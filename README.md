@@ -63,5 +63,4 @@ Hello, foo!
 
 ## ToDo
 
-* Needs to move the runtime module inside the interpreter to allow access from the compiler
 * Implement flow control statements
