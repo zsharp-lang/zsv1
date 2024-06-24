@@ -35,7 +35,7 @@ This will hopefully change in the future.
 
 To run the code, just run the main project. This should result with the output:
 ```
-Hello, world!
+Hello, World!
 Hello, foo!
 ```
 
