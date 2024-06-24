@@ -11,7 +11,15 @@ using IR = ZSharp.IR;
  * Interpreter
  */
 
-Interpreter interpreter = new();
+var runtime = IR.RuntimeModule.Standard;
+
+Interpreter interpreter = new(runtime);
+
+{
+    interpreter.SetIR(runtime.TypeSystem.Any, TypeSystem.Any);
+    interpreter.SetIR(runtime.TypeSystem.String, TypeSystem.String);
+    interpreter.SetIR(runtime.TypeSystem.Void, TypeSystem.Void);
+}
 
 /*
  * Toolchain
@@ -20,14 +28,6 @@ Interpreter interpreter = new();
 Desugarer desugarer = new();
 //Instantiator instantiator = new();
 ZSCompiler compiler = new(interpreter);
-
-var runtime = IR.RuntimeModule.Standard;
-
-{
-    interpreter.SetIR(runtime.TypeSystem.Any, TypeSystem.Any);
-    interpreter.SetIR(runtime.TypeSystem.String, TypeSystem.String);
-    interpreter.SetIR(runtime.TypeSystem.Void, TypeSystem.Void);
-}
 
 
 #region Internal Functions
@@ -251,6 +251,8 @@ if (true)
 }
 
 
+RId globalVoid = new("void");
+compiler.DefineGlobal(globalVoid, new Class(runtime.TypeSystem.Void));
 RId globalString = new("string");
 compiler.DefineGlobal(globalString, new Class(runtime.TypeSystem.String));
 
@@ -266,9 +268,14 @@ compiler.DefineGlobal(globalString, new Class(runtime.TypeSystem.String));
  * let stdIO = "std:io";
  * import { print } from stdIO;
  * 
- * print("Hello, world!");
+ * fun id(x: string): string {
+ *   return x;
+ * }
  * 
- * fun foo(x: string) {
+ * let message = id("Hello, World!");
+ * print(message);
+ * 
+ * fun foo(x: string): void {
  *   print(x);
  * }
  * 
@@ -278,6 +285,8 @@ compiler.DefineGlobal(globalString, new Class(runtime.TypeSystem.String));
 
 RId stdIO;
 RId print;
+RId id;
+RId id_x;
 RId message;
 RId foo_x;
 RId foo;
@@ -299,11 +308,31 @@ var rastNodes = new RStatement[]
         })
     },
 
+    new RExpressionStatement(
+        new RFunction(
+            id = new("id"), 
+            new()
+            {
+                Args = [
+                    new(id_x = new("x"), globalString, null)
+                ]
+            })
+        {
+            ReturnType = globalString,
+            Body = new RReturn(id_x)
+        }
+    ),
+
     // let message = "Hello, World!";
     new RLetStatement(
         new RNamePattern(message = new("message")),
         null, //globals["string"],
-        RLiteral.String("Hello, World!")
+        new RCall(
+            id, 
+            [ 
+                new(RLiteral.String("Hello, World!"))
+            ]
+        )
     ),
 
     // print(message);
@@ -314,7 +343,7 @@ var rastNodes = new RStatement[]
         ])
     ),
 
-    // fun foo(x: string) { print(x); }
+    // fun foo(x: string): void { print(x); }
     new RExpressionStatement(
         new RFunction(
             foo = new("foo"),
@@ -325,7 +354,8 @@ var rastNodes = new RStatement[]
                 ]
             })
         {
-            Body = new RExpressionStatement(
+            ReturnType = globalVoid,
+            Body = new RReturn(
                 new RCall(print,
                 [
                     new(foo_x)

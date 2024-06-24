@@ -13,7 +13,7 @@ namespace ZSharp.CTRuntime
         {
             if (Node!.Content is null) return;
 
-            using (codeCompiler.UseCompiler(this))
+            using (codeCompiler.UseDefinitionCompiler(this))
             using (CT.UseScope(Node))
                 foreach (var item in Node.Content.Statements)
                     Compile(item);

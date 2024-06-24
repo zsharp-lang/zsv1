@@ -13,6 +13,9 @@ global using IRTBinder = ZSharp.CTRuntime.IBinder<ZSharp.CTRuntime.Code>;
 global using ICTDefinitionCompiler = ZSharp.CTRuntime.IDefinitionCompiler<ZSharp.VM.ZSObject>;
 global using IRTDefinitionCompiler = ZSharp.CTRuntime.IDefinitionCompiler<ZSharp.CTRuntime.Code>;
 
+global using ICTStatementCompiler = ZSharp.CTRuntime.IStatementCompiler<ZSharp.VM.ZSObject>;
+global using IRTStatementCompiler = ZSharp.CTRuntime.IStatementCompiler<ZSharp.CTRuntime.Code>;
+
 global using ICTCallable = ZSharp.CTRuntime.ICallable<ZSharp.VM.ZSObject>;
 global using IRTCallable = ZSharp.CTRuntime.ICallable<ZSharp.CTRuntime.Code>;
 

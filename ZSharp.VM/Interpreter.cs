@@ -1,15 +1,23 @@
-﻿namespace ZSharp.VM
+﻿using ZSharp.IR;
+
+namespace ZSharp.VM
 {
     public sealed class Interpreter
     {
         //private readonly Assembler _assembler;
+        private readonly IRLoader _irLoader;
+        private readonly RuntimeModule _runtime;
         private readonly TypeSystem _typeSystem;
         private readonly VirtualMachine _vm;
 
-        public Interpreter(int callStackSize = 1024)
+        public RuntimeModule Runtime => _runtime;
+
+        public Interpreter(RuntimeModule runtime, int callStackSize = 1024)
         {
-            _vm = new(callStackSize);
+            _runtime = runtime;
             _typeSystem = new(this);
+            _irLoader = new(_runtime);
+            _vm = new(_irLoader, callStackSize);
         }
 
         #region MainAPI

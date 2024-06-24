@@ -19,7 +19,7 @@ namespace ZSharp.CTRuntime
 
         public Interpreter Interpreter => _interpreter;
 
-        public ZSCompiler() : this(new()) { }
+        public ZSCompiler() : this(new(IR.RuntimeModule.Standard)) { }
 
         public ZSCompiler(Interpreter interpreter)
         {

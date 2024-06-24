@@ -10,11 +10,11 @@ namespace ZSharp.CTRuntime
         public IR.Function Compile(RFunction function)
         {
             var functionBinding = Context.GetCT<RTFunction>(function);
+
+            var signature = signatureCompiler.Compile(function.Signature, function.ReturnType);
+
             if (functionBinding is null)
-            {
                 using (RT.UseScope(function))
-                {
-                    var signature = signatureCompiler.Compile(function.Signature);
                     functionBinding = Context.Set(
                         function.Id,
                         new RTFunction(new(signature)
@@ -22,7 +22,10 @@ namespace ZSharp.CTRuntime
                             Name = function.Name
                         }, Compiler.Interpreter.LoadIR<VM.ZSSignature>(signature))
                     );
-                }
+            else
+            {
+                functionBinding.IR.Signature = signature;
+                functionBinding.Type = new RTFunctionType(Compiler.Interpreter.LoadIR<VM.ZSSignature>(signature));
             }
 
             var functionIR = functionBinding.IR;

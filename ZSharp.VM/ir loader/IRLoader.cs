@@ -2,9 +2,9 @@
 
 namespace ZSharp.VM
 {
-    internal sealed class IRLoader
+    internal sealed class IRLoader(RuntimeModule runtime)
     {
-        private readonly Assembler assembler = new();
+        private readonly Assembler assembler = new(runtime);
         private readonly Dictionary<IRObject, ZSObject> irMap = [];
 
         public Assembler Assembler => assembler;
@@ -52,7 +52,7 @@ namespace ZSharp.VM
                 throw new Exception();
 
             var signature = Load(function.Signature);
-            var code = assembler.Assemble(function.Body.Instructions);
+            var code = assembler.Assemble(function.Body.Instructions, function);
 
             return new(signature, code)
             {

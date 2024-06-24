@@ -4,11 +4,12 @@ using ZSharp.IR.VM;
 
 namespace ZSharp.VM
 {
-    internal sealed class Assembler//(IRLoader loader)
+    internal sealed class Assembler(RuntimeModule runtimeModule)//(IRLoader loader)
     {
+        private readonly RuntimeModule runtime = runtimeModule;
         //public IRLoader IRLoader { get; } = loader;
 
-        public Instruction[] Assemble(IEnumerable<IR.VM.Instruction> code)
+        public Instruction[] Assemble(IEnumerable<IR.VM.Instruction> code, Function? function = null)
         {
             List<(int, IR.VM.Instruction)> jumpTable = [];
             Dictionary<int, int> offsetMap = [];
@@ -49,6 +50,10 @@ namespace ZSharp.VM
                         break;
                     case PutString putString:
                         result.Add(new(OpCode.Push, new ZSString(putString.Value)));
+                        break;
+                    case Return _:
+                        if (function is null) throw new InvalidOperationException();
+                        result.Add(new(function.ReturnType == runtime.TypeSystem.Void ? OpCode.ReturnVoid : OpCode.Return));
                         break;
                     default:
                         break;

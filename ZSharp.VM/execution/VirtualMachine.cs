@@ -1,9 +1,9 @@
 ﻿namespace ZSharp.VM
 {
-    internal sealed class VirtualMachine(int minCallStackSize = 1024)
+    internal sealed class VirtualMachine(IRLoader loader, int minCallStackSize = 1024)
     {
         private readonly List<Frame> _callStack = new(minCallStackSize);
-        private readonly IRLoader _loader = new();
+        private readonly IRLoader _loader = loader;
 
         public Frame CurrentFrame => _callStack[^1];
 

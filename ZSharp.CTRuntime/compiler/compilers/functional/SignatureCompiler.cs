@@ -7,13 +7,18 @@ namespace ZSharp.CTRuntime
     {
         private readonly CTCodeCompiler typeCompiler = new(compiler, new CTProcessor(compiler));
 
-        public IR.Signature Compile(RSignature signature)
+        public IR.Signature Compile(RSignature signature, RExpression? returnType = null)
         {
             IR.Signature result = new(null!);
 
             if (signature.Args is not null)
                 foreach (var arg in signature.Args)
                     result.Args.Parameters.Add(Compile(arg));
+
+            if (returnType is not null)
+                result.ReturnType = typeCompiler.Bind(returnType) is Class @class 
+                    ? @class.IR 
+                    : throw new NotImplementedException();
 
             return result;
         }

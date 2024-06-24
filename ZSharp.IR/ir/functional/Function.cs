@@ -9,7 +9,11 @@
 
         public FunctionAttributes Attributes { get; set; } = FunctionAttributes.None;
 
-        public IType? ReturnType { get; set; }
+        public IType ReturnType
+        {
+            get => _signature.ReturnType;
+            set => _signature.ReturnType = value;
+        }
 
         public Signature Signature
         {

@@ -8,18 +8,29 @@ namespace ZSharp.CTRuntime
         where T : class
     {
         private IDefinitionCompiler<T>? definitionCompiler;
+        private IStatementCompiler<T>? statementCompiler;
 
         public abstract DomainContext<T> CodeContext { get; }
 
         public IProcessor<T> Processor { get; } = processor;
 
-        public ContextManager UseCompiler(IDefinitionCompiler<T> compiler)
+        public ContextManager UseDefinitionCompiler(IDefinitionCompiler<T> compiler)
         {
             (compiler, definitionCompiler) = (definitionCompiler!, compiler);
 
             return new(() =>
             {
                 definitionCompiler = compiler;
+            });
+        }
+
+        public ContextManager UseStatementCompiler(IStatementCompiler<T> compiler)
+        {
+            (compiler, statementCompiler) = (statementCompiler!, compiler);
+
+            return new(() =>
+            {
+                statementCompiler = compiler;
             });
         }
 
@@ -31,7 +42,7 @@ namespace ZSharp.CTRuntime
             {
                 RBlock block => Compile(block),
                 RExpressionStatement expressionStatement => Compile(expressionStatement),
-                _ => throw new Exception()
+                _ => statementCompiler!.Compile(statement).Read(Compiler),
             };
         }
 
