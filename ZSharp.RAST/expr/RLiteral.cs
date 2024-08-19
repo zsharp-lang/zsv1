@@ -20,6 +20,7 @@
         F64,
         I,
         U,
+        Imaginary,
     }
 
     public sealed class RLiteral(RLiteralType type, object value) : RExpression
@@ -71,6 +72,8 @@
         public static RLiteral I(long value) => new(RLiteralType.I, value);
 
         public static RLiteral U(ulong value) => new(RLiteralType.U, value);
+
+        public static RLiteral Imaginary(double value) => new(RLiteralType.Imaginary, value);
 
         public override string ToString() => Type == RLiteralType.Unit ? "()" : Value?.ToString() ?? "null";
     }
