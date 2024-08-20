@@ -1,6 +1,10 @@
 ﻿namespace ZSharp.CGRuntime
 {
-    public sealed class Runtime(ICodeGenerator codeGenerator, ICodeInjector codeInjector)
+    public sealed class Runtime(
+        ICodeGenerator codeGenerator, 
+        ICodeInjector codeInjector,
+        IDefinitionHandler definitionHandler
+        )
     {
         private readonly Stack<Frame> frames = new();
         private readonly Context context = new();
@@ -8,6 +12,8 @@
         public ICodeGenerator CodeGenerator { get; init; } = codeGenerator;
 
         public ICodeInjector Injector { get; init; } = codeInjector;
+
+        public IDefinitionHandler DefinitionHandler { get; init; } = definitionHandler;
 
         public IErrorHandler ErrorHandler { get; set; } = new DefaultErrorHandler();
 
@@ -123,6 +129,8 @@
                     Frame.Put(Injector.CreateInjector(instruction.As<HLVM.Injector>()));
                 case LLVM.OpCode.Enter: context.Enter(Frame.Pop()); break;
                 case LLVM.OpCode.Leave: context.Leave(); break;
+                case LLVM.OpCode.Definition:
+                    DefinitionHandler.Define(Frame.Pop());
                     break;
                 default:
                     throw new NotImplementedException($"Unknown opcode: {instruction.OpCode}");
