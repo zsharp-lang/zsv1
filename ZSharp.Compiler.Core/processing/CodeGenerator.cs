@@ -18,7 +18,7 @@ namespace ZSharp.Compiler
         {
             if (target is ICTReadable readable)
                 if (readable.Type is IRTAssignable rtWritable)
-                    return rtWritable.Assign(compiler, Read(readable), value);
+                    return rtWritable.Assign(compiler, target, value);
 
             if (target is ICTAssignable ctWritable)
                 return ctWritable.Assign(compiler, value);
@@ -38,7 +38,7 @@ namespace ZSharp.Compiler
         {
             if (callee is ICTReadable readable)
                 if (readable.Type is IRTCallable rtCallable)
-                    return rtCallable.Call(compiler, Read(readable), arguments);
+                    return rtCallable.Call(compiler, callee, arguments);
 
             if (callee is ICTCallable ctCallable)
                 return ctCallable.Call(compiler, arguments);
@@ -60,9 +60,9 @@ namespace ZSharp.Compiler
         {
             if (instanceTarget is ICTReadable readable)
                 if (readable.Type is IRTTypeCast rtTypeCast)
-                    return rtTypeCast.Cast(compiler, Read(readable), targetType);
-                else
-                    return readable.Read(compiler, targetType);
+                    return rtTypeCast.Cast(compiler, instanceTarget, targetType);
+                //else
+                //    return readable.Read(compiler, targetType);
 
             if (instanceTarget is ICTTypeCast ctTypeCast)
                 return ctTypeCast.Cast(compiler, targetType);
@@ -148,7 +148,7 @@ namespace ZSharp.Compiler
         {
             if (instance is ICTReadable readable)
                 if (readable.Type is IRTGetMember<MemberName> rtGetMember)
-                    return rtGetMember.Member(compiler, Read(readable), member);
+                    return rtGetMember.Member(compiler, instance, member);
 
             if (instance is ICTGetMember<MemberName> ctGetMember)
                 return ctGetMember.Member(compiler, member);
@@ -170,57 +170,38 @@ namespace ZSharp.Compiler
             throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// The value of the object.
-        /// </summary>
-        /// <param name="target"></param>
-        /// <returns></returns>
-        //Code Value(IBinding<T> target);
-
-        public Code Read(CTObject @object) => 
-            @object is Code code ? code :
-            @object is ICTReadable readable ? Read(readable) : 
-            throw new();
-
-        public Code Read(ICTReadable readable) => readable.Read(compiler);
-
-        //private static U? Protocol<U>(IBinding<T> binding)
-        //    where U : class
-        //    => binding.Type as U ?? binding as U;
-
-        //Code Literal(object value, RLiteralType literalType, IBinding<T>? unitType);
-
         public CTObject Literal(object value, RLiteralType literalType, CTObject? unitType)
         {
-            (IR.VM.Put instruction, ZSType type) = literalType switch
-            {
-                RLiteralType.String => (new IR.VM.PutString((string)value!), VM.TypeSystem.String),
-                RLiteralType.Integer => throw new NotImplementedException(),
-                RLiteralType.Real => throw new NotImplementedException(),
-                RLiteralType.Boolean => throw new NotImplementedException(),
-                RLiteralType.Null => throw new NotImplementedException(),
-                RLiteralType.Unit => throw new NotImplementedException(),
-                RLiteralType.I8 => throw new NotImplementedException(),
-                RLiteralType.I16 => throw new NotImplementedException(),
-                RLiteralType.I32 => throw new NotImplementedException(),
-                RLiteralType.I64 => throw new NotImplementedException(),
-                RLiteralType.U8 => throw new NotImplementedException(),
-                RLiteralType.U16 => throw new NotImplementedException(),
-                RLiteralType.U32 => throw new NotImplementedException(),
-                RLiteralType.U64 => throw new NotImplementedException(),
-                RLiteralType.F32 => throw new NotImplementedException(),
-                RLiteralType.F64 => throw new NotImplementedException(),
-                RLiteralType.I => throw new NotImplementedException(),
-                RLiteralType.U => throw new NotImplementedException(),
-                RLiteralType.Imaginary => throw new NotImplementedException(),
-                _ => throw new NotImplementedException(),
-            };
-            CTObject result = new Code(1, [instruction], type);
+            throw new NotImplementedException();
+            //(IR.VM.Put instruction, ZSType type) = literalType switch
+            //{
+            //    RLiteralType.String => (new IR.VM.PutString((string)value!), VM.TypeSystem.String),
+            //    RLiteralType.Integer => throw new NotImplementedException(),
+            //    RLiteralType.Real => throw new NotImplementedException(),
+            //    RLiteralType.Boolean => throw new NotImplementedException(),
+            //    RLiteralType.Null => throw new NotImplementedException(),
+            //    RLiteralType.Unit => throw new NotImplementedException(),
+            //    RLiteralType.I8 => throw new NotImplementedException(),
+            //    RLiteralType.I16 => throw new NotImplementedException(),
+            //    RLiteralType.I32 => throw new NotImplementedException(),
+            //    RLiteralType.I64 => throw new NotImplementedException(),
+            //    RLiteralType.U8 => throw new NotImplementedException(),
+            //    RLiteralType.U16 => throw new NotImplementedException(),
+            //    RLiteralType.U32 => throw new NotImplementedException(),
+            //    RLiteralType.U64 => throw new NotImplementedException(),
+            //    RLiteralType.F32 => throw new NotImplementedException(),
+            //    RLiteralType.F64 => throw new NotImplementedException(),
+            //    RLiteralType.I => throw new NotImplementedException(),
+            //    RLiteralType.U => throw new NotImplementedException(),
+            //    RLiteralType.Imaginary => throw new NotImplementedException(),
+            //    _ => throw new NotImplementedException(),
+            //};
+            //CTObject result = new Code(1, [instruction], type);
 
-            if (unitType is not null)
-                result = Call(unitType, [new(result)]);
+            //if (unitType is not null)
+            //    result = Call(unitType, [new(result)]);
 
-            return result;
+            //return result;
         }
     }
 }
