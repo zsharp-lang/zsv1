@@ -77,56 +77,39 @@
                         ErrorHandler.CouldNotFindName(instruction.As<string>());
                     break;
                 case LLVM.OpCode.Argument:
-                    Frame.Arg(instruction.As<string?>());
-                    break;
+                    Frame.Arg(instruction.As<string?>()); break;
                 case LLVM.OpCode.Call:
-                    Frame.Put(Call(instruction.As<int>()));
-                    break;
+                    Frame.Put(Call(instruction.As<int>())); break;
                 case LLVM.OpCode.GetIndex:
-                    Frame.Put(GetIndex(instruction.As<int>()));
-                    break;
+                    Frame.Put(GetIndex(instruction.As<int>())); break;
                 case LLVM.OpCode.SetIndex:
-                    Frame.Put(SetIndex(instruction.As<int>()));
-                    break;
+                    Frame.Put(SetIndex(instruction.As<int>())); break;
                 case LLVM.OpCode.DelIndex:
                     throw new NotImplementedException();
                     //break;
                 case LLVM.OpCode.GetMemberName:
-                    Frame.Put(GetMember(instruction.As<MemberName>()));
-                    break;
+                    Frame.Put(GetMember(instruction.As<MemberName>())); break;
                 case LLVM.OpCode.SetMemberName:
-                    Frame.Put(SetMember(instruction.As<MemberName>()));
-                    break;
+                    Frame.Put(SetMember(instruction.As<MemberName>())); break;
                 case LLVM.OpCode.GetMemberIndex:
-                    Frame.Put(GetMember(instruction.As<MemberIndex>()));
-                    break;
+                    Frame.Put(GetMember(instruction.As<MemberIndex>())); break;
                 case LLVM.OpCode.SetMemberIndex:
-                    Frame.Put(SetMember(instruction.As<MemberIndex>()));
-                    break;
-                case LLVM.OpCode.Assign:
-                    Frame.Put(Assign());
-                    break;
+                    Frame.Put(SetMember(instruction.As<MemberIndex>())); break;
+                case LLVM.OpCode.Assign: Frame.Put(Assign()); break;
                 case LLVM.OpCode.Literal:
-                    Frame.Put(Literal(instruction.As<LLVM.Literal>()));
-                    break;
-                case LLVM.OpCode.Jump:
-                    Frame.Jump(instruction.As<int>());
-                    break;
+                    Frame.Put(Literal(instruction.As<LLVM.Literal>())); break;
+                case LLVM.OpCode.Jump: Frame.Jump(instruction.As<int>()); break;
                 case LLVM.OpCode.JumpIfTrue:
                 case LLVM.OpCode.JumpIfFalse:
                 case LLVM.OpCode.Evaluate:
                     throw new NotImplementedException("Evaluation is not yet implemented.");
-                case LLVM.OpCode.Object:
-                    Frame.Put(instruction.As<CGObject>());
-                    break;
-                case LLVM.OpCode.Cast:
-                    Frame.Put(Cast());
-                    break;
+                case LLVM.OpCode.Object: Frame.Put(instruction.As<CGObject>()); break;
+                case LLVM.OpCode.Cast: Frame.Put(Cast()); break;
                 case LLVM.OpCode.Label:
                     Frame.Put(Injector.CreateInjector(() => LabelCreator(instruction.As<IR.VM.Nop>())));
                     break;
                 case LLVM.OpCode.Inject:
-                    Frame.Put(Injector.CreateInjector(instruction.As<HLVM.Injector>()));
+                    Frame.Put(Injector.CreateInjector(instruction.As<HLVM.Injector>())); break;
                 case LLVM.OpCode.Enter: context.Enter(Frame.Pop()); break;
                 case LLVM.OpCode.Leave: context.Leave(); break;
                 case LLVM.OpCode.Definition:
