@@ -99,6 +99,9 @@ namespace ZSharp.CGRuntime
                 // inject
                 HLVM.Inject inject => new(OpCode.Inject, inject.Injector),
 
+                // context
+                HLVM.Enter => new(OpCode.Enter),
+                HLVM.Leave => new(OpCode.Leave),
                 _ => throw new Exception($"Unknown instruction type: {instruction.GetType().Name}")
             };
     }

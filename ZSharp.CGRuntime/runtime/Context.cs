@@ -1,20 +1,44 @@
-﻿namespace ZSharp.CGRuntime
+﻿using CommonZ.Utils;
+using Scope = CommonZ.Utils.Cache<string, ZSharp.CGRuntime.CGObject>;
+
+namespace ZSharp.CGRuntime
 {
     internal sealed class Context
     {
-        public CGObject? Get(string name)
+        private readonly Mapping<CGObject, Scope> objectScopes = [];
+        private readonly Stack<Scope> scopeStack = [];
+
+        private Scope CurrentScope => scopeStack.Peek();
+
+        public Scope GlobalScope { get; } = new();
+
+        public Context()
         {
-            throw new NotImplementedException();
+            scopeStack.Push(GlobalScope);
         }
+
+        public CGObject? Get(string name)
+            => CurrentScope.Cache(name);
 
         public bool Set(string name, CGObject value)
-        {
-            throw new NotImplementedException();
-        }
+            => CurrentScope.Cache(name, searchParent: false) is null
+            && CurrentScope.Cache(name, value) is not null;
 
         public bool Del(string name)
+            => CurrentScope.Uncache(name);
+
+        public void Enter(CGObject @object)
         {
-            throw new NotImplementedException();
+            if (!objectScopes.TryGetValue(@object, out var scope))
+                objectScopes[@object] = scope = new()
+                {
+                    Parent = CurrentScope
+                };
+
+            scopeStack.Push(scope);
         }
+
+        public void Leave()
+            => scopeStack.Pop();
     }
 }

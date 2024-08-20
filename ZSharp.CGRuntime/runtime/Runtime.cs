@@ -121,6 +121,8 @@
                     break;
                 case LLVM.OpCode.Inject:
                     Frame.Put(Injector.CreateInjector(instruction.As<HLVM.Injector>()));
+                case LLVM.OpCode.Enter: context.Enter(Frame.Pop()); break;
+                case LLVM.OpCode.Leave: context.Leave(); break;
                     break;
                 default:
                     throw new NotImplementedException($"Unknown opcode: {instruction.OpCode}");

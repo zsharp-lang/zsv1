@@ -37,5 +37,8 @@
         Inject,
 
         Label,
+
+        Enter,
+        Leave,
     }
 }
