@@ -30,24 +30,39 @@ namespace ZSharp.CGCompiler
 
         private void Compile(RImport import)
         {
-            CGCode result = [CG.Get("import")]; // TODO: CG.Object(Config.Import);
-
-            result.AddRange(Context.Compile(import.Source));
-            result.Add(CG.Argument());
+            Emit([
+                CG.Get("import"), // TODO: CG.Object(Config.Import);
+                ..Context.Compile(import.Source),
+                CG.Argument()
+            ]);
 
             if (import.Arguments is not null)
                 foreach (var argument in import.Arguments)
-                {
-                    result.AddRange(Context.Compile(argument.Value));
-                    result.Add(CG.Argument(argument.Name));
-                }
+                    Emit([
+                        ..Context.Compile(argument.Value),
+                        CG.Argument(argument.Name)
+                    ]);
+
+            Emit([CG.Call((import.Arguments?.Count ?? 0) + 1)]);
 
             if (import.As is not null)
-                result.AddRange([ CG.Dup(), CG.Set(import.As.Name) ]);
+                Emit([ 
+                    CG.Dup(), 
+                    CG.Set(import.As.Name) 
+                ]);
 
-            if (import.Targets is not null)
+            if (
+                (import.Targets?.Count ?? 0) == 1
+                && import.Targets![0] is RImportTarget singleTarget
+            )
+                Emit([
+                    CG.GetMember(singleTarget.Name!),
+                    CG.Set(singleTarget.Alias?.Name ?? singleTarget.Name!)
+                    ]);
+
+            else if (import.Targets is not null)
                 foreach (var target in import.Targets)
-                    result.AddRange([
+                    Emit([
                         CG.Dup(), 
                         CG.GetMember(target.Name!), 
                         CG.Set(target.Alias?.Name ?? target.Name!)
