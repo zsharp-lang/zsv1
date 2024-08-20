@@ -7,12 +7,13 @@ namespace ZSharp.Compiler
         private readonly CGGenerator cg = new();
         private readonly IRGenerator ir;
 
-        public IR.Module Compile(RStatement[] statements, string? moduleName = null)
-        {
-            var cgModule = cg.Compile(statements, moduleName);
-            var irModule = ir.Compile(cgModule);
+        public CGObjects.Module CompileCG(RStatement[] statements, string? moduleName = null)
+            => cg.Compile(statements, moduleName);
 
-            return irModule;
-        }
+        public IR.Module CompileIR(CGObjects.Module module)
+            => ir.Run(module);
+
+        public IR.Module CompileIR(RStatement[] statements, string? moduleName = null)
+            => CompileIR(CompileCG(statements, moduleName));
     }
 }

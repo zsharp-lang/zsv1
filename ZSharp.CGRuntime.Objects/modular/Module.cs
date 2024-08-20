@@ -1,4 +1,4 @@
-﻿namespace ZSharp.Compiler
+﻿namespace ZSharp.CGObjects
 {
     public sealed class Module(string? name)
         : CGObject

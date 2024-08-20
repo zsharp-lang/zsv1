@@ -14,7 +14,7 @@ namespace ZSharp.CGCompiler
             moduleCompiler = new(context);
         }
 
-        public Module Compile(RModule module)
+        public CGObjects.Module Compile(RModule module)
         {
             return moduleCompiler.Compile(module);
         }

@@ -1,4 +1,4 @@
-﻿namespace ZSharp.Compiler
+﻿namespace ZSharp.CGObjects
 {
     public class RTFunction(string? name) : Function(name)
     {

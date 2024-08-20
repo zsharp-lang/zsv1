@@ -1,7 +1,7 @@
 ﻿using CommonZ.Utils;
 using ZSharp.CGRuntime;
 
-namespace ZSharp.Compiler
+namespace ZSharp.CGObjects
 {
     public class FunctionGroup(string? name)
         : CGObject
