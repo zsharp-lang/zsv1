@@ -116,7 +116,7 @@
                     DefinitionHandler.Define(Frame.Pop());
                     break;
                 default:
-                    throw new NotImplementedException($"Unknown opcode: {instruction.OpCode}");
+                    throw new Exception($"Unknown opcode: {instruction.OpCode}");
             }
         }
 
