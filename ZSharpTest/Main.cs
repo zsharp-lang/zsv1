@@ -125,8 +125,6 @@ var rastNodes = new RStatement[]
 
 #endregion
 
-compiler.Expose();
-
 
 var cgCode = compiler.CompileCG(rastNodes);
 var module = compiler.CompileIR(cgCode);
