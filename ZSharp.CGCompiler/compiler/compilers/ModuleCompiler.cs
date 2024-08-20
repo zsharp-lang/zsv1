@@ -45,7 +45,7 @@ namespace ZSharp.CGCompiler
             }
         }
 
-        private CGObject Compile(RLetDefinition let)
+        private Global Compile(RLetDefinition let)
         {
             //throw new NotImplementedException();
 
