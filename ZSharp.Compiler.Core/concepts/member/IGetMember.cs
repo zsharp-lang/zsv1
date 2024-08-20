@@ -1,12 +1,12 @@
-﻿namespace ZSharp.CTRuntime
+﻿namespace ZSharp.Compiler
 {
     public interface ICTGetMember<M>
     {
-        public Code Member(ZSCompiler compiler, M member);
+        public CTObject Member(ZSCompiler compiler, M member);
     }
 
     public interface IRTGetMember<M>
     {
-        public Code Member(ZSCompiler compiler, Code value, M member);
+        public CTObject Member(ZSCompiler compiler, CTObject value, M member);
     }
 }

@@ -1,7 +1,9 @@
-﻿namespace ZSharp.CTRuntime
+﻿using ZSharp.CGRuntime;
+
+namespace ZSharp.Compiler
 {
     internal interface ISetIndex<T>
     {
-        public Code Index(T @object, Argument[] index, Code value);
+        public CTObject Index(T @object, Argument[] index, CTObject value);
     }
 }

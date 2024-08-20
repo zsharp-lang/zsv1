@@ -1,4 +1,4 @@
-﻿namespace ZSharp.CTRuntime
+﻿namespace ZSharp.Compiler
 {
     public enum AssignmentType
     {

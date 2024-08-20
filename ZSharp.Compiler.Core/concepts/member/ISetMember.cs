@@ -1,7 +1,7 @@
-﻿namespace ZSharp.CTRuntime
+﻿namespace ZSharp.Compiler
 {
     internal interface ISetMember<T, M>
     {
-        public Code Member(T @object, M member, Code value);
+        public CTObject Member(T @object, M member, CTObject value);
     }
 }
