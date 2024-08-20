@@ -11,6 +11,7 @@ namespace ZSharp.CGCompiler
             {
                 RCall call => Compile(call),
                 RDefinition definition => Compile(definition),
+                RId id => Compile(id),
                 _ => throw new NotImplementedException(),
             };
 
@@ -31,5 +32,8 @@ namespace ZSharp.CGCompiler
 
         private CGCode Compile(RDefinition definition)
             => [CG.Object(Context.Compile(definition))];
+
+        private CGCode Compile(RId id)
+            => [CG.Get(id.Name)];
     }
 }
