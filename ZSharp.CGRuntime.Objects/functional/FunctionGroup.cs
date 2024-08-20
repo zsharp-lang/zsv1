@@ -19,15 +19,16 @@ namespace ZSharp.CGObjects
 
         public CGObject Call(Compiler.ICompiler compiler, Args args, KwArgs kwArgs)
         {
-            ArgumentMatch? bestMatch = null;
-            foreach (var overload in Overloads)
-            {
-                var match = overload.Signature.Match(compiler, args, kwArgs);
+            throw new NotImplementedException();
+            //ArgumentMatch? bestMatch = null;
+            //foreach (var overload in Overloads)
+            //{
+            //    var match = overload.Signature.Match(compiler, args, kwArgs);
 
-                if (match is null) continue;
+            //    if (match is null) continue;
 
-                if (bestMatch is null || match > bestMatch) bestMatch = match;
-            }
+            //    if (bestMatch is null || match > bestMatch) bestMatch = match;
+            //}
 
             throw new("No matching overload found.");
         }
