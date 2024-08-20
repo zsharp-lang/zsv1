@@ -13,7 +13,7 @@ namespace ZSharp.CGRuntime
             for (int i = 0; i < code.Length; ++i)
             {
                 ref var instruction = ref code[i];
-                if (instruction.As<HLVM.Instruction>() is HLVM.Instruction target)
+                if (instruction.Is<HLVM.Instruction>(out var target))
                 {
                     if (!labels.TryGetValue(instruction, out var index))
                         // do note that instructions is mapped 1-to-1 with code so this works
@@ -102,6 +102,9 @@ namespace ZSharp.CGRuntime
                 // context
                 HLVM.Enter => new(OpCode.Enter),
                 HLVM.Leave => new(OpCode.Leave),
+
+                HLVM.Definition => new(OpCode.Definition),
+
                 _ => throw new Exception($"Unknown instruction type: {instruction.GetType().Name}")
             };
     }

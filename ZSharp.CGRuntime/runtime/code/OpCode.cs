@@ -40,5 +40,7 @@
 
         Enter,
         Leave,
+
+        Definition,
     }
 }
