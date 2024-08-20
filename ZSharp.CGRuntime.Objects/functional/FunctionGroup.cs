@@ -11,13 +11,13 @@ namespace ZSharp.CGObjects
 
         public Collection<Function> Overloads { get; } = [];
 
-        public CGObject Call(ICompiler compiler, Argument[] arguments)
+        public CGObject Call(Compiler.ICompiler compiler, Argument[] arguments)
         {
             var (args, kwargs) = Utils.SplitArguments(arguments);
             return Call(compiler, args, kwargs);
         }
 
-        public CGObject Call(ICompiler compiler, Args args, KwArgs kwArgs)
+        public CGObject Call(Compiler.ICompiler compiler, Args args, KwArgs kwArgs)
         {
             ArgumentMatch? bestMatch = null;
             foreach (var overload in Overloads)

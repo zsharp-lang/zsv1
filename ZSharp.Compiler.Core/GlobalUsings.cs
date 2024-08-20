@@ -1,5 +1,5 @@
-global using ZSCompiler = object;
 ﻿global using CTObject = ZSharp.CGRuntime.CGObject;
+global using ZSCompiler = ZSharp.Compiler.ICompiler;
 
 global using MemberName = string;
 global using MemberIndex = int;
