@@ -12,6 +12,7 @@ namespace ZSharp.CGCompiler
                 RCall call => Compile(call),
                 RDefinition definition => Compile(definition),
                 RId id => Compile(id),
+                RLiteral literal => Compile(literal),
                 _ => throw new NotImplementedException(),
             };
 
@@ -35,5 +36,11 @@ namespace ZSharp.CGCompiler
 
         private CGCode Compile(RId id)
             => [CG.Get(id.Name)];
+
+        private CGCode Compile(RLiteral literal)
+            => literal.UnitType is null 
+            ? [CG.Literal(literal.Value, literal.Type)]
+            : [CG.Literal(literal.Value, literal.Type), ..Compile(literal.UnitType)]
+            ;
     }
 }
