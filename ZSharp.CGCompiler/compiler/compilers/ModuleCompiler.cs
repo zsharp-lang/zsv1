@@ -39,10 +39,14 @@ namespace ZSharp.CGCompiler
 
         protected override void Compile(Module module)
         {
+            Emit([CG.Object(Result), CG.Enter()]);
+
             foreach (var statement in Node.Content?.Statements ?? Collection<RStatement>.Empty)
             {
                 Context.Compile(statement);
             }
+
+            Emit([CG.Leave()]);
         }
 
         private Global Compile(RLetDefinition let)
