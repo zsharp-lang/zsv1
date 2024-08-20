@@ -8,7 +8,7 @@ namespace ZSharp.Compiler
 
         public CGObjects.Module Compile(RStatement[] statements, string? moduleName = null)
         {
-            return compiler.Compile(new(moduleName ?? "$Main")
+            return compiler.Compile(new(moduleName ?? string.Empty)
             {
                 Content = new RBlock([.. statements])
             });
