@@ -8,6 +8,12 @@ namespace ZSharp.CGRuntime.HLVM
 
         public RLiteralType Type { get; } = type;
 
+        public override string ToString()
+            => Value is string
+            ? $"Literal.{Type}(\"{Value}\")"
+            : $"Literal.{Type}({Value})"
+            ;
+
         public static Literal String(string value)
             => new(value, RLiteralType.String);
 

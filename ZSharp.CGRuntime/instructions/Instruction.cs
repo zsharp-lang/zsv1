@@ -10,5 +10,7 @@
     /// </summary>
     public abstract class Instruction
     {
+        public override string ToString()
+            => $"{GetType().Name}()";
     }
 }

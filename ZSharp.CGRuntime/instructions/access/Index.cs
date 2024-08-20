@@ -14,5 +14,8 @@
 
         public static Index Del(int argumentCount)
             => new(argumentCount, AccessMode.Del);
+
+        public override string ToString()
+            => $"{AccessMode}Index({ArgumentCount})";
     }
 }

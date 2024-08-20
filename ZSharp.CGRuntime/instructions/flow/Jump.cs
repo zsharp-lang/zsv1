@@ -15,5 +15,8 @@
 
         public static Jump IfFalse(Instruction target)
             => new(target, JumpCondition.IfFalse);
+
+        public override string ToString()
+            => $"Jump{Condition}({Target.GetType().Name})";
     }
 }

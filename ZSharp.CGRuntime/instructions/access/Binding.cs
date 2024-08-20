@@ -14,5 +14,8 @@
 
         public static Binding Del(string name)
             => new(name, AccessMode.Del);
+
+        public override string ToString()
+            => $"{AccessMode}(\"{Name}\")";
     }
 }

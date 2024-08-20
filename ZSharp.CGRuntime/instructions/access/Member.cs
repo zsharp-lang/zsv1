@@ -14,5 +14,11 @@
 
         public static Member<T> Del(T member)
             => new(member, AccessMode.Del);
+
+        public override string ToString()
+            => MemberPosition is string name
+            ? $"{AccessMode}Member(\"{MemberPosition}\")"
+            : $"{AccessMode}Member({MemberPosition})"
+            ;
     }
 }
