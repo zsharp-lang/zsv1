@@ -1,2 +1,2 @@
-global using MemberIndex = int;
+﻿global using MemberIndex = int;
 global using MemberName = string;
