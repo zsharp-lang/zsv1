@@ -32,6 +32,6 @@
             => pc = index;
 
         public CGObject[] ToArray()
-            => [.. stack];
+            => [.. stack.Reverse()];
     }
 }
