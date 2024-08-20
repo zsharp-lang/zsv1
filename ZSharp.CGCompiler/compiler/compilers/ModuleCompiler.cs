@@ -14,7 +14,7 @@ namespace ZSharp.CGCompiler
         protected internal override CGObject? Compile(RDefinition definition)
             => base.Compile(definition) ?? definition switch
             {
-                //RLetDefinition let => Compile(let),
+                RLetDefinition let => Compile(let),
                 //RVarDefinition var => Compile(var),
                 //ROOPDefinition oop => Compile(oop),
                 _ => null,
@@ -53,6 +53,10 @@ namespace ZSharp.CGCompiler
 
             if (let.Type is not null)
                 @global.Type = Context.Compile(let.Type);
+
+            global.Initializer = Context.Compile(let.Value);
+
+            return @global;
         }
 
         private CGObject Compile(RVarDefinition var)
