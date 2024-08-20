@@ -8,7 +8,7 @@
 
         Object,
 
-        Ret,
+        End,
 
         Argument,
         Call,

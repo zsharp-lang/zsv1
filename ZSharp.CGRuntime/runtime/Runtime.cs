@@ -40,7 +40,7 @@
             try
             {
                 LLVM.Instruction instruction;
-                while ((instruction = Frame.Instruction()).OpCode != LLVM.OpCode.Ret)
+                while ((instruction = Frame.Instruction()).OpCode != LLVM.OpCode.End)
                 {
                     Execute(instruction);
                 }
@@ -54,8 +54,8 @@
         {
             switch (instruction.OpCode)
             {
-                case LLVM.OpCode.Ret:
-                    throw new InvalidOperationException("Return instruction should not be executed.");
+                case LLVM.OpCode.End:
+                    throw new InvalidOperationException($"{nameof(LLVM.OpCode.End)} instruction should not be executed.");
                 case LLVM.OpCode.Get:
                     if (context.Get(instruction.As<string>()) is CGObject @object)
                         Frame.Put(@object);

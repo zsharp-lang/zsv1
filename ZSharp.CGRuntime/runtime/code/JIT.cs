@@ -82,7 +82,7 @@ namespace ZSharp.CGRuntime
                 HLVM.Cast => new(OpCode.Cast),
 
                 // return
-                HLVM.Return => new(OpCode.Ret),
+                HLVM.End => new(OpCode.End),
 
                 // flow
                 HLVM.Jump jump => jump.Condition switch

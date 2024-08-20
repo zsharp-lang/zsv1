@@ -14,7 +14,7 @@
         public static HLVM.Label Label()
             => new();
 
-        public static HLVM.Return End()
+        public static HLVM.End End()
             => new();
     }
 }
