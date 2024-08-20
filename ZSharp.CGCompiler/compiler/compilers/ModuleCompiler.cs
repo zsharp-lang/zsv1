@@ -10,7 +10,7 @@ namespace ZSharp.CGCompiler
         protected internal override void AddCode(CGCode code)
             => Result.Content.AddRange(code);
 
-        protected internal override object? Compile(RDefinition definition)
+        protected internal override CGObject? Compile(RDefinition definition)
             => base.Compile(definition) ?? definition switch
             {
                 //RLetDefinition let => Compile(let),

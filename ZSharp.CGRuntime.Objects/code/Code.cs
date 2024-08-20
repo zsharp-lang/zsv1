@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    internal class Code
+    internal class Code : CGObject
     {
     }
 }
