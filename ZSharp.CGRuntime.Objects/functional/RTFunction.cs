@@ -16,7 +16,8 @@
 
             code.Add(new IR.VM.Call(IR));
 
-            return new Code(code);
+            throw new NotImplementedException();
+            //return new Code(code);
         }
     }
 }
