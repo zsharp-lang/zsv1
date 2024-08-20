@@ -6,7 +6,7 @@ namespace CommonZ.Utils
         where Key : notnull
         where Value : class
     {
-        private readonly Dictionary<Key, Value> _cache = new();
+        private readonly Dictionary<Key, Value> _cache = [];
 
         public Cache<Key, Value>? Parent { get; set; }
 
@@ -17,33 +17,37 @@ namespace CommonZ.Utils
             return value;
         }
 
-        public Value? Cache(Key key)
+        public Value? Cache(Key key, bool searchParent = true)
         {
             if (_cache.TryGetValue(key, out Value? result))
                 return result;
+            if (!searchParent) return null;
             return Parent?.Cache(key);
         }
 
-        public T? Cache<T>(Key key)
+        public T? Cache<T>(Key key, bool searchParent = true)
             where T : class
         {
             if (_cache.TryGetValue(key, out Value? result))
                 return result as T;
+            if (!searchParent) return null;
             return Parent?.Cache<T>(key);
         }
 
-        public bool Cache(Key key, [MaybeNullWhen(false)] out Value value)
+        public bool Cache(Key key, [MaybeNullWhen(false)] out Value value, bool searchParent = true)
         {
             if (_cache.TryGetValue(key, out value))
                 return true;
+            if (!searchParent) return (value = null) is not null;
             return Parent?.Cache(key, out value) ?? false;
         }
 
-        public bool Cache<T>(Key key, [MaybeNullWhen(false)] out T? value)
+        public bool Cache<T>(Key key, [MaybeNullWhen(false)] out T? value, bool searchParent = true)
             where T : class
         {
             if (_cache.TryGetValue(key, out Value? result))
                 return (value = result as T) is not null;
+            if (!searchParent) return (value = null) is not null;
             return Parent?.Cache(key, out value) ?? (value = null) is null;
         }
 
