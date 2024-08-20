@@ -5,7 +5,7 @@ namespace ZSharp.Compiler
     public sealed class Compiler
     {
         private readonly CGGenerator cg = new();
-        private readonly IRGenerator ir;
+        private readonly IRGenerator ir = new();
 
         public CGObjects.Module CompileCG(RStatement[] statements, string? moduleName = null)
             => cg.Compile(statements, moduleName);
