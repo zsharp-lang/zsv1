@@ -1,5 +1,4 @@
-﻿using ZSharp.CGRuntime;
-using ZSharp.RAST;
+﻿using ZSharp.RAST;
 
 namespace ZSharp.CGCompiler
 {
@@ -11,7 +10,9 @@ namespace ZSharp.CGCompiler
 
         public Compiler()
         {
-            moduleCompiler = new(context);
+            moduleCompiler = 
+                context.CurrentCompiler as ModuleCompiler 
+                ?? throw new Exception();
         }
 
         public CGObjects.Module Compile(RModule module)
