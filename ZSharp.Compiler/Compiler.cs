@@ -15,5 +15,8 @@ namespace ZSharp.Compiler
 
         public IR.Module CompileIR(RStatement[] statements, string? moduleName = null)
             => CompileIR(CompileCG(statements, moduleName));
+
+        public void Expose(string name, CGObject @object)
+            => ir.Runtime.Expose(name, @object);
     }
 }

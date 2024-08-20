@@ -19,6 +19,9 @@
 
         private Frame Frame => frames.Peek();
 
+        public bool Expose(string name, CGObject @object)
+            => context.Set(name, @object);
+
         public CGObject[] Run(IEnumerable<HLVM.Instruction> code)
         {
             return Run(JIT.Compile(code.ToArray()));
