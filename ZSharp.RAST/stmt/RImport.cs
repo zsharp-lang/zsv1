@@ -1,8 +1,11 @@
 ﻿namespace ZSharp.RAST
 {
-    public class RImportTarget(string name, RId? alias = null) : RDefinition(name)
+    public class RImportTarget(RId name, RId? alias = null) : RDefinition(name)
     {
         public RId? Alias { get; set; } = alias;
+
+        public RImportTarget(string name, RId? alias = null)
+            : this(new RId(name), alias) { }
     }
 
     public class RImport : RStatement
