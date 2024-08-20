@@ -10,6 +10,8 @@ namespace ZSharp.CGCompiler
         private readonly ExpressionCompiler _expressionCompiler;
         private readonly StatementCompiler _statementCompiler;
 
+        public CGObject? CurrentContextObject { get; private set; }
+
         public Context()
         {
             _expressionCompiler = new(this);
@@ -51,6 +53,16 @@ namespace ZSharp.CGCompiler
         public void Emit(CGCode code)
             => CurrentCompiler.AddCode(code);
 
+        public ContextManager For(CGObject @object)
+        {
+            (CurrentContextObject, @object) = (@object, CurrentContextObject);
+
+            return new(() =>
+            {
+                CurrentContextObject = @object;
+            });
+        }
+
         public ContextManager Of(ContextCompiler compiler)
         {
             _stack.Push(compiler);
@@ -60,5 +72,8 @@ namespace ZSharp.CGCompiler
                 _stack.Pop();
             });
         }
+
+        public CGObject RequireContextObject()
+            => CurrentContextObject ?? throw new InvalidOperationException();
     }
 }

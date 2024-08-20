@@ -56,6 +56,8 @@ namespace ZSharp.CGCompiler
             TResult result;
             (Result, result) = (Create(), Result);
 
+            Define();
+
             using (
                 new ContextManager(() =>
                 {
@@ -63,6 +65,7 @@ namespace ZSharp.CGCompiler
                     Result = result;
                 })
             )
+            using (Context.For(Result))
             {
                 using (Context.Of(this))
                     Compile(result);
@@ -72,6 +75,8 @@ namespace ZSharp.CGCompiler
         }
 
         protected abstract TResult Create();
+
+        protected virtual void Define() { }
 
         protected abstract void Compile(TResult @object);
     }
