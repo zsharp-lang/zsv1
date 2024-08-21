@@ -1,7 +1,7 @@
 ﻿using ZSharp.Compiler;
 using ZSharp.RAST;
 
-var compiler = new Compiler();
+var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
 
 #region RAST
 
@@ -27,7 +27,7 @@ var compiler = new Compiler();
 
 
 //RId stdIO;
-RId print;
+//RId print;
 //RId id;
 //RId id_x;
 //RId message;
@@ -42,13 +42,21 @@ var rastNodes = new RStatement[]
     //    RLiteral.String("std:io")
     //),
 
-    // import { print } from stdIO;
-    new RImport(RLiteral.String("std:io"))
-    {
-        Targets = [
-            new(print = new("print"))
-        ]
-    },
+    new RExpressionStatement(
+        new RLetDefinition(
+            "myGlobal", 
+            null,
+            value: RLiteral.String("Hello, Global!")
+        )
+    ),
+
+    //// import { print } from stdIO;
+    //new RImport(RLiteral.String("std:io"))
+    //{
+    //    Targets = [
+    //        new(print = new("print"))
+    //    ]
+    //},
 
     //new RExpressionStatement(
     //    new RFunction(
@@ -85,13 +93,13 @@ var rastNodes = new RStatement[]
     //    ])
     //),
 
-    // print("Hello");
-    new RExpressionStatement(
-        new RCall(print,
-        [
-            new(RLiteral.String("Hello"))
-        ])
-    ),
+    //// print("Hello");
+    //new RExpressionStatement(
+    //    new RCall(print,
+    //    [
+    //        new(RLiteral.String("Hello"))
+    //    ])
+    //),
 
     //// fun foo(x: string): void { print(x); }
     //new RExpressionStatement(
