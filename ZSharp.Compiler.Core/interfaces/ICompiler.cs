@@ -4,6 +4,6 @@
     {
         public CGRuntime.ICodeGenerator CG { get; }
 
-        public IRCode Read(CTObject @object);
+        public Code Read(CTObject @object);
     }
 }

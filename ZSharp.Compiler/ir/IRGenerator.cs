@@ -2,13 +2,13 @@
 
 namespace ZSharp.Compiler
 {
-    internal class Code(IRCode code)
+    internal class CodeObject(Code code)
         : CGObject
         , ICTReadable
     {
         public CGObject Type => throw new NotImplementedException();
 
-        public IRCode Read(ICompiler compiler)
+        public Code Read(ICompiler compiler)
             => code;
     }
 
@@ -49,6 +49,6 @@ namespace ZSharp.Compiler
             => objectQueue.Enqueue(@object);
 
         public CGObject CreateInjector(CGRuntime.HLVM.Injector injector)
-            => new Code([.. injector()]);
+            => new CodeObject(new(injector()));
     }
 }

@@ -4,19 +4,19 @@
     {
         public CTObject Type { get; }
 
-        public IRCode Cast(ZSCompiler compiler, CTObject type)
+        public Code Cast(ZSCompiler compiler, CTObject type)
             => this is ICTTypeCast typeCast 
             && typeCast.Cast(compiler, type) is ICTReadable readable
             ?  readable.Read(compiler, type)
             : throw new NotImplementedException();
 
-        public IRCode Read(ZSCompiler compiler, CTObject? @as)
+        public Code Read(ZSCompiler compiler, CTObject? @as)
         {
             if (@as is null || @as == Type)
                 return Read(compiler);
             return Cast(compiler, @as);
         }
 
-        public IRCode Read(ZSCompiler compiler);
+        public Code Read(ZSCompiler compiler);
     }
 }
