@@ -105,6 +105,8 @@ namespace ZSharp.CGRuntime
 
                 HLVM.Definition => new(OpCode.Definition),
 
+                HLVM.Dup => new(OpCode.Dup),
+
                 _ => throw new Exception($"Unknown instruction type: {instruction.GetType().Name}")
             };
     }

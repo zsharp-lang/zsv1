@@ -42,5 +42,7 @@
         Leave,
 
         Definition,
+
+        Dup,
     }
 }

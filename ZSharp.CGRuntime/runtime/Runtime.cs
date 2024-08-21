@@ -118,6 +118,7 @@
                 case LLVM.OpCode.Definition:
                     DefinitionHandler.Define(Frame.Pop());
                     break;
+                case LLVM.OpCode.Dup: Frame.Put(Frame.Top()); break;
                 default:
                     throw new Exception($"Unknown opcode: {instruction.OpCode}");
             }
