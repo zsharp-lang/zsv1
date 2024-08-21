@@ -14,8 +14,7 @@
         }
 
         public RLetDefinition(string name, RExpression? type, RExpression value)
-            :
-             this(new RId(name), type, value)
+            : this(new RId(name), type, value)
         {
 
         }
