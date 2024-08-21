@@ -22,11 +22,41 @@ namespace ZSharp.Compiler
 			if (CurrentContext is not Module module)
 				throw new Exception("Global definition must be in a module context");
 
-			//var type = global.Type; // TODO: Implement type generation
-			var ir = new IR.Global(global.Name, null!);
-			module.IR!.Globals.Add(ir);
+			var declaredType = global.Type is null ? null : EvaluateType(global.Type);
 
-			return ir;
+			var initializerCode = global.Initializer is null
+				? null : Read(runtime.Run(global.Initializer));
+
+			if (initializerCode is not null)
+			{
+				var initializerType = initializerCode.RequireValueType();
+
+				declaredType ??= initializerType;
+
+				var assignmentCode = AssignTo(initializerType, declaredType);
+
+				if (assignmentCode is not null)
+					initializerCode.Append(assignmentCode);
+			}
+			else if (declaredType is null) throw new Exception("Unknown type!");
+			else initializerCode = Code.Empty;
+
+            var ir = new IR.Global(global.Name, declaredType)
+            {
+                Initializer = [.. initializerCode.Instructions]
+				// todo: ^^^ should the IR also contain information about stack size?
+            };
+
+            var initIR = module.InitFunction.IR!;
+            initIR.Body.StackSize = Math.Max(initIR.Body.StackSize, initializerCode.MaxStackSize);
+            initIR.Body.Instructions.AddRange([
+				..initializerCode.Instructions,
+				new IR.VM.SetGlobal(ir)
+			]);
+
+            module.IR!.Globals.Add(ir);
+
+            return ir;
 		}
 
 		private IR.Module Definition(Module module)
@@ -36,16 +66,16 @@ namespace ZSharp.Compiler
 			if (CurrentContext is not null && parent is null)
 				throw new Exception("Module definition must be in a module or a top level context");
 
-			var ir = new IR.Module(module.Name);
+			var ir = module.IR = new IR.Module(module.Name);
+			
+			ir.Functions.Add(module.InitFunction.IR = new(RuntimeModule.TypeSystem.Void));
 
 			if (parent is not null)
 				parent.IR!.Submodules.Add(ir);
 
-			IR.Function init = new((null as IR.IType)!);
-
 			using (ContextOf(module))
 				foreach (var contentObject in runtime.Run(module.Content))
-					init.Body.Instructions.AddRange(Read(contentObject));
+					throw new Exception("top-level code must not generate RT code!");
 
 			return ir;
 		}
