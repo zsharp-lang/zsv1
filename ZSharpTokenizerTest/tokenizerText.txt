@@ -1,0 +1,8 @@
+﻿"Hello this is a string"
+
+	"And with escape chars:\n \\ \"" 'H' [] (
+	) , ;:
+
+_  id this_is_id thisIsAlso _0 __ a0 a0_
+
+/ + ++ -- == += -= *= &&
