@@ -48,8 +48,8 @@
 
             foreach (var span in spans)
             {
-                start = new Position(Math.Min(start.Line, span.Start.Line), Math.Min(start.Column, span.Start.Column));
-                end = new Position(Math.Max(end.Line, span.End.Line), Math.Max(end.Column, span.End.Column));
+                start = Position.Min(start, span.Start);
+                end = Position.Max(end, span.End);
             }
 
             return new Span(start, end);
