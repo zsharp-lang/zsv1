@@ -25,7 +25,8 @@ namespace ZSharp.CGCompiler
             //code.Add(CG.Object(TypeSystem.Void));
             //code.Add(CG.Cast());
 
-            Emit(code);
+            if (expressionStatement.Expression is not RDefinition)
+                Emit(code);
         }
 
         private void Compile(RImport import)
