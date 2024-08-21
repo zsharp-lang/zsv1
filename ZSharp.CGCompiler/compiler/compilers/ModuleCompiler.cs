@@ -54,14 +54,20 @@ namespace ZSharp.CGCompiler
 
         private Global Compile(RLetDefinition let)
         {
-            //throw new NotImplementedException();
-
             var @global = new Global(let.Name ?? "??");
 
             if (let.Type is not null)
                 @global.Type = Context.Compile(let.Type);
 
             global.Initializer = Context.Compile(let.Value);
+
+            Emit([
+                CG.Object(@global),
+                CG.Dup(),
+
+                CG.Set(global.Name),
+                CG.Definition(),
+                ]);
 
             return @global;
         }
