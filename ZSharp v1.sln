@@ -27,12 +27,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.CGRuntime", "ZSharp.
 		{50A7F0CE-AFEE-418E-89E3-96F41D45BF8A} = {50A7F0CE-AFEE-418E-89E3-96F41D45BF8A}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.CGCompiler", "ZSharp.CGCompiler\ZSharp.CGCompiler.csproj", "{4EF9F954-41F4-4AB3-9A90-06A565BF01A5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.CGCompiler", "ZSharp.CGCompiler\ZSharp.CGCompiler.csproj", "{4EF9F954-41F4-4AB3-9A90-06A565BF01A5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{50A7F0CE-AFEE-418E-89E3-96F41D45BF8A} = {50A7F0CE-AFEE-418E-89E3-96F41D45BF8A}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler", "ZSharp.Compiler\ZSharp.Compiler.csproj", "{678634DE-CD65-4020-AB16-CCC77E013299}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.Compiler", "ZSharp.Compiler\ZSharp.Compiler.csproj", "{678634DE-CD65-4020-AB16-CCC77E013299}"
 	ProjectSection(ProjectDependencies) = postProject
 		{0B6D1C48-03D7-44F7-89FE-CDF81028C429} = {0B6D1C48-03D7-44F7-89FE-CDF81028C429}
 		{50A7F0CE-AFEE-418E-89E3-96F41D45BF8A} = {50A7F0CE-AFEE-418E-89E3-96F41D45BF8A}
@@ -44,9 +44,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.Compiler.Objects", "
 		{50A7F0CE-AFEE-418E-89E3-96F41D45BF8A} = {50A7F0CE-AFEE-418E-89E3-96F41D45BF8A}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Runtime", "ZSharp.Runtime\ZSharp.Runtime.csproj", "{82DC7AA6-D066-4F6A-A85F-C494B6C4F59E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.Runtime", "ZSharp.Runtime\ZSharp.Runtime.csproj", "{82DC7AA6-D066-4F6A-A85F-C494B6C4F59E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.Core", "ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj", "{0B6D1C48-03D7-44F7-89FE-CDF81028C429}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.Compiler.Core", "ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj", "{0B6D1C48-03D7-44F7-89FE-CDF81028C429}"
 	ProjectSection(ProjectDependencies) = postProject
 		{12DC3C9B-4067-4907-B969-57AB4303B7FB} = {12DC3C9B-4067-4907-B969-57AB4303B7FB}
 	EndProjectSection
