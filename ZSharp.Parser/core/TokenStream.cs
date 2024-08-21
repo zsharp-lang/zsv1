@@ -8,8 +8,11 @@ namespace ZSharp.Parser
         {
             private readonly Queue<Token>? cache = tokenStream.cache;
             private readonly TokenStream tokenStream = tokenStream;
+            private readonly bool cacheEnabled = tokenStream.cacheEnabled;
 
-            public bool Committing { get; private set; } = true;
+            private bool alive = true;
+
+            public bool Committing { get; private set; } = false;
 
             public void Commit() => Committing = true;
 
@@ -26,14 +29,23 @@ namespace ZSharp.Parser
 
             private void SetCacheState()
             {
-                if (Committing) cache?.Clear();
-                tokenStream.cache = cache;
+                if (!alive) return;
+
+                alive = false;
+                Queue<Token>? temp = cache;
+
+                if (!Committing)
+                    foreach (var token in tokenStream.cache ?? [])
+                        (temp ??= []).Enqueue(token);
+                tokenStream.cache = temp;
+                tokenStream.cacheEnabled = cacheEnabled;
             }
         }
 
         private readonly IEnumerator<Token> tokens;
 
         private Queue<Token>? cache = null;
+        private bool cacheEnabled = false;
 
         public bool HasTokens { get; private set; } = true;
 
@@ -48,17 +60,23 @@ namespace ZSharp.Parser
         public TokenStreamPosition LookAhead()
         {
             var position = new TokenStreamPosition(this);
+            cacheEnabled = true;
             cache = [];
             return position;
         }
 
         public Token PeekToken()
-            => tokens.Current;
+            => (cache?.Count ?? 0) > 0 ? cache!.Peek() : tokens.Current;
 
         public Token Advance()
         {
+            if ((cache?.Count ?? 0) > 0)
+                return cache!.Dequeue();
+
             Token result = tokens.Current;
-            cache?.Enqueue(result);
+
+            if (cacheEnabled)
+                cache?.Enqueue(result);
 
             if (SkipWhitespaces)
                 while ((HasTokens = tokens.MoveNext()) && tokens.Current.Is(TokenCategory.WhiteSpace)) ;
