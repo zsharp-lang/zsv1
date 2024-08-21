@@ -3,10 +3,10 @@ using ZSharp.RAST;
 
 namespace ZSharp.Compiler
 {
-    public sealed class CodeGenerator(ZSCompiler compiler)
+    internal sealed class CodeGenerator(IRGenerator compiler)
         : ICodeGenerator
     {
-        private readonly ZSCompiler compiler = compiler;
+        private readonly IRGenerator compiler = compiler;
 
         /// <summary>
         /// The assigment (=) operator.
@@ -14,7 +14,7 @@ namespace ZSharp.Compiler
         /// <param name="target"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public CTObject Assign(CTObject target, CTObject value)
+        public CGObject Assign(CGObject target, CGObject value)
         {
             if (target is ICTReadable readable)
                 if (readable.Type is IRTAssignable rtWritable)
@@ -34,7 +34,7 @@ namespace ZSharp.Compiler
         /// <param name="callee"></param>
         /// <param name="arguments"></param>
         /// <returns></returns>
-        public CTObject Call(CTObject callee, Argument[] arguments)
+        public CGObject Call(CGObject callee, Argument[] arguments)
         {
             if (callee is ICTReadable readable)
                 if (readable.Type is IRTCallable rtCallable)
@@ -56,7 +56,7 @@ namespace ZSharp.Compiler
         /// <param name="instanceTarget"></param>
         /// <param name="targetType"></param>
         /// <returns></returns>
-        public CTObject Cast(CTObject instanceTarget, CTObject targetType)
+        public CGObject Cast(CGObject instanceTarget, CGObject targetType)
         {
             if (instanceTarget is ICTReadable readable)
                 if (readable.Type is IRTTypeCast rtTypeCast)
@@ -80,7 +80,7 @@ namespace ZSharp.Compiler
         /// <param name="instanceTarget"></param>
         /// <param name="index"></param>
         /// <returns></returns>
-        public CTObject Index(CTObject instanceTarget, Argument[] index)
+        public CGObject Index(CGObject instanceTarget, Argument[] index)
         {
             throw new NotImplementedException();
 
@@ -101,7 +101,7 @@ namespace ZSharp.Compiler
         /// <param name="index"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public CTObject Index(CTObject instanceTarget, Argument[] index, CTObject value)
+        public CGObject Index(CGObject instanceTarget, Argument[] index, CGObject value)
         {
             throw new NotImplementedException();
 
@@ -121,7 +121,7 @@ namespace ZSharp.Compiler
         /// <param name="instance"></param>
         /// <param name="index"></param>
         /// <returns></returns>
-        public CTObject Member(CTObject instance, MemberIndex index)
+        public CGObject Member(CGObject instance, MemberIndex index)
         {
             throw new NotImplementedException();
         }
@@ -133,7 +133,7 @@ namespace ZSharp.Compiler
         /// <param name="index"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public CTObject Member(CTObject instance, MemberIndex index, CTObject value)
+        public CGObject Member(CGObject instance, MemberIndex index, CGObject value)
         {
             throw new NotImplementedException();
         }
@@ -144,7 +144,7 @@ namespace ZSharp.Compiler
         /// <param name="instance"></param>
         /// <param name="member"></param>
         /// <returns></returns>
-        public CTObject Member(CTObject instance, MemberName member)
+        public CGObject Member(CGObject instance, MemberName member)
         {
             if (instance is ICTReadable readable)
                 if (readable.Type is IRTGetMember<MemberName> rtGetMember)
@@ -165,43 +165,48 @@ namespace ZSharp.Compiler
         /// <param name="member"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public CTObject Member(CTObject instance, MemberName member, CTObject value)
+        public CGObject Member(CGObject instance, MemberName member, CGObject value)
         {
             throw new NotImplementedException();
         }
 
-        public CTObject Literal(object value, RLiteralType literalType, CTObject? unitType)
+        public CGObject Literal(object value, RLiteralType literalType, CGObject? unitType)
         {
-            throw new NotImplementedException();
-            //(IR.VM.Put instruction, ZSType type) = literalType switch
-            //{
-            //    RLiteralType.String => (new IR.VM.PutString((string)value!), VM.TypeSystem.String),
-            //    RLiteralType.Integer => throw new NotImplementedException(),
-            //    RLiteralType.Real => throw new NotImplementedException(),
-            //    RLiteralType.Boolean => throw new NotImplementedException(),
-            //    RLiteralType.Null => throw new NotImplementedException(),
-            //    RLiteralType.Unit => throw new NotImplementedException(),
-            //    RLiteralType.I8 => throw new NotImplementedException(),
-            //    RLiteralType.I16 => throw new NotImplementedException(),
-            //    RLiteralType.I32 => throw new NotImplementedException(),
-            //    RLiteralType.I64 => throw new NotImplementedException(),
-            //    RLiteralType.U8 => throw new NotImplementedException(),
-            //    RLiteralType.U16 => throw new NotImplementedException(),
-            //    RLiteralType.U32 => throw new NotImplementedException(),
-            //    RLiteralType.U64 => throw new NotImplementedException(),
-            //    RLiteralType.F32 => throw new NotImplementedException(),
-            //    RLiteralType.F64 => throw new NotImplementedException(),
-            //    RLiteralType.I => throw new NotImplementedException(),
-            //    RLiteralType.U => throw new NotImplementedException(),
-            //    RLiteralType.Imaginary => throw new NotImplementedException(),
-            //    _ => throw new NotImplementedException(),
-            //};
-            //CTObject result = new Code(1, [instruction], type);
+            //throw new NotImplementedException();
+            (IR.VM.Put instruction, IRType type) = literalType switch
+            {
+                RLiteralType.String => (new IR.VM.PutString((string)value!), compiler.RuntimeModule.TypeSystem.String),
+                RLiteralType.Integer => throw new NotImplementedException(),
+                RLiteralType.Real => throw new NotImplementedException(),
+                RLiteralType.Boolean => throw new NotImplementedException(),
+                RLiteralType.Null => throw new NotImplementedException(),
+                RLiteralType.Unit => throw new NotImplementedException(),
+                RLiteralType.I8 => throw new NotImplementedException(),
+                RLiteralType.I16 => throw new NotImplementedException(),
+                RLiteralType.I32 => throw new NotImplementedException(),
+                RLiteralType.I64 => throw new NotImplementedException(),
+                RLiteralType.U8 => throw new NotImplementedException(),
+                RLiteralType.U16 => throw new NotImplementedException(),
+                RLiteralType.U32 => throw new NotImplementedException(),
+                RLiteralType.U64 => throw new NotImplementedException(),
+                RLiteralType.F32 => throw new NotImplementedException(),
+                RLiteralType.F64 => throw new NotImplementedException(),
+                RLiteralType.I => throw new NotImplementedException(),
+                RLiteralType.U => throw new NotImplementedException(),
+                RLiteralType.Imaginary => throw new NotImplementedException(),
+                _ => throw new NotImplementedException(),
+            };
+            CGObject result = new CodeObject(new()
+            {
+                Instructions = [instruction],
+                Types = [type],
+                MaxStackSize = 1
+            });
 
-            //if (unitType is not null)
-            //    result = Call(unitType, [new(result)]);
+            if (unitType is not null)
+                result = Call(unitType, [new(result)]);
 
-            //return result;
+            return result;
         }
     }
 }

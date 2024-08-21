@@ -22,12 +22,15 @@ namespace ZSharp.Compiler
 
         private readonly CodeGenerator CG;
 
+        internal IR.RuntimeModule RuntimeModule { get; }
+
         ICodeGenerator ICompiler.CG => CG;
 
         internal Runtime Runtime => runtime;
 
-        public IRGenerator()
+        public IRGenerator(IR.RuntimeModule runtimeModule)
         {
+            RuntimeModule = runtimeModule;
             CG = new(this);
             runtime = new(CG, this, this);
         }
