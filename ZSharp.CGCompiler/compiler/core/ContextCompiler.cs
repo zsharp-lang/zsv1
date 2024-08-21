@@ -68,7 +68,7 @@ namespace ZSharp.CGCompiler
             using (Context.For(Result))
             {
                 using (Context.Of(this))
-                    Compile(result);
+                    Compile(Result);
 
                 return Result;
             }
