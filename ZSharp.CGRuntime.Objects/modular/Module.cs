@@ -5,6 +5,8 @@
     {
         public IR.Module? IR { get; set; }
 
+        public RTFunction InitFunction { get; } = new(null);
+
         public string? Name { get; set; } = name;
 
         public CGCode Content { get; } = [];
