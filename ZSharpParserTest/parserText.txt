@@ -1,0 +1,3 @@
+﻿let myVar = "foo";
+
+let otherVar = "other";

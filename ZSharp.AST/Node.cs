@@ -1,12 +1,11 @@
 ﻿namespace ZSharp.AST
 {
-    public class Node<T> where T : TokenInfo
+    public abstract class Node(TokenInfo? tokenInfo = null)
     {
-        public T TokenInfo { get; }
+        public TokenInfo? TokenInfo { get; init; } = tokenInfo;
 
-        public Node(T tokenInfo)
-        {
-            TokenInfo = tokenInfo;
-        }
+        protected T As<T>()
+            where T : TokenInfo
+            => (TokenInfo as T)!;
     }
 }

@@ -55,6 +55,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Tokenizer", "ZSharp.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharpTokenizerTest", "ZSharpTokenizerTest\ZSharpTokenizerTest.csproj", "{DFE6B315-DF3D-4EE9-990C-068404AB9F83}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Parser", "ZSharp.Parser\ZSharp.Parser.csproj", "{8523CD79-8272-4331-A49F-947B0269A42D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharpParserTest", "ZSharpParserTest\ZSharpParserTest.csproj", "{0DC3D462-5240-4670-A5C2-04FCD7093F2E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +129,14 @@ Global
 		{DFE6B315-DF3D-4EE9-990C-068404AB9F83}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DFE6B315-DF3D-4EE9-990C-068404AB9F83}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DFE6B315-DF3D-4EE9-990C-068404AB9F83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8523CD79-8272-4331-A49F-947B0269A42D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8523CD79-8272-4331-A49F-947B0269A42D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8523CD79-8272-4331-A49F-947B0269A42D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8523CD79-8272-4331-A49F-947B0269A42D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0DC3D462-5240-4670-A5C2-04FCD7093F2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0DC3D462-5240-4670-A5C2-04FCD7093F2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0DC3D462-5240-4670-A5C2-04FCD7093F2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0DC3D462-5240-4670-A5C2-04FCD7093F2E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
