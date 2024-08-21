@@ -2,6 +2,8 @@
 using ZSharp.Parser;
 using ZSharp.Tokenizer;
 
+using static MyParsers;
+
 
 using (StreamReader stream = File.OpenText("./parserText.txt"))
 {
@@ -10,14 +12,7 @@ using (StreamReader stream = File.OpenText("./parserText.txt"))
 
     var documentParser = new DocumentParser();
 
-    documentParser.AddKeywordParser(
-        "let", parser =>
-        {
-            var expression = MyParsers.ParseLetExpression(parser);
-            parser.Eat(ZSharp.Text.TokenType.Semicolon);
-            return new ExpressionStatement(expression);
-        }
-    );
+    documentParser.AddKeywordParser("let", ExpressionStatement(ParseLetExpression));
 
     var documentNode = documentParser.Parse(parser);
 

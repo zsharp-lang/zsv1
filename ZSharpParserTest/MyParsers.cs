@@ -24,4 +24,12 @@ internal static class MyParsers
             Type = type,
         };
     }
+
+    public static ParserFunction<Statement> ExpressionStatement(Func<Parser, Expression> fn)
+        => parser => 
+        {
+            var expression = fn(parser);
+            parser.Eat(TokenType.Semicolon);
+            return new ExpressionStatement(expression);
+        };
 }
