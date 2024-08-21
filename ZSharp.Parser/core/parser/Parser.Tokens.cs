@@ -7,21 +7,21 @@ namespace ZSharp.Parser
 		public bool HasTokens => TokenStream.HasTokens;
 
 		public Token Eat(TokenType type)
-			=> Is(type) ? TokenStream.Advance() : throw new Exception();
+			=> Is(type) ? TokenStream.Advance() : throw new ParseError();
 
 		public bool Eat(TokenType type, out Token token)
 		{
-			if (!Is(type)) throw new Exception();
+			if (!Is(type)) throw new ParseError();
 			token = TokenStream.Advance();
 			return true;
 		}
 
 		public Token Eat(string value)
-			=> Is(value) ? TokenStream.Advance() : throw new Exception();
+			=> Is(value) ? TokenStream.Advance() : throw new ParseError();
 
         public bool Eat(string value, out Token token)
         {
-            if (!Is(value)) throw new Exception();
+            if (!Is(value)) throw new ParseError();
 			token = TokenStream.Advance();
             return true;
         }
