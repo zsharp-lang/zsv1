@@ -32,7 +32,7 @@ namespace ZSharp.Parser
                 {
                     importedNames.Add(ParseImportedName(parser));
 
-                    if (parser.Is(Text.TokenType.Comma, eat: true))
+                    while (!parser.Is(Text.TokenType.RCurly) && parser.Is(Text.TokenType.Comma, eat: true))
                         importedNames.Add(ParseImportedName(parser));
                 }
 
