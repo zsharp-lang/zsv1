@@ -17,3 +17,14 @@ let myVar = "foo" + "bar" ** "goo" * "baz"
 let otherVar = "other";
 
 "expressionStatement!";
+
+"CALLABLE"();
+
+"CALLABLE"("ARG1");
+"CALLABLE"("ARG1", "ARG2");
+
+
+"CALLABLE"("ARG1", "ARG2", arg3: "ARG3");
+"CALLABLE"("ARG1", "ARG2", arg3: "ARG3", arg4: "ARG4");
+
+"CALLABLE"(arg1: "ARG1", "ARG2");
