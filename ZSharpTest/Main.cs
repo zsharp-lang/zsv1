@@ -1,140 +1,199 @@
 ﻿using ZSharp.Compiler;
+using ZSharp.Parser;
 using ZSharp.RAST;
+using ZSharp.Text;
+using ZSharp.Tokenizer;
 
-var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
 
 #region RAST
 
-/*
- * The code below represents the RAST of the following Z# code:
- * 
- * let stdIO = "std:io";
- * import { print } from stdIO;
- * 
- * fun id(x: string): string {
- *   return x;
- * }
- * 
- * let message = id("Hello, World!");
- * print(message);
- * 
- * fun foo(x: string): void {
- *   print(x);
- * }
- * 
- * foo("Hello, foo!");
- */
+///*
+// * The code below represents the RAST of the following Z# code:
+// * 
+// * let stdIO = "std:io";
+// * import { print } from stdIO;
+// * 
+// * fun id(x: string): string {
+// *   return x;
+// * }
+// * 
+// * let message = id("Hello, World!");
+// * print(message);
+// * 
+// * fun foo(x: string): void {
+// *   print(x);
+// * }
+// * 
+// * foo("Hello, foo!");
+// */
 
 
-//RId stdIO;
-//RId print;
-//RId id;
-//RId id_x;
-//RId message;
-//RId foo_x;
-//RId foo;
-var rastNodes = new RStatement[]
-{
-    //// let stdIO = "std:io";
-    //new RLetStatement(
-    //    new RNamePattern(stdIO = new("stdIO")),
-    //    null,
-    //    RLiteral.String("std:io")
-    //),
+////RId stdIO;
+////RId print;
+////RId id;
+////RId id_x;
+////RId message;
+////RId foo_x;
+////RId foo;
+//var rastNodes = new RStatement[]
+//{
+//    //// let stdIO = "std:io";
+//    //new RLetStatement(
+//    //    new RNamePattern(stdIO = new("stdIO")),
+//    //    null,
+//    //    RLiteral.String("std:io")
+//    //),
 
-    new RExpressionStatement(
-        new RLetDefinition(
-            "myGlobal", 
-            null,
-            value: RLiteral.String("Hello, Global!")
-        )
-    ),
+//    new RExpressionStatement(
+//        new RLetDefinition(
+//            "myGlobal", 
+//            null,
+//            value: RLiteral.String("Hello, Global!")
+//        )
+//    ),
 
-    //// import { print } from stdIO;
-    //new RImport(RLiteral.String("std:io"))
-    //{
-    //    Targets = [
-    //        new(print = new("print"))
-    //    ]
-    //},
+//    //// import { print } from stdIO;
+//    //new RImport(RLiteral.String("std:io"))
+//    //{
+//    //    Targets = [
+//    //        new(print = new("print"))
+//    //    ]
+//    //},
 
-    //new RExpressionStatement(
-    //    new RFunction(
-    //        id = new("id"),
-    //        new()
-    //        {
-    //            Args = [
-    //                new(id_x = new("x"), globalString, null)
-    //            ]
-    //        })
-    //    {
-    //        ReturnType = globalString,
-    //        Body = new RReturn(id_x)
-    //    }
-    //),
+//    //new RExpressionStatement(
+//    //    new RFunction(
+//    //        id = new("id"),
+//    //        new()
+//    //        {
+//    //            Args = [
+//    //                new(id_x = new("x"), globalString, null)
+//    //            ]
+//    //        })
+//    //    {
+//    //        ReturnType = globalString,
+//    //        Body = new RReturn(id_x)
+//    //    }
+//    //),
 
-    //// let message = "Hello, World!";
-    //new RLetStatement(
-    //    new RNamePattern(message = new("message")),
-    //    null, //globals["string"],
-    //    new RCall(
-    //        id,
-    //        [
-    //            new(RLiteral.String("Hello, World!"))
-    //        ]
-    //    )
-    //),
+//    //// let message = "Hello, World!";
+//    //new RLetStatement(
+//    //    new RNamePattern(message = new("message")),
+//    //    null, //globals["string"],
+//    //    new RCall(
+//    //        id,
+//    //        [
+//    //            new(RLiteral.String("Hello, World!"))
+//    //        ]
+//    //    )
+//    //),
 
-    //// print(message);
-    //new RExpressionStatement(
-    //    new RCall(print,
-    //    [
-    //        new(message)
-    //    ])
-    //),
+//    //// print(message);
+//    //new RExpressionStatement(
+//    //    new RCall(print,
+//    //    [
+//    //        new(message)
+//    //    ])
+//    //),
 
-    //// print("Hello");
-    //new RExpressionStatement(
-    //    new RCall(print,
-    //    [
-    //        new(RLiteral.String("Hello"))
-    //    ])
-    //),
+//    //// print("Hello");
+//    //new RExpressionStatement(
+//    //    new RCall(print,
+//    //    [
+//    //        new(RLiteral.String("Hello"))
+//    //    ])
+//    //),
 
-    //// fun foo(x: string): void { print(x); }
-    //new RExpressionStatement(
-    //    new RFunction(
-    //        foo = new("foo"),
-    //        new() {
-    //            Args =
-    //            [
-    //                new(foo_x = new("x"), globalString, null)
-    //            ]
-    //        })
-    //    {
-    //        ReturnType = globalVoid,
-    //        Body = new RReturn(
-    //            new RCall(print,
-    //            [
-    //                new(foo_x)
-    //            ])
-    //        )
-    //    }
-    //),
+//    //// fun foo(x: string): void { print(x); }
+//    //new RExpressionStatement(
+//    //    new RFunction(
+//    //        foo = new("foo"),
+//    //        new() {
+//    //            Args =
+//    //            [
+//    //                new(foo_x = new("x"), globalString, null)
+//    //            ]
+//    //        })
+//    //    {
+//    //        ReturnType = globalVoid,
+//    //        Body = new RReturn(
+//    //            new RCall(print,
+//    //            [
+//    //                new(foo_x)
+//    //            ])
+//    //        )
+//    //    }
+//    //),
 
-    //// foo("Hello, foo!");
-    //new RExpressionStatement(
-    //    new RCall(foo,
-    //    [
-    //        new(RLiteral.String("Hello, foo!"))
-    //    ])
-    //)
-};
+//    //// foo("Hello, foo!");
+//    //new RExpressionStatement(
+//    //    new RCall(foo,
+//    //    [
+//    //        new(RLiteral.String("Hello, foo!"))
+//    //    ])
+//    //)
+//};
 
 #endregion
+
+
+const string FileName = "test.zs";
+
+
+#region Parsing
+
+ZSharp.AST.Document documentNode;
+using (StreamReader stream = File.OpenText(FileName))
+{
+    var parser = new Parser(Tokenizer.Tokenize(new(stream)));
+    ExpressionParser expressionParser;
+    parser.AddParserFor(expressionParser = new ExpressionParser());
+
+    var documentParser = new DocumentParser();
+
+    //documentParser.AddKeywordParser("let", ParseLetStatement);
+
+    expressionParser.Terminal(
+        TokenType.String, 
+        token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.String)
+    );
+
+    expressionParser.InfixL("+", 50);
+    expressionParser.InfixL("*", 70);
+    expressionParser.InfixL("**", 80);
+
+    expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
+
+    documentParser.AddKeywordParser(LangParser.Keywords.Import, LangParser.ParseImportStatement);
+
+    expressionParser.Separator(TokenType.Comma);
+    expressionParser.Separator(TokenType.RParen);
+    expressionParser.Separator(TokenType.Semicolon);
+
+    documentNode = documentParser.Parse(parser);
+
+    Console.WriteLine($"Finished parsing document with {documentNode.Statements.Count} statements!");
+}
+
+#endregion
+
+
+#region Resolving
+
+
+var rastNodes = ZSharp.Resolver.Resolver.Resolve(documentNode).ToArray();
+
+
+#endregion
+
+
+#region Compilation
+
+var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
 
 
 var cgCode = compiler.CompileCG(rastNodes);
 var module = compiler.CompileIR(cgCode);
 
 Console.ReadLine();
+
+#endregion
