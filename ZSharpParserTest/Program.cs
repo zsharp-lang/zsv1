@@ -16,7 +16,7 @@ using (StreamReader stream = File.OpenText("./parserText.txt"))
 
     documentParser.AddKeywordParser("let", ParseLetStatement);
 
-    expressionParser.Terminal(TokenType.String, token => new Literal(token.Value, LiteralType.String));
+    expressionParser.Terminal(TokenType.String, token => new LiteralExpression(token.Value, LiteralType.String));
 
     expressionParser.InfixL("+", 50);
     expressionParser.InfixL("*", 70);
