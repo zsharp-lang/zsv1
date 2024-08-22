@@ -8,7 +8,7 @@ namespace ZSharp.Parser
         {
             private readonly Queue<Token>? cache = tokenStream.cache;
             private readonly TokenStream tokenStream = tokenStream;
-            private readonly bool cacheEnabled = tokenStream.cacheEnabled;
+            private readonly bool lookingAhead = tokenStream.lookingAhead;
 
             private bool alive = true;
 
@@ -38,14 +38,14 @@ namespace ZSharp.Parser
                     foreach (var token in tokenStream.cache ?? [])
                         (temp ??= []).Enqueue(token);
                 tokenStream.cache = temp;
-                tokenStream.cacheEnabled = cacheEnabled;
+                tokenStream.lookingAhead = lookingAhead;
             }
         }
 
         private readonly IEnumerator<Token> tokens;
 
         private Queue<Token>? cache = null;
-        private bool cacheEnabled = false;
+        private bool lookingAhead = false;
 
         public bool HasTokens { get; private set; } = true;
 
@@ -60,22 +60,26 @@ namespace ZSharp.Parser
         public TokenStreamPosition LookAhead()
         {
             var position = new TokenStreamPosition(this);
-            cacheEnabled = true;
+            lookingAhead = true;
             cache = [];
             return position;
         }
 
         public Token PeekToken()
-            => (cache?.Count ?? 0) > 0 ? cache!.Peek() : tokens.Current;
+            => lookingAhead 
+            ? tokens.Current 
+            : (cache?.Count ?? 0) > 0 
+                ? cache!.Peek() 
+                : tokens.Current;
 
         public Token Advance()
         {
-            if ((cache?.Count ?? 0) > 0)
+            if (!lookingAhead && (cache?.Count ?? 0) > 0)
                 return cache!.Dequeue();
 
             Token result = tokens.Current;
 
-            if (cacheEnabled)
+            if (lookingAhead)
                 cache?.Enqueue(result);
 
             if (SkipWhitespaces)
