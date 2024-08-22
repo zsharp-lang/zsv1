@@ -6,6 +6,8 @@ namespace ZSharp.Parser
     {
 		public bool HasTokens => TokenStream.HasTokens;
 
+		public Token Token => HasTokens ? TokenStream.PeekToken() : throw new ParseError();
+
 		public Token Eat(TokenType type)
 			=> Is(type) ? TokenStream.Advance() : throw new ParseError();
 
