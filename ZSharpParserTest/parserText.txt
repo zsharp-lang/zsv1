@@ -1,3 +1,19 @@
-﻿let myVar = "foo";
+﻿import { a as A, b as B } from "std:test";
+
+import "std:test";
+
+import "std:test" as test;
+
+import {} from "std:test";
+
+import {a as A} from "std:test";
+
+import {a, b} from "std:test";
+
+let myVar = "foo" + "bar" ** "goo" * "baz"
+
+, yourVar = "it's actually mine";
 
 let otherVar = "other";
+
+"expressionStatement!";
