@@ -11,4 +11,8 @@
     <Folder Include="tokens\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Text\ZSharp.Text.csproj" />
+  </ItemGroup>
+
 </Project>
