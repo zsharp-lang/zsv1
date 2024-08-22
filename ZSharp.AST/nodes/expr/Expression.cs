@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.AST
 {
-    public abstract class Expression : Node
+    public abstract class Expression(TokenInfo? tokenInfo = null) : Node(tokenInfo)
     {
 
     }
