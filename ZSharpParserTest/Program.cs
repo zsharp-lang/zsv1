@@ -1,4 +1,6 @@
-﻿using ZSharp.Parser;
+﻿using ZSharp.AST;
+using ZSharp.Parser;
+using ZSharp.Text;
 using ZSharp.Tokenizer;
 
 using static MyParsers;
@@ -7,25 +9,18 @@ using static MyParsers;
 using (StreamReader stream = File.OpenText("./parserText.txt"))
 {
     var parser = new Parser(Tokenizer.Tokenize(new(stream)));
-    parser.AddParserFor(new ExpressionParser());
+    ExpressionParser expressionParser;
+    parser.AddParserFor(expressionParser = new ExpressionParser());
 
     var documentParser = new DocumentParser();
 
-    documentParser.AddKeywordParser("let", ExpressionStatement(ParseLetExpression));
-    
-    using (var lookAhead = parser.LookAhead())
-    {
-        parser.Eat("let");
+    documentParser.AddKeywordParser("let", ParseLetStatement);
 
-        using (var lookAhead2 = parser.LookAhead())
-        {
-            parser.Eat(ZSharp.Text.TokenType.Identifier);
-        }
+    expressionParser.Terminal(TokenType.String, token => new Literal(token.Value, LiteralType.String));
 
-        lookAhead.Restore();
-    }
+
+
     var documentNode = documentParser.Parse(parser);
-
 
     Console.WriteLine($"Finished parsing document with {documentNode.Statements.Count} statements!");
 }
