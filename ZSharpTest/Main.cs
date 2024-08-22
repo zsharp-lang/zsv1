@@ -194,6 +194,6 @@ var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
 var cgCode = compiler.CompileCG(rastNodes);
 var module = compiler.CompileIR(cgCode);
 
-Console.ReadLine();
+Console.WriteLine("Execution finished!");
 
 #endregion
