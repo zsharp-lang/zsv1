@@ -19,8 +19,6 @@ namespace ZSharp.Parser
         }
 
         protected override Statement ParseDefaultContextItem(Parser parser)
-        {
-            throw new NotImplementedException();
-        }
+            => LangParser.ParseExpressionStatement(parser);
     }
 }
