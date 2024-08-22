@@ -154,7 +154,7 @@ namespace ZSharp.Tokenizer
 
                     if (Operators.Contains(c))
                     {
-                        while (Operators.Contains(c = stream.Peek()))
+                        while (Operators.Contains(stream.Peek()))
                             sb.Append(stream.Read());
 
                         return new(TokenType.Operator, sb.ToString(), new(start, stream.Position));
