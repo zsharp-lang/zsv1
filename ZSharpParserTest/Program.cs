@@ -22,8 +22,12 @@ using (StreamReader stream = File.OpenText("./parserText.txt"))
     expressionParser.InfixL("*", 70);
     expressionParser.InfixL("**", 80);
 
+    expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
+
     documentParser.AddKeywordParser(LangParser.Keywords.Import, LangParser.ParseImportStatement);
 
+    expressionParser.Separator(TokenType.Comma);
+    expressionParser.Separator(TokenType.RParen);
     expressionParser.Separator(TokenType.Semicolon);
     
     var documentNode = documentParser.Parse(parser);
