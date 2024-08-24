@@ -41,7 +41,7 @@
         Enter,
         Leave,
 
-        Definition,
+        Compile,
 
         Dup,
     }

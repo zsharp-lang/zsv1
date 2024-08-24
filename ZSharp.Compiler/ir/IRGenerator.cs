@@ -37,19 +37,19 @@ namespace ZSharp.Compiler
 
         public IR.Module Run(CGObjects.Module module)
         {
-            var ir = Definition(module);
+            CompileObject(module);
+
             Run();
-            return ir;
+
+            return module.IR ?? throw new Exception("Compilation failed!");
         }
 
         public void Run()
         {
-            while (objectQueue.Count > 0)
-                Compile(objectQueue.Dequeue());
+            foreach (var objects in dependencyGraph)
+                foreach (var @object in objects)
+                    Compile(@object);
         }
-
-        public void Enqueue(CGObject @object)
-            => objectQueue.Enqueue(@object);
 
         public CGObject CreateInjector(CGRuntime.HLVM.Injector injector)
             => new CodeObject(new(injector()));

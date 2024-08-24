@@ -36,7 +36,7 @@ namespace ZSharp.CGCompiler
 
             Emit([
                 CG.Object(Result),
-                CG.Definition()
+                CG.Compile()
                 ]);
         }
 
@@ -66,7 +66,7 @@ namespace ZSharp.CGCompiler
                 CG.Dup(),
 
                 CG.Set(global.Name),
-                CG.Definition(),
+                CG.Compile(),
                 ]);
 
             return @global;

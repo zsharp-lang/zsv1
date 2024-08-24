@@ -103,7 +103,7 @@ namespace ZSharp.CGRuntime
                 HLVM.Enter => new(OpCode.Enter),
                 HLVM.Leave => new(OpCode.Leave),
 
-                HLVM.Definition => new(OpCode.Definition),
+                HLVM.Compile => new(OpCode.Compile),
 
                 HLVM.Dup => new(OpCode.Dup),
 

@@ -8,7 +8,7 @@
         public static HLVM.Inject Inject(Func<IR.VM.Instruction> injector)
             => new(injector);
 
-        public static HLVM.Definition Definition()
+        public static HLVM.Compile Compile()
             => new();
 
         public static HLVM.Evaluate Evaluate()

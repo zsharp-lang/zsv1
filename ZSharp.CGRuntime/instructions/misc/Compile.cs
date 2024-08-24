@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.CGRuntime.HLVM
 {
-    public sealed class Definition : Instruction
+    public sealed class Compile : Instruction
     {
     }
 }

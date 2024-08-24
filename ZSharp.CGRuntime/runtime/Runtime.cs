@@ -3,7 +3,7 @@
     public sealed class Runtime(
         ICodeGenerator codeGenerator, 
         ICodeInjector codeInjector,
-        IDefinitionHandler definitionHandler
+        ICompileHandler definitionHandler
         )
     {
         private readonly Stack<Frame> frames = new();
@@ -13,7 +13,7 @@
 
         public ICodeInjector Injector { get; init; } = codeInjector;
 
-        public IDefinitionHandler DefinitionHandler { get; init; } = definitionHandler;
+        public ICompileHandler DefinitionHandler { get; init; } = definitionHandler;
 
         public IErrorHandler ErrorHandler { get; set; } = new DefaultErrorHandler();
 
@@ -115,8 +115,8 @@
                     Frame.Put(Injector.CreateInjector(instruction.As<HLVM.Injector>())); break;
                 case LLVM.OpCode.Enter: context.Enter(Frame.Pop()); break;
                 case LLVM.OpCode.Leave: context.Leave(); break;
-                case LLVM.OpCode.Definition:
-                    DefinitionHandler.Define(Frame.Pop());
+                case LLVM.OpCode.Compile:
+                    DefinitionHandler.CompileObject(Frame.Pop());
                     break;
                 case LLVM.OpCode.Dup: Frame.Put(Frame.Top()); break;
                 default:

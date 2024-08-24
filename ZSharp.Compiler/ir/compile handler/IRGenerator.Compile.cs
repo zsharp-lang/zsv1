@@ -4,20 +4,54 @@ using ZSharp.CGRuntime;
 namespace ZSharp.Compiler
 {
     internal partial class IRGenerator
-		: IDefinitionHandler
+		: ICompileHandler
     {
-		public void Define(CGObject @object)
-			=> Definition(@object);
+		public void CompileObject(CGObject @object)
+		{
+			RegisterObject(@object);
 
-		private IR.IRObject Definition(CGObject @object)
+			Compile(@object);
+        }
+
+		private IR.IRObject Compile(CGObject @object)
 			=> @object switch
 			{
-				Global global => Definition(global),
+				Global global => Compile(global),
 				Module module => Definition(module),
 				_ => throw new NotImplementedException(),
 			};
 
-		private IR.Global Definition(Global global)
+		private IR.Function Compile(Function function)
+		{
+			if (CurrentlyBuiltObjectState == ObjectState.Uninitialized)
+                using (Initializing(function))
+                    Initialize(function);
+			else if (CurrentlyBuiltObjectState == ObjectState.Initialized)
+				using (Declaring(function))
+					Declare(function);
+			else if (CurrentlyBuiltObjectState == ObjectState.Declared)
+				using (Defining(function))
+					Define(function);
+
+			return function.IR!;
+		}
+
+        private IR.Global Compile(Global global)
+        {
+            if (CurrentlyBuiltObjectState == ObjectState.Uninitialized)
+                using (Initializing(global))
+                    Initialize(global);
+            else if (CurrentlyBuiltObjectState == ObjectState.Initialized)
+                using (Declaring(global))
+                    Declare(global);
+            else if (CurrentlyBuiltObjectState == ObjectState.Declared)
+                using (Defining(global))
+                    Define(global);
+
+            return global.IR!;
+        }
+
+        private IR.Global Compile(Global global)
 		{
 			if (CurrentContext is not Module module)
 				throw new Exception("Global definition must be in a module context");
@@ -59,7 +93,22 @@ namespace ZSharp.Compiler
             return ir;
 		}
 
-		private IR.Module Definition(Module module)
+        private IR.Module Compile(Module module)
+        {
+            if (CurrentlyBuiltObjectState == ObjectState.Uninitialized)
+                using (Initializing(module))
+                    Initialize(module);
+            else if (CurrentlyBuiltObjectState == ObjectState.Initialized)
+                using (Declaring(module))
+                    Declare(module);
+            else if (CurrentlyBuiltObjectState == ObjectState.Declared)
+                using (Defining(module))
+                    Define(module);
+
+            return module.IR!;
+        }
+
+        private IR.Module Definition(Module module)
 		{
 			Module? parent = CurrentContext as Module;
 
