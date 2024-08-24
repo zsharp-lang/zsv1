@@ -15,6 +15,8 @@
     {
         private CGCode? _body;
 
+        public IR.Function? IR { get; set; }
+
         public string? Name { get; set; } = name;
 
         public CGCode Body
