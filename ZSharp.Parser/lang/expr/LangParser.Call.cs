@@ -31,11 +31,11 @@ namespace ZSharp.Parser
 
             List<CallArgument> arguments = [];
 
-            while (!parser.Is(Text.TokenType.RParen))
+            if (!parser.Is(Text.TokenType.RParen))
             {
                 arguments.Add(ParseCallArgument(parser));
 
-                while (!parser.Is(Text.TokenType.RParen) && parser.Is(Text.TokenType.Comma, eat: true))
+                while (parser.Is(Text.TokenType.Comma, eat: true))
                     arguments.Add(ParseCallArgument(parser));
             }
 
