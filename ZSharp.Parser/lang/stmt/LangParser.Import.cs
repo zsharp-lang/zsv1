@@ -1,4 +1,5 @@
 ﻿using ZSharp.AST;
+using ZSharp.Text;
 
 namespace ZSharp.Parser
 {
@@ -24,15 +25,15 @@ namespace ZSharp.Parser
             List<ImportedName>? importedNames = null;
             Expression source;
 
-            if (parser.Is(Text.TokenType.LCurly, eat: true))
+            if (parser.Is(TokenType.LCurly, eat: true))
             {
                 importedNames = [];
 
-                while (!parser.Is(Text.TokenType.RCurly, eat: true))
+                if (!parser.Is(TokenType.RCurly, eat: true))
                 {
                     importedNames.Add(ParseImportedName(parser));
 
-                    while (!parser.Is(Text.TokenType.RCurly) && parser.Is(Text.TokenType.Comma, eat: true))
+                    while (parser.Is(TokenType.Comma, eat: true))
                         importedNames.Add(ParseImportedName(parser));
                 }
 
@@ -47,9 +48,9 @@ namespace ZSharp.Parser
             string? alias = null;
 
             if (parser.Is(Keywords.As, eat: true))
-                alias = parser.Eat(Text.TokenType.Identifier).Value;
+                alias = parser.Eat(TokenType.Identifier).Value;
 
-            var semicolon = parser.Eat(Text.TokenType.Semicolon);
+            var semicolon = parser.Eat(TokenType.Semicolon);
 
             return new(new()
             {
@@ -58,6 +59,7 @@ namespace ZSharp.Parser
             })
             {
                 Alias = alias,
+                Arguments = arguments,
                 ImportedNames = importedNames,
                 Source = source,
             };
