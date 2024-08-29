@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.CGObjects
 {
-    public class CTFunction(string? name) : Function(name)
+    public abstract class CTFunction(string? name) : Function(name)
     {
 
     }
