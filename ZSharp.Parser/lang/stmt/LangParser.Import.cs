@@ -26,13 +26,15 @@ namespace ZSharp.Parser
             if (parser.Is(TokenType.LParen, eat: true))
             {
                 arguments = [];
-                if (!parser.Is(TokenType.RParen, eat: true))
+                if (!parser.Is(TokenType.RParen))
                 {
                     arguments.Add(ParseCallArgument(parser));
 
                     while (parser.Is(TokenType.Comma, eat: true))
                         arguments.Add(ParseCallArgument(parser));
                 }
+
+                parser.Eat(TokenType.RParen);
             }
 
 
