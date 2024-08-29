@@ -22,6 +22,20 @@ namespace ZSharp.Parser
         {
             var importKeyword = parser.Eat(Keywords.Import);
 
+            List<CallArgument>? arguments = null;
+            if (parser.Is(TokenType.LParen, eat: true))
+            {
+                arguments = [];
+                if (!parser.Is(TokenType.RParen, eat: true))
+                {
+                    arguments.Add(ParseCallArgument(parser));
+
+                    while (parser.Is(TokenType.Comma, eat: true))
+                        arguments.Add(ParseCallArgument(parser));
+                }
+            }
+
+
             List<ImportedName>? importedNames = null;
             Expression source;
 
