@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="nodes\abs\" />
     <Folder Include="tokens\" />
   </ItemGroup>
 
