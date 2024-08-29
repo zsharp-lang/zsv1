@@ -8,11 +8,13 @@ namespace ZSharp.Parser
     {
         private readonly Mapping<Type, ParserBase> parsersFor = [];
 
+        public void AddParserFor<T>(ParserFunction<T> parser)
+            where T : Node
+            => AddParserFor(new FunctionalParser<T>(parser));
+
         public void AddParserFor<T>(Parser<T> contextParser)
             where T : Node
-        {
-            parsersFor[typeof(T)] = contextParser;
-        }
+            => parsersFor[typeof(T)] = contextParser;
 
         public Parser<T>? GetParserFor<T>()
             where T : Node
