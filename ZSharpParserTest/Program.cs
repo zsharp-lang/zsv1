@@ -3,18 +3,13 @@ using ZSharp.Parser;
 using ZSharp.Text;
 using ZSharp.Tokenizer;
 
-using static MyParsers;
-
 
 using (StreamReader stream = File.OpenText("./parserText.txt"))
 {
+    var zsharpParser = new ZSharpParser();
     var parser = new Parser(Tokenizer.Tokenize(new(stream)));
-    ExpressionParser expressionParser;
-    parser.AddParserFor(expressionParser = new ExpressionParser());
 
-    var documentParser = new DocumentParser();
-
-    documentParser.AddKeywordParser("let", ParseLetStatement);
+    var expressionParser = zsharpParser.Expression;
 
     expressionParser.Terminal(TokenType.String, token => new LiteralExpression(token.Value, LiteralType.String));
 
@@ -24,13 +19,23 @@ using (StreamReader stream = File.OpenText("./parserText.txt"))
 
     expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
 
-    documentParser.AddKeywordParser(LangParser.Keywords.Import, LangParser.ParseImportStatement);
+    expressionParser.AddKeywordParser(LangParser.Keywords.Function, LangParser.ParseFunctionExpression);
 
     expressionParser.Separator(TokenType.Comma);
     expressionParser.Separator(TokenType.RParen);
     expressionParser.Separator(TokenType.Semicolon);
     
-    var documentNode = documentParser.Parse(parser);
+    zsharpParser.RegisterParsers(parser);
+    var documentNode = zsharpParser.Parse(parser);
 
     Console.WriteLine($"Finished parsing document with {documentNode.Statements.Count} statements!");
+
+    Console.WriteLine();
+
+    foreach (var statement in documentNode.Statements)
+    {
+        Console.WriteLine();
+        Console.WriteLine(statement.GetType().Name);
+        Console.WriteLine(statement);
+    }
 }
