@@ -54,7 +54,9 @@ namespace ZSharp.Parser
         public TokenStream(IEnumerable<Token> tokens)
         {
             this.tokens = tokens.GetEnumerator();
-            HasTokens = this.tokens.MoveNext();
+
+            if (SkipWhitespaces)
+                while ((HasTokens = this.tokens.MoveNext()) && this.tokens.Current.Is(TokenCategory.WhiteSpace)) ;
         }
 
         public TokenStreamPosition LookAhead()
