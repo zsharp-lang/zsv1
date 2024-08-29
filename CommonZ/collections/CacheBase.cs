@@ -48,7 +48,7 @@ namespace CommonZ.Utils
             if (_cache.TryGetValue(key, out Value? result))
                 return (value = result as T) is not null;
             if (!searchParent) return (value = null) is not null;
-            return Parent?.Cache(key, out value) ?? (value = null) is null;
+            return Parent?.Cache(key, out value) ?? (value = null) is not null;
         }
 
         public bool Uncache(Key key)
