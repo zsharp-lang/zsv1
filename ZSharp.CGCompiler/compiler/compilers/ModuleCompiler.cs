@@ -23,19 +23,19 @@ namespace ZSharp.CGCompiler
         protected override Module Create()
             => new(Node.Name);
 
-        protected override void Define()
+        protected override void Define(Module module)
         {
             if (Context.CurrentContextObject is null)
                 return;
 
-            if (Result.Name is not null && Result.Name != string.Empty)
+            if (module.Name is not null && module.Name != string.Empty)
                 Emit([
                     CG.Object(Result),
-                    CG.Set(Result.Name)
+                    CG.Set(module.Name)
                     ]);
 
             Emit([
-                CG.Object(Result),
+                CG.Object(module),
                 CG.Compile()
                 ]);
         }

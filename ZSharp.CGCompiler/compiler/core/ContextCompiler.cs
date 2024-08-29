@@ -53,10 +53,11 @@ namespace ZSharp.CGCompiler
         {
             (Node, node) = (node, Node);
 
-            TResult result;
-            (Result, result) = (Create(), Result);
+            TResult result = Create();
 
-            Define();
+            Define(result);
+
+            (Result, result) = (result, Result);
 
             using (
                 new ContextManager(() =>
@@ -76,7 +77,7 @@ namespace ZSharp.CGCompiler
 
         protected abstract TResult Create();
 
-        protected virtual void Define() { }
+        protected virtual void Define(TResult @object) { }
 
         protected abstract void Compile(TResult @object);
     }
