@@ -143,17 +143,22 @@ const string FileName = "test.zs";
 ZSharp.AST.Document documentNode;
 using (StreamReader stream = File.OpenText(FileName))
 {
+    var zsharpParser = new ZSharpParser();
     var parser = new Parser(Tokenizer.Tokenize(new(stream)));
-    ExpressionParser expressionParser;
-    parser.AddParserFor(expressionParser = new ExpressionParser());
-
-    var documentParser = new DocumentParser();
-
-    //documentParser.AddKeywordParser("let", ParseLetStatement);
+    
+    var expressionParser = zsharpParser.Expression;
 
     expressionParser.Terminal(
         TokenType.String, 
         token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.String)
+    );
+    expressionParser.Terminal(
+        TokenType.Identifier,
+        token => new ZSharp.AST.IdentifierExpression(token.Value)
+    );
+    expressionParser.Nud(
+        LangParser.Keywords.Let,
+        LangParser.ParseLetExpression
     );
 
     expressionParser.InfixL("+", 50);
@@ -162,13 +167,12 @@ using (StreamReader stream = File.OpenText(FileName))
 
     expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
 
-    documentParser.AddKeywordParser(LangParser.Keywords.Import, LangParser.ParseImportStatement);
-
     expressionParser.Separator(TokenType.Comma);
     expressionParser.Separator(TokenType.RParen);
     expressionParser.Separator(TokenType.Semicolon);
 
-    documentNode = documentParser.Parse(parser);
+    zsharpParser.RegisterParsers(parser);
+    documentNode = zsharpParser.Parse(parser);
 
     Console.WriteLine($"Finished parsing document with {documentNode.Statements.Count} statements!");
 }
