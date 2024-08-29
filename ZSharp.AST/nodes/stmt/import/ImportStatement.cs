@@ -4,6 +4,8 @@
     {
         public new ImportTokens TokenInfo => As<ImportTokens>();
 
+        public List<CallArgument>? Arguments { get; set; }
+
         public List<ImportedName>? ImportedNames { get; set; }
 
         public string? Alias { get; set; }
