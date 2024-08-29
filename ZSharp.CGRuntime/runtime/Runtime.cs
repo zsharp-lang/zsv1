@@ -9,6 +9,8 @@
         private readonly Stack<Frame> frames = new();
         private readonly Context context = new();
 
+        public Context Context => context;
+
         public ICodeGenerator CodeGenerator { get; init; } = codeGenerator;
 
         public ICodeInjector Injector { get; init; } = codeInjector;

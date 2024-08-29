@@ -3,12 +3,12 @@ using Scope = CommonZ.Utils.Cache<string, ZSharp.CGRuntime.CGObject>;
 
 namespace ZSharp.CGRuntime
 {
-    internal sealed class Context
+    public sealed class Context
     {
         private readonly Mapping<CGObject, Scope> objectScopes = [];
         private readonly Stack<Scope> scopeStack = [];
 
-        private Scope CurrentScope => scopeStack.Peek();
+        public Scope CurrentScope => scopeStack.Peek();
 
         public Scope GlobalScope { get; } = new();
 
@@ -39,6 +39,12 @@ namespace ZSharp.CGRuntime
         }
 
         public void Leave()
+            => scopeStack.Pop();
+
+        public void PutScope(Scope scope)
+            => scopeStack.Push(scope);
+
+        public void PopScope()
             => scopeStack.Pop();
     }
 }
