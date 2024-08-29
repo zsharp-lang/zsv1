@@ -8,12 +8,11 @@ namespace ZSharp.Parser
         {
             var expression = parser.Parse<Expression>();
 
-            return new(new()
-                {
-                    Semicolon = parser.Eat(Text.TokenType.Semicolon)
-                })
+            parser.Eat(Text.TokenType.Semicolon);
+
+            return new()
             {
-                Expression = expression
+                Expression = expression,
             };
         }
     }

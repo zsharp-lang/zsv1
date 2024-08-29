@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);ZSHARP_MINIMAL_PARENTHESIS</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\CommonZ\CommonZ.csproj" />
     <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />

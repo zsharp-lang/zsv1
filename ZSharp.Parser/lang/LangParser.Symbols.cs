@@ -4,7 +4,10 @@
     {
         public static class Symbols
         {
-            public const string ImportAll = "*";
+            public const string Assign          = "=";
+            public const string ImportAll       = "*";
+            public const string ThenDo          = "=>";
+            public const string VarPack         = "...";
         }
     }
 }

@@ -7,6 +7,18 @@ namespace ZSharp.Parser
 
     public static class Utils
     {
+        public static Parser<Statement> DefinitionStatement<T>(Parser<T> defParser)
+            where T : Expression
+            => new FunctionalParser<Statement>(
+                parser => new ExpressionStatement() { Expression = defParser.Parse(parser) }
+            );
+
+        public static Parser<Statement> DefinitionStatement<T>(ParserFunction<T> defParser)
+            where T : Expression
+            => new FunctionalParser<Statement>(
+                parser => new ExpressionStatement() { Expression = defParser(parser) }
+            );
+
         //public static ParserFunction<Statement> ExpressionStatement(Func<Parser, Expression> fn)
         //    => parser =>
         //    {
