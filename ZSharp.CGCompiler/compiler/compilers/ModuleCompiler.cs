@@ -8,12 +8,15 @@ namespace ZSharp.CGCompiler
     internal class ModuleCompiler(Context context)
         : ContextCompiler<RModule, Module>(context)
     {
+        private readonly FunctionCompiler functionCompiler = new(context);
+
         protected internal override void AddCode(CGCode code)
             => Result.Content.AddRange(code);
 
         protected internal override CGObject? Compile(RDefinition definition)
             => base.Compile(definition) ?? definition switch
             {
+                RFunction function => Compile(function),
                 RLetDefinition let => Compile(let),
                 //RVarDefinition var => Compile(var),
                 //ROOPDefinition oop => Compile(oop),
@@ -45,12 +48,13 @@ namespace ZSharp.CGCompiler
             Emit([CG.Object(Result), CG.Enter()]);
 
             foreach (var statement in Node.Content?.Statements ?? Collection<RStatement>.Empty)
-            {
                 Context.Compile(statement);
-            }
 
             Emit([CG.Leave()]);
         }
+
+        private Function Compile(RFunction function)
+            => functionCompiler.Compile(function);
 
         private Global Compile(RLetDefinition let)
         {
