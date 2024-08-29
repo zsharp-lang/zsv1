@@ -3,7 +3,7 @@ using ZSharp.CGRuntime;
 
 namespace ZSharp.CGObjects
 {
-    public class FunctionGroup(string? name)
+    public class FunctionOverloadGroup(string? name)
         : CGObject
         //, ICTCallable
     {
