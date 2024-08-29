@@ -1,8 +1,14 @@
-﻿namespace ZSharp.CGObjects
+﻿using ZSharp.Compiler;
+
+namespace ZSharp.CGObjects
 {
     public class RTFunction(string? name) : Function(name)
     {
-        public IR.Function? IR { get; set; }
+        //public IR.Function? IR { get; set; }
+
+        public Signature Signature { get; set; } = new();
+
+        public CGCode? ReturnType { get; set; }
 
         public CGObject Call(IRCode[] arguments)
         {

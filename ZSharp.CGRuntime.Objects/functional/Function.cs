@@ -1,4 +1,6 @@
-﻿namespace ZSharp.CGObjects
+﻿using ZSharp.Compiler;
+
+namespace ZSharp.CGObjects
 {
     /// <summary>
     /// Defines the base structure for a function.
