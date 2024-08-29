@@ -33,6 +33,15 @@
             if (@object is ICTReadable ctReadable)
                 return ctReadable.Read(this);
 
+            if (@object is CGObjects.Global global)
+                return new([
+                    new IR.VM.GetGlobal(global.IR!)
+                ])
+                {
+                    MaxStackSize = 1,
+                    Types = [global.IR!.Type]
+                };
+
             throw new NotImplementedException();
         }
 

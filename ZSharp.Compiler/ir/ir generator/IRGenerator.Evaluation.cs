@@ -6,13 +6,13 @@ namespace ZSharp.Compiler
         //: ICodeInjector
         //, ICompiler
     {
-        private IRType EvaluateType(Collection<CGRuntime.HLVM.Instruction> instructions)
+        public IRType EvaluateType(Collection<CGRuntime.HLVM.Instruction> instructions)
             => EvaluateType(runtime.Run(instructions));
 
-        private IRType EvaluateType(IEnumerable<CGObject> objects)
+        public IRType EvaluateType(IEnumerable<CGObject> objects)
             => EvaluateType(Read(objects));
 
-        private IRType EvaluateType(Code code)
+        public IRType EvaluateType(Code code)
         {
             throw new NotImplementedException();
         }
