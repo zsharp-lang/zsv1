@@ -1,8 +1,8 @@
 ﻿namespace ZSharp.AST
 {
-    public sealed class LetExpression(string name) : Expression
+    public sealed class LetExpression : Expression
     {
-        public string Name { get; set; } = name;
+        public required string Name { get; set; }
 
         public Expression? Type { get; set; }
 
