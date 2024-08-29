@@ -43,13 +43,15 @@ namespace ZSharp.Parser
             {
                 importedNames = [];
 
-                if (!parser.Is(TokenType.RCurly, eat: true))
+                if (!parser.Is(TokenType.RCurly))
                 {
                     importedNames.Add(ParseImportedName(parser));
 
                     while (parser.Is(TokenType.Comma, eat: true))
                         importedNames.Add(ParseImportedName(parser));
                 }
+
+                parser.Eat(TokenType.RCurly);
 
                 parser.Eat(Keywords.From);
             } else if (parser.Is(Symbols.ImportAll))
