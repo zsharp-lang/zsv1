@@ -8,6 +8,9 @@
                 BlockStatement block => Resolve(block),
                 ExpressionStatement expressionStatement => Resolve(expressionStatement),
                 ImportStatement importStatement => Resolve(importStatement),
+
+                Return @return => Resolve(@return),
+
                 _ => NotImplemented<RStatement>(statement)
             };
 
