@@ -166,6 +166,7 @@ using (StreamReader stream = File.OpenText(FileName))
     expressionParser.InfixL("**", 80);
 
     expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
+    expressionParser.Led(".", LangParser.ParseMemberAccess, 150);
 
     expressionParser.Separator(TokenType.Comma);
     expressionParser.Separator(TokenType.RParen);
