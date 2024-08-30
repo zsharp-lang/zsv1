@@ -33,7 +33,7 @@ namespace ZSharp.CGCompiler
 
             if (module.Name is not null && module.Name != string.Empty)
                 Emit([
-                    CG.Object(Result),
+                    CG.Object(module),
                     CG.Set(module.Name)
                     ]);
 
