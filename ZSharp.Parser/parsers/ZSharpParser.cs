@@ -8,6 +8,8 @@ namespace ZSharp.Parser
 
         public ModuleParser Module { get; } = new();
 
+        public FunctionParser Function { get; } = new();
+
         public ExpressionParser Expression { get; } = new();
 
         public Document Parse(Parser parser)
@@ -16,6 +18,8 @@ namespace ZSharp.Parser
         public void RegisterParsers(Parser parser)
         {
             parser.AddParserFor(Expression);
+
+            parser.AddParserFor(FunctionBody.Content, Function);
         }
 
         public ZSharpParser(bool initialize = true)
@@ -35,7 +39,7 @@ namespace ZSharp.Parser
         {
             parser.AddKeywordParser(
                 LangParser.Keywords.Function, 
-                Utils.DefinitionStatement(LangParser.ParseFunctionExpression)
+                Utils.DefinitionStatement(Function)
             );
             parser.AddKeywordParser(
                 LangParser.Keywords.Module, 

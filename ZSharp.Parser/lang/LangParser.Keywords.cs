@@ -14,6 +14,7 @@
             public const string Let         = "let";
             public const string Module      = "module";
             public const string Of          = "of";
+            public const string Return      = "return";
             public const string When        = "when";
         }
     }
