@@ -12,5 +12,8 @@
         public LiteralType Type { get; set; } = type;
 
         public Expression? UnitType { get; set; }
+
+        public static LiteralExpression String(string value)
+            => new(value, LiteralType.String);
     }
 }
