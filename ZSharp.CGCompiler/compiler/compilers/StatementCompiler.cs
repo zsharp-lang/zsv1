@@ -10,12 +10,19 @@ namespace ZSharp.CGCompiler
         {
             switch(statement)
             {
+                case RBlock block: Compile(block); break;
                 case RExpressionStatement expressionStatement: Compile(expressionStatement); break;
                 case RImport import: Compile(import); break;
                 default: return false;
             };
 
             return true;
+        }
+
+        private void Compile(RBlock block)
+        {
+            foreach (var statement in block.Statements)
+                Context.Compile(statement);
         }
 
         private void Compile(RExpressionStatement expressionStatement)
