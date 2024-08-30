@@ -44,6 +44,20 @@ namespace ZSharp.CGCompiler
                 Context.Compile(Node.Body);
         }
 
+        protected internal override bool Compile(RStatement statement)
+        {
+            if (statement is RReturn @return)
+            {
+                if (@return.Value is not null)
+                    AddCode(Context.Compile(@return.Value));
+                AddCode([
+                    CG.Inject(() => new IR.VM.Return())
+                    ]);
+                return true;
+            }
+            return base.Compile(statement);
+        }
+
         private Parameter Compile(RParameter parameter)
             => new(parameter.Name ?? throw new Exception())
             {
