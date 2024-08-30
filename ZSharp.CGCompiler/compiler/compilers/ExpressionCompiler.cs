@@ -9,12 +9,38 @@ namespace ZSharp.CGCompiler
         public CGCode Compile(RExpression expression)
             => expression switch
             {
+                RBinaryExpression binary => Compile(binary),
                 RCall call => Compile(call),
                 RDefinition definition => Compile(definition),
                 RId id => Compile(id),
                 RLiteral literal => Compile(literal),
                 _ => throw new NotImplementedException(),
             };
+
+        private CGCode Compile(RBinaryExpression binary)
+        {
+            // TODO: implement member access operator as regular operator
+            // but the normal overload should actually be a CT function
+            if (binary.Operator == ".")
+            {
+                if (binary.Right is not RLiteral literal || literal.Type != RLiteralType.String)
+                    throw new Exception("Member access operator requires a string literal as the right operand.");
+
+                return [
+                    ..Compile(binary.Left),
+                    CG.GetMember((literal.Value as string)!)
+                ];
+            }
+            else return Compile(
+                new RCall(
+                    new RId(binary.Operator),
+                    [
+                        new(binary.Left),
+                        new(binary.Right)
+                    ]
+                )
+            );
+        }
 
         private CGCode Compile(RCall call)
         {
