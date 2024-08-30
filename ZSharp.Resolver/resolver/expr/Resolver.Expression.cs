@@ -5,6 +5,7 @@
         public static RExpression Resolve(Expression expression)
             => expression switch
             {
+                BinaryExpression binary => Resolve(binary),
                 CallExpression call => Resolve(call),
                 Function function => Resolve(function),
                 IdentifierExpression identifier => Resolve(identifier),
