@@ -1,8 +1,10 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CommonZ.Utils
 {
     public abstract class CacheBase<Key, Value>
+        : IEnumerable<KeyValuePair<Key, Value>>
         where Key : notnull
         where Value : class
     {
@@ -55,5 +57,11 @@ namespace CommonZ.Utils
         {
             return _cache.Remove(key);
         }
+
+        public IEnumerator<KeyValuePair<Key, Value>> GetEnumerator()
+            => _cache.GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator()
+            => _cache.GetEnumerator();
     }
 }
