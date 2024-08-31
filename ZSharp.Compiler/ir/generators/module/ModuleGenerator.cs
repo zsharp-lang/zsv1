@@ -11,7 +11,8 @@ namespace ZSharp.Compiler
         protected override IR.Module Compile()
         {
             Object.IR = new(Object.Name);
-            Object.InitFunction.IR = new(IRGenerator.RuntimeModule.TypeSystem.Void);
+            ;
+            Object.IR.Functions.Add(Object.InitFunction.IR = new(IRGenerator.RuntimeModule.TypeSystem.Void));
 
             foreach (var _ in IRGenerator.Runtime.Run(Object.Content))
                 throw new Exception("Module content should not return any values.");
