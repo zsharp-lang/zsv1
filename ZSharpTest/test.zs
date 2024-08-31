@@ -1,12 +1,12 @@
 ﻿// import { print as output } from "std:io";
 
-module Test;
 module Lib {
 	fun bar() {
 		return "Hello";
 	}
 }
 
+module Test;
 
 	let y = "Hello";
 let x = y;
