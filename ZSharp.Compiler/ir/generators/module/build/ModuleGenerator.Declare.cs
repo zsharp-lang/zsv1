@@ -16,7 +16,9 @@ namespace ZSharp.Compiler
                     parameter.Initializer is null ? null :
                     IRGenerator.Read(IRGenerator.Runtime.Run(parameter.Initializer));
 
-                return new(
+                IRGenerator.Runtime.Context.Set(parameter.Name, parameter);
+
+                return parameter.IR = new(
                     parameter.Name, 
                     type ?? initializerCode?.RequireValueType() ?? throw new Exception())
                 {
@@ -24,32 +26,35 @@ namespace ZSharp.Compiler
                 };
             }
 
-            IRType ? returnType = IRGenerator.RuntimeModule.TypeSystem.Void;
-
-            if (function.ReturnType is not null)
-                returnType = IRGenerator.EvaluateType(function.ReturnType);
-
-            if (returnType is null)
-                throw new NotImplementedException("Implicit return type");
-
-            function.IR = new(returnType)
+            using (IRGenerator.ContextOf(function)) // TODO: remove this when module becomes dependency aware
             {
-                Name = function.Name,
-            };
+                IRType ? returnType = null;
 
-            Object.IR!.Functions.Add(function.IR);
+                if (function.ReturnType is not null)
+                    returnType = IRGenerator.EvaluateType(function.ReturnType);
 
-            foreach (var arg in function.Signature.Args)
-                function.IR.Signature.Args.Parameters.Add(Declare(arg));
+                if (returnType is null)
+                    throw new NotImplementedException("Implicit return type");
 
-            if (function.Signature.VarArgs is not null)
-                function.IR.Signature.Args.Var = Declare(function.Signature.VarArgs);
+                function.IR = new(returnType)
+                {
+                    Name = function.Name,
+                };
 
-            foreach (var arg in function.Signature.KwArgs)
-                function.IR.Signature.KwArgs.Parameters.Add(Declare(arg));
+                Object.IR!.Functions.Add(function.IR);
 
-            if (function.Signature.VarKwArgs is not null)
-                function.IR.Signature.KwArgs.Var = Declare(function.Signature.VarKwArgs);
+                foreach (var arg in function.Signature.Args)
+                    function.IR.Signature.Args.Parameters.Add(Declare(arg));
+
+                if (function.Signature.VarArgs is not null)
+                    function.IR.Signature.Args.Var = Declare(function.Signature.VarArgs);
+
+                foreach (var arg in function.Signature.KwArgs)
+                    function.IR.Signature.KwArgs.Parameters.Add(Declare(arg));
+
+                if (function.Signature.VarKwArgs is not null)
+                    function.IR.Signature.KwArgs.Var = Declare(function.Signature.VarKwArgs);
+            }
         }
 
         private void Declare(Global global)
