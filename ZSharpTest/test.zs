@@ -1,18 +1,22 @@
 ﻿// import { print as output } from "std:io";
 
 module Lib {
-	fun bar(): string {
-		return "Hello";
+	fun bar(x: string): string {
+		return x;
 	}
 }
 
-module Test;
+module Program;
 
 	let y = "Hello";
 let x = y;
 
-fun foo(x=x): string {
-	return Lib.bar();
+fun foo(): string {
+	return Lib.bar(x);
+}
+
+fun main(): string {
+	foo();
 }
 
 
