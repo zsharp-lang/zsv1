@@ -1,17 +1,8 @@
-﻿using ZSharp.CGRuntime;
+﻿using ZSharp.CGObjects;
+using ZSharp.CGRuntime;
 
 namespace ZSharp.Compiler
 {
-    internal class CodeObject(Code code)
-        : CGObject
-        , ICTReadable
-    {
-        public CGObject Type => throw new NotImplementedException();
-
-        public Code Read(ICompiler compiler)
-            => code;
-    }
-
     internal partial class IRGenerator
         : ICodeInjector
         , ICompiler
@@ -36,7 +27,7 @@ namespace ZSharp.Compiler
         }
 
         public CGObject CreateInjector(CGRuntime.HLVM.Injector injector)
-            => new CodeObject(new(injector()));
+            => new RawCode(new(injector()));
 
         public IR.Module Run(CGObjects.Module module)
         {

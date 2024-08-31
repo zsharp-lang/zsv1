@@ -1,4 +1,5 @@
-﻿using ZSharp.CGRuntime;
+﻿using ZSharp.CGObjects;
+using ZSharp.CGRuntime;
 using ZSharp.RAST;
 
 namespace ZSharp.Compiler
@@ -196,7 +197,7 @@ namespace ZSharp.Compiler
                 RLiteralType.Imaginary => throw new NotImplementedException(),
                 _ => throw new NotImplementedException(),
             };
-            CGObject result = new CodeObject(new()
+            CGObject result = new RawCode(new()
             {
                 Instructions = [instruction],
                 Types = [type],

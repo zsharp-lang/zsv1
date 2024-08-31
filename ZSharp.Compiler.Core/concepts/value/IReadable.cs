@@ -2,7 +2,7 @@
 {
     public interface ICTReadable
     {
-        public CTObject Type { get; }
+        public IRType Type { get; }
 
         public Code Cast(ZSCompiler compiler, CTObject type)
             => this is ICTTypeCast typeCast 
