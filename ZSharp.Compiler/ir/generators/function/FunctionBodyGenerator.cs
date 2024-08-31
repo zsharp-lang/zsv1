@@ -12,15 +12,18 @@ namespace ZSharp.Compiler
 
         protected override IR.Function Compile()
         {
-            if (Object.HasBody)
-            {
-                Code body = new();
+            using (IRGenerator.ContextOf(Object))
+                if (Object.HasBody)
+                {
+                    Code body = new();
 
-                foreach (var item in IRGenerator.Runtime.Run(Object.Body))
-                    body.Append(IRGenerator.Read(item));
+                    foreach (var item in IRGenerator.Runtime.Run(Object.Body))
+                        body.Append(IRGenerator.Read(item));
 
-                Object.IR!.Body.Instructions.AddRange(body.Instructions);
-            }
+                    Object.IR!.Body.Instructions.AddRange(body.Instructions);
+
+                    Object.IR.Body.StackSize = body.MaxStackSize;
+                }
 
             return Object.IR!;
         }
