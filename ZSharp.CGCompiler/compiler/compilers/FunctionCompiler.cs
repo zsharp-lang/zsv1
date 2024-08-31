@@ -15,6 +15,12 @@ namespace ZSharp.CGCompiler
 
         protected override void Define(RTFunction function)
         {
+            if (function.Name is not null && function.Name != string.Empty)
+                Emit([
+                    CG.Object(function),
+                    CG.Set(function.Name)
+                ]);
+
             Emit([
                 CG.Object(function),
                 CG.Compile()

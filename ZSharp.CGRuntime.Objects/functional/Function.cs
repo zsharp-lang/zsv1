@@ -13,7 +13,7 @@ namespace ZSharp.CGObjects
     /// </summary>
     public abstract class Function(string? name) 
         : CGObject
-        // , ICTCallable
+        , ICTCallable
     {
         private CGCode? _body;
 
@@ -35,6 +35,12 @@ namespace ZSharp.CGObjects
 
         public bool HasBody => _body is not null;
 
-        // TODO: implement the callable protocol abstractly
+        public abstract CGObject Call(ICompiler compiler, CGRuntime.Argument[] arguments);
+
+        public virtual CGRuntime.Argument[]? Match(ICompiler compiler, CGRuntime.Argument[] arguments)
+        {
+            var (args, kwargs) = Utils.SplitArguments(arguments);
+            return Match(compiler, args, kwargs);
+        }
     }
 }
