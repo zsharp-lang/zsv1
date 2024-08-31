@@ -1,4 +1,6 @@
-﻿namespace ZSharp.VM
+﻿using System.Runtime.InteropServices;
+
+namespace ZSharp.VM
 {
     internal sealed class Frame(ZSObject[] arguments, int numLocals, Instruction[] code, int stackSize)
     {
@@ -12,14 +14,24 @@
         private int _ip = -1;
 
         public bool IsStackEmpty => _sp == -1;
+
         public bool IsStackFull => _sp == _stack.Length;
 
         public bool IsEndOfProgram => _ip == _code.Length - 1;
 
-        public static Frame NoArguments(int numLocals, Instruction[] code, int stackSize)
+        internal ZSObject[] Locals => _locals;
+
+        private Frame(Code code, params ZSObject[] locals)
+            : this([], 0, code.Instructions, code.StackSize)
         {
-            return new([], numLocals, code, stackSize);
+            _locals = locals;
         }
+
+        public static Frame NoArguments(int numLocals, Instruction[] code, int stackSize)
+            => new([], numLocals, code, stackSize);
+
+        public static Frame WithLocals(Code code, params ZSObject[] locals)
+            => new(code, locals);
 
         public ZSObject Argument(int index)
             => _arguments[index];

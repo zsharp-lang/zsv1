@@ -3,8 +3,8 @@
 namespace ZSharp.VM
 {
     public sealed class ZSModule(Module module) 
-        : ZSStruct(module.Globals.Count, CoreTypes.Module)
-        , IIRObject
+        : ZSStruct(module.Globals.Count, TypeSystem.Module)
+        //, IIRObject
     {
         public Module Module { get; } = module;
 

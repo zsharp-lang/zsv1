@@ -4,16 +4,16 @@ using ZSharp.IR.VM;
 
 namespace ZSharp.VM
 {
-    internal sealed class Assembler(RuntimeModule runtimeModule)//(IRLoader loader)
+    internal sealed class Assembler(RuntimeModule runtimeModule)
     {
         private readonly RuntimeModule runtime = runtimeModule;
-        //public IRLoader IRLoader { get; } = loader;
 
-        public Instruction[] Assemble(IEnumerable<IR.VM.Instruction> code, Function? function = null)
+        public Code Assemble(IEnumerable<IR.VM.Instruction> code, Function? function = null)
         {
             List<(int, IR.VM.Instruction)> jumpTable = [];
             Dictionary<int, int> offsetMap = [];
 
+            int stackSize = (function?.HasBody ?? false) ? function.Body.StackSize : 0;
             List<Instruction> result = [];
 
             foreach (var (index, instruction) in new Enumerate<IR.VM.Instruction>(code))
@@ -22,7 +22,11 @@ namespace ZSharp.VM
                 switch (instruction)
                 {
                     case Call call:
+                        result.Add(new(OpCode.LoadObjectFromMetadata, call.Function));
                         result.Add(new(OpCode.Call, call.Function.Signature.Length));
+                        stackSize++; // TODO: fix this by having a number of arguments in ZSFunction
+                        // and passing the function itself to the instruction. This will require loading
+                        // functions in 2 steps: first, load all functions, then load all functions' bodies.
                         break;
                     case CallIndirect callIndirect:
                         result.Add(new(OpCode.Call, callIndirect.Signature.Length));
@@ -38,9 +42,16 @@ namespace ZSharp.VM
                     case GetArgument getArgument:
                         result.Add(new(OpCode.GetArgument, getArgument.Argument.Index));
                         break;
+                    case SetArgument setArgument:
+                        result.Add(new(OpCode.SetArgument, setArgument.Argument.Index));
+                        break;
                     case GetGlobal getGlobal:
-                        result.Add(new(OpCode.LoadObjectFromMetadata, getGlobal.Global.Module));
+                        result.Add(new(OpCode.LoadObjectFromMetadata, getGlobal.Global.Module!));
                         result.Add(new(OpCode.GetField, getGlobal.Global.Index));
+                        break;
+                    case SetGlobal setGlobal:
+                        result.Add(new(OpCode.LoadObjectFromMetadata, setGlobal.Global.Module!));
+                        result.Add(new(OpCode.SetField, setGlobal.Global.Index));
                         break;
                     case GetObject getObject:
                         result.Add(new(OpCode.LoadObjectFromMetadata, getObject.IR));
@@ -69,7 +80,7 @@ namespace ZSharp.VM
                 result[instructionIndex] = instruction;
             }
 
-            return [.. result];
+            return new([.. result], stackSize);
         }
     }
 }

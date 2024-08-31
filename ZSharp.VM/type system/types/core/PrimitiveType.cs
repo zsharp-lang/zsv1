@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.VM.Types
 {
-    public abstract class PrimitiveType(string name, ZSObject type) : ZSObject(type), IType
+    public class PrimitiveType(string name, ZSObject type) : ZSObject(type)
     {
         public string Name { get; } = name;
 
@@ -11,9 +11,5 @@
         {
             return Name;
         }
-
-        public abstract bool? IsAssignableTo(Interpreter interpreter, ZSObject target);
-
-        public abstract bool? IsAssignableFrom(Interpreter interpreter, ZSObject source);
     }
 }
