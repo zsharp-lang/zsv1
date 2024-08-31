@@ -193,6 +193,7 @@ var rastNodes = ZSharp.Resolver.Resolver.Resolve(documentNode).ToArray();
 #region Compilation
 
 var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
+compiler.Initialize();
 
 
 var cgCode = compiler.CompileCG(rastNodes);
