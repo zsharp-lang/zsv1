@@ -13,6 +13,7 @@
     <ProjectReference Include="..\ZSharp.RAST\ZSharp.RAST.csproj" />
     <ProjectReference Include="..\ZSharp.Resolver\ZSharp.Resolver.csproj" />
     <ProjectReference Include="..\ZSharp.Tokenizer\ZSharp.Tokenizer.csproj" />
+    <ProjectReference Include="..\ZSharp.VM\ZSharp.VM.csproj" />
   </ItemGroup>
 
   <ItemGroup>

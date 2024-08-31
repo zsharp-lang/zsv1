@@ -199,6 +199,50 @@ compiler.Initialize();
 var cgCode = compiler.CompileCG(rastNodes);
 var module = compiler.CompileIR(cgCode);
 
-Console.WriteLine("Execution finished!");
+Console.WriteLine("Compilation finished!");
 
 #endregion
+
+Console.WriteLine();
+
+ZSharp.IR.Module? mainModule = null;
+foreach (var submodule in module.Submodules)
+{
+    if (submodule.Name == "Program")
+        if (mainModule is not null) throw new Exception("Multiple main modules found!");
+        else mainModule = submodule;
+}
+
+if (mainModule is null) Console.WriteLine("No main module found!");
+else
+{
+    var runtime = new ZSharp.VM.Runtime(ZSharp.IR.RuntimeModule.Standard);
+
+    var zsModule = runtime.LoadIR(mainModule);
+
+    ZSharp.IR.Function? main = null;
+    foreach (var function in mainModule.Functions)
+    {
+        if (function.Name == "main" && function.Signature.Length == 0)
+            if (main is not null) throw new Exception("Multiple main functions found!");
+            else main = function;
+    }
+
+    if (main is not null)
+    {
+        var zsMain = runtime.LoadIR(main) as ZSharp.VM.ZSFunction ?? throw new("Unexpected error while loading main function!");
+        var result = runtime.EvaluateInNewFrame(new(zsMain.Code, zsMain.StackSize)); // TODO: using evaluate here is invalid
+        // since main returns a value, but evaluate expects the value to be on the top of the stack. This can be
+        // fixed by adding an entry point which only calls main and leave the result on the stack.
+        // For now, main will not return anything.
+
+        if (result is ZSharp.VM.ZSString stringResult)
+            Console.WriteLine("Main (String): " + stringResult.Value);
+        else Console.WriteLine($"Main ({result.Type}): " + result);
+    }
+    else Console.WriteLine("No main function found!");
+}
+
+Console.WriteLine();
+Console.WriteLine("Press any key to exit...");
+Console.ReadKey();
