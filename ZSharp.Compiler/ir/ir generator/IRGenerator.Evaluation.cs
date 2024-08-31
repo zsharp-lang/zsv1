@@ -1,4 +1,5 @@
 ﻿using CommonZ.Utils;
+using ZSharp.CGObjects;
 
 namespace ZSharp.Compiler
 {
@@ -6,11 +7,23 @@ namespace ZSharp.Compiler
         //: ICodeInjector
         //, ICompiler
     {
-        public IRType EvaluateType(Collection<CGRuntime.HLVM.Instruction> instructions)
+        public IRType EvaluateType(CGCode instructions)
             => EvaluateType(runtime.Run(instructions));
 
+        public IRType EvaluateType(CGObject @object)
+        {
+            if (@object is RawType raw)
+                return raw.AsType(this); // this is a placeholder for a compile-type protocol
+
+            return EvaluateType(Read(@object));
+        }
+
         public IRType EvaluateType(IEnumerable<CGObject> objects)
-            => EvaluateType(Read(objects));
+        {
+            var objectList = objects.ToArray();
+            if (objectList.Length == 1) return EvaluateType(objectList[0]);
+            return EvaluateType(Read(objectList));
+        }
 
         public IRType EvaluateType(Code code)
         {
