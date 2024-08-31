@@ -18,6 +18,20 @@ namespace ZSharp.Compiler
 
             Build();
 
+            IRGenerator.Runtime.Context.Enter(Object);
+
+            foreach (var (name, item) in IRGenerator.CurrentScope)
+                switch (item)
+                {
+                    case FunctionOverloadGroup group: Object.Members[name] = group; break;
+                    case Global global: Object.Members[name] = global; break;
+                    case Module module: Object.Members[name] = module; break;
+                    case RTFunction function: Object.Members[name] = function; break;
+                    default: break;
+                }
+
+            IRGenerator.Runtime.Context.Leave();
+
             return Object.IR;
         }
     }
