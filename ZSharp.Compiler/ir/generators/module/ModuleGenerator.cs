@@ -11,7 +11,7 @@ namespace ZSharp.Compiler
         protected override IR.Module Compile()
         {
             Object.IR = new(Object.Name);
-            ;
+            
             Object.IR.Functions.Add(Object.InitFunction.IR = new(IRGenerator.RuntimeModule.TypeSystem.Void));
 
             foreach (var _ in IRGenerator.Runtime.Run(Object.Content))
