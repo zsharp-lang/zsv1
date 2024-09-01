@@ -8,15 +8,17 @@ module Lib {
 
 module Program;
 
-	let y = "Hello";
-let x = y;
 
-fun foo(): string {
-	return Lib.bar(x);
-}
 
 fun main(): string {
 	foo();
+}
+
+let x = y;
+let y = "Hello";
+
+fun foo(): string {
+	return Lib.bar(x);
 }
 
 
