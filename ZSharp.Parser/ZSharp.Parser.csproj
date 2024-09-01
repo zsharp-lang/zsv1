@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);ZSHARP_MINIMAL_PARENTHESIS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommonZ\CommonZ.csproj" />
+    <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />
+    <ProjectReference Include="..\ZSharp.Text\ZSharp.Text.csproj" />
+  </ItemGroup>
+
+</Project>

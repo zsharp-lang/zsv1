@@ -1,6 +1,5 @@
 namespace CommonZ.Utils;
 
-
 public class Collection<T> : List<T> {
     public static readonly Collection<T> Empty = new ReadOnlyCollection<T>();
 
@@ -19,6 +18,12 @@ public class Collection<T> : List<T> {
     public new void Add(T item) {
         OnAdd(item);
         base.Add(item);
+    }
+
+    public new void AddRange(IEnumerable<T> collection)
+    {
+        foreach (var item in collection)
+            Add(item);
     }
 
     public new void Insert(int index, T item) {

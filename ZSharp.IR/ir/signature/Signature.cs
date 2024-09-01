@@ -65,7 +65,7 @@
             if (includeVarArgs && IsVarArgs)
                 yield return Args.Var!;
             if (_kwArgs is not null)
-                foreach (var (_, param) in KwArgs.Parameters)
+                foreach (var param in KwArgs.Parameters)
                     yield return param;
             if (includeVarKwArgs && IsVarKwArgs)
                 yield return KwArgs.Var!;

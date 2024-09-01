@@ -15,5 +15,21 @@
         {
             return $"{Line}:{Column}";
         }
+
+        public static Position Min(Position left, Position right)
+        {
+            if (left.Line < right.Line) return left;
+            if (right.Line < left.Line) return right;
+            if (left.Column < right.Column) return left;
+            return right;
+        }
+
+        public static Position Max(Position left, Position right)
+        {
+            if (left.Line > right.Line) return left;
+            if (right.Line > left.Line) return right;
+            if (left.Column > right.Column) return left;
+            return right;
+        }
     }
 }

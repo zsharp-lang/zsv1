@@ -6,7 +6,7 @@ namespace ZSharp.IR
     {
         private KwArgsCollection? _parameters;
 
-        public Mapping<string, Parameter> Parameters
+        public Collection<Parameter> Parameters
         {
             get
             {

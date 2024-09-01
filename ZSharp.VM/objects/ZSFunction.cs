@@ -1,7 +1,7 @@
 ﻿namespace ZSharp.VM
 {
-    public sealed class ZSFunction(ZSSignature signature, Instruction[] code) 
-        : ZSObject(new Types.FunctionType(signature))
+    public sealed class ZSFunction(Instruction[] code) 
+        : ZSObject(TypeSystem.Function)
     {
         public Instruction[] Code { get; set; } = code;
 

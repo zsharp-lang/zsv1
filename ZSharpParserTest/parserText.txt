@@ -1,0 +1,71 @@
+﻿module Foo;
+
+import { a as A, b as B } from "std:test";
+
+import("A", b: "B") "std:test";
+
+import "std:test" as test;
+
+import {} from "std:test";
+
+import {a as A} from "std:test";
+
+import {a, b} from "std:test";
+
+let myVar = "foo" + "bar" ** "goo" * "baz"
+
+, yourVar = "it's actually mine";
+
+let otherVar = "other";
+
+"expressionStatement!";
+
+"CALLABLE"();
+
+"CALLABLE"("ARG1");
+"CALLABLE"("ARG1", "ARG2");
+
+
+"CALLABLE"("ARG1", "ARG2", arg3: "ARG3");
+"CALLABLE"("ARG1", "ARG2", arg3: "ARG3", arg4: "ARG4");
+
+"CALLABLE"(arg1: "ARG1", "ARG2");
+
+
+fun() {}
+
+fun foo() {}
+
+fun foo(x) {}
+
+fun foo(x, y) {}
+
+fun foo(x, y, z) {}
+
+fun foo(x, y, ...z) {}
+
+fun foo(x, y, ...z,) {}
+
+fun foo(x, y,) {}
+
+fun foo({}) {}
+
+fun foo({x}) {}
+
+fun foo({x, y}) {}
+
+fun foo({x, y, z}) {}
+
+fun foo({x, y, ...z}) {}
+
+fun foo(x, y, {}) {}
+
+fun foo(x, y, {z}) {}
+
+fun foo(x, y, {z, w}) {}
+
+fun foo(x, y, {z, w, v}) {}
+
+fun foo(x, y, {z, w, ...v}) {}
+
+fun foo(x, y, ...z, {w, v, ...u}) {}

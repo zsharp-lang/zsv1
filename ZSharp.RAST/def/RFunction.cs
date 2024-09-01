@@ -5,11 +5,13 @@
         /// <summary>
         /// Generic parameters of the function or <see cref="null"/> if the function is not generic.
         /// </summary>
+        [Obsolete("Use Signature instead.")]
         public List<RGenericParameter>? GenericParameters { get; set; }
 
         /// <summary>
         /// Parameters of the function or <see cref="null"/> if the function has no parameters.
         /// </summary>
+        [Obsolete("Use Signature instead.")]
         public List<RParameter>? Parameters { get; set; }
 
         public RSignature Signature { get; set; }
@@ -24,12 +26,12 @@
         /// </summary>
         public RStatement? Body { get; set; }
 
-        public RFunction(string name, RSignature signature)
-            : this(new RId(name), signature)
+        public RFunction(string? name, RSignature signature)
+            : this(name is null ? null : new RId(name), signature)
         {
         }
 
-        public RFunction(RId id, RSignature signature)
+        public RFunction(RId? id, RSignature signature)
             : base(id)
         {
             Signature = signature;

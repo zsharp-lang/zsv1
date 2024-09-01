@@ -3,30 +3,30 @@
 namespace ZSharp.IR
 {
     internal sealed class KwArgsCollection(Signature signature)
-        : Mapping<string, Parameter>
+        : Collection<Parameter>
     {
         public Signature Signature { get; } = signature;
 
-        public override void OnAdd(string name, Parameter item)
+        public override void OnAdd(Parameter item)
         {
             AssertUnOwned(item);
 
             item.Signature = Signature;
-            item.Index = Count + Signature.TotalNumArgs;
+            item.Index = Signature.TotalNumArgs + Count;
         }
 
-        public override void OnRemove(string name)
+        public override void OnRemoveAt(int index)
         {
-            Parameter parameter = this[name];
+            OnRemove(this[index]);
+        }
 
-            foreach (var param in Values)
-            {
-                if (param.Index > parameter.Index)
-                    param.Index--;
-            }
+        public override void OnRemove(Parameter item)
+        {
+            for (int i = item.Index + 1 - Signature.TotalNumArgs; i < Count; i++)
+                this[i].Index--;
 
-            parameter.Signature = null;
-            parameter.Index = -1;
+            item.Signature = null;
+            item.Index = -1;
         }
 
         private static void AssertUnOwned(Parameter item)

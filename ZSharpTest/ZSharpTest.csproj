@@ -8,11 +8,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZSharp.CTRuntime.Standard\ZSharp.CTRuntime.Standard.csproj" />
-    <ProjectReference Include="..\ZSharp.CTRuntime\ZSharp.CTRuntime.csproj" />
-    <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
+    <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />
     <ProjectReference Include="..\ZSharp.RAST\ZSharp.RAST.csproj" />
+    <ProjectReference Include="..\ZSharp.Resolver\ZSharp.Resolver.csproj" />
+    <ProjectReference Include="..\ZSharp.Tokenizer\ZSharp.Tokenizer.csproj" />
     <ProjectReference Include="..\ZSharp.VM\ZSharp.VM.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="test.zs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
