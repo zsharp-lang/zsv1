@@ -6,12 +6,12 @@
     internal enum DependencyState
     {
         /// <summary>
-        /// The dependency must be at least declared. Corresponds to <see cref="ObjectState.Declared"/>.
+        /// The dependency must be at least declared.
         /// </summary>
         Declared,
 
         /// <summary>
-        /// The dependency must be fully defined. Corresponds to <see cref="ObjectState.Defined"/>.
+        /// The dependency must be fully defined.
         /// </summary>
         Defined,
 

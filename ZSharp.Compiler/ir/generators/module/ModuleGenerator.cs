@@ -17,9 +17,9 @@ namespace ZSharp.Compiler
             foreach (var _ in IRGenerator.Runtime.Run(Object.Content))
                 throw new Exception("Module content should not return any values.");
 
-            Build();
-
             IRGenerator.Runtime.Context.Enter(Object);
+
+            Build();
 
             foreach (var (name, item) in IRGenerator.CurrentScope)
                 switch (item)

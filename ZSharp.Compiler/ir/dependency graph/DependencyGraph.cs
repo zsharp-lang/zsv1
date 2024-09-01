@@ -3,54 +3,25 @@
 namespace ZSharp.Compiler
 {
     internal sealed partial class DependencyGraph<T>
-        where T : notnull
+        where T : class
     {
-        private readonly Mapping<T, ObjectState> states = [];
-        private readonly Mapping<T, Collection<DependencyNode<T>>> graph = [];
-        private readonly Collection<Collection<T>> order = [];
+        private readonly Mapping<DependencyNode<T>, Collection<DependencyNode<T>>> graph = [];
 
-        public void Add(ObjectState type, T dependant, params T[] dependencies)
+        public void AddDependenciesForDeclarationOf(T dependent, params DependencyNode<T>[] dependencies)
+            => AddDependencies(dependent, DependencyState.Declared, dependencies);
+
+        public void AddDependenciesForDefinitionOf(T dependent, params DependencyNode<T>[] dependencies)
+            => AddDependencies(dependent, DependencyState.Defined, dependencies);
+
+        public void AddDependencies(T dependent, DependencyState state, params DependencyNode<T>[] dependencies)
+            => AddDependencies(new(dependent, state), dependencies);
+
+        public void AddDependencies(DependencyNode<T> dependent, params DependencyNode<T>[] dependencyNodes)
         {
-            Add(dependant);
+            if (!graph.TryGetValue(dependent, out var dependencies))
+                graph[dependent] = dependencies = [];
 
-            var deps = graph[dependant];
-
-            foreach (var dependency in dependencies)
-                deps.Add(new(dependency, type));
-        }
-
-        public void Add(T dependant)
-        {
-            if (!states.ContainsKey(dependant))
-                states[dependant] = ObjectState.Uninitialized;
-
-            if (graph.ContainsKey(dependant))
-                graph[dependant] = [];
-        }
-
-        public void SetState(T dependant, ObjectState state)
-            => states[dependant] = state;
-
-        private void CalculateOrder()
-        {
-            Mapping<int, Collection<T>> dependencyLevels = [];
-
-            foreach (var (dependant, dependencies) in graph)
-            {
-                foreach (var dependency in dependencies)
-                {
-                    if (!IsDependencyMet(dependency))
-
-                }
-            }
-        }
-
-        private bool IsDependencyMet(DependencyNode<T> dependency)
-        {
-            if (!states.TryGetValue(dependency.Dependency, out var state))
-                return false;
-
-            return state >= dependency.State;
+            dependencies.AddRange(dependencyNodes);
         }
     }
 }

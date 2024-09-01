@@ -3,10 +3,10 @@
 namespace ZSharp.Compiler
 {
     internal sealed partial class DependencyGraph<T>
-        : IEnumerable<IEnumerable<T>>
+        : IEnumerable<IEnumerable<DependencyNode<T>>>
     {
-        public IEnumerator<IEnumerable<T>> GetEnumerator()
-            => new Iterator(this);
+        public IEnumerator<IEnumerable<DependencyNode<T>>> GetEnumerator()
+            => (order ?? CalculateOrder()).GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator()
             => GetEnumerator();

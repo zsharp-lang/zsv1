@@ -17,7 +17,7 @@ namespace ZSharp.Compiler
 
         private void Compile(RTFunction function)
         {
-            // TODO: Implement function overloads
+            // TODO: Implement function overloads.
             //if (function.Name is not null && function.Name != string.Empty)
             //{
             //    if (!IRGenerator.CurrentScope.Cache<FunctionOverloadGroup>(function.Name, out var functionGroup))
@@ -34,13 +34,13 @@ namespace ZSharp.Compiler
             //    // However, for now, we will only add the functions themselves.
             //}
 
-            //EnqueueForDependencyCollection(function);
-            Initialize(function);
+            EnqueueForDependencyCollection(function);
+            //Initialize(function);
         }
 
         private void Compile(Global global)
-            //=> EnqueueForDependencyCollection(global);
-            => Initialize(global);
+            => EnqueueForDependencyCollection(global);
+            //=> Initialize(global);
 
         private void Compile(Module module)
             => Object.IR!.Submodules.Add(new ModuleGenerator(IRGenerator, module).Run());
