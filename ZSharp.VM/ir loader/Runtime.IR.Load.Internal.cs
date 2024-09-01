@@ -31,6 +31,9 @@ namespace ZSharp.VM
         {
             var zsModule = new ZSModule(module);
 
+            if (module.HasImportedModules)
+                foreach (var importedModule in module.ImportedModules)
+                    LoadIR(importedModule);
             foreach (var submodule in module.Submodules)
                 LoadIR(submodule);
 
