@@ -12,7 +12,8 @@ The current state of the project is:
 * [x] CGCompiler
 * [x] CGRuntime
 * [x] IR Layer
-* [ ] ZSRuntime
+* [x] ZSRuntime
+* [ ] Platform Compiler
 
 ## Structure
 
@@ -31,3 +32,32 @@ The IR defines a static structure, while the runtime objects can vary during exe
 Simply run the main project (ZSharpTest).
 
 You can edit the `test.zs` file.
+
+## ToDo
+
+* [ ] Add support for type-inference
+    - [x] Local inference
+    - [ ] Function return type
+* [ ] Implement the overloading protocol (C#)
+* [ ] Implement the `compile` protocol (both `IRObject` and `IR Type`) (C#, Z#)
+* [ ] Implement better Z# RT VM API (C#)
+    - [ ] Function calls
+    - [ ] Object construction, instantiation and initialization
+    - [ ] IR loading
+* [ ] Organize IR loading in Z# RT VM (C#)
+* [ ] Implement document-level definitions
+    - [ ] Functions
+    - [ ] Globals
+* [ ] Implement OOP types
+    - [ ] Class
+    - [ ] Interface
+    - [ ] Typeclass
+    - [ ] Structure
+* [ ] Add support for decorators
+* [ ] Add support for custom attributes
+* [ ] Implement the CG `Execute`/`Evaluate` command.
+* [ ] Implement the `import(string)` CG function (C#)
+    - [ ] Add support for extensible `StringImporter`
+* [ ] Add support for definition templates
+    - [ ] Functions
+    - [ ] Classes (which includes methods, properties, fields, etc..)
