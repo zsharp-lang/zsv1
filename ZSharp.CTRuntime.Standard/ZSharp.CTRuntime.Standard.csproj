@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZSharp.CTRuntime\ZSharp.CTRuntime.csproj" />
     <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
   </ItemGroup>
 
