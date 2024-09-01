@@ -25,7 +25,15 @@ namespace ZSharp.Compiler
                     Object.IR.Body.StackSize = body.MaxStackSize;
                 }
 
+            if (Object.ReturnType is null)
+                Object.IR!.ReturnType = InferReturnType();
+
             return Object.IR!;
+        }
+
+        private IRType InferReturnType()
+        {
+            throw new NotImplementedException();
         }
     }
 }
