@@ -33,14 +33,9 @@
 
         private void ExecuteCall(Instruction instruction)
         {
-            int argc = instruction.As<int>();
-
-            // TODO: fix the ordering when the instruction holds the actual function.
-            // for now, the function appears at the top because it is the result of compiling
-            // a `call` instruction, which appears after all the arguments.
-            var function = CurrentFrame.Pop() as ZSFunction ?? throw new Exception();
-
-            var args = new ZSObject[argc];
+            var function = instruction.As<ZSFunction>();
+            
+            var args = new ZSObject[function.ArgumentCount];
             for (var i = args.Length - 1; i >= 0; i--)
                 args[i] = CurrentFrame.Pop();
 
