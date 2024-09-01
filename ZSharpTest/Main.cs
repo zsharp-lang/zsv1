@@ -230,7 +230,7 @@ else
 
     if (main is not null)
     {
-        var zsMain = runtime.LoadIR(main) as ZSharp.VM.ZSFunction ?? throw new("Unexpected error while loading main function!");
+        var zsMain = runtime.LoadIR(main);
         var result = runtime.EvaluateInNewFrame(new(zsMain.Code, zsMain.StackSize)); // TODO: using evaluate here is invalid
         // since main returns a value, but evaluate expects the value to be on the top of the stack. This can be
         // fixed by adding an entry point which only calls main and leave the result on the stack.
