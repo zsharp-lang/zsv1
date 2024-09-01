@@ -4,9 +4,10 @@ using ZSharp.IR.VM;
 
 namespace ZSharp.VM
 {
-    internal sealed class Assembler(RuntimeModule runtimeModule)
+    internal sealed class Assembler(Runtime runtime)
     {
-        private readonly RuntimeModule runtime = runtimeModule;
+        private readonly Runtime runtime = runtime;
+        private readonly RuntimeModule runtimeModule = runtime.RuntimeModule;
 
         public Code Assemble(IEnumerable<IR.VM.Instruction> code, Function? function = null)
         {
@@ -22,11 +23,7 @@ namespace ZSharp.VM
                 switch (instruction)
                 {
                     case Call call:
-                        result.Add(new(OpCode.LoadObjectFromMetadata, call.Function));
-                        result.Add(new(OpCode.Call, call.Function.Signature.Length));
-                        stackSize++; // TODO: fix this by having a number of arguments in ZSFunction
-                        // and passing the function itself to the instruction. This will require loading
-                        // functions in 2 steps: first, load all functions, then load all functions' bodies.
+                        result.Add(new(OpCode.Call, runtime.LoadIR(call.Function)));
                         break;
                     case CallIndirect callIndirect:
                         result.Add(new(OpCode.Call, callIndirect.Signature.Length));
@@ -64,7 +61,7 @@ namespace ZSharp.VM
                         break;
                     case Return _:
                         if (function is null) throw new InvalidOperationException();
-                        result.Add(new(function.ReturnType == runtime.TypeSystem.Void ? OpCode.ReturnVoid : OpCode.Return));
+                        result.Add(new(function.ReturnType == runtimeModule.TypeSystem.Void ? OpCode.ReturnVoid : OpCode.Return));
                         break;
                     default:
                         break;

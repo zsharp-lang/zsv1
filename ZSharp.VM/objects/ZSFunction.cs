@@ -5,6 +5,8 @@
     {
         public Instruction[] Code { get; set; } = code;
 
+        public int ArgumentCount { get; set; } = 0;
+
         public int StackSize { get; set; } = 0;
 
         public int LocalCount { get; set; } = 0;
