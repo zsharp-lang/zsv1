@@ -216,7 +216,7 @@ foreach (var submodule in module.Submodules)
 if (mainModule is null) Console.WriteLine("No main module found!");
 else
 {
-    var runtime = new ZSharp.VM.Runtime(ZSharp.IR.RuntimeModule.Standard);
+    var runtime = compiler.RT;
 
     var zsModule = runtime.LoadIR(mainModule);
 
