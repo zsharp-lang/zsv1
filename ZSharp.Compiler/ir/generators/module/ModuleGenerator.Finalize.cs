@@ -11,6 +11,8 @@
 
             foreach (var module in importedModules)
                 Object.IR.ImportedModules.Add(module);
+
+            IRGenerator.RT.LoadIR(Object.IR);
         }
 
         private void LookupImports(IR.Function function)
