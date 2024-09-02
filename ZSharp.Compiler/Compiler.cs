@@ -8,6 +8,8 @@ namespace ZSharp.Compiler
         private readonly CGGenerator cg = new();
         private readonly IRGenerator ir = new(runtimeModule);
 
+        public VM.Runtime RT => ir.RT;
+
         public void Initialize()
         {
             Expose("string", new RawType(ir.RuntimeModule.TypeSystem.String));
