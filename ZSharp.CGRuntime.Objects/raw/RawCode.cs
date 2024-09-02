@@ -8,6 +8,8 @@ namespace ZSharp.CGObjects
     {
         private readonly Code code = code;
 
+        public Code Code => code;
+
         public IR.IType Type => code.RequireValueType();
 
         public Code Read(ICompiler _)
