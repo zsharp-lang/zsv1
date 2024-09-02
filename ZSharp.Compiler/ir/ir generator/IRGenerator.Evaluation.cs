@@ -27,7 +27,12 @@ namespace ZSharp.Compiler
 
         public IRType EvaluateType(Code code)
         {
-            throw new NotImplementedException();
+            var value = EvaluateRT(code);
+
+            // TODO: implement the `compile-type` protocol and use it here.
+            // for now, we'll just return the type `string` for all values.
+
+            return RuntimeModule.TypeSystem.String;
         }
     }
 }
