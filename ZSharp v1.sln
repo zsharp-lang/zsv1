@@ -13,11 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.Text", "ZSharp.Text\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharpTest", "ZSharpTest\ZSharpTest.csproj", "{F89D890B-AC10-4CC1-A07D-E54CE0115F54}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.CTRuntime.Standard", "ZSharp.CTRuntime.Standard\ZSharp.CTRuntime.Standard.csproj", "{D8762E41-A2CE-4364-BAE6-205630345B84}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A6987B24-D697-4F9F-9615-9BE8641065A8} = {A6987B24-D697-4F9F-9615-9BE8641065A8}
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.VM", "ZSharp.VM\ZSharp.VM.csproj", "{30B617E2-DB3D-4ABE-A103-A4CF8AB62B74}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.IR", "ZSharp.IR\ZSharp.IR.csproj", "{A6987B24-D697-4F9F-9615-9BE8641065A8}"
@@ -59,6 +54,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharpParserTest", "ZSharpP
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.Resolver", "ZSharp.Resolver\ZSharp.Resolver.csproj", "{B78A6017-DCBC-4594-9FB7-C4F56DBBEC77}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.CT.StandardLibrary", "ZSharp.CT.StandardLibrary\ZSharp.CT.StandardLibrary.csproj", "{7FCC6EEC-12BC-409C-93A9-0A4AF7B8E83B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -85,10 +82,6 @@ Global
 		{F89D890B-AC10-4CC1-A07D-E54CE0115F54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F89D890B-AC10-4CC1-A07D-E54CE0115F54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F89D890B-AC10-4CC1-A07D-E54CE0115F54}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D8762E41-A2CE-4364-BAE6-205630345B84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D8762E41-A2CE-4364-BAE6-205630345B84}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D8762E41-A2CE-4364-BAE6-205630345B84}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D8762E41-A2CE-4364-BAE6-205630345B84}.Release|Any CPU.Build.0 = Release|Any CPU
 		{30B617E2-DB3D-4ABE-A103-A4CF8AB62B74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{30B617E2-DB3D-4ABE-A103-A4CF8AB62B74}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30B617E2-DB3D-4ABE-A103-A4CF8AB62B74}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -137,6 +130,10 @@ Global
 		{B78A6017-DCBC-4594-9FB7-C4F56DBBEC77}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B78A6017-DCBC-4594-9FB7-C4F56DBBEC77}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B78A6017-DCBC-4594-9FB7-C4F56DBBEC77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FCC6EEC-12BC-409C-93A9-0A4AF7B8E83B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FCC6EEC-12BC-409C-93A9-0A4AF7B8E83B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FCC6EEC-12BC-409C-93A9-0A4AF7B8E83B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FCC6EEC-12BC-409C-93A9-0A4AF7B8E83B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
