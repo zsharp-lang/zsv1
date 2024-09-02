@@ -4,7 +4,7 @@
     {
         private readonly HashSet<IR.Module> importedModules = [];
 
-        private void Finalize()
+        private void FinalizeCompilation()
         {
             foreach (var function in Object.IR!.Functions)
                 LookupImports(function);

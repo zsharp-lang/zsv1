@@ -33,7 +33,7 @@ namespace ZSharp.Compiler
 
             IRGenerator.Runtime.Context.Leave();
 
-            Finalize();
+            FinalizeCompilation();
 
             return Object.IR;
         }
