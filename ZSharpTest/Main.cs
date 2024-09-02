@@ -195,6 +195,9 @@ var rastNodes = ZSharp.Resolver.Resolver.Resolve(documentNode).ToArray();
 var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
 compiler.Initialize();
 
+var standardModule = new ZSharp.CT.StandardLibrary.StandardModule();
+compiler.RT.AddInternalModule(standardModule);
+compiler.Expose("print", standardModule.Print);
 
 var cgCode = compiler.CompileCG(rastNodes);
 var module = compiler.CompileIR(cgCode);

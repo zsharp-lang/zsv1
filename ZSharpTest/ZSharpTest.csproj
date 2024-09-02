@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
+    <ProjectReference Include="..\ZSharp.CT.StandardLibrary\ZSharp.CT.StandardLibrary.csproj" />
     <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />
     <ProjectReference Include="..\ZSharp.RAST\ZSharp.RAST.csproj" />
     <ProjectReference Include="..\ZSharp.Resolver\ZSharp.Resolver.csproj" />
