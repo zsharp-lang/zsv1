@@ -22,6 +22,8 @@ namespace ZSharp.Compiler
         public IRGenerator(IR.RuntimeModule runtimeModule)
         {
             RuntimeModule = runtimeModule;
+            rtRuntime = new(runtimeModule);
+            rtRuntime.Initialize();
             CG = new(this);
             runtime = new(CG, this, this);
         }
