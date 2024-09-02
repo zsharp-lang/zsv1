@@ -12,6 +12,7 @@ namespace ZSharp.Compiler
         {
             Expose("string", new RawType(ir.RuntimeModule.TypeSystem.String));
             Expose("void", new RawType(ir.RuntimeModule.TypeSystem.Void));
+            Expose("type", new RawType(ir.RuntimeModule.TypeSystem.Type));
         }
 
         public Module CompileCG(RStatement[] statements, string? moduleName = null)
