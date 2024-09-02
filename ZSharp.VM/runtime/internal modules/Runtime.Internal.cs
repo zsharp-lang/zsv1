@@ -9,8 +9,15 @@ namespace ZSharp.VM
 
         public void AddInternalModule(InternalModule module)
         {
-            if (internalModules.ContainsKey(module.ModuleIR))
+            var ir = module.Load(this);
+
+            if (internalModules.ContainsKey(ir))
                 throw new InvalidOperationException("Internal module already exists.");
+
+            internalModules[ir] = module;
+
+            // TODO: Load the module using a custom loader.
+            irMap[ir] = new ZSValue(null!);
         }
 
         public ZSInternalFunction GetInternalFunction(IR.Function function)

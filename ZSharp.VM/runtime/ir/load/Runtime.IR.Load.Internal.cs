@@ -4,8 +4,6 @@ namespace ZSharp.VM
 {
     public sealed partial class Runtime
     {
-        private readonly Assembler assembler;
-
         public ZSObject LoadIRInternal(IType type)
         {
             if (type is IRObject @object)
@@ -45,7 +43,7 @@ namespace ZSharp.VM
             foreach (var function in module.Functions)
             {
                 var zsFunction = LoadIR(function);
-                var functionBody = assembler.Assemble(function.Body.Instructions, function);
+                var functionBody = Assemble(function.Body.Instructions, function);
                 
                 zsFunction.Code = functionBody.Instructions;
                 zsFunction.StackSize = functionBody.StackSize;
