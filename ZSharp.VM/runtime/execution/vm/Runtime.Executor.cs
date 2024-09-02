@@ -54,8 +54,6 @@
 
             var result = function.Call(args);
 
-            ExecuteReturnVoid();
-
             if (result is not null)
                 CurrentFrame.Push(result);
         }
