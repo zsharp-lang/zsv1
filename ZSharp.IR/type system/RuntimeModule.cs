@@ -15,21 +15,21 @@
         {
             Module module = new("Runtime");
 
-            Class any;
             Class @string;
+            Class type;
             Class @void;
 
             {
-                module.Types.Add(any = new("Any"));
+                module.Types.Add(type = new("Type"));
                 module.Types.Add(@string = new("String"));
                 module.Types.Add(@void = new("Void"));
             }
 
             return new(module, new()
             {
-                Any = any,
                 String = @string,
-                Void = @void
+                Type = type,
+                Void = @void,
             });
         }
     }
