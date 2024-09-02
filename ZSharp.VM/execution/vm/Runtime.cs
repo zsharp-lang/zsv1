@@ -2,14 +2,8 @@
 
 namespace ZSharp.VM
 {
-    public sealed partial class Runtime
+    public sealed partial class Runtime(RuntimeModule runtimeModule)
     {
-        public RuntimeModule RuntimeModule { get; }
-
-        public Runtime(RuntimeModule runtimeModule)
-        {
-            this.RuntimeModule = runtimeModule;
-            this.assembler = new(this);
-        }
+        public RuntimeModule RuntimeModule { get; } = runtimeModule;
     }
 }

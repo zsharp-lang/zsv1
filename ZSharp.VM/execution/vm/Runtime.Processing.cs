@@ -46,13 +46,11 @@
 
         private void ExecuteCallInternal(Instruction instruction)
         {
-            int argc = instruction.As<int>();
+            var function = instruction.As<ZSInternalFunction>();
 
-            var args = new ZSObject[argc];
+            var args = new ZSObject[function.ArgumentCount];
             for (var i = args.Length - 1; i >= 0; i--)
                 args[i] = CurrentFrame.Pop();
-
-            var function = CurrentFrame.Pop() as ZSInternalFunction ?? throw new Exception();
 
             var result = function.Call(args);
 

@@ -4,11 +4,8 @@ using ZSharp.IR.VM;
 
 namespace ZSharp.VM
 {
-    internal sealed class Assembler(Runtime runtime)
+    public sealed partial class Runtime
     {
-        private readonly Runtime runtime = runtime;
-        private readonly RuntimeModule runtimeModule = runtime.RuntimeModule;
-
         public Code Assemble(IEnumerable<IR.VM.Instruction> code, Function? function = null)
         {
             List<(int, IR.VM.Instruction)> jumpTable = [];
@@ -23,14 +20,13 @@ namespace ZSharp.VM
                 switch (instruction)
                 {
                     case Call call:
-                        result.Add(new(OpCode.Call, runtime.LoadIR(call.Function)));
+                        result.Add(new(OpCode.Call, LoadIR(call.Function)));
                         break;
                     case CallIndirect callIndirect:
                         result.Add(new(OpCode.Call, callIndirect.Signature.Length));
                         break;
                     case CallInternal callInternal:
-                        result.Add(new(OpCode.LoadObjectFromMetadata, callInternal.Function));
-                        result.Add(new(OpCode.CallInternal, callInternal.Function.Signature.Length));
+                        result.Add(new(OpCode.CallInternal, GetInternalFunction(callInternal.Function)));
                         break;
                     case Jump jump:
                         result.Add(new(OpCode.Jump, 0));
@@ -61,7 +57,7 @@ namespace ZSharp.VM
                         break;
                     case Return _:
                         if (function is null) throw new InvalidOperationException();
-                        result.Add(new(function.ReturnType == runtimeModule.TypeSystem.Void ? OpCode.ReturnVoid : OpCode.Return));
+                        result.Add(new(function.ReturnType == RuntimeModule.TypeSystem.Void ? OpCode.ReturnVoid : OpCode.Return));
                         break;
                     default:
                         break;
