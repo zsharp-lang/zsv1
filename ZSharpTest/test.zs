@@ -4,6 +4,11 @@ module Lib {
 	fun bar(x: string): string {
 		return x;
 	}
+
+	fun id(x: type): type {
+		print(x);
+		return x;
+	}
 }
 
 module Program;
@@ -17,7 +22,7 @@ fun main(): string {
 let x = y;
 let y = "Hello";
 
-fun foo(): string {
+fun foo(): Lib.id(string) {
 	return Lib.bar(x);
 }
 
