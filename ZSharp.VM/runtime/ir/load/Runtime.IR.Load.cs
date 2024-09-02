@@ -9,6 +9,9 @@ namespace ZSharp.VM
 
         public ZSModule LoadIR(Module module)
         {
+            if (irMap.TryGetValue(module, out var result))
+                return result as ZSModule;
+
             var zsModule = (ZSModule)LoadIR(module as IRObject);
 
             if (module.Functions.Count > 0 && module.Functions[0].Name is null)
