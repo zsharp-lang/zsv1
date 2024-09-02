@@ -14,10 +14,10 @@ namespace ZSharp.Compiler
             Expose("void", new RawType(ir.RuntimeModule.TypeSystem.Void));
         }
 
-        public CGObjects.Module CompileCG(RStatement[] statements, string? moduleName = null)
+        public Module CompileCG(RStatement[] statements, string? moduleName = null)
             => cg.Compile(statements, moduleName);
 
-        public IR.Module CompileIR(CGObjects.Module module)
+        public IR.Module CompileIR(Module module)
             => ir.Run(module);
 
         public IR.Module CompileIR(RStatement[] statements, string? moduleName = null)
