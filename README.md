@@ -63,3 +63,11 @@ You can edit the `test.zs` file.
     - [ ] Classes (which includes methods, properties, fields, etc..)
 * [x] Fix module references lookup code (consider the fact that IR have 2 sources: `Read` and `EvaluateType`).
     - > The way this works is by analyzing each function code right after the body is compiled.
+* [ ] ZSharp.Compiler project
+    - [ ] IR Generator
+    - [ ] Generators
+        - [ ] Document
+        - [ ] Function Body
+        - [ ] Module
+        - [ ] OOP Types
+        - [ ] Method Body
