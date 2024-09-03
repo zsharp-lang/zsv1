@@ -4,6 +4,8 @@ namespace ZSharp.IR
 {
     public class Class(string? name) : OOPType
     {
+        private FieldCollection? _fields;
+
         public string? Name { get; set; } = name;
 
         public ClassAttributes Attributes { get; set; } = ClassAttributes.None;
@@ -18,7 +20,17 @@ namespace ZSharp.IR
 
         public Collection<Interface> Interfaces { get; } = [];
 
-        public Collection<Field> Fields { get; } = [];
+        public Collection<Field> Fields
+        {
+            get
+            {
+                if (_fields is not null)
+                    return _fields;
+
+                Interlocked.CompareExchange(ref _fields, new(this), null);
+                return _fields;
+            }
+        }
 
         public Collection<Method> Methods { get; } = [];
 
