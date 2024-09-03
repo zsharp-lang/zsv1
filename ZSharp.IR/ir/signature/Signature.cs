@@ -7,6 +7,8 @@
         private Args? _args;
         private KwArgs? _kwArgs;
 
+        public override Module? Module => _owner?.Module;
+
         public Args Args
         {
             get
@@ -54,7 +56,7 @@
         public IRObject? Owner
         {
             get => _owner;
-            set => Module = (_owner = value)?.Module;
+            set => _owner = value;
         }
 
         public IEnumerable<Parameter> GetParameters(bool includeVarArgs = true, bool includeVarKwArgs = true)

@@ -2,7 +2,7 @@
 
 namespace ZSharp.IR
 {
-    public sealed class Module(string? name) : IRObject
+    public sealed class Module(string? name) : ModuleMember
     {
         private Collection<Module>? _importedModules;
         private ModuleCollection<Function>? _functions;
@@ -51,6 +51,8 @@ namespace ZSharp.IR
                 return _globals;
             }
         }
+
+        public bool HasGlobals => !_globals.IsNullOrEmpty();
 
         public Collection<Module> Submodules
         {

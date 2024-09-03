@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.IR
 {
-    public class Function : IRObject
+    public class Function : ModuleMember
     {
         private Signature _signature;
         private VM.FunctionBody? _body;

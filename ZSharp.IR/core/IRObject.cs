@@ -2,6 +2,6 @@
 {
     public abstract class IRObject
     {
-        public Module? Module { get; internal set; }
+        public abstract Module? Module { get; }
     }
 }

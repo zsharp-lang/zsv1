@@ -6,6 +6,8 @@ namespace ZSharp.IR
     {
         private Signature? _signature;
 
+        public override Module? Module => _signature?.Module;
+
         public string Name { get; } = name;
 
         public IType Type { get; set; } = type;
@@ -15,7 +17,7 @@ namespace ZSharp.IR
         public Signature? Signature
         {
             get => _signature;
-            set => Module = (_signature = value)?.Module;
+            set => _signature = value;
         }
 
         public int Index { get; internal set; }

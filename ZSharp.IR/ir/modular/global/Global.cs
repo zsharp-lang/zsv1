@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.IR
 {
-    public sealed class Global(string name, IType type) : IRObject
+    public sealed class Global(string name, IType type) : ModuleMember
     {
         public string Name { get; set; } = name;
 

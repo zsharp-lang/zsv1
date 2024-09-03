@@ -2,7 +2,7 @@
 
 namespace ZSharp.IR
 {
-    public class Class(string? name) : OOPType
+    public sealed class Class(string? name) : OOPType
     {
         private FieldCollection? _fields;
 
@@ -31,6 +31,8 @@ namespace ZSharp.IR
                 return _fields;
             }
         }
+
+        public bool HasFields => !_fields.IsNullOrEmpty();
 
         public Collection<Method> Methods { get; } = [];
 

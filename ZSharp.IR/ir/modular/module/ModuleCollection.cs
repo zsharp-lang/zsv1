@@ -3,7 +3,7 @@
 namespace ZSharp.IR
 {
     internal class ModuleCollection<T>(Module owner) : Collection<T>
-        where T : IRObject
+        where T : ModuleMember
     {
         public Module Module { get; } = owner;
 
@@ -11,24 +11,24 @@ namespace ZSharp.IR
         {
             AssertUnOwned(item);
 
-            item.Module = Module;
+            item.Owner = Module;
         }
 
         public override void OnInsert(int index, T item)
         {
             AssertUnOwned(item);
 
-            item.Module = Module;
+            item.Owner = Module;
         }
 
         public override void OnRemove(T item)
         {
-            item.Module = null;
+            item.Owner = null;
         }
 
         public override void OnRemoveAt(int index)
         {
-            this[index].Module = null;
+            this[index].Owner = null;
         }
 
         private void AssertUnOwned(T item)
