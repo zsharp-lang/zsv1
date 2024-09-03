@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.VM
 {
-    public sealed class StackIsFullException : Exception
+    public sealed class StackIsFullException : ZSRuntimeException
     {
     }
 }

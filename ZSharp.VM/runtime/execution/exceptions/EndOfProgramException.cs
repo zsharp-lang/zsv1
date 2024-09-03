@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.VM
 {
-    public sealed class EndOfProgramException : Exception
+    public sealed class EndOfProgramException : ZSRuntimeException
     {
     }
 }
