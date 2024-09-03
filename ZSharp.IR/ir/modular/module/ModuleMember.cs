@@ -11,5 +11,12 @@
             get => _module;
             set => _module = value;
         }
+
+        public ModuleMember() { }
+
+        public ModuleMember(Module module)
+        {
+            _module = module;
+        }
     }
 }

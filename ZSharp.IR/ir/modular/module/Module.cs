@@ -4,7 +4,7 @@ namespace ZSharp.IR
 {
     public sealed class Module(string? name) : ModuleMember
     {
-        private Collection<Module>? _importedModules;
+        private ModuleCollection<ImportedModule>? _importedModules;
         private ModuleCollection<Function>? _functions;
         private GlobalCollection? _globals;
         private ModuleCollection<Module>? _submodules;
@@ -14,14 +14,14 @@ namespace ZSharp.IR
 
         public ModuleAttributes Attributes { get; set; } = ModuleAttributes.None;
 
-        public Collection<Module> ImportedModules
+        public Collection<ImportedModule> ImportedModules
         {
             get
             {
                 if (_importedModules is not null)
                     return _importedModules;
 
-                Interlocked.CompareExchange(ref _importedModules, new(), null);
+                Interlocked.CompareExchange(ref _importedModules, new(this), null);
                 return _importedModules;
             }
         }
