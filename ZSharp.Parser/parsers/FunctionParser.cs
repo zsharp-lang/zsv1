@@ -12,6 +12,10 @@ namespace ZSharp.Parser
                 LangParser.Keywords.Return,
                 LangParser.ParseReturnStatement
             );
+            AddKeywordParser(
+                LangParser.Keywords.Let,
+                Utils.ExpressionStatement(LangParser.ParseLetExpression)
+            );
         }
 
         public override Function Parse(Parser parser)
