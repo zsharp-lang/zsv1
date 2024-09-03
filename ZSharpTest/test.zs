@@ -23,7 +23,9 @@ let x = y;
 let y = "Hello";
 
 fun foo(): Lib.id(string) {
-	return Lib.bar(x);
+	let tmp = Lib.bar(x);
+
+	return tmp;
 }
 
 
