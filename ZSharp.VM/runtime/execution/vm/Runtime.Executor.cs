@@ -69,9 +69,9 @@
             var function = CurrentFrame.Pop() as ZSFunction ?? throw new Exception();
 
             if (args.Length < 1) throw new("Virtual call requires at least one argument.");
-            if (args[0].Type is not Types.Object objectType)
+            if (args[0].Type is not ZSClass objectType)
                 throw new("Virtual method may only be called when the first argument is an object.");
-            if (objectType.VTable is null)
+            if (!objectType.HasVTable)
                 throw new("Object doesn't have a vtable");
 
             function = objectType.VTable[function];
@@ -128,7 +128,7 @@
 
         private void ExecuteLoadObjectFromMetadata(Instruction instruction)
         {
-            CurrentFrame.Push(LoadIR(instruction.As<IR.IRObject>()));
+            CurrentFrame.Push(Get(instruction.As<IR.IRObject>()));
         }
     }
 }

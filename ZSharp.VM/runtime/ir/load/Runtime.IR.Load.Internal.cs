@@ -4,49 +4,63 @@ namespace ZSharp.VM
 {
     public sealed partial class Runtime
     {
-        public ZSObject LoadIRInternal(IType type)
+        private ZSObject LoadIRInternal(IType type)
         {
             if (type is IRObject @object)
-                return LoadIR(@object);
+                return Get(@object);
             throw new NotImplementedException();
         }
 
-        public ZSFunction LoadIRInternal(Function function)
+        private ZSClass LoadIRInternal(Class @class)
+            => throw new NotImplementedException();
+
+        private ZSFunction LoadIRInternal(Function function)
         {
             if (!function.HasBody)
                 throw new Exception();
 
-            //var code = assembler.Assemble(function.Body.Instructions, function);
+            var code = 
+                function.Module is not null 
+                ? [] 
+                : Assemble(function.Body.Instructions, function).Instructions;
 
-            return new([])
-            {
-                ArgumentCount = function.Signature.Length,
-                LocalCount = function.Body.HasLocals ? function.Body.Locals.Count : 0,
-                StackSize = 0,
-            };
+            return irMap.Cache(function, ZSFunction.CreateFrom(
+                function,
+                code, 
+                TypeSystem.Function
+            ));
         }
 
-        public ZSModule LoadIRInternal(Module module)
+        private ZSModule LoadIRInternal(Module module)
         {
-            var zsModule = new ZSModule(module);
+            var zsModule = ZSModule.CreateFrom(module, TypeSystem.Module);
 
             if (module.HasImportedModules)
                 foreach (var importedModule in module.ImportedModules)
-                    LoadIR(importedModule);
+                    ImportIR(importedModule);
 
             foreach (var function in module.Functions)
-                LoadIR(function);
+                LoadIRInternal(function);
 
             foreach (var submodule in module.Submodules)
-                LoadIR(submodule);
+                LoadIRInternal(submodule);
+
+            irMap.Cache(module, zsModule);
 
             foreach (var function in module.Functions)
             {
-                var zsFunction = LoadIR(function);
+                var zsFunction = Get(function);
                 var functionBody = Assemble(function.Body.Instructions, function);
                 
                 zsFunction.Code = functionBody.Instructions;
                 zsFunction.StackSize = functionBody.StackSize;
+            }
+
+            if (module.Functions.Count > 0 && module.Functions[0].Name is null)
+            {
+                var initFunction = Get(module.Functions[0]);
+
+                Run(new(initFunction.Code, initFunction.StackSize), new ZSObject[initFunction.LocalCount]);
             }
 
             return zsModule;

@@ -2,19 +2,25 @@
 
 namespace ZSharp.VM
 {
-    public sealed partial class Runtime(RuntimeModule runtimeModule)
+    public sealed partial class Runtime
     {
-        public RuntimeModule RuntimeModule { get; } = runtimeModule;
+        public RuntimeModule RuntimeModule { get; }
 
-        public void Initialize()
+        public Runtime(RuntimeModule runtimeModule)
+            : this(runtimeModule, new(runtimeModule)) { }
+
+        public Runtime(RuntimeModule runtimeModule, TypeSystem typeSystem)
         {
-            var typeObject = new ZSValue(null!);
-            typeObject.Type = typeObject;
+            RuntimeModule = runtimeModule;
+            TypeSystem = typeSystem;
 
-            irMap[RuntimeModule.TypeSystem.Type] = typeObject;
+            Initialize();
+        }
 
-            irMap[RuntimeModule.TypeSystem.String] = new ZSValue(typeObject);
-            irMap[RuntimeModule.TypeSystem.Void] = new ZSValue(typeObject);
+        private void Initialize()
+        {
+            InitializeTypeSystem();
+            InitializeSingletonValues();
         }
     }
 }

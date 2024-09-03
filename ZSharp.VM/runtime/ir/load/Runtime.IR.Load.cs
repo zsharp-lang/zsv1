@@ -4,24 +4,40 @@ namespace ZSharp.VM
 {
     public sealed partial class Runtime
     {
-        public ZSFunction LoadIR(Function function)
-            => LoadIR(function as IRObject) as ZSFunction ?? throw new();
-
-        public ZSModule LoadIR(Module module)
+        /// <summary>
+        /// Use <see cref="ImportIR(Class)"/> instead.
+        /// </summary>
+        /// <param name="class"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public ZSClass LoadIR(Class @class)
         {
-            if (irMap.TryGetValue(module, out var result))
-                return result as ZSModule;
+            if (@class.Module is not null)
+                throw new Exception("LoadIR(Class) can only be used with free functions");
 
-            var zsModule = (ZSModule)LoadIR(module as IRObject);
-
-            if (module.Functions.Count > 0 && module.Functions[0].Name is null)
-            {
-                var initFunction = LoadIR(module.Functions[0]);
-
-                Run(new(initFunction.Code, initFunction.StackSize), new ZSObject[initFunction.LocalCount]);
-            }
-
-            return zsModule;
+            return irMap.Cache(@class, LoadIRInternal(@class));
         }
+
+        /// <summary>
+        /// Use <see cref="ImportIR(Function)"/> instead.
+        /// </summary>
+        /// <param name="function"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public ZSFunction LoadIR(Function function)
+        {
+            if (function.Module is not null)
+                throw new Exception("LoadIR(Function) can only be used with free functions");
+
+            return irMap.Cache(function, LoadIRInternal(function));
+        }
+
+        /// <summary>
+        /// Use <see cref="ImportIR(Module)"/> instead.
+        /// </summary>
+        /// <param name="module"></param>
+        /// <returns></returns>
+        public ZSModule LoadIR(Module module)
+            => LoadIRInternal(module);
     }
 }

@@ -1,17 +1,39 @@
-﻿namespace ZSharp.VM
+﻿using ZSharp.IR;
+
+namespace ZSharp.VM
 {
     public sealed class TypeSystem
     {
-        public static ZSObject Type { get; } = new Types.Type();
+        public ZSObject Type { get; }
+        
+        public ZSObject Boolean { get; }
+        
+        public ZSObject Function { get; }
+        
+        public ZSObject Module { get; }
+        
+        public ZSObject Null { get; }
+        
+        public ZSObject String { get; }
 
-        public static ZSObject Boolean { get; } = new Types.PrimitiveType("Boolean");
+        public ZSObject Void { get; }
 
-        public static ZSObject Function { get; } = new Types.PrimitiveType("Function");
+        public TypeSystem(RuntimeModule runtimeModule)
+            : this(runtimeModule.TypeSystem) { }
 
-        public static ZSObject Module { get; } = new Types.PrimitiveType("Module");
+        public TypeSystem(IR.TypeSystem typeSystem)
+        {
+            Type = new Types.Type(typeSystem.Type);
 
-        public static ZSObject Null { get; } = new Types.PrimitiveType("NullType");
+            Boolean = CreatePrimitive(null!);
+            Function = CreatePrimitive(null!);
+            Module = CreatePrimitive(null!);
+            Null = CreatePrimitive(null!);
+            String = CreatePrimitive(typeSystem.String);
+            Void = CreatePrimitive(typeSystem.Void);
+        }
 
-        public static ZSObject String { get; } = new Types.PrimitiveType("String");
+        private ZSObject CreatePrimitive(Class @class)
+            => new Types.PrimitiveType(@class, Type);
     }
 }

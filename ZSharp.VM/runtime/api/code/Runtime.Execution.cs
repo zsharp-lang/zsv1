@@ -15,7 +15,7 @@
         /// Execute the given code in the context of the current frame.
         /// </summary>
         /// <param name="code">The code to evaluate.</param>
-        /// <param name="isolated">If <see cref="true"/>, the code will not modify the context
+        /// <param name="isolated">If <see langword="true"/>, the code will not modify the context
         /// of the current frame but a copy of it.</param>
         public void ExecuteInCurrentFrame(Code code, bool isolated)
         {

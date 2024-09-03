@@ -2,7 +2,7 @@
 {
     internal sealed class Type : PrimitiveType
     {
-        public Type() : base("Type", null!)
+        public Type(IR.Class @class) : base(@class, null!)
             => Type = this;
     }
 }

@@ -17,7 +17,11 @@ namespace ZSharp.VM
             internalModules[ir] = module;
 
             // TODO: Load the module using a custom loader.
-            irMap[ir] = new ZSValue(null!);
+            // Or just call the initializer. (althoug it's already called at the top?)
+            irMap.Cache(ir, ZSModule.CreateFrom(ir, TypeSystem.Module));
+
+            foreach (var function in ir.Functions)
+                irMap.Cache(function, GetInternalFunction(function));
         }
 
         public ZSInternalFunction GetInternalFunction(IR.Function function)
@@ -40,7 +44,11 @@ namespace ZSharp.VM
             if (!internalModule.FunctionImplementations.TryGetValue(function, out var implementation))
                 throw new InvalidOperationException("Internal function not implemented.");
 
-            return internalFunctions[function] = new(implementation, function.Signature.Length);
+            return internalFunctions[function] = new(
+                implementation, 
+                function.Signature.Length, 
+                TypeSystem.Function
+            );
         }
     }
 }

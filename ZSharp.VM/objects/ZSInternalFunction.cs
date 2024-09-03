@@ -3,7 +3,8 @@
     public delegate ZSObject? ZSInternalFunctionDelegate(ZSObject[] args);
 
     public sealed class ZSInternalFunction
-        (ZSInternalFunctionDelegate function, int argumentCount)
+        (ZSInternalFunctionDelegate function, int argumentCount, ZSObject type)
+        : ZSObject(type)
     {
         public int ArgumentCount { get; } = argumentCount;
 

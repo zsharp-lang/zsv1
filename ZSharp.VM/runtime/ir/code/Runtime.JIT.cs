@@ -20,7 +20,7 @@ namespace ZSharp.VM
                 switch (instruction)
                 {
                     case Call call:
-                        result.Add(new(OpCode.Call, LoadIR(call.Function)));
+                        result.Add(new(OpCode.Call, Get(call.Function)));
                         break;
                     case CallIndirect callIndirect:
                         result.Add(new(OpCode.Call, callIndirect.Signature.Length));
@@ -53,7 +53,7 @@ namespace ZSharp.VM
                         result.Add(new(OpCode.Pop));
                         break;
                     case PutString putString:
-                        result.Add(new(OpCode.Push, new ZSString(putString.Value)));
+                        result.Add(new(OpCode.Push, new ZSString(putString.Value, TypeSystem.String)));
                         break;
                     case Return _:
                         if (function is null) throw new InvalidOperationException();
