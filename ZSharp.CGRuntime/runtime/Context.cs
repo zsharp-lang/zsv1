@@ -21,7 +21,7 @@ namespace ZSharp.CGRuntime
             => CurrentScope.Cache(name);
 
         public bool Set(string name, CGObject value)
-            => CurrentScope.Cache(name, searchParent: false) is null
+            => !CurrentScope.Contains(name)
             && CurrentScope.Cache(name, value) is not null;
 
         public bool Del(string name)
