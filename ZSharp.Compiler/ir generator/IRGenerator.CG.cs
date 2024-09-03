@@ -30,11 +30,14 @@
 
         public Code Read(CGObject @object)
         {
-            if (@object is ICTReadable ctReadable)
-                return ctReadable.Read(this);
+            Code? code = null;
 
+            if (@object is ICTReadable ctReadable)
+                code = ctReadable.Read(this);
+
+            // TODO: remove this
             if (@object is CGObjects.Global global)
-                return new([
+                code = new([
                     new IR.VM.GetGlobal(global.IR!)
                 ])
                 {
@@ -42,7 +45,10 @@
                     Types = [global.IR!.Type]
                 };
 
-            throw new NotImplementedException();
+            if (code is null)
+                throw new NotImplementedException();
+
+            return code;
         }
 
         public Code Read(IEnumerable<CGObject> objects)

@@ -7,7 +7,7 @@ namespace ZSharp.Compiler
         //, ICompiler
     {
         public IRType EvaluateType(CGCode instructions)
-            => EvaluateType(runtime.Run(instructions));
+            => EvaluateType(CG.Run(instructions));
 
         public IRType EvaluateType(CGObject @object)
         {

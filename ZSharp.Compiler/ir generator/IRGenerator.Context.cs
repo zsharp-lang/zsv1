@@ -1,27 +1,26 @@
 ﻿using CommonZ.Utils;
 using ZSharp.CGRuntime;
-using Scope = CommonZ.Utils.Cache<string, ZSharp.CGRuntime.CGObject>; // object = CGObject
+using Scope = CommonZ.Utils.Cache<string, ZSharp.CGRuntime.CGObject>;
 
 namespace ZSharp.Compiler
 {
     internal partial class IRGenerator
     {
         private readonly Mapping<CGObject, Scope> scopes = [];
-        private readonly Mapping<CGObject, Scope> closures = [];
         private readonly Stack<CGObject> contextStack = [];
 
-        public Scope CurrentScope => runtime.Context.CurrentScope;
+        public Scope CurrentScope => CG.Context.CurrentScope;
 
         public CGObject? CurrentContext => contextStack.Count == 0 ? null : contextStack.Peek();
 
-        public ContextManager ClosureOf(CGObject @object)
+        public T? FindContext<T>()
+            where T : class
         {
-            if (!closures.TryGetValue(@object, out var closure))
-                closures[@object] = closure = CurrentScope;
+            foreach (var item in contextStack)
+                if (item is T protocol)
+                    return protocol;
 
-            runtime.Context.PutScope(closure);
-
-            return new(() => runtime.Context.PopScope());
+            return null;
         }
 
         public ContextManager ContextOf(CGObject @object)
@@ -33,11 +32,11 @@ namespace ZSharp.Compiler
                     Parent = CurrentScope
                 };
 
-            runtime.Context.PutScope(scope);
+            CG.Context.PutScope(scope);
 
             return new(() =>
             {
-                runtime.Context.PopScope();
+                CG.Context.PopScope();
                 contextStack.Pop();
             });
         }

@@ -51,9 +51,8 @@ namespace ZSharp.Compiler
                 .Select(item => item switch
                 {
                     CGRuntime.HLVM.Object @objectInstruction => objectInstruction.CGObject,
-                    CGRuntime.HLVM.Binding bindingInstruction
-                        when bindingInstruction.AccessMode == CGRuntime.HLVM.AccessMode.Get
-                        => IRGenerator.CurrentScope.Cache(bindingInstruction.Name),
+                    CGRuntime.HLVM.Get getInstruction
+                        => IRGenerator.CurrentScope.Cache(getInstruction.Name),
                     _ => null
                 })
                 .Where(dependency => dependency is not null)

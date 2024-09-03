@@ -14,10 +14,12 @@ namespace ZSharp.Compiler
             
             Object.IR.Functions.Add(Object.InitFunction.IR = new(IRGenerator.RuntimeModule.TypeSystem.Void));
 
-            foreach (var _ in IRGenerator.Runtime.Run(Object.Content))
+            _ = Object.InitFunction.IR.Body;
+
+            foreach (var _ in IRGenerator.CG.Run(Object.Content))
                 throw new Exception("Module content should not return any values.");
 
-            IRGenerator.Runtime.Context.Enter(Object);
+            IRGenerator.CG.Context.Enter(Object);
 
             Build();
 
@@ -31,7 +33,7 @@ namespace ZSharp.Compiler
                     default: break;
                 }
 
-            IRGenerator.Runtime.Context.Leave();
+            IRGenerator.CG.Context.Leave();
 
             FinalizeCompilation();
 

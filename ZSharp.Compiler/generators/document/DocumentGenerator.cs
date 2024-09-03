@@ -9,7 +9,7 @@ namespace ZSharp.Compiler
         {
             Object.IR = new(Object.Name);
 
-            foreach (var _ in IRGenerator.Runtime.Run(Object.Content))
+            foreach (var _ in IRGenerator.CG.Run(Object.Content))
                 throw new Exception("Document level CG code must not result with CG objects!");
 
             return Object.IR;

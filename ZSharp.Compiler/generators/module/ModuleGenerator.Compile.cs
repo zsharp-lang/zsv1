@@ -34,15 +34,47 @@ namespace ZSharp.Compiler
             //    // However, for now, we will only add the functions themselves.
             //}
 
+            if (function.Name is not null && function.Name != string.Empty)
+                IRGenerator.CurrentScope.Cache(function.Name, function);
             EnqueueForDependencyCollection(function);
-            //Initialize(function);
         }
 
         private void Compile(Global global)
-            => EnqueueForDependencyCollection(global);
-            //=> Initialize(global);
+        {
+            IRGenerator.CurrentScope.Cache(global.Name, global);
+            EnqueueForDependencyCollection(global);
+        }
+
+        private void Compile(Import import)
+        {
+            var importResult = IRGenerator.CG.Run([
+                // TODO: import callable goes here
+                ..import.Arguments
+                ]);
+
+            if (importResult.Length != 1)
+                throw new Exception("Import callable must return a single object.");
+
+            var source = importResult[0];
+
+            if (import.Alias is not null)
+                IRGenerator.CurrentScope.Cache(import.Alias, source);
+
+            foreach (var importedName in import.ImportedNames)
+            {
+                var result = IRGenerator.Generate.Member(source, importedName.Name);
+
+                IRGenerator.CurrentScope.Cache(importedName.Alias ?? importedName.Name, result);
+
+                Object.ImportedMembers.Add(result);
+            }
+        }
 
         private void Compile(Module module)
-            => Object.IR!.Submodules.Add(new ModuleGenerator(IRGenerator, module).Run());
+        {
+            if (module.Name is not null && module.Name != string.Empty)
+                IRGenerator.CurrentScope.Cache(module.Name, module);
+            Object.IR!.Submodules.Add(new ModuleGenerator(IRGenerator, module).Run());
+        }
     }
 }

@@ -1,5 +1,4 @@
-﻿using ZSharp.CGObjects;
-using ZSharp.CGRuntime;
+﻿using ZSharp.CGRuntime;
 
 namespace ZSharp.Compiler
 {

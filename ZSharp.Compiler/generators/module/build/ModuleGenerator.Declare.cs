@@ -14,9 +14,9 @@ namespace ZSharp.Compiler
 
                 var initializerCode = 
                     parameter.Initializer is null ? null :
-                    IRGenerator.Read(IRGenerator.Runtime.Run(parameter.Initializer));
+                    IRGenerator.Read(IRGenerator.CG.Run(parameter.Initializer));
 
-                IRGenerator.Runtime.Context.Set(parameter.Name, parameter);
+                IRGenerator.CG.Context.Set(parameter.Name, parameter);
 
                 return parameter.IR = new(
                     parameter.Name, 
@@ -62,7 +62,7 @@ namespace ZSharp.Compiler
             var declaredType = global.Type is null ? null : IRGenerator.EvaluateType(global.Type);
 
             var initializerCode = global.Initializer is null
-                ? null : IRGenerator.Read(IRGenerator.Runtime.Run(global.Initializer));
+                ? null : IRGenerator.Read(IRGenerator.CG.Run(global.Initializer));
 
             if (initializerCode is not null)
             {

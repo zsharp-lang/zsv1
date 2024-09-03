@@ -2,7 +2,7 @@
 {
     public interface ICompiler
     {
-        public CGRuntime.ICodeGenerator CG { get; }
+        public CGRuntime.ICodeGenerator Generate { get; }
 
         public Code Read(CTObject @object);
     }

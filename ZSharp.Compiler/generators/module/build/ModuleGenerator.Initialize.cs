@@ -8,9 +8,6 @@ namespace ZSharp.Compiler
         {
             AddDependencyForDefinition(function);
 
-            //Declare(function);
-            //Define(function);
-
             void Initialize(Parameter parameter)
             {
                 if (parameter.Type is not null)
@@ -48,8 +45,6 @@ namespace ZSharp.Compiler
         {
             AddDependencyForDefinition(global);
 
-            //Declare(global);
-            //Define(global);
             if (global.Type is not null)
             {
                 AddDependenciesForDeclaration(global.Type);

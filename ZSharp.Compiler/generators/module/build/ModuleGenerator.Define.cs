@@ -11,7 +11,7 @@ namespace ZSharp.Compiler
         {
             if (global.Initializer is not null && global.IR!.Initializer is null)
             {
-                var initializerCode = IRGenerator.Read(IRGenerator.Runtime.Run(global.Initializer));
+                var initializerCode = IRGenerator.Read(IRGenerator.CG.Run(global.Initializer));
 
                 var initIR = Object.InitFunction.IR!;
                 initIR.Body.StackSize = Math.Max(initIR.Body.StackSize, initializerCode.MaxStackSize);

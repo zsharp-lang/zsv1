@@ -13,6 +13,9 @@ namespace ZSharp.Compiler
 
         private IR.Module Compile(Module module)
         {
+            if (module.Name is not null && module.Name != string.Empty)
+                IRGenerator.CurrentScope.Cache(module.Name, module);
+
             var ir = new ModuleGenerator(IRGenerator, module).Run();
 
             Object.IR!.Submodules.Add(ir);
