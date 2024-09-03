@@ -19,13 +19,16 @@ namespace ZSharp.Parser
                 parser => new ExpressionStatement() { Expression = defParser(parser) }
             );
 
-        //public static ParserFunction<Statement> ExpressionStatement(Func<Parser, Expression> fn)
-        //    => parser =>
-        //    {
-        //        var expression = fn(parser);
-        //        parser.Eat(TokenType.Semicolon);
-        //        return new ExpressionStatement(expression);
-        //    };
+        public static ParserFunction<Statement> ExpressionStatement(Func<Parser, Expression> fn)
+            => parser =>
+            {
+                var expression = fn(parser);
+                parser.Eat(TokenType.Semicolon);
+                return new ExpressionStatement
+                {
+                    Expression = expression
+                };
+            };
 
         public static LedFunction InfixL(string @operator, int bindingPower)
             => (parser, left) =>
