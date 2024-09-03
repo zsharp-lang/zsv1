@@ -61,4 +61,5 @@ You can edit the `test.zs` file.
 * [ ] Add support for definition templates
     - [ ] Functions
     - [ ] Classes (which includes methods, properties, fields, etc..)
-* [ ] Fix module references lookup code (consider the fact that IR have 2 sources: `Read` and `EvaluateType`).
+* [x] Fix module references lookup code (consider the fact that IR have 2 sources: `Read` and `EvaluateType`).
+    - > The way this works is by analyzing each function code right after the body is compiled.
