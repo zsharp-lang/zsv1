@@ -22,6 +22,33 @@ namespace ZSharp.Compiler
                     AddDependenciesForDeclaration(parameter.Initializer);
             }
 
+            void InitializeBody(CGCode body)
+            {
+                foreach (var instruction in body)
+                {
+                    CGObject? @object = instruction switch
+                    {
+                        CGRuntime.HLVM.Get getInstruction =>
+                            IRGenerator.CurrentScope.Cache(getInstruction.Name),
+                        CGRuntime.HLVM.Object @objectInstruction =>
+                            objectInstruction.CGObject,
+                        _ => null
+                    };
+
+                    if (@object is null) continue;
+
+                    if (@object is Local local)
+                    {
+                        if (local.Initializer is not null)
+                            AddDependenciesForDefinition(local.Initializer);
+                        if (local.Type is not null)
+                            AddDependenciesForDefinition(local.Type);
+                    }
+
+                    AddDependenciesForDefinition(DependencyState.Declared, @object);
+                }
+            }
+
             if (function.ReturnType is not null)
                 AddDependenciesForDeclaration(function.ReturnType);
 
@@ -38,7 +65,7 @@ namespace ZSharp.Compiler
                 Initialize(function.Signature.VarKwArgs);
 
             if (function.Body is not null)
-                AddDependenciesForDefinition(function.Body);
+                InitializeBody(function.Body);
         }
 
         public void Initialize(Global global)

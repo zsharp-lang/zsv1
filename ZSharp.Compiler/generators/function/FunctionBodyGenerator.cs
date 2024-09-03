@@ -7,7 +7,11 @@ namespace ZSharp.Compiler
     {
         public override void CompileObject(CGObject @object)
         {
-            throw new NotImplementedException();
+            switch (@object)
+            {
+                case Local local: Compile(local); break;
+                default: break;
+            }
         }
 
         protected override IR.Function Compile()
