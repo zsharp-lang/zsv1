@@ -23,7 +23,6 @@ namespace ZSharp.Compiler
         {
             RuntimeModule = runtimeModule;
             rtRuntime = new(runtimeModule);
-            rtRuntime.Initialize();
             CG = new(this);
             runtime = new(CG, this, this);
         }
