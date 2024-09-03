@@ -77,7 +77,13 @@ namespace ZSharp.CGCompiler
 
         protected abstract TResult Create();
 
-        protected virtual void Define(TResult @object) { }
+        protected virtual void Define(TResult @object)
+        {
+            Emit([
+                CGRuntime.CG.Object(@object),
+                CGRuntime.CG.Compile()
+            ]);
+        }
 
         protected abstract void Compile(TResult @object);
     }

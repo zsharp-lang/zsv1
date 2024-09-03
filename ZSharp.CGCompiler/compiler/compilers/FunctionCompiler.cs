@@ -13,20 +13,6 @@ namespace ZSharp.CGCompiler
         protected override RTFunction Create()
             => new(Node.Name);
 
-        protected override void Define(RTFunction function)
-        {
-            if (function.Name is not null && function.Name != string.Empty)
-                Emit([
-                    CG.Object(function),
-                    CG.Set(function.Name)
-                ]);
-
-            Emit([
-                CG.Object(function),
-                CG.Compile()
-            ]);
-        }
-
         protected override void Compile(RTFunction @object)
         {
             if (Node.Signature.Args is not null)

@@ -29,13 +29,7 @@ namespace ZSharp.CGRuntime
             => instruction switch
             {
                 // bindings
-                HLVM.Binding binding => binding.AccessMode switch
-                {
-                    HLVM.AccessMode.Get => new(OpCode.Get, binding.Name),
-                    HLVM.AccessMode.Set => new(OpCode.Set, binding.Name),
-                    HLVM.AccessMode.Del => new(OpCode.Del, binding.Name),
-                    _ => throw new Exception($"Unknown access mode: {binding.AccessMode}")
-                },
+                HLVM.Get get => new(OpCode.Get, get.Name),
 
                 // callables
                 HLVM.Argument argument => new(OpCode.Argument, argument.Name),

@@ -3,8 +3,6 @@
     internal enum OpCode
     {
         Get,
-        Set,
-        Del,
 
         Object,
 

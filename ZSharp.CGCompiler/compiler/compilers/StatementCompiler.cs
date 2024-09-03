@@ -38,43 +38,38 @@ namespace ZSharp.CGCompiler
 
         private void Compile(RImport import)
         {
-            Emit([
-                CG.Get("import"), // TODO: CG.Object(Config.Import);
+            CGCode args = [
                 ..Context.Compile(import.Source),
                 CG.Argument()
-            ]);
+            ];
 
             if (import.Arguments is not null)
                 foreach (var argument in import.Arguments)
-                    Emit([
+                    args.AddRange([
                         ..Context.Compile(argument.Value),
                         CG.Argument(argument.Name)
                     ]);
 
-            Emit([CG.Call((import.Arguments?.Count ?? 0) + 1)]);
+            args.Add(CG.Call((import.Arguments?.Count ?? 0) + 1));
 
-            if (import.As is not null)
-                Emit([ 
-                    CG.Dup(), 
-                    CG.Set(import.As.Name) 
-                ]);
+            List<CGObjects.ImportedName> importedNames = [];
 
-            if (
-                (import.Targets?.Count ?? 0) == 1
-                && import.Targets![0] is RImportTarget singleTarget
-            )
-                Emit([
-                    CG.GetMember(singleTarget.Name!),
-                    CG.Set(singleTarget.Alias?.Name ?? singleTarget.Name!)
-                    ]);
-
-            else if (import.Targets is not null)
+            if (import.Targets is not null)
                 foreach (var target in import.Targets)
-                    Emit([
-                        CG.Dup(), 
-                        CG.GetMember(target.Name!), 
-                        CG.Set(target.Alias?.Name ?? target.Name!)
-                    ]);
+                    importedNames.Add(new CGObjects.ImportedName()
+                    {
+                        Alias = target.Alias?.Name,
+                        Name = target.Name!,
+                    });
+
+            Emit([
+                CG.Object(new CGObjects.Import() {
+                    Alias = import.As?.Name,
+                    Arguments = args,
+                    ImportedNames = importedNames,
+                }),
+                CG.Compile(),
+            ]);
         }
     }
 }

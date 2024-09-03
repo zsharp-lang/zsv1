@@ -73,14 +73,6 @@
                     else
                         ErrorHandler.CouldNotFindName(instruction.As<string>());
                     break;
-                case LLVM.OpCode.Set:
-                    if (!context.Set(instruction.As<string>(), Frame.Pop()))
-                        ErrorHandler.NameAlreadyExists(instruction.As<string>());
-                    break;
-                case LLVM.OpCode.Del:
-                    if (!context.Del(instruction.As<string>()))
-                        ErrorHandler.CouldNotFindName(instruction.As<string>());
-                    break;
                 case LLVM.OpCode.Argument:
                     Frame.Arg(instruction.As<string?>()); break;
                 case LLVM.OpCode.Call:
