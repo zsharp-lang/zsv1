@@ -36,6 +36,13 @@ namespace ZSharp.CGCompiler
                 Context.Compile(Node.Body);
         }
 
+        protected internal override CGObject? Compile(RDefinition definition)
+            => definition switch
+            {
+                RLetDefinition let => Compile(let),
+                _ => null
+            };
+
         protected internal override bool Compile(RStatement statement)
         {
             if (statement is RReturn @return)
@@ -48,6 +55,23 @@ namespace ZSharp.CGCompiler
                 return true;
             }
             return base.Compile(statement);
+        }
+
+        private Local Compile(RLetDefinition let)
+        {
+            Local local = new()
+            {
+                Initializer = Context.Compile(let.Value),
+                Name = let.Name ?? throw new(),
+                Type = let.Type is null ? null : Context.Compile(let.Type)
+            };
+
+            Emit([
+                CG.Object(local),
+                CG.Compile()
+            ]);
+
+            return local;
         }
 
         private Parameter Compile(RParameter parameter)
