@@ -43,8 +43,8 @@ You can edit the `test.zs` file.
 * [ ] Implement better Z# RT VM API (C#)
     - [ ] Function calls
     - [ ] Object construction, instantiation and initialization
-    - [ ] IR loading
-* [ ] Organize IR loading in Z# RT VM (C#)
+    - [x] IR loading
+* [x] Organize IR loading in Z# RT VM (C#)
 * [ ] Implement document-level definitions
     - [ ] Functions
     - [ ] Globals
