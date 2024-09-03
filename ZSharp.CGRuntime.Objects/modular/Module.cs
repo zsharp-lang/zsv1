@@ -3,11 +3,13 @@ using ZSharp.Compiler;
 
 namespace ZSharp.CGObjects
 {
-    public sealed class Module(string? name)
+    public sealed class Module(string name)
         : CGObject
         , ICTGetMember<MemberName>
     {
-        public Mapping<string, CGObject> Members { get; } = new();
+        public Mapping<string, CGObject> Members { get; } = [];
+
+        public Collection<CGObject> ImportedMembers { get; } = [];
 
         public IR.Module? IR { get; set; }
 
