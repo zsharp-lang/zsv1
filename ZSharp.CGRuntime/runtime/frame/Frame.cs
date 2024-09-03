@@ -26,7 +26,7 @@
             => args.Pop();
 
         public LLVM.Instruction Instruction()
-            => code[++pc];
+            => ++pc == code.Length ? new(LLVM.OpCode.End) : code[pc];
 
         public void Jump(int index)
             => pc = index;
