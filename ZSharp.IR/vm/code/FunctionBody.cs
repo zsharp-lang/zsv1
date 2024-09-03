@@ -5,7 +5,7 @@ namespace ZSharp.IR.VM
     public sealed class FunctionBody
     {
         private InstructionCollection? _instructions;
-        private Collection<Local>? _locals;
+        private LocalCollection? _locals;
 
         public Function Function { get; }
 
@@ -30,7 +30,7 @@ namespace ZSharp.IR.VM
                 if (_locals is not null)
                     return _locals;
 
-                Interlocked.CompareExchange(ref _locals, [], null);
+                Interlocked.CompareExchange(ref _locals, new(this), null);
                 return _locals;
             }
         }
