@@ -1,5 +1,4 @@
-﻿using CommonZ.Utils;
-using ZSharp.CGObjects;
+﻿using ZSharp.CGObjects;
 
 namespace ZSharp.Compiler
 {
@@ -29,10 +28,13 @@ namespace ZSharp.Compiler
         {
             var value = EvaluateRT(code);
 
+            if (value is VM.ZSIRObject irObject && irObject.IR is IRType type)
+                return type;
+
             // TODO: implement the `compile-type` protocol and use it here.
             // for now, we'll just return the type `string` for all values.
 
-            return RuntimeModule.TypeSystem.String;
+            throw new NotImplementedException();
         }
     }
 }
