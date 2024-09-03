@@ -37,7 +37,7 @@ namespace ZSharp.VM
 
             if (module.HasImportedModules)
                 foreach (var importedModule in module.ImportedModules)
-                    ImportIR(importedModule);
+                    ImportIR(importedModule.Imported);
 
             foreach (var function in module.Functions)
                 LoadIRInternal(function);
