@@ -37,6 +37,9 @@
             UnitType = unitType;
         }
 
+        public T As<T>()
+            => (T)Value!;
+
         public static RLiteral String(string value) => new(RLiteralType.String, value);
 
         public static RLiteral Integer(long value) => new(RLiteralType.Integer, value);
