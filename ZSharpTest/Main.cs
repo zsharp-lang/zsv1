@@ -135,7 +135,7 @@ using ZSharp.Tokenizer;
 #endregion
 
 
-string FileName = args.Length == 0 ? "test.zs" : args[1];
+string FileName = args.Length == 0 ? "test.zs" : args[0];
 
 
 #region Parsing
