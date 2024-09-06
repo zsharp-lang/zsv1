@@ -6,12 +6,12 @@ namespace ZSharp.VM
 {
     public sealed partial class Runtime
     {
-        public Code Assemble(IEnumerable<IR.VM.Instruction> code, Function? function = null)
+        public Code Assemble(IEnumerable<IR.VM.Instruction> code, Function? function = null, int? stackSize = null)
         {
             List<(int, IR.VM.Instruction)> jumpTable = [];
             Dictionary<int, int> offsetMap = [];
 
-            int stackSize = (function?.HasBody ?? false) ? function.Body.StackSize : 0;
+            int maxStackSize = stackSize ?? ((function?.HasBody ?? false) ? function.Body.StackSize : 0);
             List<Instruction> result = [];
 
             foreach (var (index, instruction) in new Enumerate<IR.VM.Instruction>(code))
@@ -45,6 +45,7 @@ namespace ZSharp.VM
                     case SetGlobal setGlobal:
                         result.Add(new(OpCode.LoadObjectFromMetadata, setGlobal.Global.Module!));
                         result.Add(new(OpCode.SetField, setGlobal.Global.Index));
+                        maxStackSize++;
                         break;
                     case GetObject getObject:
                         result.Add(new(OpCode.LoadObjectFromMetadata, getObject.IR));
@@ -73,7 +74,7 @@ namespace ZSharp.VM
                 result[instructionIndex] = instruction;
             }
 
-            return new([.. result], stackSize);
+            return new([.. result], maxStackSize);
         }
     }
 }
