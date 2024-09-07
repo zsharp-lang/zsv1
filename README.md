@@ -9,8 +9,7 @@ The current state of the project is:
 * [x] Tokenizer
 * [x] Parser
 * [x] Resolver
-* [x] CGCompiler
-* [x] CGRuntime
+* [x] Compiler
 * [x] IR Layer
 * [x] ZSRuntime
 * [ ] Platform Compiler
