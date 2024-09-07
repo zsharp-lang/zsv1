@@ -61,13 +61,11 @@ var rastNodes = ZSharp.Resolver.Resolver.Resolve(documentNode).ToArray();
 #region Compilation
 
 var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
-//compiler.Initialize();
 
 var standardModule = new ZSharp.CT.StandardLibrary.StandardModule();
 compiler.Runtime.AddInternalModule(standardModule);
 compiler.Context.CurrentScope.Cache("print", standardModule.Print);
 
-//var cgCode = compiler.CompileCG(rastNodes);
 var module = compiler.CompileAsDocument(rastNodes);
 
 Console.WriteLine("Compilation finished!");
