@@ -14,7 +14,9 @@ module Lib {
 module Program;
 
 fun main(): string {
-	return foo();
+	foo();
+
+	return "ok";
 }
 
 let x = y;
@@ -25,8 +27,6 @@ fun foo(): Lib.id(string) {
 
 	return tmp;
 }
-
-
 
 /*
 if (isProduction)
