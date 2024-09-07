@@ -1,4 +1,4 @@
-﻿namespace ZSharp.CGRuntime
+﻿namespace ZSharp.Compiler
 {
     public sealed class Argument(CGObject @object)
     {

@@ -26,10 +26,10 @@
         public static Polymorphic Polymorphic(int distance)
             => new(distance);
 
-        public static ImplicitCast ImplicitCast(CTObject castFunction)
+        public static ImplicitCast ImplicitCast(CGObject castFunction)
             => new(castFunction);
 
-        public static ExplicitCast ExplicitCast(CTObject castFunction)
+        public static ExplicitCast ExplicitCast(CGObject castFunction)
             => new(castFunction);
     }
 
@@ -55,16 +55,16 @@
         public int Distance { get; } = distance;
     }
 
-    public abstract class Cast(CTObject castFunction, AssignmentType assignmentType) : Assignment
+    public abstract class Cast(CGObject castFunction, AssignmentType assignmentType) : Assignment
     {
         public override AssignmentType AssignmentType => assignmentType;
 
-        public CTObject CastFunction { get; } = castFunction;
+        public CGObject CastFunction { get; } = castFunction;
     }
 
-    public sealed class ImplicitCast(CTObject castFunction) 
+    public sealed class ImplicitCast(CGObject castFunction) 
         : Cast(castFunction, AssignmentType.ImplicitCast);
 
-    public sealed class ExplicitCast(CTObject castFunction) 
+    public sealed class ExplicitCast(CGObject castFunction) 
         : Cast(castFunction, AssignmentType.ExplicitCast);
 }

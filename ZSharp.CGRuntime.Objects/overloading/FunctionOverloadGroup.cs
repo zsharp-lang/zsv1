@@ -1,5 +1,5 @@
 ﻿using CommonZ.Utils;
-using ZSharp.CGRuntime;
+using ZSharp.Compiler;
 
 namespace ZSharp.CGObjects
 {
@@ -11,24 +11,22 @@ namespace ZSharp.CGObjects
 
         public Collection<Function> Overloads { get; } = [];
 
-        public CGObject Call(Compiler.ICompiler compiler, Argument[] arguments)
+        public CGObject Call(ICompiler compiler, Argument[] arguments)
         {
             var (args, kwargs) = Utils.SplitArguments(arguments);
             return Call(compiler, args, kwargs);
         }
 
-        public CGObject Call(Compiler.ICompiler compiler, Args args, KwArgs kwArgs)
+        public CGObject Call(ICompiler compiler, Args args, KwArgs kwArgs)
         {
-            throw new NotImplementedException();
-            //ArgumentMatch? bestMatch = null;
-            //foreach (var overload in Overloads)
-            //{
-            //    var match = overload.Signature.Match(compiler, args, kwArgs);
+            if (Overloads.Count == 0)
+                throw new("Empty overload group.");
 
-            //    if (match is null) continue;
-
-            //    if (bestMatch is null || match > bestMatch) bestMatch = match;
-            //}
+            var bestMatch =
+                    Overloads
+                    .Select(overload => overload.Match(compiler, args, kwArgs))
+                    .Where(match => match is not null)
+                    .Max();
 
             throw new("No matching overload found.");
         }

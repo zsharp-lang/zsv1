@@ -1,5 +1,4 @@
-﻿using ZSharp.CGRuntime;
-using ZSharp.RAST;
+﻿using ZSharp.RAST;
 
 namespace ZSharp.Compiler
 {

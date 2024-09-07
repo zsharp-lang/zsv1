@@ -20,8 +20,6 @@ namespace ZSharp.CGObjects
 
         public string? Name { get; set; } = name;
 
-        public CGCode Content { get; } = [];
-
         public CGObject Member(ICompiler compiler, string member)
             => Members[member];
 

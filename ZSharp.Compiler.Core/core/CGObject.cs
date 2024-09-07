@@ -1,4 +1,4 @@
-﻿namespace ZSharp.CGRuntime
+﻿namespace ZSharp.Compiler
 {
     public abstract class CGObject
     {

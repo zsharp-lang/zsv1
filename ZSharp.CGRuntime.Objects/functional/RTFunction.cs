@@ -28,7 +28,7 @@ namespace ZSharp.CGObjects
             //return new Code(code);
         }
 
-        public override CGObject Call(ICompiler compiler, CGRuntime.Argument[] arguments)
+        public override CGObject Call(ICompiler compiler, Argument[] arguments)
         {
             var (args, kwargs) = Utils.SplitArguments(arguments);
 
@@ -89,7 +89,7 @@ namespace ZSharp.CGObjects
                 Types = [null!], // TODO: fix type
             };
 
-        public override CGRuntime.Argument[]? Match(ICompiler compiler, Args args, KwArgs kwArgs)
+        public override Argument[]? Match(ICompiler compiler, Args args, KwArgs kwArgs)
         {
             throw new NotImplementedException();
         }

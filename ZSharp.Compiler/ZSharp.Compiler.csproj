@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.CGRuntime.Objects\ZSharp.Compiler.Objects.csproj" />
-    <ProjectReference Include="..\ZSharp.CGRuntime\ZSharp.CGRuntime.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj" />
     <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
     <ProjectReference Include="..\ZSharp.RAST\ZSharp.RAST.csproj" />

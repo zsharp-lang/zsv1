@@ -1,6 +1,6 @@
 ﻿using CommonZ.Utils;
 
-using Scope = CommonZ.Utils.Cache<string, ZSharp.CGRuntime.CGObject>;
+using Scope = CommonZ.Utils.Cache<string, ZSharp.Compiler.CGObject>;
 
 namespace ZSharp.Compiler
 {

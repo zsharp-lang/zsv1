@@ -2,6 +2,6 @@
 {
     public interface ICompiler
     {
-        public Code CompileIRCode(CTObject @object);
+        public Code CompileIRCode(CGObject @object);
     }
 }

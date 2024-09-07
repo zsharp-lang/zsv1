@@ -7,7 +7,7 @@
             throw new NotImplementedException();
         }
 
-        public CGObject Call(CGObject target, CGRuntime.Argument[] arguments)
+        public CGObject Call(CGObject target, Argument[] arguments)
         {
             if (target is ICTCallable ctCallable)
                 return ctCallable.Call(this, arguments);
@@ -37,7 +37,7 @@
         /// <param name="instanceTarget"></param>
         /// <param name="index"></param>
         /// <returns></returns>
-        public CGObject Index(CGObject instanceTarget, CGRuntime.Argument[] index)
+        public CGObject Index(CGObject instanceTarget, Argument[] index)
         {
             throw new NotImplementedException();
         }
@@ -49,7 +49,7 @@
         /// <param name="index"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public CGObject Index(CGObject instanceTarget, CGRuntime.Argument[] index, CGObject value)
+        public CGObject Index(CGObject instanceTarget, Argument[] index, CGObject value)
         {
             throw new NotImplementedException();
         }

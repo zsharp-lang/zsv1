@@ -1,4 +1,5 @@
 ﻿using CommonZ.Utils;
+using ZSharp.Compiler;
 
 namespace ZSharp.CGObjects
 {

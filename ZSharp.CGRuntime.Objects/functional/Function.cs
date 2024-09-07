@@ -21,14 +21,14 @@ namespace ZSharp.CGObjects
 
         public CGObject? Body { get; set; }
 
-        public abstract CGObject Call(ICompiler compiler, CGRuntime.Argument[] arguments);
+        public abstract CGObject Call(ICompiler compiler, Argument[] arguments);
 
-        public virtual CGRuntime.Argument[]? Match(ICompiler compiler, CGRuntime.Argument[] arguments)
+        public virtual Argument[]? Match(ICompiler compiler, Argument[] arguments)
         {
             var (args, kwargs) = Utils.SplitArguments(arguments);
             return Match(compiler, args, kwargs);
         }
 
-        public abstract CGRuntime.Argument[]? Match(ICompiler compiler, Args args, KwArgs kwArgs);
+        public abstract Argument[]? Match(ICompiler compiler, Args args, KwArgs kwArgs);
     }
 }
