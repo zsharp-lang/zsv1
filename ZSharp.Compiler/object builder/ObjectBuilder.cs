@@ -1,20 +1,21 @@
 ﻿namespace ZSharp.Compiler
 {
-    internal sealed class ObjectBuilder(IObjectBuilder objectBuilder)
+    internal sealed class ObjectBuilder<T>(IObjectBuilder<T> objectBuilder)
+        where T : class
     {
-        private readonly IObjectBuilder objectBuilder = objectBuilder;
-        private readonly DependencyGraph<CGObject> dependencyGraph = [];
+        private readonly IObjectBuilder<T> objectBuilder = objectBuilder;
+        private readonly DependencyGraph<T> dependencyGraph = [];
 
-        public void AddDependenciesForDeclarationOf(CGObject dependent, params DependencyNode<CGObject>[] dependencies)
+        public void AddDependenciesForDeclarationOf(T dependent, params DependencyNode<T>[] dependencies)
             => dependencyGraph.AddDependenciesForDeclarationOf(dependent, dependencies);
 
-        public void AddDependenciesForDefinitionOf(CGObject dependent, params DependencyNode<CGObject>[] dependencies)
+        public void AddDependenciesForDefinitionOf(T dependent, params DependencyNode<T>[] dependencies)
             => dependencyGraph.AddDependenciesForDefinitionOf(dependent, dependencies);
 
-        public void AddDependencies(CGObject dependent, DependencyState state, params DependencyNode<CGObject>[] dependencies)
+        public void AddDependencies(T dependent, DependencyState state, params DependencyNode<T>[] dependencies)
             => dependencyGraph.AddDependencies(dependent, state, dependencies);
 
-        public void AddDependencies(DependencyNode<CGObject> dependent, params DependencyNode<CGObject>[] dependencies)
+        public void AddDependencies(DependencyNode<T> dependent, params DependencyNode<T>[] dependencies)
             => dependencyGraph.AddDependencies(dependent, dependencies);
 
         public void BuildInOrder()
@@ -24,7 +25,7 @@
                 BuildSingle(@object);
         }
 
-        private void BuildSingle(DependencyNode<CGObject> @object)
+        private void BuildSingle(DependencyNode<T> @object)
         {
             switch (@object.State)
             {
@@ -34,10 +35,10 @@
             }
         }
 
-        private void BuildDeclaration(CGObject @object)
+        private void BuildDeclaration(T @object)
             => objectBuilder.Declare(@object);
 
-        private void BuildDefinition(CGObject @object)
+        private void BuildDefinition(T @object)
             => objectBuilder.Define(@object);
     }
 }

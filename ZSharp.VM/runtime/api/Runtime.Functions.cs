@@ -1,4 +1,6 @@
-﻿namespace ZSharp.VM
+﻿using ZSharp.IR.VM;
+
+namespace ZSharp.VM
 {
     public sealed partial class Runtime
     {
@@ -69,7 +71,17 @@
         /// the runtime.</exception></exception>
         public ZSObject? Call(IR.Function function, params ZSObject[] arguments)
         {
-            throw new NotImplementedException();
+            var zsFunction = Get(function);
+
+            return Call(zsFunction, arguments);
+        }
+
+        public ZSObject? Call(ZSFunction function, params ZSObject[] arguments)
+        {
+            PushFrame(Frame.NoArguments(0, [], 1));
+            Run(new Frame(arguments, function.LocalCount, function.Code, function.StackSize));
+            
+            return PopFrame().Pop();
         }
     }
 }

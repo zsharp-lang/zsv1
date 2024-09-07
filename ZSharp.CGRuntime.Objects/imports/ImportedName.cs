@@ -1,4 +1,6 @@
-﻿namespace ZSharp.CGObjects
+﻿using ZSharp.Compiler;
+
+namespace ZSharp.CGObjects
 {
     public sealed class ImportedName : CGObject
     {

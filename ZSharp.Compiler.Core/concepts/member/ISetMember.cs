@@ -2,6 +2,6 @@
 {
     internal interface ISetMember<T, M>
     {
-        public CTObject Member(T @object, M member, CTObject value);
+        public CGObject Member(T @object, M member, CGObject value);
     }
 }

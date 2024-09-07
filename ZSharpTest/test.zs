@@ -13,10 +13,8 @@ module Lib {
 
 module Program;
 
-
-
 fun main(): string {
-	foo();
+	return foo();
 }
 
 let x = y;

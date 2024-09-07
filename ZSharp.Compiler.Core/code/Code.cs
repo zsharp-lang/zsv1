@@ -4,7 +4,7 @@ namespace ZSharp.Compiler
 {
     public sealed class Code
     {
-        public Collection<IR.VM.Instruction> Instructions { get; init; } = [];
+        public IRCode Instructions { get; init; } = [];
 
         public int MaxStackSize { get; set; }
 

@@ -1,5 +1,4 @@
 ﻿using ZSharp.CGObjects;
-using ZSharp.CGRuntime;
 using ZSharp.Compiler;
 using ZSharp.VM;
 
@@ -26,7 +25,7 @@ namespace ZSharp.CT.StandardLibrary
         {
             var code = base.Call(compiler, arguments) as RawCode;
 
-            code!.Code.Instructions[^1] = new IR.VM.CallInternal(IR);
+            code!.Code.Instructions[^1] = new IR.VM.CallInternal(IR!);
 
             return code;
         }

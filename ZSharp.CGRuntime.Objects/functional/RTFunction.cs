@@ -2,13 +2,15 @@
 
 namespace ZSharp.CGObjects
 {
-    public class RTFunction(string? name) : Function(name)
+    public class RTFunction(string? name) 
+        : Function(name)
+        , ICTReadable
     {
-        //public IR.Function? IR { get; set; }
+        IR.IType ICTReadable.Type => throw new NotImplementedException();
 
         public Signature Signature { get; set; } = new();
 
-        public CGCode? ReturnType { get; set; }
+        public CGObject? ReturnType { get; set; }
 
         public CGObject Call(IRCode[] arguments)
         {
@@ -26,7 +28,7 @@ namespace ZSharp.CGObjects
             //return new Code(code);
         }
 
-        public override CGObject Call(ICompiler compiler, CGRuntime.Argument[] arguments)
+        public override CGObject Call(ICompiler compiler, Argument[] arguments)
         {
             var (args, kwargs) = Utils.SplitArguments(arguments);
 
@@ -50,7 +52,7 @@ namespace ZSharp.CGObjects
                 throw new($"Function {Name} takes {Signature.Args.Count} arguments, but {args.Count} were given.");
 
             for (int i = 0; i < Signature.Args.Count; i++)
-                argsCode.Append(compiler.Read(args[i]));
+                argsCode.Append(compiler.CompileIRCode(args[i]));
 
             if (kwArgs.Count > Signature.KwArgs.Count)
                 if (Signature.VarKwArgs is null)
@@ -61,7 +63,7 @@ namespace ZSharp.CGObjects
                 throw new($"Function {Name} takes {Signature.KwArgs.Count} keyword arguments, but {kwArgs.Count} were given.");
 
             foreach (var kwArgParameter in Signature.KwArgs)
-                kwArgsCode.Append(compiler.Read(kwArgs[kwArgParameter.Name]));
+                kwArgsCode.Append(compiler.CompileIRCode(kwArgs[kwArgParameter.Name]));
 
             Code result = new();
             result.Append(argsCode);
@@ -74,7 +76,22 @@ namespace ZSharp.CGObjects
             result.Types.Clear();
             result.Types.Add(IR!.ReturnType);
 
+            result.MaxStackSize = Math.Max(result.MaxStackSize, result.Types.Count);
+
             return new RawCode(result);
+        }
+
+        Code ICTReadable.Read(ICompiler compiler)
+            => new([
+                new IR.VM.GetObject(IR!)
+            ])
+            {
+                Types = [null!], // TODO: fix type
+            };
+
+        public override Argument[]? Match(ICompiler compiler, Args args, KwArgs kwArgs)
+        {
+            throw new NotImplementedException();
         }
     }
 }

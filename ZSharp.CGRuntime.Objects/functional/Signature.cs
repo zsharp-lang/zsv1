@@ -1,4 +1,6 @@
-﻿using Parameters = CommonZ.Utils.Collection<ZSharp.CGObjects.Parameter>;
+﻿using ZSharp.Compiler;
+
+using Parameters = CommonZ.Utils.Collection<ZSharp.CGObjects.Parameter>;
 
 namespace ZSharp.CGObjects
 {

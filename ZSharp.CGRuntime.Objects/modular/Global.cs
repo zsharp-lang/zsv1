@@ -11,9 +11,11 @@ namespace ZSharp.CGObjects
 
         public string Name { get; } = name;
 
-        public CGCode? Initializer { get; set; }
+        public bool IsReadOnly { get; set; }
 
-        public CGCode? Type { get; set; }
+        public CGObject? Initializer { get; set; }
+
+        public CGObject? Type { get; set; }
 
         IType ICTReadable.Type => IR!.Type;
 

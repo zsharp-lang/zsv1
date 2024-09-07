@@ -1,9 +1,8 @@
-﻿using CommonZ.Utils;
-using ZSharp.CGRuntime;
+﻿using ZSharp.Compiler;
 
 namespace ZSharp.CGObjects
 {
-    internal static class Utils
+    public static class Utils
     {
         public static (Args, KwArgs) SplitArguments(Argument[] arguments)
         {
