@@ -7,12 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZSharp.CGCompiler\ZSharp.CGCompiler.csproj" />
+    <ProjectReference Include="..\ZSharp.CGRuntime.Objects\ZSharp.Compiler.Objects.csproj" />
     <ProjectReference Include="..\ZSharp.CGRuntime\ZSharp.CGRuntime.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj" />
     <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
     <ProjectReference Include="..\ZSharp.RAST\ZSharp.RAST.csproj" />
     <ProjectReference Include="..\ZSharp.VM\ZSharp.VM.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="compilers\module\content\oop\" />
   </ItemGroup>
 
 </Project>

@@ -1,9 +1,9 @@
 ﻿namespace ZSharp.Compiler
 {
-    internal interface IObjectBuilder
+    internal interface IObjectBuilder<T>
     {
-        public void Declare(CGObject @object);
+        public void Declare(T @object);
 
-        public void Define(CGObject @object);
+        public void Define(T @object);
     }
 }

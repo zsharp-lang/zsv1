@@ -15,25 +15,11 @@ namespace ZSharp.CGObjects
         : CGObject
         , ICTCallable
     {
-        private CGCode? _body;
-
         public IR.Function? IR { get; set; }
 
         public string? Name { get; set; } = name;
 
-        public CGCode Body
-        {
-            get
-            {
-                if (_body is not null)
-                    return _body;
-
-                Interlocked.CompareExchange(ref _body, [], null);
-                return _body;
-            }
-        }
-
-        public bool HasBody => _body is not null;
+        public CGObject? Body { get; set; }
 
         public abstract CGObject Call(ICompiler compiler, CGRuntime.Argument[] arguments);
 
@@ -42,5 +28,7 @@ namespace ZSharp.CGObjects
             var (args, kwargs) = Utils.SplitArguments(arguments);
             return Match(compiler, args, kwargs);
         }
+
+        public abstract CGRuntime.Argument[]? Match(ICompiler compiler, Args args, KwArgs kwArgs);
     }
 }

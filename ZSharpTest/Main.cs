@@ -193,14 +193,14 @@ var rastNodes = ZSharp.Resolver.Resolver.Resolve(documentNode).ToArray();
 #region Compilation
 
 var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
-compiler.Initialize();
+//compiler.Initialize();
 
 var standardModule = new ZSharp.CT.StandardLibrary.StandardModule();
-compiler.RT.AddInternalModule(standardModule);
-compiler.Expose("print", standardModule.Print);
+compiler.Runtime.AddInternalModule(standardModule);
+compiler.Context.CurrentScope.Cache("print", standardModule.Print);
 
-var cgCode = compiler.CompileCG(rastNodes);
-var module = compiler.CompileIR(cgCode);
+//var cgCode = compiler.CompileCG(rastNodes);
+var module = compiler.CompileAsDocument(rastNodes);
 
 Console.WriteLine("Compilation finished!");
 
@@ -219,7 +219,7 @@ foreach (var submodule in module.Submodules)
 if (mainModule is null) Console.WriteLine("No main module found!");
 else
 {
-    var runtime = compiler.RT;
+    var runtime = compiler.Runtime;
 
     var zsModule = runtime.ImportIR(mainModule);
 
@@ -233,13 +233,11 @@ else
 
     if (main is not null)
     {
-        var zsMain = runtime.ImportIR(main);
-        var result = runtime.EvaluateInNewFrame(new(zsMain.Code, zsMain.StackSize)); // TODO: using evaluate here is invalid
-        // since main returns a value, but evaluate expects the value to be on the top of the stack. This can be
-        // fixed by adding an entry point which only calls main and leave the result on the stack.
-        // For now, main will not return anything.
+        var result = runtime.Call(main);
 
-        if (result is ZSharp.VM.ZSString stringResult)
+        if (result is null)
+            Console.WriteLine("Main (Void)");
+        else if (result is ZSharp.VM.ZSString stringResult)
             Console.WriteLine("Main (String): " + stringResult.Value);
         else Console.WriteLine($"Main ({result.Type}): " + result);
     }

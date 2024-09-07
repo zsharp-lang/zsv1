@@ -21,7 +21,7 @@ namespace ZSharp.CT.StandardLibrary
                 {
                     Args = [
                         new("value") {
-                            Type = [CGRuntime.CG.Get("string")],
+                            Type = null,
                             IR = parameter
                         }
                     ]

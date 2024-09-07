@@ -11,9 +11,9 @@ namespace ZSharp.CGObjects
 
         public required string Name { get; set; }
 
-        public CGCode? Type { get; set; }
+        public CGObject? Type { get; set; }
 
-        public CGCode? Initializer { get; set; }
+        public CGObject? Initializer { get; set; }
 
         IType ICTReadable.Type => IR!.Type;
 
