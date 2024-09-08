@@ -5,6 +5,57 @@ namespace ZSharp.Compiler
 {
     internal sealed partial class ModuleCompiler
     {
+        public void Initialize(Class @class, ROOPDefinition node)
+        {
+            AddDependenciesForDeclaration();
+
+            AddDependencyForDefinition(@class);
+
+            if (node.Bases is not null)
+                foreach (var item in node.Bases)
+                    AddDependenciesForDeclaration(item);
+
+            if (node.Content is not null)
+                AddDependenciesForDefinition(node.Content);
+
+            // TODO: also parameters (primary constructor) and class parameters.\
+
+            // TODO: support metaclass
+        }
+
+        public void Initialize(Global global, RLetDefinition node)
+        {
+            AddDependenciesForDeclaration();
+
+            AddDependencyForDefinition(global);
+
+            if (node.Type is not null)
+            {
+                AddDependenciesForDeclaration(node.Type);
+                AddDependenciesForDefinition(node.Value);
+            }
+            else
+                AddDependenciesForDeclaration(node.Value);
+        }
+
+        public void Initialize(Global global, RVarDefinition node)
+        {
+            AddDependenciesForDeclaration();
+
+            AddDependencyForDefinition(global);
+
+            if (node.Type is not null)
+            {
+                AddDependenciesForDeclaration(node.Type);
+                if (node.Value is not null)
+                    AddDependenciesForDefinition(node.Value);
+            }
+            else if (node.Value is null)
+                throw new Exception("Global variable must have a type or an initializer");
+            else
+                AddDependenciesForDeclaration(node.Value);
+        }
+
         public void Initialize(RTFunction function, RFunction node)
         {
             AddDependenciesForDeclaration();
@@ -48,35 +99,6 @@ namespace ZSharp.Compiler
 
             if (node.Body is not null)
                 AddDependenciesForDefinition(node.Body);
-        }
-
-        public void Initialize(Global global, RLetDefinition node)
-        {
-            AddDependencyForDefinition(global);
-
-            if (node.Type is not null)
-            {
-                AddDependenciesForDeclaration(node.Type);
-                AddDependenciesForDefinition(node.Value);
-            }
-            else
-                AddDependenciesForDeclaration(node.Value);
-        }
-
-        public void Initialize(Global global, RVarDefinition node)
-        {
-            AddDependencyForDefinition(global);
-
-            if (node.Type is not null)
-            {
-                AddDependenciesForDeclaration(node.Type);
-                if (node.Value is not null)
-                    AddDependenciesForDefinition(node.Value);
-            }
-            else if (node.Value is null)
-                throw new Exception("Global variable must have a type or an initializer");
-            else
-                AddDependenciesForDeclaration(node.Value);
         }
     }
 }

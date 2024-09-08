@@ -5,8 +5,8 @@ namespace ZSharp.Compiler
 {
     internal sealed partial class ModuleCompiler
     {
-        private void Define(RTFunction function, RFunction node)
-            => functionBodyCompiler.Compile(node, function);
+        private void Define(Class @class, ROOPDefinition node)
+            => classBodyCompiler.Compile(node, @class); // TODO: support metaclasses
 
         private void Define(Global global, RLetDefinition node)
         {
@@ -41,5 +41,8 @@ namespace ZSharp.Compiler
                     ]);
             }
         }
+
+        private void Define(RTFunction function, RFunction node)
+            => functionBodyCompiler.Compile(node, function);
     }
 }

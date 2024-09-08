@@ -28,6 +28,10 @@ fun foo(): Lib.id(string) {
 	return tmp;
 }
 
+class Foo {
+	//let x = Lib.bar(y);
+}
+
 /*
 if (isProduction)
 	fun foo() { }

@@ -12,9 +12,9 @@ import {a as A} from "std:test";
 
 import {a, b} from "std:test";
 
-let myVar = "foo" + "bar" ** "goo" * "baz"
+let myVar = "foo" + "bar" ** "goo" * "baz";
 
-, yourVar = "it's actually mine";
+let yourVar = "it's actually mine";
 
 let otherVar = "other";
 
@@ -69,3 +69,21 @@ fun foo(x, y, {z, w, v}) {}
 fun foo(x, y, {z, w, ...v}) {}
 
 fun foo(x, y, ...z, {w, v, ...u}) {}
+
+class {}
+
+class Foo {}
+
+class;
+
+class Foo;
+
+class Foo : "Base";
+
+class Foo : "Base";
+
+class Foo : "Base", "Mixin";
+
+class Foo : "Base", "Mixin" {
+	let x = "x";
+}

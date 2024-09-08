@@ -10,10 +10,12 @@ namespace ZSharp.Compiler
             {
                 RFunction function => Compile(function),
                 RLetDefinition let => Compile(let),
+                ROOPDefinition oop => Compile(oop),
+                RVarDefinition var => Compile(var),
                 _ => null,
             };
 
-        private CGObject Compile(RFunction node)
+        private RTFunction Compile(RFunction node)
         {
             RTFunction function = new(node.Name);
 
@@ -26,7 +28,7 @@ namespace ZSharp.Compiler
             return function;
         }
 
-        private CGObject Compile(RLetDefinition node)
+        private Global Compile(RLetDefinition node)
         {
             Global global = new(node.Name ?? throw new());
 
@@ -35,6 +37,39 @@ namespace ZSharp.Compiler
             EnqueueForDependencyCollection(global, node);
 
             return global;
+        }
+
+        private CGObject Compile(ROOPDefinition node)
+            => node.Type switch
+            {
+                "class" => CompileClass(node),
+                _ => throw new NotImplementedException(),
+            };
+
+        private Global Compile(RVarDefinition node)
+        {
+            Global global = new(node.Name ?? throw new());
+
+            Result.Members.Add(node.Name, Context.CurrentScope.Cache(node.Name, global));
+
+            EnqueueForDependencyCollection(global, node);
+
+            return global;
+        }
+
+        private Class CompileClass(ROOPDefinition node)
+        {
+            Class @class = new()
+            {
+                Name = node.Name,
+            };
+
+            if (node.Name is not null && node.Name != string.Empty)
+                Result.Members.Add(node.Name, Context.CurrentScope.Cache(node.Name, @class));
+
+            EnqueueForDependencyCollection(@class, node);
+
+            return @class;
         }
     }
 }

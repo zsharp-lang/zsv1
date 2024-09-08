@@ -12,13 +12,13 @@
 
         public RBlock? Content { get; set; }
 
-        public ROOPDefinition(string type, string name)
-            : this(type, new RId(name))
+        public ROOPDefinition(string type, string? name)
+            : this(type, name is null ? null : new RId(name))
         {
             
         }
 
-        public ROOPDefinition(string type, RId id)
+        public ROOPDefinition(string type, RId? id)
             : base(id)
         {
             Type = type;

@@ -12,10 +12,10 @@ namespace ZSharp.IR
 
         public Class? Base { get; set; }
 
-        public Class(string? name, Class? @class)
+        public Class(string? name, Class? @base)
             : this(name)
         {
-            Base = @class;
+            Base = @base;
         }
 
         public Collection<Interface> Interfaces { get; } = [];

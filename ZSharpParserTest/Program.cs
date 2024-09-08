@@ -12,14 +12,13 @@ using (StreamReader stream = File.OpenText("./parserText.txt"))
     var expressionParser = zsharpParser.Expression;
 
     expressionParser.Terminal(TokenType.String, token => new LiteralExpression(token.Value, LiteralType.String));
+    //expressionParser.Terminal(TokenType.Identifier, token => new IdentifierExpression(token.Value));
 
     expressionParser.InfixL("+", 50);
     expressionParser.InfixL("*", 70);
     expressionParser.InfixL("**", 80);
 
     expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
-
-    expressionParser.AddKeywordParser(LangParser.Keywords.Function, LangParser.ParseFunctionExpression);
 
     expressionParser.Separator(TokenType.Comma);
     expressionParser.Separator(TokenType.RParen);

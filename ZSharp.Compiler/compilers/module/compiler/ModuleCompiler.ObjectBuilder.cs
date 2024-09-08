@@ -39,11 +39,13 @@ namespace ZSharp.Compiler
                 Initialize,
                 Initialize,
                 Initialize,
+                Initialize,
                 Unspecified
                 )(@object);
 
         void IObjectBuilder<NodeObject>.Declare(NodeObject @object)
             => Dispatcher(
+                Declare,
                 Declare,
                 Declare,
                 Declare,
@@ -55,10 +57,12 @@ namespace ZSharp.Compiler
                 Define,
                 Define,
                 Define,
+                Define,
                 Unspecified
                 )(@object);
 
         private static Action<NodeObject> Dispatcher(
+            Action<Class, ROOPDefinition> classFn,
             Action<RTFunction, RFunction> functionFn,
             Action<Global, RLetDefinition> letFn,
             Action<Global, RVarDefinition> varFn,
@@ -68,6 +72,7 @@ namespace ZSharp.Compiler
             {
                 switch (@object.Object)
                 {
+                    case Class @class: classFn(@class, (ROOPDefinition)@object.Node); break;
                     case RTFunction function: functionFn(function, (RFunction)@object.Node); break;
                     case Global global
                         when @object.Node is RLetDefinition let:

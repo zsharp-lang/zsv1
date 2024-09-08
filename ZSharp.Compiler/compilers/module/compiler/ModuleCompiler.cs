@@ -10,6 +10,7 @@ namespace ZSharp.Compiler
             : base(compiler)
         {
             functionBodyCompiler = new(compiler);
+            classBodyCompiler = new(compiler);
         }
 
         protected override void Compile()

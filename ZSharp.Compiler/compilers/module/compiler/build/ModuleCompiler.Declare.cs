@@ -5,72 +5,36 @@ namespace ZSharp.Compiler
 {
     internal sealed partial class ModuleCompiler
     {
-        private void Declare(RTFunction function, RFunction node)
+        private void Declare(Class @class, ROOPDefinition node)
         {
-            IR.Parameter Declare(Parameter parameter)
+            if (node.Bases is not null)
+                foreach (var baseObject in node.Bases)
+                    @class.Bases.Add(Compiler.CompileNode(baseObject));
+
+            var bases = new Queue<IRType>((@class.Bases ?? [])
+                .Select(Compiler.CompileIRType));
+
+            IR.Class? @base = null;
+            if (bases.Count > 0)
             {
-                var node = (RParameter)nodes.Cache(parameter)!.Node;
+                if (bases.Peek() is IR.Class) @base = (IR.Class)bases.Dequeue();
 
-                parameter.Type = 
-                    node.Type is null ? null :
-                    Compiler.CompileNode(node.Type);
-
-                parameter.Initializer = 
-                    node.Default is null ? null :
-                    Compiler.CompileNode(node.Default);
-
-                var initializer = parameter.Initializer is null
-                    ? null
-                    : Compiler.CompileIRCode(parameter.Initializer);
-                var type = parameter.Type is null 
-                    ? null 
-                    : Compiler.CompileIRType(parameter.Type);
-
-                if (type is null && initializer is null)
-                    throw new();
-                else type ??= initializer!.RequireValueType();
-
-                Context.CurrentScope.Cache(parameter.Name, parameter);
-
-                return parameter.IR = new(parameter.Name, type)
+                foreach (var item in bases)
                 {
-                    Initializer = initializer?.Instructions.ToArray()
-                };
+                    throw new NotImplementedException();
+
+                    //if (item is not IR.Interface @interface)
+                    //    throw new();
+
+                    //@class.Interfaces.Add(@interface);
+                }
             }
 
-            using (Context.For(function))
-            {
+            @class.IR = new(node.Name, @base);
 
-                if (node.ReturnType is not null)
-                    function.ReturnType = Compiler.CompileNode(node.ReturnType);
+            Result.IR!.Types.Add(@class.IR);
 
-                IRType ? returnType = null;
-
-                if (function.ReturnType is not null)
-                    returnType = Compiler.CompileIRType(function.ReturnType);
-
-                if (returnType is null)
-                    throw new NotImplementedException("Implicit return type");
-
-                function.IR = new(returnType)
-                {
-                    Name = function.Name,
-                };
-
-                Result.IR!.Functions.Add(function.IR);
-
-                foreach (var arg in function.Signature.Args)
-                    function.IR.Signature.Args.Parameters.Add(Declare(arg));
-
-                if (function.Signature.VarArgs is not null)
-                    function.IR.Signature.Args.Var = Declare(function.Signature.VarArgs);
-
-                foreach (var arg in function.Signature.KwArgs)
-                    function.IR.Signature.KwArgs.Parameters.Add(Declare(arg));
-
-                if (function.Signature.VarKwArgs is not null)
-                    function.IR.Signature.KwArgs.Var = Declare(function.Signature.VarKwArgs);
-            }
+            // TODO: implement class parameters
         }
 
         private void Declare(Global global, RLetDefinition node)
@@ -120,5 +84,74 @@ namespace ZSharp.Compiler
 
             Result.IR!.Globals.Add(global.IR);
         }
+
+        private void Declare(RTFunction function, RFunction node)
+        {
+            IR.Parameter Declare(Parameter parameter)
+            {
+                var node = (RParameter)nodes.Cache(parameter)!.Node;
+
+                parameter.Type =
+                    node.Type is null ? null :
+                    Compiler.CompileNode(node.Type);
+
+                parameter.Initializer =
+                    node.Default is null ? null :
+                    Compiler.CompileNode(node.Default);
+
+                var initializer = parameter.Initializer is null
+                    ? null
+                    : Compiler.CompileIRCode(parameter.Initializer);
+                var type = parameter.Type is null
+                    ? null
+                    : Compiler.CompileIRType(parameter.Type);
+
+                if (type is null && initializer is null)
+                    throw new();
+                else type ??= initializer!.RequireValueType();
+
+                Context.CurrentScope.Cache(parameter.Name, parameter);
+
+                return parameter.IR = new(parameter.Name, type)
+                {
+                    Initializer = initializer?.Instructions.ToArray()
+                };
+            }
+
+            using (Context.For(function))
+            {
+
+                if (node.ReturnType is not null)
+                    function.ReturnType = Compiler.CompileNode(node.ReturnType);
+
+                IRType ? returnType = null;
+
+                if (function.ReturnType is not null)
+                    returnType = Compiler.CompileIRType(function.ReturnType);
+
+                if (returnType is null)
+                    throw new NotImplementedException("Implicit return type");
+
+                function.IR = new(returnType)
+                {
+                    Name = function.Name,
+                };
+
+                Result.IR!.Functions.Add(function.IR);
+
+                foreach (var arg in function.Signature.Args)
+                    function.IR.Signature.Args.Parameters.Add(Declare(arg));
+
+                if (function.Signature.VarArgs is not null)
+                    function.IR.Signature.Args.Var = Declare(function.Signature.VarArgs);
+
+                foreach (var arg in function.Signature.KwArgs)
+                    function.IR.Signature.KwArgs.Parameters.Add(Declare(arg));
+
+                if (function.Signature.VarKwArgs is not null)
+                    function.IR.Signature.KwArgs.Var = Declare(function.Signature.VarKwArgs);
+            }
+        }
+
     }
 }

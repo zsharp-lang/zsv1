@@ -12,6 +12,7 @@
                 LetExpression let => Resolve(let),
                 LiteralExpression literal => Resolve(literal),
                 Module module => Resolve(module),
+                OOPDefinition oop => Resolve(oop),
                 _ => NotImplemented<RExpression>(expression)
             };
 

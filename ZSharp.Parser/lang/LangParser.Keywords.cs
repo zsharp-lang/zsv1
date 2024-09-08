@@ -6,6 +6,7 @@
         {
             public const string As          = "as";
             public const string Case        = "case";
+            public const string Class       = "class";
             public const string Else        = "else";
             public const string From        = "from";
             public const string Function    = "fun";
