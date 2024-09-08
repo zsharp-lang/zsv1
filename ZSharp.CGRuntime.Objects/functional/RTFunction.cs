@@ -2,7 +2,7 @@
 
 namespace ZSharp.CGObjects
 {
-    public class RTFunction(string? name) 
+    public class RTFunction(string? name)
         : Function(name)
         , ICTReadable
     {
@@ -40,7 +40,7 @@ namespace ZSharp.CGObjects
             // TODO: type checking (when type system is implemented)
 
             Code
-                argsCode = new(), varArgsCode = new(), 
+                argsCode = new(), varArgsCode = new(),
                 kwArgsCode = new(), varKwArgsCode = new();
 
             if (args.Count > Signature.Args.Count)
