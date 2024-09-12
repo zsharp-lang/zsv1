@@ -1,4 +1,4 @@
-﻿// import { print as output } from "std:io";
+﻿import { print as output } from "std:io";
 
 module Lib {
 	fun bar(x: string): string {
@@ -6,7 +6,7 @@ module Lib {
 	}
 
 	fun id(x: type): type {
-		print(x);
+		output(x);
 		return x;
 	}
 }
@@ -16,7 +16,7 @@ module Program;
 fun main(): string {
 	foo();
 
-	return "ok";
+	return x;
 }
 
 let x = y;
