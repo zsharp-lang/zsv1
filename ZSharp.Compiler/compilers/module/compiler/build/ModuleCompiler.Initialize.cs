@@ -5,18 +5,18 @@ namespace ZSharp.Compiler
 {
     internal sealed partial class ModuleCompiler
     {
-        public void Initialize(Class @class, ROOPDefinition node)
+        public void Initialize(ModuleOOPObject oop, ROOPDefinition node)
         {
-            AddDependenciesForDeclaration();
+            objectBuilder.AddDependenciesForDeclaration();
 
-            AddDependencyForDefinition(@class);
+            objectBuilder.AddDependencyForDefinition(oop);
 
             if (node.Bases is not null)
                 foreach (var item in node.Bases)
-                    AddDependenciesForDeclaration(item);
+                    objectBuilder.AddDependenciesForDeclaration(item);
 
             if (node.Content is not null)
-                AddDependenciesForDefinition(node.Content);
+                objectBuilder.AddDependenciesForDefinition(node.Content);
 
             // TODO: also parameters (primary constructor) and class parameters.\
 
@@ -25,42 +25,42 @@ namespace ZSharp.Compiler
 
         public void Initialize(Global global, RLetDefinition node)
         {
-            AddDependenciesForDeclaration();
+            objectBuilder.AddDependenciesForDeclaration();
 
-            AddDependencyForDefinition(global);
+            objectBuilder.AddDependencyForDefinition(global);
 
             if (node.Type is not null)
             {
-                AddDependenciesForDeclaration(node.Type);
-                AddDependenciesForDefinition(node.Value);
+                objectBuilder.AddDependenciesForDeclaration(node.Type);
+                objectBuilder.AddDependenciesForDefinition(node.Value);
             }
             else
-                AddDependenciesForDeclaration(node.Value);
+                objectBuilder.AddDependenciesForDeclaration(node.Value);
         }
 
         public void Initialize(Global global, RVarDefinition node)
         {
-            AddDependenciesForDeclaration();
+            objectBuilder.AddDependenciesForDeclaration();
 
-            AddDependencyForDefinition(global);
+            objectBuilder.AddDependencyForDefinition(global);
 
             if (node.Type is not null)
             {
-                AddDependenciesForDeclaration(node.Type);
+                objectBuilder.AddDependenciesForDeclaration(node.Type);
                 if (node.Value is not null)
-                    AddDependenciesForDefinition(node.Value);
+                    objectBuilder.AddDependenciesForDefinition(node.Value);
             }
             else if (node.Value is null)
                 throw new Exception("Global variable must have a type or an initializer");
             else
-                AddDependenciesForDeclaration(node.Value);
+                objectBuilder.AddDependenciesForDeclaration(node.Value);
         }
 
         public void Initialize(RTFunction function, RFunction node)
         {
-            AddDependenciesForDeclaration();
+            objectBuilder.AddDependenciesForDeclaration();
 
-            AddDependencyForDefinition(function);
+            objectBuilder.AddDependencyForDefinition(function);
 
             Parameter InitializeParameter(RParameter node)
             {
@@ -68,22 +68,22 @@ namespace ZSharp.Compiler
 
                 if (node.Type is not null)
                 {
-                    AddDependenciesForDeclaration(node.Type);
+                    objectBuilder.AddDependenciesForDeclaration(node.Type);
                     if (node.Default is not null)
-                        AddDependenciesForDefinition(node.Default);
+                        objectBuilder.AddDependenciesForDefinition(node.Default);
                 }
                 else if (node.Default is null)
                     throw new Exception("Parameter must have a type or an initializer");
                 else
-                    AddDependenciesForDeclaration(node.Default);
+                    objectBuilder.AddDependenciesForDeclaration(node.Default);
 
-                nodes.Cache(parameter, new NodeObject(node, parameter));
+                objectBuilder.Nodes.Cache(parameter, new NodeObject(node, parameter));
 
                 return parameter;
             }
 
             if (node.ReturnType is not null)
-                AddDependenciesForDeclaration(node.ReturnType);
+                objectBuilder.AddDependenciesForDeclaration(node.ReturnType);
 
             foreach (var arg in node.Signature.Args ?? [])
                 function.Signature.Args.Add(InitializeParameter(arg));
@@ -98,7 +98,7 @@ namespace ZSharp.Compiler
                 function.Signature.VarKwArgs = InitializeParameter(node.Signature.VarKwArgs);
 
             if (node.Body is not null)
-                AddDependenciesForDefinition(node.Body);
+                objectBuilder.AddDependenciesForDefinition(node.Body);
         }
     }
 }

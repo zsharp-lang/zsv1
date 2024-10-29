@@ -23,5 +23,11 @@ namespace ZSharp.Compiler
 
             dependencies.AddRange(dependencyNodes);
         }
+
+        public void Clear()
+        {
+            graph.Clear();
+            order = null;
+        }
     }
 }

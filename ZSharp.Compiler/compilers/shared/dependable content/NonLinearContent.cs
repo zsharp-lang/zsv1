@@ -3,12 +3,49 @@ using ZSharp.RAST;
 
 namespace ZSharp.Compiler
 {
-    internal sealed partial class ModuleCompiler
+    internal sealed class NonLinearContent(
+            Context context, 
+            IObjectBuilder<NodeObject> objectBuilder,
+            IObjectInitializer<NodeObject> objectInitializer
+        )
     {
-        private readonly Cache<CGObject, NodeObject> nodes = new();
+        private readonly Context context = context;
+        private readonly ObjectBuilder<NodeObject> objectBuilder = new(objectBuilder);
+
         private NodeObject? currentDependent = null;
 
-        private void AddDependency(
+        private readonly Queue<NodeObject> dependencyCollectionQueue = [];
+
+        public Cache<CGObject, NodeObject> Nodes { get; } = new();
+
+        public void EnqueueForDependencyCollection(CGObject @object, RDefinition node)
+            => EnqueueForDependencyCollection(new NodeObject(node, @object));
+
+        public void EnqueueForDependencyCollection(NodeObject @object)
+        {
+            dependencyCollectionQueue.Enqueue(@object);
+            Nodes.Cache(@object.Object, @object);
+        }
+
+        public void Build()
+        {
+            NodeObject @object;
+
+            while (dependencyCollectionQueue.Count > 0)
+                using (CollectingDependenciesFor(@object = dependencyCollectionQueue.Dequeue()))
+                    objectInitializer.Initialize(@object);
+
+            objectBuilder.BuildInOrder();
+        }
+
+        public void Clear()
+        {
+            objectBuilder.Clear();
+            dependencyCollectionQueue.Clear();
+            Nodes.Clear();
+        }
+
+        public void AddDependency(
             DependencyState dependentState,
             NodeObject dependency,
             DependencyState state = DependencyState.Declared
@@ -19,39 +56,39 @@ namespace ZSharp.Compiler
                 new DependencyNode<NodeObject>(dependency, state)
             );
 
-        private void AddDependenciesForDeclaration(
+        public void AddDependenciesForDeclaration(
             CGObject dependency,
             DependencyState state = DependencyState.Defined
         )
         {
-            if (nodes.Cache(dependency, out var nodeObject))
+            if (Nodes.Cache(dependency, out var nodeObject))
                 AddDependenciesForDeclaration(nodeObject, state);
         }
 
-        private void AddDependencyForDefinition(
+        public void AddDependencyForDefinition(
             CGObject dependency,
             DependencyState state = DependencyState.Declared
         )
         {
-            if (nodes.Cache(dependency, out var nodeObject))
+            if (Nodes.Cache(dependency, out var nodeObject))
                 AddDependencyForDefinition(nodeObject, state);
         }
 
-        private void AddDependenciesForDeclaration(
+        public void AddDependenciesForDeclaration(
             NodeObject dependency,
             DependencyState state = DependencyState.Defined
         )
             => AddDependency(DependencyState.Declared, dependency, state);
 
-        private void AddDependencyForDefinition(
+        public void AddDependencyForDefinition(
             NodeObject dependency,
             DependencyState state = DependencyState.Declared
         )
             => AddDependency(DependencyState.Defined, dependency, state);
 
         public void AddDependencies(
-            DependencyState dependentState, 
-            DependencyState dependenciesState, 
+            DependencyState dependentState,
+            DependencyState dependenciesState,
             RExpression node
         )
             => AddDependencies(
@@ -59,9 +96,9 @@ namespace ZSharp.Compiler
                 dependenciesState,
                 new RExpressionWalker<RName, RName>(name => name)
                 .Walk(node)
-                .Select(name => 
-                    Context.CurrentScope.Cache(name.Name, out var result) &&
-                    nodes.Cache(result, out var nodeObject) ? nodeObject : null
+                .Select(name =>
+                    context.CurrentScope.Cache(name.Name, out var result) &&
+                    Nodes.Cache(result, out var nodeObject) ? nodeObject : null
                 )
                 .Where(dependency => dependency is not null).ToArray()!
             );
@@ -77,13 +114,13 @@ namespace ZSharp.Compiler
                 new RExpressionWalker<RName, RName>(name => name)
                 .Walk(node)
                 .Select(name =>
-                    Context.CurrentScope.Cache(name.Name, out var result) &&
-                    nodes.Cache(result, out var nodeObject) ? nodeObject : null
+                    context.CurrentScope.Cache(name.Name, out var result) &&
+                    Nodes.Cache(result, out var nodeObject) ? nodeObject : null
                 )
                 .Where(dependency => dependency is not null).ToArray()!
             );
 
-        private void AddDependencies(
+        public void AddDependencies(
             DependencyState dependentState,
             DependencyState dependenciesState,
             params NodeObject[] dependencies
@@ -94,43 +131,43 @@ namespace ZSharp.Compiler
                 dependencies.Select(dependency => new DependencyNode<NodeObject>(dependency, dependenciesState)).ToArray()
             );
 
-        private void AddDependenciesForDeclaration(
+        public void AddDependenciesForDeclaration(
             DependencyState state = DependencyState.Defined,
             params NodeObject[] dependencies
         )
             => AddDependencies(DependencyState.Declared, state, dependencies);
 
-        private void AddDependenciesForDefinition(
+        public void AddDependenciesForDefinition(
             DependencyState state = DependencyState.Declared,
             params NodeObject[] dependencies
         )
             => AddDependencies(DependencyState.Defined, state, dependencies);
 
-        private void AddDependenciesForDeclaration(
+        public void AddDependenciesForDeclaration(
             RExpression node,
             DependencyState state = DependencyState.Defined
         )
             => AddDependencies(DependencyState.Declared, state, node);
 
-        private void AddDependenciesForDefinition(
+        public void AddDependenciesForDefinition(
             RExpression node,
             DependencyState state = DependencyState.Declared
         )
             => AddDependencies(DependencyState.Defined, state, node);
 
-        private void AddDependenciesForDeclaration(
+        public void AddDependenciesForDeclaration(
             RStatement node,
             DependencyState state = DependencyState.Defined
         )
-    => AddDependencies(DependencyState.Declared, state, node);
+            => AddDependencies(DependencyState.Declared, state, node);
 
-        private void AddDependenciesForDefinition(
+        public void AddDependenciesForDefinition(
             RStatement node,
             DependencyState state = DependencyState.Declared
         )
             => AddDependencies(DependencyState.Defined, state, node);
 
-        private ContextManager CollectingDependenciesFor(NodeObject compiler)
+        public ContextManager CollectingDependenciesFor(NodeObject compiler)
         {
             (currentDependent, compiler) = (compiler, currentDependent);
 

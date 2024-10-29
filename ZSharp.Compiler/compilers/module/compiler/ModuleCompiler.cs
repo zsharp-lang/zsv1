@@ -11,6 +11,8 @@ namespace ZSharp.Compiler
         {
             functionBodyCompiler = new(compiler);
             classBodyCompiler = new(compiler);
+
+            objectBuilder = new(compiler.Context, this, this);
         }
 
         protected override void Compile()
@@ -23,7 +25,8 @@ namespace ZSharp.Compiler
                 foreach (var statement in Node.Content.Statements)
                     Compiler.CompileNode(statement);
 
-            Build();
+            objectBuilder.Build();
+            objectBuilder.Clear();
 
             if (Result.InitFunction.IR.HasBody)
                 Result.IR.Functions.Insert(0, Result.InitFunction.IR);

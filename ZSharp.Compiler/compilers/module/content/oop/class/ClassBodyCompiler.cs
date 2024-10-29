@@ -3,19 +3,32 @@ using ZSharp.RAST;
 
 namespace ZSharp.Compiler
 {
-    internal sealed partial class ClassBodyCompiler(Compiler compiler)
-        : ContextCompiler<ROOPDefinition, Class>(compiler)
+    internal sealed partial class ClassSpecCompiler
+        : ContextCompiler<ROOPDefinition, ClassSpec>
     {
-        protected override void Compile()
+        public ClassSpecCompiler(Compiler compiler)
+            : base(compiler)
         {
-            Result.IR = new(Node.Name);
-
-            if (Node.Content is not null)
-                foreach (var item in Node.Content.Statements)
-                    Compiler.CompileNode(item);
+            objectBuilder = new(compiler.Context, this, this);
         }
 
-        protected override Class Create()
+        protected override void Compile()
+        {
+            if (Node.Bases is not null)
+                Result.Bases = [.. Node.Bases.Select(Compiler.CompileNode)];
+
+            if (Node.Content is not null)
+            {
+                Result.Content = [];
+                foreach (var item in Node.Content.Statements)
+                    Compiler.CompileNode(item);
+            }
+
+            objectBuilder.Build();
+            objectBuilder.Clear();
+        }
+
+        protected override ClassSpec Create()
             => throw new NotImplementedException();
     }
 }

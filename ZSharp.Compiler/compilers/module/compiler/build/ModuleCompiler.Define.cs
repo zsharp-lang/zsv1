@@ -5,8 +5,16 @@ namespace ZSharp.Compiler
 {
     internal sealed partial class ModuleCompiler
     {
-        private void Define(Class @class, ROOPDefinition node)
-            => classBodyCompiler.Compile(node, @class); // TODO: support metaclasses
+        private void Define(ModuleOOPObject oop, ROOPDefinition node)
+        {
+            Compiler.CompileClass(
+                oop.Object ?? throw new($"OOP Object must not be {null} at this point."),
+                classBodyCompiler.Compile(node, oop.Spec)
+            );
+
+            if (Compiler.CompileIRObject(oop.Object) is IR.OOPType ir)
+                Result.IR!.Types.Add(ir);
+        }
 
         private void Define(Global global, RLetDefinition node)
         {

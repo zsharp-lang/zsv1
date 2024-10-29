@@ -53,6 +53,9 @@ namespace CommonZ.Utils
             return Parent?.Cache(key, out value) ?? (value = null) is not null;
         }
 
+        public void Clear()
+            => _cache.Clear();
+
         public bool Contains(Key key, bool searchParent = true)
         {
             if (_cache.ContainsKey(key))

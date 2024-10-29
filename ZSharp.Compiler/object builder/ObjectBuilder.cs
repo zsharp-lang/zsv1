@@ -25,6 +25,9 @@
                 BuildSingle(@object);
         }
 
+        public void Clear()
+            => dependencyGraph.Clear();
+
         private void BuildSingle(DependencyNode<T> @object)
         {
             switch (@object.State)

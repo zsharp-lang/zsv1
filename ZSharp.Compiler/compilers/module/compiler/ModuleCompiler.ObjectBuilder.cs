@@ -6,35 +6,11 @@ namespace ZSharp.Compiler
 {
     internal sealed partial class ModuleCompiler
         : IObjectBuilder<NodeObject>
+        , IObjectInitializer<NodeObject>
     {
-        private readonly Queue<NodeObject> dependencyCollectionQueue = [];
-        private ObjectBuilder<NodeObject>? objectBuilder = null;
+        private readonly NonLinearContent objectBuilder;
 
-        private void EnqueueForDependencyCollection(CGObject @object, RDefinition node)
-            => EnqueueForDependencyCollection(new NodeObject(node, @object));
-
-        private void EnqueueForDependencyCollection(NodeObject @object)
-        {
-            dependencyCollectionQueue.Enqueue(@object);
-            nodes.Cache(@object.Object, @object);
-        }
-
-        private void Build()
-        {
-            objectBuilder = new(this);
-
-            NodeObject @object;
-
-            while (dependencyCollectionQueue.Count > 0)
-                using (CollectingDependenciesFor(@object = dependencyCollectionQueue.Dequeue()))
-                    Initialize(@object);
-
-            objectBuilder.BuildInOrder();
-
-            objectBuilder = null;
-        }
-
-        private void Initialize(NodeObject @object)
+        void IObjectInitializer<NodeObject>.Initialize(NodeObject @object)
             => Dispatcher(
                 Initialize,
                 Initialize,
@@ -62,7 +38,7 @@ namespace ZSharp.Compiler
                 )(@object);
 
         private static Action<NodeObject> Dispatcher(
-            Action<Class, ROOPDefinition> classFn,
+            Action<ModuleOOPObject, ROOPDefinition> oopFn,
             Action<RTFunction, RFunction> functionFn,
             Action<Global, RLetDefinition> letFn,
             Action<Global, RVarDefinition> varFn,
@@ -72,7 +48,7 @@ namespace ZSharp.Compiler
             {
                 switch (@object.Object)
                 {
-                    case Class @class: classFn(@class, (ROOPDefinition)@object.Node); break;
+                    case ModuleOOPObject oop: oopFn(oop, (ROOPDefinition)@object.Node); break;
                     case RTFunction function: functionFn(function, (RFunction)@object.Node); break;
                     case Global global
                         when @object.Node is RLetDefinition let:
