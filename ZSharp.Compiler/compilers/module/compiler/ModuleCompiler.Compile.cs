@@ -23,7 +23,7 @@ namespace ZSharp.Compiler
             if (node.Name is not null && node.Name != string.Empty)
                 Result.Members.Add(node.Name, Context.CurrentScope.Cache(node.Name, function));
 
-            EnqueueForDependencyCollection(function, node);
+            objectBuilder.EnqueueForDependencyCollection(function, node);
 
             return function;
         }
@@ -34,7 +34,7 @@ namespace ZSharp.Compiler
 
             Result.Members.Add(node.Name, Context.CurrentScope.Cache(node.Name, global));
 
-            EnqueueForDependencyCollection(global, node);
+            objectBuilder.EnqueueForDependencyCollection(global, node);
 
             return global;
         }
@@ -52,7 +52,7 @@ namespace ZSharp.Compiler
 
             Result.Members.Add(node.Name, Context.CurrentScope.Cache(node.Name, global));
 
-            EnqueueForDependencyCollection(global, node);
+            objectBuilder.EnqueueForDependencyCollection(global, node);
 
             return global;
         }
