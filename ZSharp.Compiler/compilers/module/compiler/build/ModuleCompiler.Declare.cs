@@ -5,36 +5,13 @@ namespace ZSharp.Compiler
 {
     internal sealed partial class ModuleCompiler
     {
-        private void Declare(Class @class, ROOPDefinition node)
+        private void Declare(ModuleOOPObject oop, ROOPDefinition node)
         {
-            if (node.Bases is not null)
-                foreach (var baseObject in node.Bases)
-                    @class.Bases.Add(Compiler.CompileNode(baseObject));
+            oop.Object = Compiler.CreateClass(oop.Spec.MetaClass, oop.Spec.Name);
 
-            var bases = new Queue<IRType>((@class.Bases ?? [])
-                .Select(Compiler.CompileIRType));
-
-            IR.Class? @base = null;
-            if (bases.Count > 0)
-            {
-                if (bases.Peek() is IR.Class) @base = (IR.Class)bases.Dequeue();
-
-                foreach (var item in bases)
-                {
-                    throw new NotImplementedException();
-
-                    //if (item is not IR.Interface @interface)
-                    //    throw new();
-
-                    //@class.Interfaces.Add(@interface);
-                }
-            }
-
-            @class.IR = new(node.Name, @base);
-
-            Result.IR!.Types.Add(@class.IR);
-
-            // TODO: implement class parameters
+            if (node.Name is not null && node.Name != string.Empty)
+                if (Context.CurrentScope.Uncache(node.Name))
+                    Context.CurrentScope.Cache(node.Name, oop.Object);
         }
 
         private void Declare(Global global, RLetDefinition node)
@@ -89,7 +66,7 @@ namespace ZSharp.Compiler
         {
             IR.Parameter Declare(Parameter parameter)
             {
-                var node = (RParameter)nodes.Cache(parameter)!.Node;
+                var node = (RParameter)objectBuilder.Nodes.Cache(parameter)!.Node;
 
                 parameter.Type =
                     node.Type is null ? null :

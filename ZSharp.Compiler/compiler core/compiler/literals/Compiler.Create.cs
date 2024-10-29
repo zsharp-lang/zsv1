@@ -1,13 +1,26 @@
-﻿using ZSharp.CGObjects;
-using ZSharp.RAST;
+﻿using CommonZ.Utils;
+using ZSharp.CGObjects;
 using ZSharp.VM;
 
 namespace ZSharp.Compiler
 {
     public sealed partial class Compiler
     {
+        private readonly Mapping<IRType, NullLiteral> nullLiterals = [];
+
+        public CGObject CreateRuntimeObject(ZSObject @object)
+            => new RuntimeObject(@object);
+
         public CGObject CreateString(string value)
             => new StringLiteral(value, RuntimeModule.TypeSystem.String);
+
+        public CGObject CreateNull(IRType type)
+        {
+            if (!nullLiterals.TryGetValue(type, out var nullLiteral))
+                nullLiterals[type] = nullLiteral = new(type);
+
+            return nullLiteral;
+        }
 
         public CGObject CreateLiteral()
         {

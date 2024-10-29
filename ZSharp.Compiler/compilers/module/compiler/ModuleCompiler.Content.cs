@@ -3,6 +3,6 @@
     internal sealed partial class ModuleCompiler
     {
         private readonly FunctionBodyCompiler functionBodyCompiler;
-        private readonly ClassBodyCompiler classBodyCompiler;
+        private readonly ClassSpecCompiler classBodyCompiler;
     }
 }

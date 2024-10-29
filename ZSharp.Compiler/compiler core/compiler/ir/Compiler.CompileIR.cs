@@ -1,4 +1,4 @@
-﻿using ZSharp.IR;
+﻿using ZSharp.CGObjects;
 using ZSharp.VM;
 
 namespace ZSharp.Compiler
@@ -24,12 +24,14 @@ namespace ZSharp.Compiler
 
         #region IR Object
 
-        public IRObject CompileIRObject(CGObject @object)
+        public IR.IRObject CompileIRObject(CGObject @object)
         {
+            if (@object is Class @class) return @class.IR ?? throw new();
+
             throw new NotImplementedException();
         }
 
-        public IRObject CompileIRObject(ZSObject @object)
+        public IR.IRObject CompileIRObject(ZSObject @object)
         {
             throw new NotImplementedException();
         }
@@ -38,9 +40,9 @@ namespace ZSharp.Compiler
 
         #region IR Type
 
-        public IType CompileIRType(CGObject @object)
+        public IRType CompileIRType(CGObject @object)
         {
-            if (@object is CGObjects.RawType rawType)
+            if (@object is RawType rawType)
                 return rawType.AsType(this);
 
             return CompileIRType(Evaluate(@object));
@@ -48,7 +50,7 @@ namespace ZSharp.Compiler
             throw new NotImplementedException();
         }
 
-        public IType CompileIRType(ZSObject @object)
+        public IRType CompileIRType(ZSObject @object)
         {
             if (@object is ZSIRObject irObject && irObject.IR is IRType type)
                 return type;

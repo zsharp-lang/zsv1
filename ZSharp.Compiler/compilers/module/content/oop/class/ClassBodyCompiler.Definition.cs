@@ -3,7 +3,7 @@ using ZSharp.RAST;
 
 namespace ZSharp.Compiler
 {
-    internal sealed partial class ClassBodyCompiler
+    internal sealed partial class ClassSpecCompiler
     {
         protected override CGObject? CompileContextItem(RDefinition definition)
             => definition switch
@@ -19,9 +19,15 @@ namespace ZSharp.Compiler
             throw new NotImplementedException();
         }
 
-        private Global Compile(RLetDefinition node)
+        private Field Compile(RLetDefinition node)
         {
-            throw new NotImplementedException();
+            Field field = new(node.Name ?? throw new());
+
+            Result.Content!.Add(field);
+
+            objectBuilder.EnqueueForDependencyCollection(field, node);
+
+            return field;
         }
 
         private CGObject Compile(RVarDefinition node)

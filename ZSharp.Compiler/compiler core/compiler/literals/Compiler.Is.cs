@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using ZSharp.CGObjects;
+using ZSharp.VM;
 
 namespace ZSharp.Compiler
 {
@@ -38,6 +39,16 @@ namespace ZSharp.Compiler
 
             return (value = literalValue) is not null;
         }
+
+        public bool IsRuntimeObject(CGObject @object)
+            => @object is RuntimeObject;
+
+        public bool IsRuntimeObject(CGObject @object, [NotNullWhen(true)] out ZSObject? value)
+            => (value = @object is RuntimeObject runtimeObject ? runtimeObject.Object : null) is not null;
+
+        public bool IsRuntimeObject<T>(CGObject @object, [NotNullWhen(true)] out T? value)
+            where T : ZSObject
+            => (value = @object is RuntimeObject runtimeObject ? runtimeObject.Object as T : null) is not null;
 
         /// <summary>
         /// Checks if the given object is a literal string and unpacks it.

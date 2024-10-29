@@ -4,6 +4,8 @@
     {
         public string Type { get; set; }
 
+        public RExpression? MetaType { get; set; }
+
         public List<RGenericParameter>? GenericParameters { get; set; }
 
         public List<RParameter>? Parameters { get; set; }

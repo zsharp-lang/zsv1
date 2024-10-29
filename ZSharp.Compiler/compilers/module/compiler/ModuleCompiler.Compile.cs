@@ -57,19 +57,22 @@ namespace ZSharp.Compiler
             return global;
         }
 
-        private Class CompileClass(ROOPDefinition node)
+        private CGObject CompileClass(ROOPDefinition node)
         {
-            Class @class = new()
+            var result = new ModuleOOPObject(new()
             {
                 Name = node.Name,
-            };
+                MetaClass = node.MetaType is not null
+                    ? Compiler.CompileNode(node.MetaType)
+                    : Context.DefaultMetaClass
+            });
 
             if (node.Name is not null && node.Name != string.Empty)
-                Result.Members.Add(node.Name, Context.CurrentScope.Cache(node.Name, @class));
+                Result.Members.Add(node.Name, Context.CurrentScope.Cache(node.Name, result));
 
-            EnqueueForDependencyCollection(@class, node);
+            objectBuilder.EnqueueForDependencyCollection(result, node);
 
-            return @class;
+            return result;
         }
     }
 }
