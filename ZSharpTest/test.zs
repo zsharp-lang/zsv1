@@ -29,7 +29,7 @@ fun foo(): Lib.id(string) {
 }
 
 class Foo {
-	//let x = Lib.bar(y);
+	let x = Lib.bar(y);
 }
 
 /*
