@@ -64,7 +64,9 @@ var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
 
 var standardModule = new ZSharp.CT.StandardLibrary.StandardModule();
 compiler.Runtime.AddInternalModule(standardModule);
-compiler.Context.CurrentScope.Cache("print", standardModule.Print);
+//compiler.Context.CurrentScope.Cache("print", standardModule.Print);
+
+compiler.Context.GlobalScope.Cache("import", standardModule.Import);
 
 var module = compiler.CompileAsDocument(rastNodes);
 

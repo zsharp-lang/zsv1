@@ -7,15 +7,7 @@ namespace ZSharp.Compiler
     public sealed partial class Compiler
     {
         public CGObject CreateString(string value)
-        {
-            return new RawCode(new([
-                new IR.VM.PutString(value),
-            ])
-            {
-                MaxStackSize = 1,
-                Types = [RuntimeModule.TypeSystem.String]
-            });
-        }
+            => new StringLiteral(value, RuntimeModule.TypeSystem.String);
 
         public CGObject CreateLiteral()
         {
