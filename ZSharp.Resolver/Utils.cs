@@ -44,6 +44,8 @@
             => type switch
             {
                 LiteralType.String => RLiteralType.String,
+                LiteralType.Number => RLiteralType.Integer,
+                LiteralType.Decimal => RLiteralType.Real,
                 _ => throw new NotImplementedException()
             };
     }

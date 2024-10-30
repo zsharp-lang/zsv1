@@ -5,3 +5,5 @@ global using KwArgs = CommonZ.Utils.Mapping<string, ZSharp.Compiler.CGObject>;
 
 global using MemberName = string;
 global using MemberIndex = int;
+
+global using DefaultIntegerType = int;

@@ -8,6 +8,12 @@ namespace ZSharp.Compiler
     {
         private readonly Mapping<IRType, NullLiteral> nullLiterals = [];
 
+        public CGObject CreateFloat32(float value)
+            => new Float32Literal(value, RuntimeModule.TypeSystem.Float32);
+
+        public CGObject CreateInteger(DefaultIntegerType value)
+            => new IntegerLiteral(value, RuntimeModule.TypeSystem.Int32); // TODO: fix type here
+
         public CGObject CreateRuntimeObject(ZSObject @object)
             => new RuntimeObject(@object);
 

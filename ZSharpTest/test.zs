@@ -13,14 +13,18 @@ module Lib {
 
 module Program;
 
-fun main(): string {
+fun main(): f32 {
 	foo();
 
-	return x;
+	return pi;
 }
 
 let x = y;
 let y = "Hello";
+
+let exitCode = 100;
+
+let pi = 3.14;
 
 fun foo(): Lib.id(string) {
 	let tmp = Lib.bar(x);

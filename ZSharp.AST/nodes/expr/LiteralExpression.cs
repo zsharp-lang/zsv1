@@ -3,6 +3,9 @@
     public enum LiteralType
     {
         String,
+
+        Number,
+        Decimal,
     }
 
     public sealed class LiteralExpression(string value, LiteralType type) : Expression

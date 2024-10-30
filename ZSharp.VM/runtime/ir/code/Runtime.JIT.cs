@@ -53,6 +53,12 @@ namespace ZSharp.VM
                     case Pop _:
                         result.Add(new(OpCode.Pop));
                         break;
+                    case PutFloat32 putFloat32:
+                        result.Add(new(OpCode.Push, new ZSFloat32(putFloat32.Value, TypeSystem.Float32)));
+                        break;
+                    case PutInt32 putInt32:
+                        result.Add(new(OpCode.Push, new ZSInt32(putInt32.Value, TypeSystem.Int32)));
+                        break;
                     case PutString putString:
                         result.Add(new(OpCode.Push, new ZSString(putString.Value, TypeSystem.String)));
                         break;

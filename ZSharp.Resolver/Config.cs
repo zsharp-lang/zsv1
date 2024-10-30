@@ -1,2 +1,2 @@
 ﻿global using DefaultIntegerType = System.Int32;
-global using DefaultRealType = System.Double;
+global using DefaultRealType = System.Single;

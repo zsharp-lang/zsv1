@@ -12,6 +12,10 @@ namespace ZSharp.Compiler
 
         public CGObject Void { get; }
 
+        public CGObject Int32 { get; }
+
+        public CGObject Float32 { get; }
+
         internal TypeSystem(Compiler compiler)
         {
             this.compiler = compiler;
@@ -19,6 +23,8 @@ namespace ZSharp.Compiler
             String = new RawType(compiler.RuntimeModule.TypeSystem.String);
             Type = new RawType(compiler.RuntimeModule.TypeSystem.Type);
             Void = new RawType(compiler.RuntimeModule.TypeSystem.Void);
+            Int32 = new RawType(compiler.RuntimeModule.TypeSystem.Int32);
+            Float32 = new RawType(compiler.RuntimeModule.TypeSystem.Float32);
         }
     }
 }
