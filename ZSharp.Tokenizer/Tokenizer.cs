@@ -14,6 +14,8 @@ namespace ZSharp.Tokenizer
 
         private const char Asterisk = '*';
 
+        private const char Dot = '.';
+
         private const char Underscore = '_';
 
         private const char LF = '\n';
@@ -99,7 +101,23 @@ namespace ZSharp.Tokenizer
 
                 Token ReadNumber()
                 {
-                    throw new NotImplementedException();
+                    char c = stream.Peek();
+
+                    StringBuilder sb = new();
+                    sb.Append(stream.Read());
+
+                    while (IsDigit(stream.Peek()))
+                        sb.Append(stream.Read());
+
+                    if (stream.Peek() != Dot)
+                        return new(TokenType.Number, sb.ToString(), new(start, stream.Position));
+
+                    sb.Append(stream.Read());
+
+                    while (IsDigit(stream.Peek()))
+                        sb.Append(stream.Read());
+
+                    return new(TokenType.Decimal, sb.ToString(), new(start, stream.Position));
                 }
 
                 Token ReadIdentifier()
