@@ -18,6 +18,10 @@ namespace ZSharp.VM
 
         public ZSObject Void { get; }
 
+        public ZSObject Int32 { get; }
+
+        public ZSObject Float32 { get; }
+
         public TypeSystem(RuntimeModule runtimeModule)
             : this(runtimeModule.TypeSystem) { }
 
@@ -31,6 +35,10 @@ namespace ZSharp.VM
             Null = CreatePrimitive(null!);
             String = CreatePrimitive(typeSystem.String);
             Void = CreatePrimitive(typeSystem.Void);
+
+            Int32 = CreatePrimitive(typeSystem.Int32);
+
+            Float32 = CreatePrimitive(typeSystem.Float32);
         }
 
         private ZSObject CreatePrimitive(Class @class)
