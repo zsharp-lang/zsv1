@@ -19,10 +19,18 @@
             Class type;
             Class @void;
 
+            Class int32;
+
+            Class float32;
+
             {
                 module.Types.Add(type = new("Type"));
                 module.Types.Add(@string = new("String"));
                 module.Types.Add(@void = new("Void"));
+
+                module.Types.Add(int32 = new("Int32"));
+
+                module.Types.Add(float32 = new("Float32"));
             }
 
             return new(module, new()
@@ -30,6 +38,10 @@
                 String = @string,
                 Type = type,
                 Void = @void,
+
+                Int32 = int32,
+
+                Float32 = float32,
             });
         }
     }
