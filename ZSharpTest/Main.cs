@@ -21,6 +21,14 @@ using (StreamReader stream = File.OpenText(FileName))
         token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.String)
     );
     expressionParser.Terminal(
+        TokenType.Number,
+        token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.Number)
+    );
+    expressionParser.Terminal(
+        TokenType.Decimal,
+        token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.Decimal)
+    );
+    expressionParser.Terminal(
         TokenType.Identifier,
         token => new ZSharp.AST.IdentifierExpression(token.Value)
     );
