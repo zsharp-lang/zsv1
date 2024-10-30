@@ -116,6 +116,8 @@ else
             if (stringResult.Value == "ok") Environment.Exit(0);
             else if (stringResult.Value == "fail") Environment.Exit(1);
             else Console.WriteLine("Main (String): " + stringResult.Value);
+        else if (result is ZSharp.VM.ZSInt32 int32Result)
+            Environment.Exit(int32Result.Value);
         else Console.WriteLine($"Main ({result.Type}): " + result);
     }
     else Console.WriteLine("No main function found!");
