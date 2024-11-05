@@ -6,6 +6,10 @@
 
         Number,
         Decimal,
+
+        Null,
+        True,
+        False,
     }
 
     public sealed class LiteralExpression(string value, LiteralType type) : Expression
@@ -18,5 +22,14 @@
 
         public static LiteralExpression String(string value)
             => new(value, LiteralType.String);
+
+        public static LiteralExpression Null()
+            => new("null", LiteralType.Null);
+
+        public static LiteralExpression True()
+            => new("true", LiteralType.True);
+
+        public static LiteralExpression False()
+            => new("false", LiteralType.False);
     }
 }
