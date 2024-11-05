@@ -13,10 +13,17 @@ module Lib {
 
 module Program;
 
-fun main(): f32 {
+fun main(): i32 {
 	foo();
 
-	return pi;
+	output(pi + 5.0);
+
+	output(1 + 1);
+
+	output(true);
+	output(false);
+
+	return exitCode;
 }
 
 let x = y;
