@@ -18,6 +18,9 @@
             Class @string;
             Class type;
             Class @void;
+            Class @null;
+
+            Class boolean;
 
             Class int32;
 
@@ -27,6 +30,9 @@
                 module.Types.Add(type = new("Type"));
                 module.Types.Add(@string = new("String"));
                 module.Types.Add(@void = new("Void"));
+                module.Types.Add(@null = new("Null"));
+
+                module.Types.Add(boolean = new("Boolean"));
 
                 module.Types.Add(int32 = new("Int32"));
 
@@ -38,6 +44,9 @@
                 String = @string,
                 Type = type,
                 Void = @void,
+                Null = @null,
+
+                Boolean = boolean,
 
                 Int32 = int32,
 

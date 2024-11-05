@@ -5,7 +5,8 @@
         String,
         Integer,
         Real,
-        Boolean,
+        True,
+        False,
         Null,
         Unit,
         I8,
@@ -46,7 +47,11 @@
 
         public static RLiteral Real(double value) => new(RLiteralType.Real, value);
 
-        public static RLiteral Boolean(bool value) => new(RLiteralType.Boolean, value);
+        public static RLiteral Boolean(bool value) => value ? True() : False();
+
+        public static RLiteral True() => new(RLiteralType.True, true);
+
+        public static RLiteral False() => new(RLiteralType.False, false);
 
         public static RLiteral Null() => new(RLiteralType.Null, null!);
 

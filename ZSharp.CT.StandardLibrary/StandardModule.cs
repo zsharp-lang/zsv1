@@ -11,6 +11,8 @@ namespace ZSharp.CT.StandardLibrary
 
         public CGObjects.CTFunction Import { get; private set; } = null!;
 
+        public CGObjects.SimpleFunctionOverloadGroup AdditionOperator { get; private set; } = null!;
+
         public StringImporter StringImporter { get; } = new();
 
         public StandardLibraryImporter StandardLibraryImporter { get; } = new();
@@ -27,6 +29,25 @@ namespace ZSharp.CT.StandardLibrary
             FunctionImplementations[print.IR!] = print.Implementation;
 
             module.Functions.Add(print.IR!);
+
+            AdditionOperator = new("+");
+
+            InternalFunction addFloat32, addInt32;
+
+            addFloat32 = StandardFunctions.AddFloat32(runtime);
+            FunctionImplementations[addFloat32.IR!] = addFloat32.Implementation;
+
+            module.Functions.Add(addFloat32.IR!);
+
+            addInt32 = StandardFunctions.AddInt32(runtime);
+            FunctionImplementations[addInt32.IR!] = addInt32.Implementation;
+
+            module.Functions.Add(addInt32.IR!);
+
+            AdditionOperator.Overloads.AddRange([
+                addFloat32,
+                addInt32,
+            ]);
 
             var moduleCG = new CGObjects.Module(module.Name!);
 

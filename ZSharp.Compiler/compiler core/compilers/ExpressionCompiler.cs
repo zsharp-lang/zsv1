@@ -33,8 +33,14 @@ namespace ZSharp.Compiler
                 else throw new();
             }
 
-            // TODO: operator lookup table
-            throw new NotImplementedException();
+            var right = Compiler.CompileNode(binary.Right);
+            if (!Compiler.Operators.Cache(binary.Operator, out var @operator))
+                throw new($"Could not find operator '{binary.Operator}'");
+
+            return Compiler.Call(@operator, [
+                new(left),
+                new(right)
+            ]);
         }
 
         private CGObject Compile(RCall call)

@@ -35,17 +35,17 @@ namespace ZSharp.CGObjects
                     switch (item)
                     {
                         case Field field:
-                            result.members.Add(field.Name, field);
+                            result.Members.Add(field.Name, field);
                             result.IR.Fields.Add(field.IR!);
                             break;
                         case Method method:
                             result.IR.Methods.Add(method.IR!);
                             if (method.Name is not null)
-                            result.members.Add(method.Name, method); 
+                            result.Members.Add(method.Name, method); 
                             break;
                         case Class @class
                             when @class.Name is not null:
-                            result.members.Add(@class.Name, @class); break;
+                            result.Members.Add(@class.Name, @class); break;
                         default:
                             throw new NotImplementedException(item.GetType().Name);
                     }

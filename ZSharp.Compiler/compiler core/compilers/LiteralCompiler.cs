@@ -11,6 +11,9 @@ namespace ZSharp.Compiler
                 RLiteralType.String => Compiler.CreateString(literal.As<string>()),
                 RLiteralType.Integer => Compiler.CreateInteger(literal.As<DefaultIntegerType>()),
                 RLiteralType.Real => Compiler.CreateFloat32(literal.As<float>()), // TODO: configurable default float
+                RLiteralType.True => Compiler.CreateTrue(),
+                RLiteralType.False => Compiler.CreateFalse(),
+                RLiteralType.Null => Compiler.CreateNull(),
                 _ => throw new NotImplementedException(),
             };
     }

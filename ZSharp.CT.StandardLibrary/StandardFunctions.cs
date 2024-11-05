@@ -28,5 +28,69 @@ namespace ZSharp.CT.StandardLibrary
                 }
             };
         }
+
+        public static InternalFunction AddFloat32(Runtime runtime)
+        {
+            var ir = new IR.Function(runtime.RuntimeModule.TypeSystem.Float32)
+            {
+                Name = "+"
+            };
+
+            IR.Parameter left, right;
+            ir.Signature.Args.Parameters.AddRange([
+                left = new("left", runtime.RuntimeModule.TypeSystem.Float32),
+                right = new("right", runtime.RuntimeModule.TypeSystem.Float32)
+            ]);
+
+            return new(ir)
+            {
+                Implementation = Implementations.AddFloat32,
+                Signature = new()
+                {
+                    Args = [
+                        new("left") {
+                            Type = null!,
+                            IR = left
+                        },
+                        new("right") {
+                            Type = null!,
+                            IR = right
+                        }
+                    ]
+                }
+            };
+        }
+
+        public static InternalFunction AddInt32(Runtime runtime)
+        {
+            var ir = new IR.Function(runtime.RuntimeModule.TypeSystem.Int32)
+            {
+                Name = "+"
+            };
+
+            IR.Parameter left, right;
+            ir.Signature.Args.Parameters.AddRange([
+                left = new("left", runtime.RuntimeModule.TypeSystem.Int32),
+                right = new("right", runtime.RuntimeModule.TypeSystem.Int32)
+            ]);
+
+            return new(ir)
+            {
+                Implementation = Implementations.AddInt32,
+                Signature = new()
+                {
+                    Args = [
+                        new("left") {
+                            Type = null!,
+                            IR = left
+                        },
+                        new("right") {
+                            Type = null!,
+                            IR = right
+                        }
+                    ]
+                }
+            };
+        }
     }
 }

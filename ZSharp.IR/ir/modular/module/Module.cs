@@ -40,6 +40,8 @@ namespace ZSharp.IR
             }
         }
 
+        public bool HasFunctions => !_functions.IsNullOrEmpty();
+
         public Collection<Global> Globals
         {
             get
@@ -66,6 +68,8 @@ namespace ZSharp.IR
             }
         }
 
+        public bool HasSubmodules => !_submodules.IsNullOrEmpty();
+
         public Collection<OOPType> Types
         {
             get
@@ -77,5 +81,7 @@ namespace ZSharp.IR
                 return _types;
             }
         }
+
+        public bool HasTypes => !_types.IsNullOrEmpty();
     }
 }

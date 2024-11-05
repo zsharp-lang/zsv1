@@ -6,6 +6,8 @@ namespace ZSharp.Compiler
     {
         public Code CompileIRCode(CGObject @object);
 
+        public IRType CompileIRType(CGObject @object);
+
         public Code Assign(Code irCode, Assignment assignment)
             => throw new NotImplementedException();
 

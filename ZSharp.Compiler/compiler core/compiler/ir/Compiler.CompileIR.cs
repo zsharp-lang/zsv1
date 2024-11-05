@@ -33,6 +33,8 @@ namespace ZSharp.Compiler
 
         public IR.IRObject CompileIRObject(ZSObject @object)
         {
+            if (@object is ZSIRObject irObject) return irObject.IR;
+
             throw new NotImplementedException();
         }
 
@@ -52,7 +54,7 @@ namespace ZSharp.Compiler
 
         public IRType CompileIRType(ZSObject @object)
         {
-            if (@object is ZSIRObject irObject && irObject.IR is IRType type)
+            if (CompileIRObject(@object) is IRType type)
                 return type;
 
             throw new NotImplementedException();
