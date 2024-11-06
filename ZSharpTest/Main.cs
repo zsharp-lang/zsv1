@@ -30,7 +30,13 @@ using (StreamReader stream = File.OpenText(FileName))
     );
     expressionParser.Terminal(
         TokenType.Identifier,
-        token => new ZSharp.AST.IdentifierExpression(token.Value)
+        token => token.Value switch
+        {
+            "null" => ZSharp.AST.LiteralExpression.Null(),
+            "true" => ZSharp.AST.LiteralExpression.True(),
+            "false" => ZSharp.AST.LiteralExpression.False(),
+            _ => new ZSharp.AST.IdentifierExpression(token.Value),
+        }
     );
     expressionParser.Nud(
         LangParser.Keywords.Let,
@@ -71,7 +77,24 @@ var rastNodes = ZSharp.Resolver.Resolver.Resolve(documentNode).ToArray();
 var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
 
 var standardModule = new ZSharp.CT.StandardLibrary.StandardModule();
-compiler.Runtime.AddInternalModule(standardModule);
+compiler.ImportIR(compiler.Runtime.AddInternalModule(standardModule));
+
+compiler.Operators.Cache("+", standardModule.AdditionOperator);
+var overloads = new List<ZSharp.CGObjects.RTFunction>(standardModule.AdditionOperator.Overloads);
+standardModule.AdditionOperator.Overloads.Clear();
+standardModule.AdditionOperator.Overloads.AddRange(overloads.Select(o => o.IR).Select(compiler.ImportIR).Select(o =>
+{
+    ZSharp.CT.StandardLibrary.InternalFunction r = new(o.IR!)
+    {
+        Implementation = standardModule.FunctionImplementations[o.IR!]
+    };
+
+    (o.Signature, r.Signature) = (r.Signature, o.Signature);
+    return r;
+}));
+
+foreach (var overload in standardModule.AdditionOperator.Overloads)
+    compiler.Runtime.GetInternalFunction(overload.IR!);
 
 compiler.Context.GlobalScope.Cache("import", standardModule.Import);
 

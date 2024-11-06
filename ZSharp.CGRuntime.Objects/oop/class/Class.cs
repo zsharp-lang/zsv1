@@ -7,7 +7,7 @@ namespace ZSharp.CGObjects
         : CGObject
         , ICTGetMember<MemberName>
     {
-        internal readonly Mapping<string, CGObject> members = [];
+        public Mapping<string, CGObject> Members { get; } = [];
 
         public IR.Class? IR { get; set; }
 
@@ -18,6 +18,6 @@ namespace ZSharp.CGObjects
         //public List<Interface>? Interfaces { get; set; }
 
         public CGObject Member(ICompiler compiler, MemberName member)
-            => members[member];
+            => Members[member];
     }
 }

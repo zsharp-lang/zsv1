@@ -11,12 +11,8 @@
                 RLiteralType.String => literal.Value,
                 RLiteralType.Integer => DefaultIntegerType.Parse(literal.Value),
                 RLiteralType.Real => DefaultRealType.Parse(literal.Value),
-                RLiteralType.Boolean => 
-                    literal.Value == "true" || (
-                    literal.Value == "false"
-                    ? false
-                    : throw new Exception("How did we get here?")
-                ),
+                RLiteralType.True => true,
+                RLiteralType.False => false,
                 RLiteralType.Null => null!,
                 RLiteralType.Unit => ValueTuple.Create(),
                 RLiteralType.I8 => sbyte.Parse(literal.Value),
@@ -46,6 +42,9 @@
                 LiteralType.String => RLiteralType.String,
                 LiteralType.Number => RLiteralType.Integer,
                 LiteralType.Decimal => RLiteralType.Real,
+                LiteralType.True => RLiteralType.True,
+                LiteralType.False => RLiteralType.False,
+                LiteralType.Null => RLiteralType.Null,
                 _ => throw new NotImplementedException()
             };
     }

@@ -41,6 +41,7 @@ namespace ZSharp.Compiler
         private void Initialize()
         {
             InitializeTypeSystem();
+            InitializeLiterals();
         }
 
         private static RModule CreateImplicitModule(IEnumerable<RStatement> nodes)

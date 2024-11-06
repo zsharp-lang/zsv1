@@ -4,7 +4,7 @@ using ZSharp.VM;
 
 namespace ZSharp.CT.StandardLibrary
 {
-    internal sealed class InternalFunction
+    public sealed class InternalFunction
         : RTFunction
     {
         public required ZSInternalFunctionDelegate Implementation { get; init; }

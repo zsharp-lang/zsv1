@@ -22,5 +22,7 @@ namespace ZSharp.IR
                 return _importedMembers;
             }
         }
+
+        public bool HasImportedMembers => !_importedMembers.IsNullOrEmpty();
     }
 }

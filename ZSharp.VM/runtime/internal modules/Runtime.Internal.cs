@@ -7,7 +7,7 @@ namespace ZSharp.VM
         private readonly Mapping<IR.Module, InternalModule> internalModules = [];
         private readonly Mapping<IR.Function, ZSInternalFunction> internalFunctions = [];
 
-        public void AddInternalModule(InternalModule module)
+        public IR.Module AddInternalModule(InternalModule module)
         {
             var ir = module.Load(this);
 
@@ -22,6 +22,8 @@ namespace ZSharp.VM
 
             foreach (var function in ir.Functions)
                 irMap.Cache(function, GetInternalFunction(function));
+
+            return ir;
         }
 
         public ZSInternalFunction GetInternalFunction(IR.Function function)

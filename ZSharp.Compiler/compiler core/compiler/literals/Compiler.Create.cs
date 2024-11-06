@@ -8,6 +8,12 @@ namespace ZSharp.Compiler
     {
         private readonly Mapping<IRType, NullLiteral> nullLiterals = [];
 
+        public CGObject CreateTrue()
+            => trueObject;
+
+        public CGObject CreateFalse()
+            => falseObject;
+
         public CGObject CreateFloat32(float value)
             => new Float32Literal(value, RuntimeModule.TypeSystem.Float32);
 
@@ -19,6 +25,9 @@ namespace ZSharp.Compiler
 
         public CGObject CreateString(string value)
             => new StringLiteral(value, RuntimeModule.TypeSystem.String);
+
+        public CGObject CreateNull()
+            => CreateNull(RuntimeModule.TypeSystem.Null);
 
         public CGObject CreateNull(IRType type)
         {
