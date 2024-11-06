@@ -14,9 +14,15 @@ namespace ZSharp.Compiler
                 _ => null,
             };
 
-        private RTFunction Compile(RFunction node)
+        private Method Compile(RFunction node)
         {
-            throw new NotImplementedException();
+            Method method = new(node.Name);
+
+            Result.Content!.Add(method);
+
+            objectBuilder.EnqueueForDependencyCollection(method, node);
+
+            return method;
         }
 
         private Field Compile(RLetDefinition node)

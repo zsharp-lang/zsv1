@@ -42,7 +42,7 @@ namespace ZSharp.Compiler
         //    }
         //}
 
-        //private void Define(RTFunction function, RFunction node)
-        //    => functionBodyCompiler.Compile(node, function);
+        private void Define(Method method, RFunction node)
+            => functionBodyCompiler.Compile(node, method);
     }
 }
