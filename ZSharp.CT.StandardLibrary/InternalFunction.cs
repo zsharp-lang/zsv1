@@ -21,7 +21,7 @@ namespace ZSharp.CT.StandardLibrary
             
         }
 
-        public override CGObject Call(ICompiler compiler, Argument[] arguments)
+        public override CGObject Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             var code = base.Call(compiler, arguments) as RawCode;
 

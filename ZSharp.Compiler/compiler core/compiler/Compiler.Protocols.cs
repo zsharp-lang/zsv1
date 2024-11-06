@@ -7,6 +7,10 @@
             throw new NotImplementedException();
         }
 
+        // TODO: WTH is this?
+        public Code Assign(Code irCode, Assignment assignment)
+            => throw new NotImplementedException();
+
         public CGObject Call(CGObject target, Argument[] arguments)
         {
             if (target is ICTCallable ctCallable)

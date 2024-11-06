@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZSharp.CGRuntime.Objects\ZSharp.Compiler.Objects.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
     <ProjectReference Include="..\ZSharp.VM\ZSharp.VM.csproj" />
   </ItemGroup>
 
