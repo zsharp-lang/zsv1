@@ -3,7 +3,6 @@
 namespace ZSharp.Compiler
 {
     public sealed partial class Compiler
-        : ICompiler
     {
         public bool IsCTValue(CGObject @object)
         {

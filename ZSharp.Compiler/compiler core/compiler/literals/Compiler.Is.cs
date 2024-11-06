@@ -5,7 +5,6 @@ using ZSharp.VM;
 namespace ZSharp.Compiler
 {
     public sealed partial class Compiler
-        : ICompiler
     {
         public bool IsLiteral(CGObject @object)
             => @object is Literal;

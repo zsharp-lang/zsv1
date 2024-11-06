@@ -3,7 +3,6 @@
 namespace ZSharp.Compiler
 {
     public sealed partial class Compiler
-        : ICompiler
     {
         private CGObject trueObject = null!, falseObject = null!;
 

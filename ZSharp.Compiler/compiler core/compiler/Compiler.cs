@@ -3,7 +3,6 @@
 namespace ZSharp.Compiler
 {
     public sealed partial class Compiler
-        : ICompiler
     {
         private readonly DocumentCompiler documentCompiler;
         private readonly ModuleCompiler moduleCompiler;

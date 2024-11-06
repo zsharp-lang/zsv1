@@ -7,7 +7,7 @@ namespace ZSharp.CT.StandardLibrary
     {
         private readonly StringImporter importer = importer;
 
-        public override CGObject Call(ICompiler compiler, Argument[] arguments)
+        public override CGObject Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             if (arguments.Length == 0) throw new();
 
@@ -21,11 +21,6 @@ namespace ZSharp.CT.StandardLibrary
                 throw new NotImplementedException();
 
             return importer.Import(source, arguments);
-        }
-
-        public override OverloadMatchResult? Match(ICompiler compiler, Argument[] arguments)
-        {
-            throw new NotImplementedException();
         }
     }
 }
