@@ -4,7 +4,6 @@ using ZSharp.RAST;
 namespace ZSharp.Compiler
 {
     internal sealed partial class FunctionBodyCompiler
-        : IStatementCompiler
     {
         protected override CGObject? CompileContextItem(RDefinition definition)
             => definition switch
