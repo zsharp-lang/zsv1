@@ -12,7 +12,7 @@ namespace ZSharp.Compiler
         void IObjectInitializer<NodeObject>.Initialize(NodeObject @object)
             => Dispatcher(
                 //Initialize,
-                //Initialize,
+                Initialize,
                 Initialize
                 //Initialize,
                 )(@object);
@@ -20,7 +20,7 @@ namespace ZSharp.Compiler
         void IObjectBuilder<NodeObject>.Declare(NodeObject @object)
             => Dispatcher(
                 //Declare,
-                //Declare,
+                Declare,
                 Declare
                 //Declare,
                 )(@object);
@@ -28,14 +28,14 @@ namespace ZSharp.Compiler
         void IObjectBuilder<NodeObject>.Define(NodeObject @object)
             => Dispatcher(
                 //Define,
-                //Define,
+                Define,
                 Define
                 //Define,
                 )(@object);
 
         private static Action<NodeObject> Dispatcher(
             //Action<Class, ROOPDefinition> classFn,
-            //Action<RTFunction, RFunction> functionFn,
+            Action<Method, RFunction> methodFn,
             Action<Field, RLetDefinition> letFn
             //Action<Global, RVarDefinition> varFn,
         )
@@ -44,7 +44,7 @@ namespace ZSharp.Compiler
                 switch (@object.Object)
                 {
                     //case Class @class: classFn(@class, (ROOPDefinition)@object.Node); break;
-                    //case RTFunction function: functionFn(function, (RFunction)@object.Node); break;
+                    case Method method: methodFn(method, (RFunction)@object.Node); break;
                     case Field field
                         when @object.Node is RLetDefinition let:
                         letFn(field, (RLetDefinition)@object.Node); break;

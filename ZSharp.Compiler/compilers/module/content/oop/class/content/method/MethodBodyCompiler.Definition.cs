@@ -3,7 +3,7 @@ using ZSharp.RAST;
 
 namespace ZSharp.Compiler
 {
-    internal sealed partial class FunctionBodyCompiler
+    internal sealed partial class MethodBodyCompiler
     {
         protected override CGObject? CompileContextItem(RDefinition definition)
             => definition switch

@@ -54,6 +54,15 @@
                 : Binding = FieldAttributes.None;
         }
 
+        public bool IsReadOnly
+        {
+            get => (Attributes & FieldAttributes.ReadOnly) == FieldAttributes.ReadOnly;
+            set => Attributes = value
+                ? Attributes | FieldAttributes.ReadOnly
+                : Attributes & (~FieldAttributes.ReadOnly);
+                
+        }
+
         /// <summary>
         /// The index of the field relative to other fields with the same binding.
         /// </summary>

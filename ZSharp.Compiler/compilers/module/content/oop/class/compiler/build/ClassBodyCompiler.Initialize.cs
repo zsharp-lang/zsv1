@@ -56,49 +56,49 @@ namespace ZSharp.Compiler
         //        objectBuilder.AddDependenciesForDeclaration(node.Value);
         //}
 
-        //public void Initialize(RTFunction function, RFunction node)
-        //{
-        //    objectBuilder.AddDependenciesForDeclaration();
+        public void Initialize(Method function, RFunction node)
+        {
+            objectBuilder.AddDependenciesForDeclaration();
 
-        //    objectBuilder.AddDependencyForDefinition(function);
+            objectBuilder.AddDependencyForDefinition(function);
 
-        //    Parameter InitializeParameter(RParameter node)
-        //    {
-        //        Parameter parameter = new(node.Name!);
+            Parameter InitializeParameter(RParameter node)
+            {
+                Parameter parameter = new(node.Name!);
 
-        //        if (node.Type is not null)
-        //        {
-        //            objectBuilder.AddDependenciesForDeclaration(node.Type);
-        //            if (node.Default is not null)
-        //                objectBuilder.AddDependenciesForDefinition(node.Default);
-        //        }
-        //        else if (node.Default is null)
-        //            throw new Exception("Parameter must have a type or an initializer");
-        //        else
-        //            objectBuilder.AddDependenciesForDeclaration(node.Default);
+                if (node.Type is not null)
+                {
+                    objectBuilder.AddDependenciesForDeclaration(node.Type);
+                    if (node.Default is not null)
+                        objectBuilder.AddDependenciesForDefinition(node.Default);
+                }
+                else if (node.Default is null)
+                    throw new Exception("Parameter must have a type or an initializer");
+                else
+                    objectBuilder.AddDependenciesForDeclaration(node.Default);
 
-        //        objectBuilder.Nodes.Cache(parameter, new NodeObject(node, parameter));
+                objectBuilder.Nodes.Cache(parameter, new NodeObject(node, parameter));
 
-        //        return parameter;
-        //    }
+                return parameter;
+            }
 
-        //    if (node.ReturnType is not null)
-        //        objectBuilder.AddDependenciesForDeclaration(node.ReturnType);
+            if (node.ReturnType is not null)
+                objectBuilder.AddDependenciesForDeclaration(node.ReturnType);
 
-        //    foreach (var arg in node.Signature.Args ?? [])
-        //        function.Signature.Args.Add(InitializeParameter(arg));
+            foreach (var arg in node.Signature.Args ?? [])
+                function.Signature.Args.Add(InitializeParameter(arg));
 
-        //    if (node.Signature.VarArgs is not null)
-        //        function.Signature.VarArgs = InitializeParameter(node.Signature.VarArgs);
+            if (node.Signature.VarArgs is not null)
+                function.Signature.VarArgs = InitializeParameter(node.Signature.VarArgs);
 
-        //    foreach (var arg in node.Signature.KwArgs ?? [])
-        //        function.Signature.KwArgs.Add(InitializeParameter(arg));
+            foreach (var arg in node.Signature.KwArgs ?? [])
+                function.Signature.KwArgs.Add(InitializeParameter(arg));
 
-        //    if (node.Signature.VarKwArgs is not null)
-        //        function.Signature.VarKwArgs = InitializeParameter(node.Signature.VarKwArgs);
+            if (node.Signature.VarKwArgs is not null)
+                function.Signature.VarKwArgs = InitializeParameter(node.Signature.VarKwArgs);
 
-        //    if (node.Body is not null)
-        //        objectBuilder.AddDependenciesForDefinition(node.Body);
-        //}
+            if (node.Body is not null)
+                objectBuilder.AddDependenciesForDefinition(node.Body);
+        }
     }
 }
