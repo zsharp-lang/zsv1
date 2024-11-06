@@ -15,5 +15,7 @@
         Static = 0b01,
         Instance = 0b10,
         Prototype = 0b11,
+
+        ReadOnly = 0b100,
     }
 }
