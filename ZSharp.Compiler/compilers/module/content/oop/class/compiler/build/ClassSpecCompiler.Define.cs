@@ -43,7 +43,6 @@ namespace ZSharp.Compiler
         //}
 
         private void Define(Method method, RFunction node)
-            //=> functionBodyCompiler.Compile(node, method);
-            => throw new NotImplementedException();
+            => methodBodyCompiler.Compile(node, method);
     }
 }

@@ -9,6 +9,8 @@ namespace ZSharp.Compiler
         public ClassSpecCompiler(Compiler compiler)
             : base(compiler)
         {
+            methodBodyCompiler = new(compiler);
+
             objectBuilder = new(compiler.Context, this, this);
         }
 
