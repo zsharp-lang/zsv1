@@ -11,12 +11,8 @@
             get => _attributes;
             set
             {
-                if ((value & FieldAttributes.BindingMask) != (_attributes & FieldAttributes.BindingMask))
-                {
-                    _attributes = value;
-                    (Owner?.Fields as FieldCollection)!.ChangeFieldBinding(this, value);
-                }
-                else _attributes = value;
+                _attributes = value;
+                (Owner?.Fields as FieldCollection)?.ChangeFieldBinding(this, value);
             }
         }
 
