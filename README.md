@@ -29,7 +29,7 @@ The IR defines a static structure, while the runtime objects can vary during exe
 
 Simply run the main project (ZSharpTest).
 
-You can edit the `test.zs` file.
+You can edit the [`test.zs`](ZSharpTest/test.zs) file.
 
 ## ToDo
 
