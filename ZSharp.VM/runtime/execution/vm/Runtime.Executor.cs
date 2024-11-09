@@ -39,9 +39,7 @@
             for (var i = args.Length - 1; i >= 0; i--)
                 args[i] = CurrentFrame.Pop();
 
-            var frame = new Frame(args, function.LocalCount, function.Code, function.StackSize);
-
-            PushFrame(frame);
+            PushFrame(new(args, function.LocalCount, function.Code, function.StackSize));
         }
 
         private void ExecuteCallInternal(Instruction instruction)
@@ -76,9 +74,7 @@
 
             function = objectType.VTable[function];
 
-            var frame = new Frame(args, function.LocalCount, function.Code, function.StackSize);
-
-            PushFrame(frame);
+            PushFrame(new(args, function.LocalCount, function.Code, function.StackSize));
         }
 
         private void ExecuteReturn()
