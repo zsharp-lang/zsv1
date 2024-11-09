@@ -2,7 +2,7 @@
 
 namespace ZSharp.IR
 {
-    public sealed class Typeclass
+    public sealed class Typeclass : OOPType
     {
         public string? Name { get; set; }
 
