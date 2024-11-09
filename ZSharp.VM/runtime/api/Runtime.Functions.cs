@@ -5,30 +5,30 @@ namespace ZSharp.VM
     public sealed partial class Runtime
     {
         /// <summary>
-        /// Creates a new <see cref="ZSFunction"/> object that represents the given
-        /// <paramref name="function"/>, bound to the given <paramref name="self"/> object.
+        /// Creates a new <see cref="ZSMethod"/> object that represents the given
+        /// <paramref name="method"/>, bound to the given <paramref name="self"/> object.
         /// 
-        /// The function must be already loaded into the runtime.
-        /// Otherwise, a <see cref="FunctionNotLoadedException"/> will be thrown.
+        /// The method must be already loaded into the runtime.
+        /// Otherwise, a <see cref="IRObjectNotLoadedException{IR.Method}"/> will be thrown.
         /// 
-        /// If the function is owned by a module, the module must be already loaded.
+        /// The method'w owning module must be already loaded.
         /// Otherwise, a <see cref="ModuleNotLoadedException"/> will be thrown.
         /// </summary>
-        /// <param name="function">The IR of the function to bind.</param>
-        /// <returns>A new <see cref="ZSFunction"/> object holding the runtime representation of
-        /// the given <paramref name="function"/>, bound to the given <paramref name="self"/>
+        /// <param name="method">The IR of the method to bind.</param>
+        /// <returns>A new <see cref="ZSMethod"/> object holding the runtime representation of
+        /// the given <paramref name="method"/>, bound to the given <paramref name="self"/>
         /// object.</returns>
-        /// <exception cref="ModuleNotLoadedException">Thrown when the function is owned by a module
-        /// and the module is not loaded into the runtime.</exception>
-        /// <exception cref="FunctionNotLoadedException">Thrown if the function is not already loaded into 
-        /// the runtime.</exception></exception>
-        public ZSFunction Bind(IR.Function function, ZSObject self)
+        /// <exception cref="ModuleNotLoadedException">Thrown when the method's owning module is 
+        /// not loaded into the runtime.</exception>
+        /// <exception cref="IRObjectNotLoadedException{IR.Method}">Thrown if the method is not already loaded into 
+        /// the runtime.</exception>
+        public ZSMethod Bind(IR.Method method, ZSObject self)
         {
-            if (function.Module is not null && !IsLoaded(function.Module))
-                throw new ModuleNotLoadedException<IR.Function>(function);
+            if (method.Module is not null && !IsLoaded(method.Module))
+                throw new ModuleNotLoadedException<IR.Method>(method);
 
-            if (!TryGet(function, out ZSFunction? result))
-                throw new FunctionNotLoadedException(function);
+            if (!TryGet(method, out ZSMethod? result))
+                throw new IRObjectNotLoadedException<IR.Method>(method);
 
             return Bind(result, self);
         }
@@ -41,8 +41,8 @@ namespace ZSharp.VM
         /// <returns>A new <see cref="ZSFunction"/> object which is a copy of
         /// the given <paramref name="function"/>, bound to the given <paramref name="self"/>
         /// object.</returns>
-        public ZSFunction Bind(ZSFunction function, ZSObject self)
-            => new(function.IR, 1, TypeSystem.Function)
+        public ZSMethod Bind(ZSMethod function, ZSObject self)
+            => new(function.IR, 1, TypeSystem.Function) // TODO: TypeSystem.Method
             {
                 ArgumentCount = function.ArgumentCount,
                 Code = function.Code,
@@ -81,6 +81,21 @@ namespace ZSharp.VM
             PushFrame(Frame.NoArguments(0, [], 1));
             Run(new Frame(arguments, function.LocalCount, function.Code, function.StackSize));
             
+            return PopFrame().Pop();
+        }
+
+        public ZSObject? Call(IR.Method method, params ZSObject[] arguments)
+        {
+            var zsMethod = Get(method);
+
+            return Call(zsMethod, arguments);
+        }
+
+        public ZSObject? Call(ZSMethod method, params ZSObject[] arguments)
+        {
+            PushFrame(Frame.NoArguments(0, [], 1));
+            Run(new Frame(arguments, method.LocalCount, method.Code, method.StackSize));
+
             return PopFrame().Pop();
         }
     }

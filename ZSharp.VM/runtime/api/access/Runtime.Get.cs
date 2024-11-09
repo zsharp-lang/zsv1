@@ -148,6 +148,28 @@ namespace ZSharp.VM
         }
 
         /// <summary>
+        /// Returns the object holding runtime representation of the given method.
+        /// 
+        /// The method must be loaded into the runtime.
+        /// Otherwise, a <see cref="IRObjectNotLoadedException{Method}"/> will be thrown.
+        /// 
+        /// The method's owning module must be loaded into the runtime.
+        /// Otherwise, a <see cref="ModuleNotLoadedException"/> will be thrown.
+        /// </summary>
+        /// <param name="method">The IR of the method to return the runtime representation of.</param>
+        /// <returns>A <see cref="ZSMethod"/> object holding the runtime representation of the given method.</returns>
+        public ZSMethod Get(Method method)
+        {
+            if (method.Module is not null && !IsLoaded(method.Module))
+                throw new ModuleNotLoadedException<Method>(method);
+
+            if (!TryGet(method, out ZSMethod? zsMethod))
+                throw new IRObjectNotLoadedException<Method>(method);
+
+            return zsMethod;
+        }
+
+        /// <summary>
         /// Returns the value of the given global variable.
         /// 
         /// The global's owning module must be loaded into the runtime.

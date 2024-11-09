@@ -100,6 +100,23 @@ namespace ZSharp.VM
         }
 
         /// <summary>
+        /// Returns the object holding runtime representation of the given method.
+        /// 
+        /// The method must be loaded into the runtime.
+        /// Otherwise, a <see cref="IRObjectNotLoadedException{Method}"/> will be thrown.
+        /// 
+        /// The method's owning module must be loaded into the runtime.
+        /// Otherwise, a <see cref="ModuleNotLoadedException"/> will be thrown.
+        /// </summary>
+        /// <param name="method">The IR of the method to return the runtime representation of.</param>
+        /// <returns>A <see cref="ZSMethod"/> object holding the runtime representation of the given method.</returns>
+        public bool TryGet(
+            Method method,
+            [NotNullWhen(true)] out ZSMethod? result
+        )
+            => irMap.Cache(method, out result);
+
+        /// <summary>
         /// Returns the value of the given local variable.
         /// 
         /// The local's owning function must be the currently executing function.

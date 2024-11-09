@@ -66,7 +66,7 @@
             for (var i = args.Length - 1; i >= 0; i--)
                 args[i] = CurrentFrame.Pop();
 
-            var function = CurrentFrame.Pop() as ZSFunction ?? throw new Exception();
+            var function = CurrentFrame.Pop() as ZSMethod ?? throw new Exception();
 
             if (args.Length < 1) throw new("Virtual call requires at least one argument.");
             if (args[0].Type is not ZSClass objectType)
