@@ -95,6 +95,30 @@
             PopFrame();
         }
 
+        private void ExecuteCreateInstance(Instruction instruction)
+        {
+            if (instruction.As<ZSMethod>() is not ZSMethod method)
+                throw new Exception();
+
+            var type = Get(method.IR.Owner ?? throw new()) as ZSClass ?? throw new();
+
+            var args = new ZSObject[method.ArgumentCount];
+            for (var i = args.Length - 1; i >= 1; i--)
+                args[i] = CurrentFrame.Pop();
+
+            var @object = new ZSInstance(
+                type.IR.Fields.Where(f => f.IsInstance).Count(),
+                type.IR.Fields.Where(f => f.IsPrototype).Count(),
+                type
+            );
+
+            args[0] = @object;
+
+            CurrentFrame.Push(@object);
+
+            PushFrame(new(args, method.LocalCount, method.Code, method.StackSize));
+        }
+
         private void ExecuteNewArray(Instruction instruction)
         {
             throw new NotImplementedException();

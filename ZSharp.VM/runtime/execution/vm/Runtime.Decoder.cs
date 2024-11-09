@@ -13,6 +13,7 @@
                 case OpCode.Call: ExecuteCall(instruction); break;
                 case OpCode.CallInternal: ExecuteCallInternal(instruction); break;
                 case OpCode.CallVirtual: ExecuteCallVirtual(instruction); break;
+                case OpCode.CreateInstance: ExecuteCreateInstance(instruction); break;
                 case OpCode.Dup: ExecuteDup(instruction); break;
                 case OpCode.GetArgument: ExecuteGetArgument(instruction); break;
                 case OpCode.GetField: ExecuteGetField(instruction); break;

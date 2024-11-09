@@ -28,6 +28,9 @@ namespace ZSharp.VM
                     case CallInternal callInternal:
                         result.Add(new(OpCode.CallInternal, GetInternalFunction(callInternal.Function)));
                         break;
+                    case CreateInstance createInstance:
+                        result.Add(new(OpCode.CreateInstance, Get(createInstance.Constructor.Method)));
+                        break;
                     case Jump jump:
                         result.Add(new(OpCode.Jump, 0));
                         jumpTable.Add((result.Count - 1, jump.Target));

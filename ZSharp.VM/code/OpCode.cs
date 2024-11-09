@@ -34,6 +34,8 @@
         SetField, // set-field [index: i32]
         CallVirtual, // call-virtual [vinfo: VInfo { type: IR, index: i32, argc: i32 }]
 
+        CreateInstance, // create-instance [constructor: IR]
+
         LoadObjectFromMetadata, // load-from-metadata [ir: IR]
     }
 }
