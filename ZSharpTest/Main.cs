@@ -43,6 +43,7 @@ using (StreamReader stream = File.OpenText(FileName))
         LangParser.ParseLetExpression
     );
 
+    expressionParser.InfixR("=", 10);
     expressionParser.InfixL("+", 50);
     expressionParser.InfixL("*", 70);
     expressionParser.InfixL("**", 80);

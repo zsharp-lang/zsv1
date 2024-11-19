@@ -32,6 +32,10 @@ namespace ZSharp.Compiler
                     return Compiler.Member(left, literal.As<int>());
                 else throw new();
             }
+            else if (binary.Operator == "=") // TODO: implement as CGF
+            {
+                return Compiler.Assign(left, Compiler.CompileNode(binary.Right));
+            }
 
             var right = Compiler.CompileNode(binary.Right);
             if (!Compiler.Operators.Cache(binary.Operator, out var @operator))
