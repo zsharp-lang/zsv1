@@ -89,8 +89,11 @@
         /// <returns></returns>
         public CGObject Member(CGObject instance, MemberName member)
         {
-            if (instance is ICTGetMember<MemberName> getMember)
-                return getMember.Member(this, member);
+            if (instance is ICTGetMember<MemberName> ctGetMember)
+                return ctGetMember.Member(this, member);
+
+            if (instance is ICTReadable readable && readable.Type is IRTGetMember<MemberName> rtGetMember)
+                return rtGetMember.Member(this, instance, member);
 
             throw new NotImplementedException();
         }
