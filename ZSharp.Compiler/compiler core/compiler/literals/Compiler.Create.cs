@@ -6,7 +6,7 @@ namespace ZSharp.Compiler
 {
     public sealed partial class Compiler
     {
-        private readonly Mapping<IRType, NullLiteral> nullLiterals = [];
+        private readonly Mapping<CGObject, NullLiteral> nullLiterals = [];
 
         public CGObject CreateTrue()
             => trueObject;
@@ -15,21 +15,21 @@ namespace ZSharp.Compiler
             => falseObject;
 
         public CGObject CreateFloat32(float value)
-            => new Float32Literal(value, RuntimeModule.TypeSystem.Float32);
+            => new Float32Literal(value, TypeSystem.Float32);
 
         public CGObject CreateInteger(DefaultIntegerType value)
-            => new IntegerLiteral(value, RuntimeModule.TypeSystem.Int32); // TODO: fix type here
+            => new IntegerLiteral(value, TypeSystem.Int32); // TODO: fix type here
 
         public CGObject CreateRuntimeObject(ZSObject @object)
             => new RuntimeObject(@object);
 
         public CGObject CreateString(string value)
-            => new StringLiteral(value, RuntimeModule.TypeSystem.String);
+            => new StringLiteral(value, TypeSystem.String);
 
         public CGObject CreateNull()
-            => CreateNull(RuntimeModule.TypeSystem.Null);
+            => CreateNull(TypeSystem.Null);
 
-        public CGObject CreateNull(IRType type)
+        public CGObject CreateNull(CGObject type)
         {
             if (!nullLiterals.TryGetValue(type, out var nullLiteral))
                 nullLiterals[type] = nullLiteral = new(type);

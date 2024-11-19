@@ -1,5 +1,4 @@
 ﻿using ZSharp.Compiler;
-using ZSharp.IR;
 
 namespace ZSharp.CGObjects
 {
@@ -15,14 +14,13 @@ namespace ZSharp.CGObjects
 
         public CGObject? Initializer { get; set; }
 
-        IType ICTReadable.Type => IR!.Type;
-
         public Code Read(Compiler.Compiler compiler)
             => new([
                 new IR.VM.GetArgument(IR!),
             ])
             {
                 MaxStackSize = 1,
+                Types = [Type ?? throw new()]
             };
     }
 }

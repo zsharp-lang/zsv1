@@ -8,7 +8,7 @@ namespace ZSharp.Compiler
 
         public int MaxStackSize { get; set; }
 
-        public Collection<IRType> Types { get; init; } = [];
+        public Collection<CGObject> Types { get; init; } = [];
 
         public bool IsVoid => Types.Count == 0;
 
@@ -29,7 +29,7 @@ namespace ZSharp.Compiler
             throw new InvalidOperationException();
         }
 
-        public IRType RequireValueType()
+        public CGObject RequireValueType()
             => IsValue ? Types[0] : throw new InvalidOperationException();
 
         public void Append(Code other)
@@ -46,7 +46,7 @@ namespace ZSharp.Compiler
         {
             Instructions = Collection<IR.VM.Instruction>.Empty,
             MaxStackSize = 0,
-            Types = Collection<IRType>.Empty,
+            Types = Collection<CGObject>.Empty,
         };
     }
 }

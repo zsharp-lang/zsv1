@@ -21,12 +21,10 @@ namespace ZSharp.Compiler
             if (node.Type is not null)
                 global.Type = Compiler.CompileNode(node.Type);
 
-            var type = global.Type is null ? null : Compiler.CompileIRType(global.Type);
             var initializer = Compiler.CompileIRCode(global.Initializer);
+            global.Type ??= initializer.RequireValueType();
 
-            type ??= initializer.RequireValueType();
-
-            global.IR = new IR.Global(global.Name, type)
+            global.IR = new IR.Global(global.Name, Compiler.CompileIRType(global.Type))
             {
                 Initializer = [.. initializer.Instructions]
             };
@@ -49,7 +47,7 @@ namespace ZSharp.Compiler
                 ? null 
                 : Compiler.CompileIRCode(global.Initializer);
 
-            type ??= initializer?.RequireValueType();
+            type ??= initializer is null ?  null : Compiler.CompileIRType(initializer.RequireValueType());
 
             if (type is null)
                 throw new();
@@ -85,7 +83,7 @@ namespace ZSharp.Compiler
 
                 if (type is null && initializer is null)
                     throw new();
-                else type ??= initializer!.RequireValueType();
+                else type ??= Compiler.CompileIRType(initializer!.RequireValueType());
 
                 Context.CurrentScope.Cache(parameter.Name, parameter);
 

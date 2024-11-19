@@ -2,7 +2,7 @@
 {
     public interface ICTReadable
     {
-        public IRType Type { get; }
+        public CGObject Type { get; }
 
         public Code Cast(Compiler compiler, CGObject type)
             => this is ICTTypeCast typeCast 

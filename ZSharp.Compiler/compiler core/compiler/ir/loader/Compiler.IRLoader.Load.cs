@@ -11,10 +11,10 @@ namespace ZSharp.Compiler
                 Initializer = parameter.Initializer is null ? null : new RawCode(new(parameter.Initializer)
                 {
                     MaxStackSize = 0, // TODO
-                    Types = [parameter.Type]
+                    Types = [ImportIR(parameter.Type)]
                 }),
                 IR = parameter,
-                Type = new RawType(parameter.Type)
+                Type = new RawType(parameter.Type, TypeSystem.Type)
             };
 
         private RTFunction LoadIR(IR.Function function)
@@ -22,7 +22,7 @@ namespace ZSharp.Compiler
             RTFunction result = new(function.Name)
             {
                 IR = function,
-                ReturnType = new RawType(function.ReturnType)
+                ReturnType = new RawType(function.ReturnType, TypeSystem.Type)
             };
 
             if (function.Signature.HasArgs)

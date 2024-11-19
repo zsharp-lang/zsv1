@@ -1,5 +1,4 @@
 ﻿using ZSharp.Compiler;
-using ZSharp.IR;
 
 namespace ZSharp.CGObjects
 {
@@ -7,7 +6,7 @@ namespace ZSharp.CGObjects
         : CGObject
         , ICTReadable
     {
-        public abstract IType Type { get; }
+        public abstract CGObject Type { get; }
 
         public object? Value { get; } = value;
 

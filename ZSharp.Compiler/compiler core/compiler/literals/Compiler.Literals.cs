@@ -8,8 +8,8 @@ namespace ZSharp.Compiler
 
         private void InitializeLiterals()
         {
-            trueObject = new TrueLiteral(RuntimeModule.TypeSystem.Boolean);
-            falseObject = new FalseLiteral(RuntimeModule.TypeSystem.Boolean);
+            trueObject = new TrueLiteral(TypeSystem.Boolean);
+            falseObject = new FalseLiteral(TypeSystem.Boolean);
         }
     }
 }

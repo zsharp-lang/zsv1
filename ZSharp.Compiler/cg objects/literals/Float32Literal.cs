@@ -1,13 +1,12 @@
 ﻿using ZSharp.Compiler;
-using ZSharp.IR;
 
 namespace ZSharp.CGObjects
 {
-    public sealed class Float32Literal(float value, IType type)
+    public sealed class Float32Literal(float value, CGObject type)
         : Literal<float>(value)
         , ICTReadable
     {
-        public override IType Type { get; } = type;
+        public override CGObject Type { get; } = type;
 
         public override Code Read(Compiler.Compiler compiler)
             => new(

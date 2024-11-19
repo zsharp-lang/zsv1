@@ -30,9 +30,11 @@ namespace ZSharp.Compiler
             Context.CurrentScope.Cache(local.Name, local);
 
             var initializer = Compiler.CompileIRCode(local.Initializer);
-            var type = local.Type is null
+            var type = Compiler.CompileIRType(
+                local.Type is null
                 ? initializer.RequireValueType()
-                : Compiler.CompileIRType(local.Type);
+                : local.Type
+            );
 
             local.IR = new(local.Name, type)
             {
@@ -73,7 +75,7 @@ namespace ZSharp.Compiler
             if (local.Type is not null)
                 type = Compiler.CompileIRType(local.Type);
             else if (initializer is not null)
-                type = initializer.RequireValueType();
+                type = Compiler.CompileIRType(initializer.RequireValueType());
             else throw new();
 
             local.IR = new(local.Name, type)

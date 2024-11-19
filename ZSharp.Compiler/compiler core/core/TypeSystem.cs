@@ -24,13 +24,14 @@ namespace ZSharp.Compiler
         {
             this.compiler = compiler;
 
-            String = new RawType(compiler.RuntimeModule.TypeSystem.String);
-            Type = new RawType(compiler.RuntimeModule.TypeSystem.Type);
-            Void = new RawType(compiler.RuntimeModule.TypeSystem.Void);
-            Null = new RawType(compiler.RuntimeModule.TypeSystem.Null);
-            Boolean = new RawType(compiler.RuntimeModule.TypeSystem.Boolean);
-            Int32 = new RawType(compiler.RuntimeModule.TypeSystem.Int32);
-            Float32 = new RawType(compiler.RuntimeModule.TypeSystem.Float32);
+            Type = new CGObjects.Type(compiler.RuntimeModule.TypeSystem.Type);
+
+            String = new RawType(compiler.RuntimeModule.TypeSystem.String, Type);
+            Void = new RawType(compiler.RuntimeModule.TypeSystem.Void, Type);
+            Null = new RawType(compiler.RuntimeModule.TypeSystem.Null, Type);
+            Boolean = new RawType(compiler.RuntimeModule.TypeSystem.Boolean, Type);
+            Int32 = new RawType(compiler.RuntimeModule.TypeSystem.Int32, Type);
+            Float32 = new RawType(compiler.RuntimeModule.TypeSystem.Float32, Type);
         }
     }
 }

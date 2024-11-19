@@ -10,7 +10,7 @@ namespace ZSharp.CGObjects
 
         public Code Code => code;
 
-        public IR.IType Type => code.RequireValueType();
+        public CGObject Type => code.RequireValueType();
 
         public Code Read(Compiler.Compiler _)
             => code;

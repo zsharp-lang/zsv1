@@ -8,7 +8,7 @@ namespace ZSharp.CGObjects
         , ICTGetMember<MemberName>
         , ICTReadable
     {
-        IR.IType ICTReadable.Type => throw new NotImplementedException();
+        CGObject ICTReadable.Type => throw new NotImplementedException();
 
         public Mapping<string, CGObject> Members { get; } = [];
 

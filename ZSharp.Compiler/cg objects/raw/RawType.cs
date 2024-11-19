@@ -3,14 +3,14 @@ using ZSharp.IR;
 
 namespace ZSharp.CGObjects
 {
-    public sealed class RawType(IType type)
+    public sealed class RawType(IRType type, CGObject metaType)
         : CGObject
         , ICTReadable
         //, ICTType
     {
-        private readonly IType type = type;
+        private IRType type = type;
 
-        public IType Type => throw new NotImplementedException();
+        public CGObject Type { get; internal set; } = metaType;
 
         public IType AsType(Compiler.Compiler compiler)
             => type;
@@ -21,7 +21,7 @@ namespace ZSharp.CGObjects
             ])
             {
                 MaxStackSize = 1,
-                Types = [type]
+                Types = [Type]
             } : throw new();
     }
 }

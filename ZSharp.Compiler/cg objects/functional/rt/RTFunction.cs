@@ -6,7 +6,7 @@ namespace ZSharp.CGObjects
         : Function(name)
         , ICTReadable
     {
-        IR.IType ICTReadable.Type => throw new NotImplementedException();
+        CGObject ICTReadable.Type => throw new NotImplementedException();
 
         public Signature Signature { get; set; } = new();
 
@@ -74,7 +74,8 @@ namespace ZSharp.CGObjects
             result.Instructions.Add(new IR.VM.Call(IR!));
 
             result.Types.Clear();
-            result.Types.Add(IR!.ReturnType);
+            result.Types.Add(ReturnType ?? compiler.TypeSystem.Void); // TODO: WTF?????? This is here because the 
+            // IR -> CG loader is not yet implemented.
 
             result.MaxStackSize = Math.Max(result.MaxStackSize, result.Types.Count);
 

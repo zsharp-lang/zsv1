@@ -1,12 +1,11 @@
 ﻿using ZSharp.Compiler;
-using ZSharp.IR;
 
 namespace ZSharp.CGObjects
 {
-    public sealed class StringLiteral(string value, IType type)
+    public sealed class StringLiteral(string value, CGObject type)
         : Literal<string>(value)
     {
-        public override IType Type { get; } = type;
+        public override CGObject Type { get; } = type;
 
         public override Code Read(Compiler.Compiler compiler)
             => new([

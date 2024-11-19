@@ -9,7 +9,7 @@ namespace ZSharp.Compiler
         public CGObject ImportIR(IRType type)
             => type is IR.IRObject irObject
             ? ImportIR(irObject)
-            : new RawType(type); // TODO: other default implementation for raw type
+            : new RawType(type, TypeSystem.Type); // TODO: other default implementation for raw type
 
         public CGObject ImportIR(IR.IRObject ir)
             => ObjectCache.CG(ir, out var result)

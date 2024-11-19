@@ -41,7 +41,7 @@ namespace ZSharp.Compiler
             // manual void cast
             var code = Compiler.CompileIRCode(result);
             foreach (var type in code.Types)
-                if (type != Compiler.RuntimeModule.TypeSystem.Void)
+                if (type != Compiler.TypeSystem.Void)
                     code.Instructions.Add(new IR.VM.Pop());
 
             code.Types.Clear();
