@@ -6,11 +6,17 @@ namespace ZSharp.Parser
     public sealed class ClassParser
         : ContextParser<OOPDefinition, Statement>
     {
+        public MethodParser Method { get; } = new();
+
         public ClassParser()
         {
             AddKeywordParser(
                 LangParser.Keywords.Let, 
                 Utils.ExpressionStatement(LangParser.ParseLetExpression)
+            );
+            AddKeywordParser(
+                LangParser.Keywords.Function,
+                Utils.DefinitionStatement(Method.Parse)
             );
         }
 
