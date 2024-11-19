@@ -1,8 +1,11 @@
 ﻿namespace ZSharp.IR
 {
-    public sealed class Method(IType returnType) : IRObject
+    public sealed class Method 
+        : IRObject
+        , ICallable
     {
-        private readonly Function _function = new(returnType);
+        private Signature _signature;
+        private VM.MethodBody? _body;
 
         public string? Name { get; set; }
 
@@ -10,31 +13,39 @@
 
         public IType ReturnType
         {
-            get => _function.ReturnType;
-            set => _function.ReturnType = value;
+            get => _signature.ReturnType;
+            set => _signature.ReturnType = value;
         }
 
         public Signature Signature
         {
-            get => _function.Signature;
+            get => _signature;
             set
             {
                 if (value.Owner is not null)
                     throw new InvalidOperationException();
-                _function.Signature.Owner = null;
-                (_function.Signature = value).Owner = this;
+                _signature.Owner = null;
+                (_signature = value).Owner = this;
             }
         }
 
-        public VM.FunctionBody Body => _function.Body;
+        public VM.MethodBody Body
+        {
+            get
+            {
+                if (_body is not null)
+                    return _body;
 
-        public bool HasBody => _function.HasBody;
+                Interlocked.CompareExchange(ref _body, new(this), null);
+                return _body;
+            }
+        }
+
+        public bool HasBody => _body is not null;
 
         public OOPType? Owner { get; set; }
 
         public override Module? Module => Owner?.Module;
-
-        public Function Function => _function;
 
         public bool IsClass
         {
@@ -66,6 +77,11 @@
             set => Attributes = value
                 ? Attributes | MethodAttributes.VirtualMethod
                 : Attributes & ~MethodAttributes.VirtualMethod;
+        }
+
+        public Method(IType returnType)
+        {
+            _signature = new(returnType) { Owner = this };
         }
 
         public Method(Signature signature)

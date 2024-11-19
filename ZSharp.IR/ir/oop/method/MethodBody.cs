@@ -2,12 +2,12 @@
 
 namespace ZSharp.IR.VM
 {
-    public sealed class FunctionBody
+    public sealed class MethodBody
     {
         private InstructionCollection? _instructions;
         private LocalCollection? _locals;
 
-        public Function Function { get; }
+        public Method Method { get; }
 
         public Collection<Instruction> Instructions
         {
@@ -30,7 +30,7 @@ namespace ZSharp.IR.VM
                 if (_locals is not null)
                     return _locals;
 
-                Interlocked.CompareExchange(ref _locals, new(Function), null);
+                Interlocked.CompareExchange(ref _locals, new(Method), null);
                 return _locals;
             }
         }
@@ -39,15 +39,15 @@ namespace ZSharp.IR.VM
 
         public int StackSize { get; set; }
 
-        public FunctionBody(Function function, IEnumerable<Instruction> code)
+        public MethodBody(Method method, IEnumerable<Instruction> code)
         {
-            Function = function;
+            Method = method;
             _instructions = new(code);
         }
 
-        public FunctionBody(Function function)
+        public MethodBody(Method method)
         {
-            Function = function;
+            Method = method;
         }
     }
 }

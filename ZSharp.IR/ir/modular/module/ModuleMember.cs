@@ -9,7 +9,7 @@
         public Module? Owner
         {
             get => _module;
-            set => _module = value;
+            internal set => _module = value;
         }
 
         public ModuleMember() { }
