@@ -33,7 +33,7 @@
 
         private void ExecuteCall(Instruction instruction)
         {
-            var function = instruction.As<ZSFunction>();
+            var function = instruction.As<ICallable>();
             
             var args = new ZSObject[function.ArgumentCount];
             for (var i = args.Length - 1; i >= 0; i--)
@@ -74,7 +74,7 @@
 
             method = objectType.VTable[method];
 
-            PushFrame(new(args, method.Function.LocalCount, method.Function.Code, method.Function.StackSize));
+            PushFrame(new(args, method.LocalCount, method.Code, method.StackSize));
         }
 
         private void ExecuteReturn()
@@ -98,7 +98,7 @@
 
             var type = Get(method.IR.Owner ?? throw new()) as ZSClass ?? throw new();
 
-            var args = new ZSObject[method.Function.ArgumentCount + 1];
+            var args = new ZSObject[method.ArgumentCount + 1];
             for (var i = args.Length - 1; i >= 1; i--)
                 args[i] = CurrentFrame.Pop();
 
@@ -112,7 +112,7 @@
 
             CurrentFrame.Push(@object);
 
-            PushFrame(new(args, method.Function.LocalCount, method.Function.Code, method.Function.StackSize));
+            PushFrame(new(args, method.LocalCount, method.Code, method.StackSize));
         }
 
         private void ExecuteNewArray(Instruction instruction)

@@ -4,6 +4,7 @@ namespace ZSharp.VM
 {
     public sealed class ZSFunction(Function function, ZSObject type) 
         : ZSIRObject<Function>(function, 0, type)
+        , ICallable
     {
         public Instruction[] Code { get; set; } = [];
 

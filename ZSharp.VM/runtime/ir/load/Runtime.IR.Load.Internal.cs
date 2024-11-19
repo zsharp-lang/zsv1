@@ -1,4 +1,5 @@
-﻿using ZSharp.IR;
+﻿using CommonZ.Utils;
+using ZSharp.IR;
 
 namespace ZSharp.VM
 {
@@ -15,8 +16,19 @@ namespace ZSharp.VM
         {
             ZSClass result = ZSClass.CreateFrom(@class, TypeSystem.Type);
 
+            Mapping<Method, ZSMethod> methods = [];
+
             foreach (var method in @class.Methods)
-                LoadIRInternal(method);
+                methods[method] = LoadIRInternal(method);
+
+            foreach (var method in @class.Methods)
+            {
+                var zsMethod = methods[method];
+                var methodBody = Assemble(method.Body.Instructions, method, method.Body.StackSize);
+
+                zsMethod.Code = methodBody.Instructions;
+                zsMethod.StackSize = methodBody.StackSize;
+            }
 
             return irMap.Cache(@class, result);
         }
@@ -29,7 +41,7 @@ namespace ZSharp.VM
             var code = 
                 function.Module is not null 
                 ? [] 
-                : Assemble(function.Body.Instructions, function).Instructions;
+                : Assemble(function.Body.Instructions, function, function.Body.StackSize).Instructions;
 
             return irMap.Cache(function, ZSFunction.CreateFrom(
                 function,
@@ -43,14 +55,8 @@ namespace ZSharp.VM
             if (!method.HasBody)
                 throw new Exception();
 
-            //var code =
-            //    method.Module is not null
-            //    ? []
-            //    : Assemble(method.Body.Instructions, method.Function).Instructions;
-
             return irMap.Cache(method, ZSMethod.CreateFrom(
                 method,
-                LoadIRInternal(method.Function),
                 TypeSystem.Function
             ));
         }
@@ -81,7 +87,7 @@ namespace ZSharp.VM
             foreach (var function in module.Functions)
             {
                 var zsFunction = Get(function);
-                var functionBody = Assemble(function.Body.Instructions, function);
+                var functionBody = Assemble(function.Body.Instructions, function,function.Body.StackSize);
                 
                 zsFunction.Code = functionBody.Instructions;
                 zsFunction.StackSize = functionBody.StackSize;

@@ -1,6 +1,4 @@
-﻿using ZSharp.IR.VM;
-
-namespace ZSharp.VM
+﻿namespace ZSharp.VM
 {
     public sealed partial class Runtime
     {
@@ -42,7 +40,7 @@ namespace ZSharp.VM
         /// the given <paramref name="method"/>, bound to the given <paramref name="self"/>
         /// object.</returns>
         public ZSMethod Bind(ZSMethod method, ZSObject self)
-            => ZSMethod.CreateFrom(method.IR, method.Function, method.Type, self);
+            => ZSMethod.CreateFrom(method.IR, method.Code, method.Type, self);
 
         /// <summary>
         /// Calls the given <see cref="IR.Function"/> with the given arguments.
@@ -87,7 +85,7 @@ namespace ZSharp.VM
         public ZSObject? Call(ZSMethod method, params ZSObject[] arguments)
         {
             PushFrame(Frame.NoArguments(0, [], 1));
-            Run(new Frame(arguments, method.Function.LocalCount, method.Function.Code, method.Function.StackSize));
+            Run(new Frame(arguments, method.LocalCount, method.Code, method.StackSize));
 
             return PopFrame().Pop();
         }

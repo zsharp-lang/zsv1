@@ -6,12 +6,12 @@ namespace ZSharp.VM
 {
     public sealed partial class Runtime
     {
-        public Code Assemble(IEnumerable<IR.VM.Instruction> code, Function? function = null, int? stackSize = null)
+        public Code Assemble(IEnumerable<IR.VM.Instruction> code, IR.ICallable? owner = null, int stackSize = 0)
         {
             List<(int, IR.VM.Instruction)> jumpTable = [];
             Dictionary<int, int> offsetMap = [];
 
-            int maxStackSize = stackSize ?? ((function?.HasBody ?? false) ? function.Body.StackSize : 0);
+            int maxStackSize = stackSize;
             List<Instruction> result = [];
 
             foreach (var (index, instruction) in new Enumerate<IR.VM.Instruction>(code))
@@ -20,7 +20,12 @@ namespace ZSharp.VM
                 switch (instruction)
                 {
                     case Call call:
-                        result.Add(new(OpCode.Call, Get(call.Function)));
+                        result.Add(new(OpCode.Call, Get(call.Callable switch
+                        {
+                            Function function => function,
+                            Method method => method,
+                            _ => throw new()
+                        })));
                         break;
                     case CallIndirect callIndirect:
                         result.Add(new(OpCode.Call, callIndirect.Signature.Length));
@@ -69,8 +74,8 @@ namespace ZSharp.VM
                         result.Add(new(OpCode.Push, new ZSString(putString.Value, TypeSystem.String)));
                         break;
                     case Return _:
-                        if (function is null) throw new InvalidOperationException();
-                        result.Add(new(function.ReturnType == RuntimeModule.TypeSystem.Void ? OpCode.ReturnVoid : OpCode.Return));
+                        if (owner is null) throw new InvalidOperationException();
+                        result.Add(new(owner.Signature.ReturnType == RuntimeModule.TypeSystem.Void ? OpCode.ReturnVoid : OpCode.Return));
                         break;
                     default:
                         break;
