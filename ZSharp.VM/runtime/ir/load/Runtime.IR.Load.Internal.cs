@@ -12,7 +12,14 @@ namespace ZSharp.VM
         }
 
         private ZSClass LoadIRInternal(Class @class)
-            => throw new NotImplementedException();
+        {
+            ZSClass result = ZSClass.CreateFrom(@class, TypeSystem.Type);
+
+            foreach (var method in @class.Methods)
+                LoadIRInternal(method);
+
+            return irMap.Cache(@class, result);
+        }
 
         private ZSFunction LoadIRInternal(Function function)
         {
@@ -31,6 +38,23 @@ namespace ZSharp.VM
             ));
         }
 
+        private ZSMethod LoadIRInternal(Method method)
+        {
+            if (!method.HasBody)
+                throw new Exception();
+
+            //var code =
+            //    method.Module is not null
+            //    ? []
+            //    : Assemble(method.Body.Instructions, method.Function).Instructions;
+
+            return irMap.Cache(method, ZSMethod.CreateFrom(
+                method,
+                LoadIRInternal(method.Function),
+                TypeSystem.Function
+            ));
+        }
+
         private ZSModule LoadIRInternal(Module module)
         {
             var zsModule = ZSModule.CreateFrom(module, TypeSystem.Module);
@@ -41,6 +65,13 @@ namespace ZSharp.VM
 
             foreach (var function in module.Functions)
                 LoadIRInternal(function);
+
+            foreach (var type in module.Types)
+                _ = type switch
+                {
+                    Class @class => LoadIRInternal(@class),
+                    _ => throw new NotImplementedException(),
+                };
 
             foreach (var submodule in module.Submodules)
                 LoadIRInternal(submodule);

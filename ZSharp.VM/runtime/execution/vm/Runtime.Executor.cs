@@ -64,7 +64,7 @@
             for (var i = args.Length - 1; i >= 0; i--)
                 args[i] = CurrentFrame.Pop();
 
-            var function = CurrentFrame.Pop() as ZSMethod ?? throw new Exception();
+            var method = CurrentFrame.Pop() as ZSMethod ?? throw new Exception();
 
             if (args.Length < 1) throw new("Virtual call requires at least one argument.");
             if (args[0].Type is not ZSClass objectType)
@@ -72,9 +72,9 @@
             if (!objectType.HasVTable)
                 throw new("Object doesn't have a vtable");
 
-            function = objectType.VTable[function];
+            method = objectType.VTable[method];
 
-            PushFrame(new(args, function.LocalCount, function.Code, function.StackSize));
+            PushFrame(new(args, method.Function.LocalCount, method.Function.Code, method.Function.StackSize));
         }
 
         private void ExecuteReturn()
@@ -98,7 +98,7 @@
 
             var type = Get(method.IR.Owner ?? throw new()) as ZSClass ?? throw new();
 
-            var args = new ZSObject[method.ArgumentCount];
+            var args = new ZSObject[method.Function.ArgumentCount + 1];
             for (var i = args.Length - 1; i >= 1; i--)
                 args[i] = CurrentFrame.Pop();
 
@@ -112,7 +112,7 @@
 
             CurrentFrame.Push(@object);
 
-            PushFrame(new(args, method.LocalCount, method.Code, method.StackSize));
+            PushFrame(new(args, method.Function.LocalCount, method.Function.Code, method.Function.StackSize));
         }
 
         private void ExecuteNewArray(Instruction instruction)

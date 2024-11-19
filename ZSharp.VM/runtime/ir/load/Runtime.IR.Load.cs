@@ -32,6 +32,14 @@ namespace ZSharp.VM
             return irMap.Cache(function, LoadIRInternal(function));
         }
 
+        public ZSMethod LoadIR(Method method)
+        {
+            if (method.Module is not null)
+                throw new Exception("LoadIR(Function) can only be used with free functions");
+
+            return irMap.Cache(method, LoadIRInternal(method));
+        }
+
         /// <summary>
         /// Use <see cref="ImportIR(Module)"/> instead.
         /// </summary>

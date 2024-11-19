@@ -2,11 +2,9 @@
 
 namespace ZSharp.VM
 {
-    public sealed class ZSMethod(Method method, int fieldCount, ZSObject type)
+    public sealed class ZSMethod(Method method, int fieldCount, ZSObject type, ZSFunction function)
         : ZSIRObject<Method>(method, fieldCount, type)
     {
-        public Instruction[] Code { get; set; } = [];
-
         public ZSObject? Self
         {
             get => ObjectSize == 0 ? null : GetField(0);
@@ -19,26 +17,18 @@ namespace ZSharp.VM
             }
         }
 
-        public int ArgumentCount { get; set; } = 0;
+        public ZSFunction Function { get; } = function;
 
-        public int StackSize { get; set; } = 0;
+        public ZSMethod(Method method, ZSFunction function, ZSObject type)
+            : this(method, 0, type, function) { }
 
-        public int LocalCount { get; set; } = 0;
+        public static ZSMethod CreateFrom(Method method, ZSFunction function, ZSObject type)
+            => CreateFrom(method, function, type, null!);
 
-        public ZSMethod(Method method, ZSObject type)
-            : this(method, 0, type) { }
-
-        public static ZSMethod CreateFrom(Method method, Instruction[] code, ZSObject type)
-            => CreateFrom(method, code, type, null!);
-
-        public static ZSMethod CreateFrom(Method method, Instruction[] code, ZSObject type, ZSObject self)
-            => new(method, self is null ? 0 : 1, type)
+        public static ZSMethod CreateFrom(Method method, ZSFunction function, ZSObject type, ZSObject self)
+            => new(method, self is null ? 0 : 1, type, function)
             {
-                ArgumentCount = method.Signature.Length,
-                Code = code,
-                LocalCount = method.HasBody && method.Body.HasLocals ? method.Body.Locals.Count : 0,
                 Self = self,
-                StackSize = method.HasBody ? method.Body.StackSize : 0
             };
     }
 }

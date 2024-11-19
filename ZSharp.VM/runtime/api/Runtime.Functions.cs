@@ -35,21 +35,14 @@ namespace ZSharp.VM
 
         /// <summary>
         /// Creates a new <see cref="ZSFunction"/> object from the given
-        /// <paramref name="function"/>, bound to the given <paramref name="self"/> object.
+        /// <paramref name="method"/>, bound to the given <paramref name="self"/> object.
         /// </summary>
-        /// <param name="function">The runtime object of the function to copy and bind.</param>
+        /// <param name="method">The runtime object of the function to copy and bind.</param>
         /// <returns>A new <see cref="ZSFunction"/> object which is a copy of
-        /// the given <paramref name="function"/>, bound to the given <paramref name="self"/>
+        /// the given <paramref name="method"/>, bound to the given <paramref name="self"/>
         /// object.</returns>
-        public ZSMethod Bind(ZSMethod function, ZSObject self)
-            => new(function.IR, 1, TypeSystem.Function) // TODO: TypeSystem.Method
-            {
-                ArgumentCount = function.ArgumentCount,
-                Code = function.Code,
-                LocalCount = function.LocalCount,
-                Self = self,
-                StackSize = function.StackSize
-            };
+        public ZSMethod Bind(ZSMethod method, ZSObject self)
+            => ZSMethod.CreateFrom(method.IR, method.Function, method.Type, self);
 
         /// <summary>
         /// Calls the given <see cref="IR.Function"/> with the given arguments.
@@ -94,7 +87,7 @@ namespace ZSharp.VM
         public ZSObject? Call(ZSMethod method, params ZSObject[] arguments)
         {
             PushFrame(Frame.NoArguments(0, [], 1));
-            Run(new Frame(arguments, method.LocalCount, method.Code, method.StackSize));
+            Run(new Frame(arguments, method.Function.LocalCount, method.Function.Code, method.Function.StackSize));
 
             return PopFrame().Pop();
         }
