@@ -55,7 +55,9 @@ class Foo {
 	}
 
 	fun zzz(this): void {
-		output(x);
+		this.x = "this.x!!";
+
+		output(this.x);
 
 		return;
 	}
