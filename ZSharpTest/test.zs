@@ -14,7 +14,7 @@ module Lib {
 module Program;
 
 fun main(): i32 {
-	foo();
+	blah();
 
 	output(pi + 5.0);
 
@@ -23,7 +23,7 @@ fun main(): i32 {
 	output(true);
 	output(false);
 
-	return exitCode;
+	return foo.bar();
 }
 
 let x = y;
@@ -33,7 +33,9 @@ let exitCode = 100;
 
 let pi = 3.14;
 
-fun foo(): Lib.id(string) {
+let foo = Foo();
+
+fun blah(): Lib.id(string) {
 	let tmp = Lib.bar(x);
 
 	return tmp;
@@ -41,6 +43,22 @@ fun foo(): Lib.id(string) {
 
 class Foo {
 	let x = Lib.bar(y);
+
+	fun bar(this): i32 {
+		output("bar");
+
+		// zzz(this);
+
+		this.zzz();
+
+		return exitCode;
+	}
+
+	fun zzz(this): void {
+		output(x);
+
+		return;
+	}
 }
 
 /*
