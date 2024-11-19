@@ -23,7 +23,7 @@ namespace ZSharp.CGObjects
                 {
                     var code = compiler.CompileIRCode(arg);
 
-                    if (code.RequireValueType() != compiler.CompileIRType(param.Type!)) return null;
+                    if (compiler.CompileIRType(code.RequireValueType()) != compiler.CompileIRType(param.Type)) return null;
                 }
 
                 foreach (var param in overload.Signature.KwArgs)
@@ -32,7 +32,7 @@ namespace ZSharp.CGObjects
 
                     var code = compiler.CompileIRCode(arg);
 
-                    if (code.RequireValueType() != param.Type) return null;
+                    if (compiler.CompileIRType(code.RequireValueType()) != compiler.CompileIRType(param.Type)) return null;
                 }
 
                 return (overload as ICTCallable).Call(compiler, arguments); // TODO: overloading protocol?????
