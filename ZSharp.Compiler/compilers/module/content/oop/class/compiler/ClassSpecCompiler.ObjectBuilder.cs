@@ -27,11 +27,11 @@ namespace ZSharp.Compiler
 
         void IObjectBuilder<NodeObject>.Define(NodeObject @object)
             => Dispatcher(
-                //Define,
-                Define,
-                Define
-                //Define,
-                )(@object);
+                    //Define,
+                    Define,
+                    Define
+                    //Define,
+                    )(@object);
 
         private static Action<NodeObject> Dispatcher(
             //Action<Class, ROOPDefinition> classFn,

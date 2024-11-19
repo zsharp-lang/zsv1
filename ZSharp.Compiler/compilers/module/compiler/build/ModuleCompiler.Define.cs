@@ -7,12 +7,9 @@ namespace ZSharp.Compiler
     {
         private void Define(ModuleOOPObject oop, ROOPDefinition node)
         {
-            Compiler.CompileClass(
-                oop.Object ?? throw new($"OOP Object must not be {null} at this point."),
-                classBodyCompiler.Compile(node, oop.Spec)
-            );
+            classBodyCompiler.Compile(node, oop);
 
-            if (Compiler.CompileIRObject(oop.Object) is IR.OOPType ir)
+            if (Compiler.CompileIRObject(oop.Object!) is IR.OOPType ir)
                 Result.IR!.Types.Add(ir);
         }
 

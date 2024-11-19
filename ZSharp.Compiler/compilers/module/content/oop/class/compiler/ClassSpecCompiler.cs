@@ -1,10 +1,9 @@
-﻿using ZSharp.CGObjects;
-using ZSharp.RAST;
+﻿using ZSharp.RAST;
 
 namespace ZSharp.Compiler
 {
     internal sealed partial class ClassSpecCompiler
-        : ContextCompiler<ROOPDefinition, ClassSpec>
+        : ContextCompiler<ROOPDefinition, ModuleOOPObject>
     {
         public ClassSpecCompiler(Compiler compiler)
             : base(compiler)
@@ -17,11 +16,11 @@ namespace ZSharp.Compiler
         protected override void Compile()
         {
             if (Node.Bases is not null)
-                Result.Bases = [.. Node.Bases.Select(Compiler.CompileNode)];
+                Result.Spec.Bases = [.. Node.Bases.Select(Compiler.CompileNode)];
 
             if (Node.Content is not null)
             {
-                Result.Content = [];
+                Result.Spec.Content = [];
                 foreach (var item in Node.Content.Statements)
                     Compiler.CompileNode(item);
             }
@@ -30,7 +29,7 @@ namespace ZSharp.Compiler
             objectBuilder.Clear();
         }
 
-        protected override ClassSpec Create()
-            => throw new NotImplementedException();
+        protected override ModuleOOPObject Create()
+            => throw new Exception();
     }
 }

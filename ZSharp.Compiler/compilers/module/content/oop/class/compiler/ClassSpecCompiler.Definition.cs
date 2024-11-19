@@ -18,8 +18,6 @@ namespace ZSharp.Compiler
         {
             Method method = new(node.Name);
 
-            Result.Content!.Add(method);
-
             objectBuilder.EnqueueForDependencyCollection(method, node);
 
             return method;
@@ -28,8 +26,6 @@ namespace ZSharp.Compiler
         private Field Compile(RLetDefinition node)
         {
             Field field = new(node.Name ?? throw new());
-
-            Result.Content!.Add(field);
 
             objectBuilder.EnqueueForDependencyCollection(field, node);
 

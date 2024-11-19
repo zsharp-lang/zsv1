@@ -47,6 +47,9 @@ namespace ZSharp.Compiler
             if (@object is RawType rawType)
                 return rawType.AsType(this);
 
+            if (@object is Class @class)
+                return @class.IR ?? throw new();
+
             return CompileIRType(Evaluate(@object));
 
             throw new NotImplementedException();

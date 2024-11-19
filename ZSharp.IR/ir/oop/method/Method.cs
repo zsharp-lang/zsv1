@@ -30,9 +30,11 @@
 
         public bool HasBody => _function.HasBody;
 
-        public OOPType? Owner { get; internal set; }
+        public OOPType? Owner { get; set; }
 
         public override Module? Module => Owner?.Module;
+
+        public Function Function => _function;
 
         public bool IsClass
         {

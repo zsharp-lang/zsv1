@@ -7,5 +7,11 @@
         public Function Function { get; set; } = function;
 
         Function IHasOperand<Function>.Operand => Function;
+
+        public Call(Method method)
+            : this(method.Function)
+        {
+
+        }
     }
 }

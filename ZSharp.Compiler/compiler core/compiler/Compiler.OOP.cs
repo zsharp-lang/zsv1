@@ -24,10 +24,10 @@ namespace ZSharp.Compiler
             return cgObject;
         }
 
-        public void CompileClass(CGObject @class, ClassSpec spec)
+        public void CompileClassItem(CGObject @class, ClassSpec spec, CGObject item)
         {
             if (spec.MetaClass is ICTMetaClass ctMeta)
-                ctMeta.Compile(this, @class, spec);
+                ctMeta.Compile(this, @class, item);
 
             // TODO: Z#
         }

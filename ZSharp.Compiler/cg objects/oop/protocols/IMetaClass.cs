@@ -20,7 +20,7 @@ namespace ZSharp.CGObjects
 
         public CGObject Construct(Compiler.Compiler compiler, ClassSpec spec);
 
-        public void Compile(Compiler.Compiler compiler, CGObject result, ClassSpec spec);
+        public void Compile(Compiler.Compiler compiler, CGObject result, CGObject item);
     }
 
     public interface ICTMetaClass<T> : ICTMetaClass
@@ -31,14 +31,14 @@ namespace ZSharp.CGObjects
 
         public new T Construct(Compiler.Compiler compiler, ClassSpec spec);
 
-        public void Compile(Compiler.Compiler compiler, T result, ClassSpec spec);
+        public void Compile(Compiler.Compiler compiler, T result, CGObject item);
 
-        void ICTMetaClass.Compile(Compiler.Compiler compiler, CGObject result, ClassSpec spec)
+        void ICTMetaClass.Compile(Compiler.Compiler compiler, CGObject result, CGObject item)
         {
             if (result is not T value)
                 throw new ArgumentException($"Argument {nameof(result)} must be an instance of {typeof(T).Name}", nameof(result));
 
-            Compile(compiler, value, spec);
+            Compile(compiler, value, item);
         }
     }
 }

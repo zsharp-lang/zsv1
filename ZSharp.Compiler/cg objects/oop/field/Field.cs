@@ -1,12 +1,11 @@
-﻿using CommonZ.Utils;
-using ZSharp.Compiler;
-using ZSharp.IR;
+﻿using ZSharp.Compiler;
 
 namespace ZSharp.CGObjects
 {
     public sealed class Field(string name)
         : CGObject
         , ICTReadable
+        , IRTBoundMember
     {
         public IR.Field? IR { get; set; }
 
@@ -16,7 +15,8 @@ namespace ZSharp.CGObjects
 
         public CGObject? Type { get; set; }
 
-        IType ICTReadable.Type => IR!.Type;
+        public CGObject Bind(Compiler.Compiler compiler, CGObject value)
+            => new BoundField(this, value);
 
         public Code Read(Compiler.Compiler compiler)
         {

@@ -22,6 +22,8 @@ namespace ZSharp.Parser
             parser.AddParserFor(Expression);
 
             parser.AddParserFor(ClassBody.Content, Class);
+            parser.AddParserFor(MethodBody.Content, Class.Method);
+
             parser.AddParserFor(FunctionBody.Content, Function);
         }
 

@@ -25,7 +25,10 @@ namespace ZSharp.Compiler
             ];
 
         public IEnumerable<T> Walk(ROOPDefinition oop)
-            => throw new NotImplementedException();
+            => [
+                ..(oop.Bases ?? []).SelectMany(Walk),
+                ..Walk(oop.Content),
+            ];
 
         public IEnumerable<T> Walk(RParameter? parameter)
             => parameter is null ? [] : [
