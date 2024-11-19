@@ -4,6 +4,9 @@
     {
         public CGObject Assign(CGObject target, CGObject value)
         {
+            if (target is ICTAssignable ctAssignable)
+                return ctAssignable.Assign(this, value);
+
             throw new NotImplementedException();
         }
 
