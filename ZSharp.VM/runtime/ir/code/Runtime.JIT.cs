@@ -46,6 +46,12 @@ namespace ZSharp.VM
                     case SetArgument setArgument:
                         result.Add(new(OpCode.SetArgument, setArgument.Argument.Index));
                         break;
+                    case GetField getField:
+                        result.Add(new(OpCode.GetField, getField.Field.Index));
+                        break;
+                    case SetField setField:
+                        result.Add(new(OpCode.SetField, setField.Field.Index));
+                        break;
                     case GetGlobal getGlobal:
                         result.Add(new(OpCode.LoadObjectFromMetadata, getGlobal.Global.Module!));
                         result.Add(new(OpCode.GetField, getGlobal.Global.Index));
