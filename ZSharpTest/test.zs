@@ -49,15 +49,13 @@ class Foo {
 
 		// zzz(this);
 
-		this.zzz();
+		this.zzz("zzz arg");
 
 		return exitCode;
 	}
 
-	fun zzz(this): void {
-		this.x = "this.x!!";
-
-		output(this.x);
+	fun zzz(this, x: string): void {
+		output(this.x = x);
 
 		return;
 	}
