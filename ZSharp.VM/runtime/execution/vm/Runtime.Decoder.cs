@@ -32,6 +32,7 @@
                 case OpCode.SetField: ExecuteSetField(instruction); break;
                 case OpCode.SetLocal: ExecuteSetLocal(instruction); break;
                 case OpCode.SetMember: ExecuteSetMember(instruction); break;
+                case OpCode.Swap: ExecuteSwap(instruction); break;
                 default: throw new InvalidInstructionException(instruction);
             }
         }

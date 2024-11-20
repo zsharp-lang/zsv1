@@ -83,6 +83,9 @@ namespace ZSharp.VM
                         if (owner is null) throw new InvalidOperationException();
                         result.Add(new(owner.Signature.ReturnType == RuntimeModule.TypeSystem.Void ? OpCode.ReturnVoid : OpCode.Return));
                         break;
+                    case Swap _:
+                        result.Add(new(OpCode.Swap));
+                        break;
                     default:
                         break;
                 }

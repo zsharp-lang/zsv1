@@ -140,15 +140,26 @@
 
         private void ExecuteSetField(Instruction instruction)
         {
+            var value = CurrentFrame.Pop();
+
             if (CurrentFrame.Pop() is not ZSStruct @struct)
                 throw new Exception();
 
-            @struct.SetField(instruction.As<int>(), CurrentFrame.Pop());
+            @struct.SetField(instruction.As<int>(), value);
         }
 
         private void ExecuteLoadObjectFromMetadata(Instruction instruction)
         {
             CurrentFrame.Push(Get(instruction.As<IR.IRObject>()));
+        }
+
+        private void ExecuteSwap(Instruction _)
+        {
+            var top = CurrentFrame.Pop();
+            var bottom = CurrentFrame.Pop();
+
+            CurrentFrame.Push(top);
+            CurrentFrame.Push(bottom);
         }
     }
 }

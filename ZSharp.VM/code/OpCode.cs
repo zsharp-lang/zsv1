@@ -8,6 +8,7 @@
         Push, // push [value: ZSObject]
         Pop, // pop
         Dup, // dup
+        Swap, // swap
 
         GetArgument, // get-argument [index: i32]
         SetArgument, // set-argument [index: i32]
