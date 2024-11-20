@@ -61,6 +61,7 @@ namespace ZSharp.VM
                         break;
                     case SetGlobal setGlobal:
                         result.Add(new(OpCode.LoadObjectFromMetadata, setGlobal.Global.Module!));
+                        result.Add(new(OpCode.Swap));
                         result.Add(new(OpCode.SetField, setGlobal.Global.Index));
                         maxStackSize++;
                         break;

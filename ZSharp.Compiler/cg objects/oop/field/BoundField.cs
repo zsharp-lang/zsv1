@@ -15,17 +15,19 @@ namespace ZSharp.CGObjects
 
         public CGObject Assign(Compiler.Compiler compiler, CGObject value)
         {
-            var code = compiler.CompileIRCode(Instance);
-            var vcode = compiler.CompileIRCode(value);
+            var instanceCode = compiler.CompileIRCode(Instance);
+            var valueCode = compiler.CompileIRCode(value);
 
             return new RawCode(new([
-                ..vcode.Instructions,
-                ..code.Instructions,
+                ..valueCode.Instructions,
+                new IR.VM.Dup(),
+                ..instanceCode.Instructions,
+                new IR.VM.Swap(),
                 new IR.VM.SetField(Field.IR!),
                 ])
             {
-                MaxStackSize = Math.Max(code.MaxStackSize, vcode.MaxStackSize),
-                Types = [compiler.TypeSystem.Void]
+                MaxStackSize = Math.Max(Math.Max(instanceCode.MaxStackSize, valueCode.MaxStackSize), 2),
+                Types = [Type]
             });
         }
 
