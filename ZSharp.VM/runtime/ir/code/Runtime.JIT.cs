@@ -36,6 +36,9 @@ namespace ZSharp.VM
                     case CreateInstance createInstance:
                         result.Add(new(OpCode.CreateInstance, Get(createInstance.Constructor.Method)));
                         break;
+                    case Dup _:
+                        result.Add(new(OpCode.Dup));
+                        break;
                     case Jump jump:
                         result.Add(new(OpCode.Jump, 0));
                         jumpTable.Add((result.Count - 1, jump.Target));
