@@ -176,8 +176,6 @@ if (mainModule is not null)
 
     var mainMethod = mainModuleGlobals.GetMethod("main", []);
 
-    Decompile(mainModuleGlobals.GetMethod("guessOnce")!);
-
     if (mainMethod is not null)
         Decompile(mainMethod);
 
