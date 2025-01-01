@@ -2,6 +2,8 @@
 {
     public sealed class Parameter : Node
     {
+        public string? Alias { get; set; }
+
         public required string Name { get; set; }
 
         public Expression? Type { get; set; }

@@ -65,6 +65,9 @@ namespace ZSharp.Parser
         {
 			var name = parser.Eat(TokenType.Identifier).Value;
 
+            string? alias = null;
+            if (parser.Is(Keywords.As, eat: true))
+                alias = parser.Eat(TokenType.Identifier).Value;
 			Expression? type = null;
             if (parser.Is(TokenType.Colon, eat: true))
 				type = parser.Parse<Expression>();
@@ -75,6 +78,7 @@ namespace ZSharp.Parser
 
             return new()
             {
+                Alias = alias,
                 Name = name,
                 Type = type,
 				Initializer = initializer,
