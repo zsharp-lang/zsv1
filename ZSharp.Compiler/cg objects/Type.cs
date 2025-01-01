@@ -1,18 +1,22 @@
 ﻿using ZSharp.Compiler;
 using ZSharp.IR;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     internal sealed class Type(IRType type)
-        : CGObject
+        : CompilerObject
         , ICTReadable
+        , ICompileIRType
     {
         private readonly IRType type = type;
         private readonly IRObject ir = type as IRObject ?? throw new();
 
-        CGObject ICTReadable.Type => this;
+        CompilerObject ITyped.Type => this;
 
-        public Code Read(Compiler.Compiler compiler)
+        IType ICompileIRType.CompileIRType(Compiler.Compiler compiler)
+            => type;
+
+        public IRCode Read(Compiler.Compiler compiler)
         => new([
                 new IR.VM.GetObject(ir)
             ])

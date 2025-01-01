@@ -5,7 +5,7 @@
     /// </summary>
     public interface ICTCallable
     {
-        public CGObject Call(Compiler compiler, Argument[] arguments);
+        public CompilerObject Call(Compiler compiler, Argument[] arguments);
     }
 
     /// <summary>
@@ -13,6 +13,6 @@
     /// </summary>
     public interface IRTCallable
     {
-        public CGObject Call(Compiler compiler, CGObject callable, Argument[] arguments);
+        public CompilerObject Call(Compiler compiler, CompilerObject callable, Argument[] arguments);
     }
 }

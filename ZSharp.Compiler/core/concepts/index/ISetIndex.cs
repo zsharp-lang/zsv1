@@ -2,6 +2,6 @@
 {
     internal interface ISetIndex<T>
     {
-        public CGObject Index(T @object, Argument[] index, CGObject value);
+        public CompilerObject Index(T @object, Argument[] index, CompilerObject value);
     }
 }

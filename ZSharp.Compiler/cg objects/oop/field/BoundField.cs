@@ -1,19 +1,19 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
-    public sealed class BoundField(Field field, CGObject instance)
-        : CGObject
+    public sealed class BoundField(Field field, CompilerObject instance)
+        : CompilerObject
         , ICTAssignable
         , ICTReadable
     {
         public Field Field { get; } = field;
 
-        public CGObject Instance { get; } = instance;
+        public CompilerObject Instance { get; } = instance;
 
-        public CGObject? Type => Field.Type;
+        public CompilerObject? Type => Field.Type;
 
-        public CGObject Assign(Compiler.Compiler compiler, CGObject value)
+        public CompilerObject Assign(Compiler.Compiler compiler, CompilerObject value)
         {
             var instanceCode = compiler.CompileIRCode(Instance);
             var valueCode = compiler.CompileIRCode(value);
@@ -31,7 +31,7 @@ namespace ZSharp.CGObjects
             });
         }
 
-        public Code Read(Compiler.Compiler compiler)
+        public IRCode Read(Compiler.Compiler compiler)
         {
             var code = compiler.CompileIRCode(Instance);
 

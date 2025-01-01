@@ -2,11 +2,11 @@
 {
     public interface ICTTypeCast
     {
-        public CGObject Cast(Compiler compiler, CGObject targetType);
+        public CompilerObject Cast(Compiler compiler, CompilerObject targetType);
     }
 
     public interface IRTTypeCast
     {
-        public CGObject Cast(Compiler compiler, CGObject @object, CGObject targetType);
+        public CompilerObject Cast(Compiler compiler, CompilerObject @object, CompilerObject targetType);
     }
 }

@@ -1,12 +1,12 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
-    public sealed class NullLiteral(CGObject type) : Literal(null)
+    public sealed class NullLiteral(CompilerObject type) : Literal(null)
     {
-        public override CGObject Type { get; } = type;
+        public override CompilerObject Type { get; } = type;
 
-        public override Code Read(Compiler.Compiler compiler)
+        public override IRCode Read(Compiler.Compiler compiler)
             => new([
                 new IR.VM.PutNull()
             ])

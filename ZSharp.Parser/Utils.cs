@@ -19,11 +19,12 @@ namespace ZSharp.Parser
                 parser => new ExpressionStatement() { Expression = defParser(parser) }
             );
 
-        public static ParserFunction<Statement> ExpressionStatement(Func<Parser, Expression> fn)
+        public static ParserFunction<Statement> ExpressionStatement(Func<Parser, Expression> fn, bool semicolon = true)
             => parser =>
             {
                 var expression = fn(parser);
-                parser.Eat(TokenType.Semicolon);
+                if (semicolon)
+                    parser.Eat(TokenType.Semicolon);
                 return new ExpressionStatement
                 {
                     Expression = expression

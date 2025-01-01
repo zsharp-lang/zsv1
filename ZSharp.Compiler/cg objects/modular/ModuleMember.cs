@@ -1,9 +1,9 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     public abstract class ModuleMember 
-        : CGObject
+        : CompilerObject
         //, IImportable<Module>
     {
         public required Module Module { get; init; }

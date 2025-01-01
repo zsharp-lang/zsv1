@@ -1,14 +1,14 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
-    public sealed class Float32Literal(float value, CGObject type)
+    public sealed class Float32Literal(float value, CompilerObject type)
         : Literal<float>(value)
         , ICTReadable
     {
-        public override CGObject Type { get; } = type;
+        public override CompilerObject Type { get; } = type;
 
-        public override Code Read(Compiler.Compiler compiler)
+        public override IRCode Read(Compiler.Compiler compiler)
             => new(
                 [
                     new IR.VM.PutFloat32(Value)

@@ -1,8 +1,8 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
-    public sealed class Import : CGObject
+    public sealed class Import : CompilerObject
     {
         public required List<Argument> Arguments { get; set; }
 

@@ -1,20 +1,22 @@
 ﻿using ZSharp.Compiler;
+using ZSharp.Interpreter;
 using ZSharp.Parser;
 using ZSharp.Text;
 using ZSharp.Tokenizer;
 
-string FileName = args.Length == 0 ? "test.zs" : args[0];
-
+string fileName = args.Length == 0 ? "test.zs" : args[0];
+string filePath = Path.GetFullPath(fileName);
 
 #region Parsing
 
 ZSharp.AST.Document documentNode;
-using (StreamReader stream = File.OpenText(FileName))
+using (StreamReader stream = File.OpenText(filePath))
 {
     var zsharpParser = new ZSharpParser();
     var parser = new Parser(Tokenizer.Tokenize(new(stream)));
     
     var expressionParser = zsharpParser.Expression;
+    var statementParser = zsharpParser.Statement;
 
     expressionParser.Terminal(
         TokenType.String, 
@@ -42,9 +44,15 @@ using (StreamReader stream = File.OpenText(FileName))
         LangParser.Keywords.Let,
         LangParser.ParseLetExpression
     );
+    expressionParser.Nud(
+        LangParser.Keywords.Class,
+        zsharpParser.Class.Parse
+    );
 
     expressionParser.InfixR("=", 10);
+    expressionParser.InfixL("<", 20);
     expressionParser.InfixL("+", 50);
+    expressionParser.InfixL("-", 50);
     expressionParser.InfixL("*", 70);
     expressionParser.InfixL("**", 80);
 
@@ -55,6 +63,21 @@ using (StreamReader stream = File.OpenText(FileName))
     expressionParser.Separator(TokenType.RParen);
     expressionParser.Separator(TokenType.Semicolon);
 
+    expressionParser.AddKeywordParser(
+        LangParser.Keywords.While,
+        LangParser.ParseWhileExpression
+    );
+
+    statementParser.AddKeywordParser(
+        LangParser.Keywords.While,
+        Utils.ExpressionStatement(LangParser.ParseWhileExpression, semicolon: false)
+    );
+
+    //zsharpParser.Function.AddKeywordParser(
+    //    LangParser.Keywords.While,
+    //    Utils.ExpressionStatement(LangParser.ParseWhileExpression, semicolon: false)
+    //);
+
     zsharpParser.RegisterParsers(parser);
     documentNode = zsharpParser.Parse(parser);
 
@@ -64,89 +87,120 @@ using (StreamReader stream = File.OpenText(FileName))
 #endregion
 
 
-#region Resolving
-
-
-var rastNodes = ZSharp.Resolver.Resolver.Resolve(documentNode).ToArray();
-
-
-#endregion
-
-
 #region Compilation
 
-var compiler = new Compiler(ZSharp.IR.RuntimeModule.Standard);
+var interpreter = new Interpreter();
+ZSharp.Runtime.NET.Runtime runtime = new(interpreter);
 
-var standardModule = new ZSharp.CT.StandardLibrary.StandardModule();
-compiler.ImportIR(compiler.Runtime.AddInternalModule(standardModule));
+interpreter.Runtime = runtime;
+interpreter.HostLoader = runtime;
 
-compiler.Operators.Cache("+", standardModule.AdditionOperator);
-var overloads = new List<ZSharp.CGObjects.RTFunction>(standardModule.AdditionOperator.Overloads);
-standardModule.AdditionOperator.Overloads.Clear();
-standardModule.AdditionOperator.Overloads.AddRange(overloads.Select(o => o.IR).Select(compiler.ImportIR).Select(o =>
+ZS.RuntimeAPI.Fields_Globals.runtime = runtime;
+runtime.Hooks.GetObject = ZSharp.Runtime.NET.Utils.GetMethod(ZS.RuntimeAPI.Impl_Globals.GetObject);
+
+var moduleIL_standardIO = typeof(Standard.IO.Impl_Globals).Module;
+var moduleIR_standardIO = interpreter.HostLoader.Import(moduleIL_standardIO);
+var moduleCO_standardIO = interpreter.CompilerIRLoader.Import(moduleIR_standardIO);
+
+interpreter.Compiler.TypeSystem.String.ToString = interpreter.CompilerIRLoader.Import(
+    runtime.Import(
+        ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ToString)
+    )
+);
+
+interpreter.Compiler.TypeSystem.Int32.Members["parse"] = interpreter.CompilerIRLoader.Import(
+    runtime.Import(
+        ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ParseInt32)
+    )
+);
+
+interpreter.SourceCompiler.StandardLibraryImporter.Libraries.Add("io", moduleCO_standardIO);
+
+var moduleIL_standardMath = typeof(Standard.Math.Impl_Globals).Module;
+var moduleIR_standardMath = interpreter.HostLoader.Import(moduleIL_standardMath);
+var moduleCO_standardMath = interpreter.CompilerIRLoader.Import(moduleIR_standardMath);
+
+interpreter.SourceCompiler.StandardLibraryImporter.Libraries.Add("math", moduleCO_standardMath);
+
+interpreter.SourceCompiler.Operators.Cache(
+    "+",
+    interpreter.CompilerIRLoader.Import(
+        runtime.Import(
+            ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.Concat)
+        )
+    )
+);
+
+interpreter.SourceCompiler.Operators.Cache(
+    "<",
+    interpreter.CompilerIRLoader.Import(
+        runtime.Import(
+            ZSharp.Runtime.NET.Utils.GetMethod(Standard.Math.Impl_Globals.LessThan)
+        )
+    )
+);
+
+interpreter.SourceCompiler.Operators.Cache(
+    "-",
+    interpreter.CompilerIRLoader.Import(
+        runtime.Import(
+            ZSharp.Runtime.NET.Utils.GetMethod(Standard.Math.Impl_Globals.Subtract)
+        )
+    )
+);
+
+//var moduleIL_compilerAPI = typeof(ZS.CompilerAPI.Impl_Globals).Module;
+//var moduleIR_compilerAPI = interpreter.HostLoader.Import(moduleIL_compilerAPI);
+//var moduleCO_compilerAPI = interpreter.CompilerIRLoader.Import(moduleIR_compilerAPI);
+
+//interpreter.SourceCompiler.ZSImporter.Libraries.Add("compiler", moduleCO_compilerAPI);
+
+var document = interpreter.CompileDocument(documentNode, filePath);
+
+Console.WriteLine($"Compilation finished with {interpreter.Compiler.Log.Logs.Count(l => l.Level == LogLevel.Error)} errors!");
+
+foreach (var log in interpreter.Compiler.Log.Logs)
+    Console.WriteLine(log);
+
+ZSharp.Objects.Module? mainModule = document.Content.FirstOrDefault(
+    item => item is ZSharp.Objects.Module module && module.Name == "Program"
+) as ZSharp.Objects.Module;
+
+if (mainModule is not null)
 {
-    ZSharp.CT.StandardLibrary.InternalFunction r = new(o.IR!)
-    {
-        Implementation = standardModule.FunctionImplementations[o.IR!]
-    };
+    var mainModuleIR = 
+        interpreter.Compiler.CompileIRObject<ZSharp.IR.Module, ZSharp.IR.Module>(mainModule, null) ?? throw new();
 
-    (o.Signature, r.Signature) = (r.Signature, o.Signature);
-    return r;
-}));
+    var mainModuleIL = runtime.Import(mainModuleIR);
+    var mainModuleGlobals = mainModuleIL.GetType("<Globals>") ?? throw new();
 
-foreach (var overload in standardModule.AdditionOperator.Overloads)
-    compiler.Runtime.GetInternalFunction(overload.IR!);
+    var mainMethod = mainModuleGlobals.GetMethod("main", []);
 
-compiler.Context.GlobalScope.Cache("import", standardModule.Import);
+    Decompile(mainModuleGlobals.GetMethod("guessOnce")!);
 
-var module = compiler.CompileAsDocument(rastNodes);
+    if (mainMethod is not null)
+        Decompile(mainMethod);
 
-Console.WriteLine("Compilation finished!");
+    mainMethod?.Invoke(null, null);
+}
 
 #endregion
 
 Console.WriteLine();
-
-ZSharp.IR.Module? mainModule = null;
-foreach (var submodule in module.Submodules)
-{
-    if (submodule.Name == "Program")
-        if (mainModule is not null) throw new Exception("Multiple main modules found!");
-        else mainModule = submodule;
-}
-
-if (mainModule is null) Console.WriteLine("No main module found!");
-else
-{
-    var runtime = compiler.Runtime;
-
-    var zsModule = runtime.ImportIR(mainModule);
-
-    ZSharp.IR.Function? main = null;
-    foreach (var function in mainModule.Functions)
-    {
-        if (function.Name == "main" && function.Signature.Length == 0)
-            if (main is not null) throw new Exception("Multiple main functions found!");
-            else main = function;
-    }
-
-    if (main is not null)
-    {
-        var result = runtime.Call(main);
-
-        if (result is null)
-            Console.WriteLine("Main (Void)");
-        else if (result is ZSharp.VM.ZSString stringResult)
-            if (stringResult.Value == "ok") Environment.Exit(0);
-            else if (stringResult.Value == "fail") Environment.Exit(1);
-            else Console.WriteLine("Main (String): " + stringResult.Value);
-        else if (result is ZSharp.VM.ZSInt32 int32Result)
-            Environment.Exit(int32Result.Value);
-        else Console.WriteLine($"Main ({result.Type}): " + result);
-    }
-    else Console.WriteLine("No main function found!");
-}
 
 Console.WriteLine();
 Console.WriteLine("Press any key to exit...");
 Console.ReadKey();
+
+
+static void Decompile(System.Reflection.MethodBase method)
+{
+    Console.WriteLine("========== Disassmebly: " + method.Name + " ==========");
+
+    foreach (var instruction in Mono.Reflection.Disassembler.GetInstructions(method))
+    {
+        Console.WriteLine(instruction);
+    }
+
+    Console.WriteLine("========== Disassmebly ==========");
+}

@@ -29,6 +29,8 @@
             }
         }
 
+        ICallableBody? ICallable.Body => _body;
+
         public VM.FunctionBody Body
         {
             get

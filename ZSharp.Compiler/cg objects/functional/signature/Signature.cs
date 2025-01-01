@@ -1,10 +1,10 @@
 ﻿using ZSharp.Compiler;
 
-using Parameters = CommonZ.Utils.Collection<ZSharp.CGObjects.Parameter>;
+using Parameters = CommonZ.Utils.Collection<ZSharp.Objects.Parameter>;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
-    public sealed class Signature : CGObject
+    public sealed class Signature : CompilerObject
     {
         public Parameters Args { get; init; } = [];
 

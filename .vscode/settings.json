@@ -1,0 +1,12 @@
+{
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/zsharp-miniz",
+        "${workspaceFolder}/zsharp-lang",
+        "${workspaceFolder}/zsharp-runtime",
+        "${workspaceFolder}/zsharp-text",
+        "${workspaceFolder}/zsharp-vm",
+    ],
+    "python.analysis.exclude": [
+        "${workspaceFolder}/miniz",
+    ]
+}

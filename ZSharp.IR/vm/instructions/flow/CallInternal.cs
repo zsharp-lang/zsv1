@@ -1,11 +1,11 @@
 ﻿namespace ZSharp.IR.VM
 {
-    public sealed class CallInternal(Function function) 
+    public sealed class CallInternal(ICallable function) 
         : Instruction
-        , IHasOperand<Function>
+        , IHasOperand<ICallable>
     {
-        public Function Function { get; set; } = function;
+        public ICallable Callable { get; set; } = function;
 
-        Function IHasOperand<Function>.Operand => Function;
+        ICallable IHasOperand<ICallable>.Operand => Callable;
     }
 }

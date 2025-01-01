@@ -2,7 +2,7 @@
 
 namespace ZSharp.IR
 {
-    public sealed class Enumclass
+    public sealed class Enumclass : OOPType
     {
         public string? Name { get; set; }
 

@@ -4,15 +4,14 @@ namespace ZSharp.Parser
 {
     public sealed class TokenStream
     {
-        public sealed class TokenStreamPosition(TokenStream tokenStream) : IDisposable
+        public sealed class TokenStreamPosition(TokenStream tokenStream, bool commit = false) : IDisposable
         {
-            private readonly Queue<Token>? cache = tokenStream.cache;
+            internal readonly Queue<Token> cache = [];
             private readonly TokenStream tokenStream = tokenStream;
-            private readonly bool lookingAhead = tokenStream.lookingAhead;
 
             private bool alive = true;
 
-            public bool Committing { get; private set; } = false;
+            public bool Committing { get; private set; } = commit;
 
             public void Commit() => Committing = true;
 
@@ -32,20 +31,21 @@ namespace ZSharp.Parser
                 if (!alive) return;
 
                 alive = false;
-                Queue<Token>? temp = cache;
 
                 if (!Committing)
-                    foreach (var token in tokenStream.cache ?? [])
-                        (temp ??= []).Enqueue(token);
-                tokenStream.cache = temp;
-                tokenStream.lookingAhead = lookingAhead;
+                    foreach (var token in cache)
+                        tokenStream.cache.Enqueue(token);
+
+                System.Diagnostics.Debug.Assert(ReferenceEquals(tokenStream.lookAheads.Pop(), this));
             }
         }
 
         private readonly IEnumerator<Token> tokens;
 
-        private Queue<Token>? cache = null;
-        private bool lookingAhead = false;
+        private readonly Queue<Token> cache = [];
+        private readonly Stack<TokenStreamPosition> lookAheads = [];
+
+        private TokenStreamPosition? CurrentLookAhead => lookAheads.Count > 0 ? lookAheads.Peek() : null;
 
         public bool HasTokens { get; private set; } = true;
 
@@ -59,30 +59,29 @@ namespace ZSharp.Parser
                 while ((HasTokens = this.tokens.MoveNext()) && this.tokens.Current.Is(TokenCategory.WhiteSpace)) ;
         }
 
-        public TokenStreamPosition LookAhead()
+        public TokenStreamPosition LookAhead(bool commit)
         {
-            var position = new TokenStreamPosition(this);
-            lookingAhead = true;
-            cache = [];
-            return position;
+            lookAheads.Push(new(this, commit));
+            return lookAheads.Peek();
         }
 
         public Token PeekToken()
-            => lookingAhead 
-            ? tokens.Current 
-            : (cache?.Count ?? 0) > 0 
-                ? cache!.Peek() 
-                : tokens.Current;
+            => cache.Count > 0 ? cache.Peek() : tokens.Current;
 
         public Token Advance()
         {
-            if (!lookingAhead && (cache?.Count ?? 0) > 0)
-                return cache!.Dequeue();
+            Token result;
 
-            Token result = tokens.Current;
+            if (cache.Count > 0)
+            {
+                result = cache.Dequeue();
+                CurrentLookAhead?.cache.Enqueue(result);
 
-            if (lookingAhead)
-                cache?.Enqueue(result);
+                return result;
+            }
+            else result = tokens.Current;
+
+            CurrentLookAhead?.cache.Enqueue(result);
 
             if (SkipWhitespaces)
                 while ((HasTokens = tokens.MoveNext()) && tokens.Current.Is(TokenCategory.WhiteSpace)) ;

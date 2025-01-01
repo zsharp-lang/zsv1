@@ -1,20 +1,31 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     public sealed class Parameter(string name) 
-        : CGObject
+        : CompilerObject
         , ICTReadable
+        , ICompileIRObject<IR.Parameter, IR.Signature>
     {
         public IR.Parameter? IR { get; set; }
 
         public string Name { get; } = name;
 
-        public CGObject? Type { get; set; }
+        public CompilerObject? Type { get; set; }
 
-        public CGObject? Initializer { get; set; }
+        public CompilerObject? Initializer { get; set; }
 
-        public Code Read(Compiler.Compiler compiler)
+        public IR.Parameter CompileIRObject(Compiler.Compiler compiler, IR.Signature? owner)
+        {
+            if (Type is null)
+                throw new("Parameter type not set.");
+
+            IR ??= new(Name, compiler.CompileIRType(Type));
+
+            return IR;
+        }
+
+        public IRCode Read(Compiler.Compiler compiler)
             => new([
                 new IR.VM.GetArgument(IR!),
             ])

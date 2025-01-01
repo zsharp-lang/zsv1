@@ -1,9 +1,9 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     public sealed class Field(string name)
-        : CGObject
+        : CompilerObject
         , ICTReadable
         , IRTBoundMember
     {
@@ -11,14 +11,14 @@ namespace ZSharp.CGObjects
 
         public string Name { get; set; } = name;
 
-        public CGObject? Initializer { get; set; }
+        public CompilerObject? Initializer { get; set; }
 
-        public CGObject? Type { get; set; }
+        public CompilerObject? Type { get; set; }
 
-        public CGObject Bind(Compiler.Compiler compiler, CGObject value)
+        public CompilerObject Bind(Compiler.Compiler compiler, CompilerObject value)
             => new BoundField(this, value);
 
-        public Code Read(Compiler.Compiler compiler)
+        public IRCode Read(Compiler.Compiler compiler)
         {
             throw new NotImplementedException();
         }

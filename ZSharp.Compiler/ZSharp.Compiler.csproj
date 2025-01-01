@@ -8,8 +8,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
-    <ProjectReference Include="..\ZSharp.RAST\ZSharp.RAST.csproj" />
-    <ProjectReference Include="..\ZSharp.VM\ZSharp.VM.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="compiler core\core\type system\types\" />
   </ItemGroup>
 
 </Project>

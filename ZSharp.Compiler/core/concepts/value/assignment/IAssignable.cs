@@ -2,11 +2,11 @@
 {
     public interface ICTAssignable
     {
-        public CGObject Assign(Compiler compiler, CGObject value);
+        public CompilerObject Assign(Compiler compiler, CompilerObject value);
     }
 
     public interface IRTAssignable
     {
-        public CGObject Assign(Compiler compiler, CGObject @object, CGObject value);
+        public CompilerObject Assign(Compiler compiler, CompilerObject @object, CompilerObject value);
     }
 }

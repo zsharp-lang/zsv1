@@ -2,7 +2,7 @@
 {
     public sealed partial class Parser
     {
-        public TokenStream.TokenStreamPosition LookAhead() 
-            => TokenStream.LookAhead();
+        public TokenStream.TokenStreamPosition LookAhead(bool commit = false) 
+            => TokenStream.LookAhead(commit);
     }
 }

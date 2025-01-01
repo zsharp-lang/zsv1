@@ -1,20 +1,20 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     public sealed class SimpleFunctionOverloadGroup(string name)
-        : CGObject
+        : CompilerObject
         , ICTCallable
     {
         public string Name { get; set; } = name;
 
         public List<RTFunction> Overloads { get; } = [];
 
-        public CGObject Call(Compiler.Compiler compiler, Argument[] arguments)
+        public CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             var (args, kwargs) = Utils.SplitArguments(arguments);
             
-            CGObject? Match(RTFunction overload)
+            CompilerObject? Match(RTFunction overload)
             {
                 if (args.Count != overload.Signature.Args.Count) return null;
                 if (kwargs.Count != overload.Signature.KwArgs.Count) return null;

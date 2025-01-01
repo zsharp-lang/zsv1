@@ -2,7 +2,7 @@
 
 namespace ZSharp.IR.VM
 {
-    public sealed class FunctionBody
+    public sealed class FunctionBody : ICallableBody
     {
         private InstructionCollection? _instructions;
         private LocalCollection? _locals;

@@ -16,13 +16,17 @@ namespace ZSharp.Parser
                 LangParser.Keywords.Let,
                 Utils.ExpressionStatement(LangParser.ParseLetExpression)
             );
+            AddKeywordParser(
+                LangParser.Keywords.Var,
+                Utils.ExpressionStatement(LangParser.ParseVarExpression)
+            );
         }
 
         public override Function Parse(Parser parser)
         {
             var funKeyword = parser.Eat(LangParser.Keywords.Function);
 
-            string? name = null;
+            string name = string.Empty;
             if (parser.Is(TokenType.Identifier))
                 name = parser.Eat(TokenType.Identifier).Value;
 
@@ -54,24 +58,17 @@ namespace ZSharp.Parser
         }
 
         protected override Statement ParseDefaultContextItem(Parser parser)
-            => LangParser.ParseExpressionStatement(parser);
+            => throw new ParseError();
 
         private Statement ParseFunctionBody(Parser parser)
         {
-            if (parser.Is(LangParser.Symbols.ThenDo, eat: true))
-                return ParseContextItem(parser);
-
-            List<Statement> body = [];
-
-            parser.Eat(TokenType.LCurly);
-
-            while (!parser.Is(TokenType.RCurly, eat: true))
-                body.Add(ParseContextItem(parser));
-
-            return new BlockStatement()
+            using (parser.NewStack(FunctionBody.Content, parser.GetParserFor<Statement>()))
             {
-                Statements = body
-            };
+                if (parser.Is(LangParser.Symbols.ThenDo, eat: true))
+                    return ParseContextItem(parser);
+
+                return LangParser.ParseBlockStatement(parser);
+            }
         }
     }
 }

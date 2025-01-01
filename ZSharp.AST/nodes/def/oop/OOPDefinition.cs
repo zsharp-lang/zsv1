@@ -4,7 +4,11 @@
     {
         public required string Type { get; set; }
 
-        public string? Name { get; set; }
+        public string Name { get; set; } = string.Empty;
+
+        public Expression? Of { get; set; }
+
+        public Signature? Signature { get; set; }
 
         public List<Expression>? Bases { get; set; }
 

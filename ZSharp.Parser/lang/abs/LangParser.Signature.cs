@@ -68,9 +68,10 @@ namespace ZSharp.Parser
             string? alias = null;
             if (parser.Is(Keywords.As, eat: true))
                 alias = parser.Eat(TokenType.Identifier).Value;
+
 			Expression? type = null;
             if (parser.Is(TokenType.Colon, eat: true))
-				type = parser.Parse<Expression>();
+				type = ParseType(parser);
 
             Expression? initializer = null;
 			if (parser.Is(Symbols.Assign, eat: true))

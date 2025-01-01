@@ -1,10 +1,10 @@
-﻿using ZSharp.CGObjects;
+﻿using ZSharp.Objects;
 
 namespace ZSharp.Compiler
 {
     public sealed partial class Compiler
     {
-        private CGObject trueObject = null!, falseObject = null!;
+        private CompilerObject trueObject = null!, falseObject = null!;
 
         private void InitializeLiterals()
         {

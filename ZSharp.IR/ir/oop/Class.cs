@@ -18,7 +18,7 @@ namespace ZSharp.IR
             Base = @base;
         }
 
-        public Collection<Interface> Interfaces { get; } = [];
+        public Collection<InterfaceImplementation> InterfacesImplementations { get; } = [];
 
         public Collection<Field> Fields
         {

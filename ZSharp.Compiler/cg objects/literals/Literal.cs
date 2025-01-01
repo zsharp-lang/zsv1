@@ -1,16 +1,16 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     public abstract class Literal(object? value)
-        : CGObject
+        : CompilerObject
         , ICTReadable
     {
-        public abstract CGObject Type { get; }
+        public abstract CompilerObject Type { get; }
 
         public object? Value { get; } = value;
 
-        public abstract Code Read(Compiler.Compiler compiler);
+        public abstract IRCode Read(Compiler.Compiler compiler);
     }
 
     public abstract class Literal<T>(T value)

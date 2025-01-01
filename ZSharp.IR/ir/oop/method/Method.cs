@@ -29,6 +29,8 @@
             }
         }
 
+        ICallableBody? ICallable.Body => _body;
+
         public VM.MethodBody Body
         {
             get
@@ -77,6 +79,16 @@
             set => Attributes = value
                 ? Attributes | MethodAttributes.VirtualMethod
                 : Attributes & ~MethodAttributes.VirtualMethod;
+        }
+
+        public bool IsAbstract
+        {
+            get => (Attributes & MethodAttributes.Abstract) == MethodAttributes.Abstract;
+            set
+            {
+                if (value) Attributes |= MethodAttributes.Abstract;
+                else Attributes &= ~MethodAttributes.Abstract;
+            }
         }
 
         public Method(IType returnType)

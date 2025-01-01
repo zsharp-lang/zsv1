@@ -9,5 +9,7 @@
         VirtualMethod = 2,
         ClassMethod = 4,
         StaticMethod = 8,
+
+        Abstract = 16,
     }
 }

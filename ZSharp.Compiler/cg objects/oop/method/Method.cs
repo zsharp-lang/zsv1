@@ -1,9 +1,9 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     public sealed class Method(string? name)
-        : CGObject
+        : CompilerObject
         , IRTBoundMember
         , ICTCallable
     {
@@ -13,23 +13,23 @@ namespace ZSharp.CGObjects
 
         public Signature Signature { get; set; } = new();
 
-        public CGObject? ReturnType { get; set; }
+        public CompilerObject? ReturnType { get; set; }
 
-        public CGObject Bind(Compiler.Compiler compiler, CGObject value)
+        public CompilerObject Bind(Compiler.Compiler compiler, CompilerObject value)
             => new BoundMethod(this, value);
 
-        public CGObject Call(Compiler.Compiler compiler, Argument[] arguments)
+        public CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             var (args, kwargs) = Utils.SplitArguments(arguments);
 
             return Call(compiler, args, kwargs);
         }
 
-        public CGObject Call(Compiler.Compiler compiler, Args args, KwArgs kwArgs)
+        public CompilerObject Call(Compiler.Compiler compiler, Args args, KwArgs kwArgs)
         {
             // TODO: type checking (when type system is implemented)
 
-            Code
+            IRCode
                 argsCode = new(), varArgsCode = new(),
                 kwArgsCode = new(), varKwArgsCode = new();
 
@@ -55,7 +55,7 @@ namespace ZSharp.CGObjects
             foreach (var kwArgParameter in Signature.KwArgs)
                 kwArgsCode.Append(compiler.CompileIRCode(kwArgs[kwArgParameter.Name]));
 
-            Code result = new();
+            IRCode result = new();
             result.Append(argsCode);
             result.Append(varArgsCode); // should be empty
             result.Append(kwArgsCode);

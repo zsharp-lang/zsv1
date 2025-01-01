@@ -34,10 +34,10 @@
         public static ExternalImplementation ExternalImplementation(int distance)
             => new(distance);
 
-        public static ImplicitCast ImplicitCast(CGObject castFunction)
+        public static ImplicitCast ImplicitCast(CompilerObject castFunction)
             => new(castFunction);
 
-        public static ExplicitCast ExplicitCast(CGObject castFunction)
+        public static ExplicitCast ExplicitCast(CompilerObject castFunction)
             => new(castFunction);
     }
 
@@ -77,16 +77,16 @@
         public int Distance { get; } = distance;
     }
 
-    public abstract class Cast(CGObject castFunction, AssignmentType assignmentType) : Assignment
+    public abstract class Cast(CompilerObject castFunction, AssignmentType assignmentType) : Assignment
     {
         public override AssignmentType AssignmentType => assignmentType;
 
-        public CGObject CastFunction { get; } = castFunction;
+        public CompilerObject CastFunction { get; } = castFunction;
     }
 
-    public sealed class ImplicitCast(CGObject castFunction) 
+    public sealed class ImplicitCast(CompilerObject castFunction) 
         : Cast(castFunction, AssignmentType.ImplicitCast);
 
-    public sealed class ExplicitCast(CGObject castFunction) 
+    public sealed class ExplicitCast(CompilerObject castFunction) 
         : Cast(castFunction, AssignmentType.ExplicitCast);
 }

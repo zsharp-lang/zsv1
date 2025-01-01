@@ -8,6 +8,8 @@ namespace ZSharp.Parser
     {
         public MethodParser Method { get; } = new();
 
+        public ConstructorParser Constructor { get; } = new();
+
         public ClassParser()
         {
             AddKeywordParser(
@@ -18,6 +20,10 @@ namespace ZSharp.Parser
                 LangParser.Keywords.Function,
                 Utils.DefinitionStatement(Method.Parse)
             );
+            AddKeywordParser(
+                LangParser.Keywords.New,
+                Constructor.Parse
+            );
         }
 
         public override OOPDefinition Parse(Parser parser)
@@ -27,6 +33,14 @@ namespace ZSharp.Parser
             string? name = null;
             if (parser.Is(TokenType.Identifier))
                 name = parser.Eat(TokenType.Identifier).Value;
+
+            Signature? signature = null;
+            if (parser.Is(TokenType.LParen, eat: true))
+            {
+                signature = LangParser.ParseSignature(parser);
+
+                parser.Eat(TokenType.RParen);
+            }
 
             List<Expression>? bases = null;
             if (parser.Is(TokenType.Colon, eat: true))
@@ -48,6 +62,7 @@ namespace ZSharp.Parser
             return new()
             {
                 Type = type,
+                Signature = signature,
                 Bases = bases,
                 Content = body,
                 Name = name,
