@@ -1,7 +1,7 @@
 ﻿import { print as output } from "std:io";
 
 module Lib {
-	fun bar(x: string): string {
+	fun bar(x: string = "hello"): string {
 		return x;
 	}
 
@@ -44,18 +44,26 @@ fun blah(): Lib.id(string) {
 class Foo {
 	let x = Lib.bar(y);
 
+	new(self: Foo)
+	{
+
+	}
+
 	fun bar(this): i32 {
 		output("bar");
 
 		// zzz(this);
 
-		this.zzz("zzz arg");
+		let blah = Blah();
+		blah.v = "zzz arg";
+
+		this.zzz(v);
 
 		return exitCode;
 	}
 
-	fun zzz(this, x: string): void {
-		output(this.x = x);
+	fun zzz(this, x: class Blah { let v: string = ""; }): void {
+		output(this.x = x.v);
 
 		return;
 	}
