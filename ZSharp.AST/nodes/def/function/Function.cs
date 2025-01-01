@@ -8,7 +8,7 @@
             init => base.TokenInfo = value;
         }
 
-        public string? Name { get; init; }
+        public string Name { get; init; } = string.Empty;
 
         public required Signature Signature { get; set; }
 
@@ -17,7 +17,7 @@
         public Statement? Body { get; set; }
 
         public override string ToString()
-            => $"fun{(Name is null ? string.Empty : $" {Name}")}" +
+            => $"fun{(Name == string.Empty ? string.Empty : $" {Name}")}" +
             $"({Signature}){(ReturnType is null ? string.Empty : $": {ReturnType}")}" +
             $"{(Body is null ? ";" : " {}")}";
     }
