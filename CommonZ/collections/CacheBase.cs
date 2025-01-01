@@ -36,7 +36,7 @@ namespace CommonZ.Utils
             return Parent?.Cache<T>(key);
         }
 
-        public bool Cache(Key key, [MaybeNullWhen(false)] out Value value, bool searchParent = true)
+        public bool Cache(Key key, [NotNullWhen(true)] out Value? value, bool searchParent = true)
         {
             if (_cache.TryGetValue(key, out value))
                 return true;
@@ -44,7 +44,7 @@ namespace CommonZ.Utils
             return Parent?.Cache(key, out value) ?? false;
         }
 
-        public bool Cache<T>(Key key, [MaybeNullWhen(false)] out T? value, bool searchParent = true)
+        public bool Cache<T>(Key key, [NotNullWhen(true)] out T? value, bool searchParent = true)
             where T : class
         {
             if (_cache.TryGetValue(key, out Value? result))
