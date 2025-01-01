@@ -1,15 +1,14 @@
 ﻿using ZSharp.Compiler;
-using ZSharp.IR;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
-    public sealed class FalseLiteral(IType type)
-        : CGObject
+    public sealed class FalseLiteral(CompilerObject type)
+        : CompilerObject
         , ICTReadable
     {
-        public IType Type { get; } = type;
+        public CompilerObject Type { get; } = type;
 
-        public Code Read(Compiler.Compiler compiler)
+        public IRCode Read(Compiler.Compiler compiler)
             => new([
                 new IR.VM.PutFalse()
             ])

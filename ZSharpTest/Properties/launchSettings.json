@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ZSharpTest": {
+      "commandName": "Project",
+      "commandLineArgs": "guessing-game.zs"
+    }
+  }
+}

@@ -69,3 +69,8 @@ You can edit the [`test.zs`](ZSharpTest/test.zs) file.
         - [ ] Module
         - [ ] OOP Types
         - [ ] Method Body
+
+## ToDo (High Level)
+* [ ] C# Interop with Z# (C# Reflection -> IR)
+* [ ] Add more language features
+* [ ] Fully implement the IR -> CG loader

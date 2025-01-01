@@ -1,20 +1,20 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     public sealed class SimpleFunctionOverloadGroup(string name)
-        : CGObject
+        : CompilerObject
         , ICTCallable
     {
         public string Name { get; set; } = name;
 
         public List<RTFunction> Overloads { get; } = [];
 
-        public CGObject Call(Compiler.Compiler compiler, Argument[] arguments)
+        public CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             var (args, kwargs) = Utils.SplitArguments(arguments);
             
-            CGObject? Match(RTFunction overload)
+            CompilerObject? Match(RTFunction overload)
             {
                 if (args.Count != overload.Signature.Args.Count) return null;
                 if (kwargs.Count != overload.Signature.KwArgs.Count) return null;
@@ -23,7 +23,7 @@ namespace ZSharp.CGObjects
                 {
                     var code = compiler.CompileIRCode(arg);
 
-                    if (code.RequireValueType() != compiler.CompileIRType(param.Type!)) return null;
+                    if (compiler.CompileIRType(code.RequireValueType()) != compiler.CompileIRType(param.Type)) return null;
                 }
 
                 foreach (var param in overload.Signature.KwArgs)
@@ -32,7 +32,7 @@ namespace ZSharp.CGObjects
 
                     var code = compiler.CompileIRCode(arg);
 
-                    if (code.RequireValueType() != param.Type) return null;
+                    if (compiler.CompileIRType(code.RequireValueType()) != compiler.CompileIRType(param.Type)) return null;
                 }
 
                 return (overload as ICTCallable).Call(compiler, arguments); // TODO: overloading protocol?????

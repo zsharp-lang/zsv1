@@ -16,7 +16,7 @@ namespace ZSharp.Parser
         public void AddKeywordParser(string keyword, ParserFunction<TContent> parser)
             => AddKeywordParser(keyword, new FunctionalParser<TContent>(parser));
 
-        protected TContent ParseContextItem(Parser parser)
+        internal protected TContent ParseContextItem(Parser parser)
         {
             if (parser.Is(Text.TokenType.Identifier, out var identifier))
                 if (keywordParsers.TryGetValue(identifier.Value, out var keywordParser))

@@ -14,15 +14,24 @@ namespace ZSharp.Parser
 
         public ExpressionParser Expression { get; } = new();
 
+        public CodeParser Statement { get; } = new();
+
+        public CodeParser Loop { get; } = new();
+
         public Document Parse(Parser parser)
             => Document.Parse(parser);
 
         public void RegisterParsers(Parser parser)
         {
             parser.AddParserFor(Expression);
+            parser.AddParserFor(Statement);
 
             parser.AddParserFor(ClassBody.Content, Class);
+            parser.AddParserFor(MethodBody.Content, Class.Method);
+
             parser.AddParserFor(FunctionBody.Content, Function);
+
+            parser.AddParserFor(LoopBody.Content, Loop);
         }
 
         public ZSharpParser(bool initialize = true)
@@ -35,6 +44,10 @@ namespace ZSharp.Parser
         {
             InitializeModuleLevelParser(Document);
             InitializeModuleLevelParser(Module);
+
+            InitializeStatementParser();
+
+            InitializeLoopParser();
         }
 
         private void InitializeModuleLevelParser<T>(ContextParser<T, Statement> parser)
@@ -61,11 +74,25 @@ namespace ZSharp.Parser
                 LangParser.Keywords.Let,
                 Utils.ExpressionStatement(LangParser.ParseLetExpression)
             );
+            parser.AddKeywordParser(
+                LangParser.Keywords.Var,
+                Utils.ExpressionStatement(LangParser.ParseVarExpression)
+            );
         }
 
-        private void InitializeExpressionParser()
+        private void InitializeStatementParser()
         {
             
+        }
+
+        private void InitializeLoopParser()
+        {
+            Loop.DefaultContextItemParser = Statement;
+
+            Loop.AddKeywordParser(
+                LangParser.Keywords.Break,
+                LangParser.ParseBreakStatement
+            );
         }
     }
 }

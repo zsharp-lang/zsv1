@@ -1,27 +1,27 @@
 ﻿using ZSharp.Compiler;
 using ZSharp.IR;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
-    public sealed class RawType(IType type)
-        : CGObject
+    public sealed class RawType(IRType type, CompilerObject metaType)
+        : CompilerObject
         , ICTReadable
-        //, ICTType
+        , ICompileIRType
     {
-        private readonly IType type = type;
+        private IRType type = type;
 
-        public IType Type => throw new NotImplementedException();
+        public CompilerObject Type { get; internal set; } = metaType;
 
-        public IType AsType(Compiler.Compiler compiler)
+        public IType CompileIRType(Compiler.Compiler compiler)
             => type;
 
-        public Code Read(Compiler.Compiler compiler)
+        public IRCode Read(Compiler.Compiler compiler)
             => type is IRObject ir ? new([
                 new IR.VM.GetObject(ir)
             ])
             {
                 MaxStackSize = 1,
-                Types = [type]
+                Types = [Type]
             } : throw new();
     }
 }

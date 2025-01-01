@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.IRLoader\ZSharp.Compiler.IRLoader.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
+    <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
+    <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />
+    <ProjectReference Include="..\ZSharp.Text\ZSharp.Text.csproj" />
+    <ProjectReference Include="..\ZSharp.Tokenizer\ZSharp.Tokenizer.csproj" />
+    <ProjectReference Include="..\ZSharp.ZSSourceCompiler\ZSharp.ZSSourceCompiler.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,6 +1,8 @@
 ﻿namespace ZSharp.IR
 {
-    public class Function : ModuleMember
+    public class Function 
+        : ModuleMember
+        , ICallable
     {
         private Signature _signature;
         private VM.FunctionBody? _body;
@@ -26,6 +28,8 @@
                 (_signature = value).Owner = this;
             }
         }
+
+        ICallableBody? ICallable.Body => _body;
 
         public VM.FunctionBody Body
         {

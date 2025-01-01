@@ -1,15 +1,14 @@
 ﻿using ZSharp.Compiler;
-using ZSharp.IR;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
-    public sealed class IntegerLiteral(DefaultIntegerType value, IType type)
+    public sealed class IntegerLiteral(DefaultIntegerType value, CompilerObject type)
         : Literal<DefaultIntegerType>(value)
         , ICTReadable
     {
-        public override IType Type { get; } = type;
+        public override CompilerObject Type { get; } = type;
 
-        public override Code Read(Compiler.Compiler compiler)
+        public override IRCode Read(Compiler.Compiler compiler)
             => new(
                 [
                     new IR.VM.PutInt32(Value)

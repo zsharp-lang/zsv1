@@ -2,11 +2,9 @@
 {
     public sealed class Local(string name, IType type) : IRObject
     {
-        public override Module? Module => Function?.Module;
+        public override Module? Module => Owner?.Module;
 
-        public FunctionBody? Body { get; internal set; }
-
-        public Function? Function => Body?.Function;
+        public IRObject? Owner { get; internal set; }
 
         public LocalAttributes Attributes { get; set; }
 

@@ -1,16 +1,60 @@
-﻿module Program;
+﻿import { input, print } from "std:io";
 
-let x = "Hello";
 
-fun foo(x: string): string {
-	print(x);
+module Lib {
+	fun id(x: type): type { return x; }
 
-	return x;
+	fun str(s: string): string { return s; }
+
+	fun printAndGetVoid(x: string): type { print("CT: " + x); return void; }
 }
 
-fun main(): void {
-	foo(y);
+
+module Program;
+
+var message: string;
+
+fun main(): Lib.id(void) { 
+	message = input("Please enter a message: "); 
+	let audience = "World!";
+
+	bar(audience); 
+
+	{
+		print("Hello");
+	}
+
+	var v = 10 - 3;
+
+	print(string(v));
+
+	v = 4;
+
+	print(string(v));
+
+	while (false)
+	{
+		print("TRUE");
+		break;
+	} else {
+		print("FALSE");
+	}
+
+	return; 
 }
 
-let y = x;
+fun bar(x: string): Lib.printAndGetVoid("This is executed at CT!") { 
+	foo(message + ", " + Lib.str(x)); 
+	return; 
+}
 
+fun foo(x: string): void { 
+	print(x); 
+	return; 
+}
+
+
+// import { compile } from "pkg:dotnet-compiler";
+
+// let dotNETModule = compile(infoof(Program));
+// dotNETModule.Write("Program.dll");

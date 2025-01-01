@@ -15,6 +15,7 @@
         {
             Module module = new("Runtime");
 
+            Class @object;
             Class @string;
             Class type;
             Class @void;
@@ -28,6 +29,7 @@
 
             {
                 module.Types.Add(type = new("Type"));
+                module.Types.Add(@object = new("Object"));
                 module.Types.Add(@string = new("String"));
                 module.Types.Add(@void = new("Void"));
                 module.Types.Add(@null = new("Null"));
@@ -41,6 +43,7 @@
 
             return new(module, new()
             {
+                Object = @object,
                 String = @string,
                 Type = type,
                 Void = @void,

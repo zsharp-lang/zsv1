@@ -2,6 +2,6 @@
 {
     internal interface IGetIndex<T>
     {
-        public CGObject Index(T @object, Argument[] index);
+        public CompilerObject Index(T @object, Argument[] index);
     }
 }

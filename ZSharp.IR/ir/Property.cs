@@ -8,9 +8,9 @@
 
         public IType Type { get; set; }
 
-        public Function? Getter { get; set; }
+        public ICallable? Getter { get; set; }
 
-        public Function? Setter { get; set; }
+        public ICallable? Setter { get; set; }
 
         public Property(string name, IType type)
         {

@@ -2,9 +2,9 @@
 
 namespace ZSharp.IR.VM
 {
-    internal sealed class LocalCollection(FunctionBody body) : Collection<Local>
+    internal sealed class LocalCollection(IRObject owner) : Collection<Local>
     {
-        private readonly FunctionBody body = body;
+        private readonly IRObject owner = owner;
 
         public override void OnAdd(Local item)
         {
@@ -12,7 +12,7 @@ namespace ZSharp.IR.VM
 
             AssertUnOwned(item);
 
-            item.Body = body;
+            item.Owner = owner;
             item.Index = Count;
         }
 
@@ -23,7 +23,7 @@ namespace ZSharp.IR.VM
             AssertOwned(item);
 
             item.Index = index;
-            item.Body = body;
+            item.Owner = owner;
 
             for (int i = index + 1; i < Count; i++)
                 this[i].Index++;
@@ -44,7 +44,7 @@ namespace ZSharp.IR.VM
 
             AssertOwned(item);
 
-            item.Body = null;
+            item.Owner = null;
 
             for (int i = index + 1; i < Count; i++)
                 this[i].Index--;
@@ -53,13 +53,13 @@ namespace ZSharp.IR.VM
         }
 
         private void AssertOwned(Local item) {
-            if (item.Body != body)
+            if (item.Owner != owner)
                 throw new InvalidOperationException();
         }
 
         private void AssertUnOwned(Local item)
         {
-            if (item.Body != null)
+            if (item.Owner != null)
                 throw new InvalidOperationException();
         }
     }

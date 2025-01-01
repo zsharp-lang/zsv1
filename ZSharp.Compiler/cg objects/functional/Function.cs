@@ -1,6 +1,6 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     /// <summary>
     /// Defines the base structure for a function.
@@ -12,15 +12,15 @@ namespace ZSharp.CGObjects
     /// different for each type of function.
     /// </summary>
     public abstract class Function(string? name) 
-        : CGObject
+        : CompilerObject
         , ICTCallable
     {
         public IR.Function? IR { get; set; }
 
         public string? Name { get; set; } = name;
 
-        public CGObject? Body { get; set; }
+        public CompilerObject? Body { get; set; }
 
-        public abstract CGObject Call(Compiler.Compiler compiler, Argument[] arguments);
+        public abstract CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments);
     }
 }

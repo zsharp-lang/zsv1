@@ -8,16 +8,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
-    <ProjectReference Include="..\ZSharp.CT.StandardLibrary\ZSharp.CT.StandardLibrary.csproj" />
-    <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />
-    <ProjectReference Include="..\ZSharp.RAST\ZSharp.RAST.csproj" />
-    <ProjectReference Include="..\ZSharp.Resolver\ZSharp.Resolver.csproj" />
-    <ProjectReference Include="..\ZSharp.Tokenizer\ZSharp.Tokenizer.csproj" />
-    <ProjectReference Include="..\ZSharp.VM\ZSharp.VM.csproj" />
+    <PackageReference Include="Mono.Reflection" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ZSharp.CT.CompilerAPI\ZSharp.CT.CompilerAPI.csproj" />
+    <ProjectReference Include="..\ZSharp.CT.RuntimeAPI\ZSharp.CT.RuntimeAPI.csproj" />
+    <ProjectReference Include="..\ZSharp.CT.StandardLibrary.Math\ZSharp.CT.StandardLibrary.Math.csproj" />
+    <ProjectReference Include="..\ZSharp.CT.StandardLibrary\ZSharp.CT.StandardLibrary.csproj" />
+    <ProjectReference Include="..\ZSharp.Interpreter\ZSharp.Interpreter.csproj" />
+    <ProjectReference Include="..\ZSharp.Runtime.IL\ZSharp.Runtime.IL.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="guessing-game.zs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="test.zs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

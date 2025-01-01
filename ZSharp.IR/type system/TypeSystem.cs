@@ -2,6 +2,8 @@
 {
     public sealed class TypeSystem
     {
+        public Class Object { get; init; } = null!;
+
         public Class String { get; init; } = null!;
 
         public Class Type { get; init; } = null!;

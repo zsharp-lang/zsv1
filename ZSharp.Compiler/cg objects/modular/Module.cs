@@ -1,18 +1,21 @@
 ﻿using CommonZ.Utils;
 using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
     public sealed class Module(string name)
-        : CGObject
+        : CompilerObject
         , ICTGetMember<MemberName>
         , ICTReadable
+        , ICompileIRObject<IR.Module, IR.Module>
     {
-        IR.IType ICTReadable.Type => throw new NotImplementedException();
+        CompilerObject ITyped.Type => throw new NotImplementedException();
 
-        public Mapping<string, CGObject> Members { get; } = [];
+        public Collection<CompilerObject> Content { get; } = [];
 
-        public Collection<CGObject> ImportedMembers { get; } = [];
+        public Mapping<string, CompilerObject> Members { get; } = [];
+
+        public Collection<CompilerObject> ImportedMembers { get; } = [];
 
         public IR.Module? IR { get; set; }
 
@@ -20,15 +23,30 @@ namespace ZSharp.CGObjects
 
         public string? Name { get; set; } = name;
 
-        public CGObject Member(Compiler.Compiler compiler, string member)
+        public CompilerObject Member(Compiler.Compiler compiler, string member)
             => Members[member];
 
-        Code ICTReadable.Read(Compiler.Compiler compiler)
+        IRCode ICTReadable.Read(Compiler.Compiler compiler)
             => new([
                 new IR.VM.GetObject(IR!)
             ])
             {
                 Types = [null!], // TODO: fix type
             };
+
+        public IR.Module CompileIRObject(Compiler.Compiler compiler, IR.Module? owner)
+        {
+            if (IR is not null)
+                return IR;
+
+            IR = new(Name);
+
+            owner?.Submodules.Add(IR);
+
+            foreach (var item in Content)
+                compiler.CompileIRObject(item, IR);
+
+            return IR;
+        }
     }
 }

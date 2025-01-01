@@ -1,18 +1,21 @@
 ﻿using ZSharp.Compiler;
 
-namespace ZSharp.CGObjects
+namespace ZSharp.Objects
 {
-    public sealed class RawCode(Code code)
-        : CGObject
+    public sealed class RawCode(IRCode code)
+        : CompilerObject
         , ICTReadable
     {
-        private readonly Code code = code;
+        private readonly IRCode code = code;
 
-        public Code Code => code;
+        public IRCode Code => code;
 
-        public IR.IType Type => code.RequireValueType();
+        public CompilerObject Type => code.RequireValueType();
 
-        public Code Read(Compiler.Compiler _)
+        public IRCode Read(Compiler.Compiler _)
             => code;
+
+        CompilerObject ITyped.GetType(Compiler.Compiler compiler)
+            => code.IsVoid ? compiler.TypeSystem.Void : code.RequireValueType();
     }
 }

@@ -5,8 +5,8 @@ namespace ZSharp.Compiler
 {
     internal sealed class ObjectCache()
     {
-        private readonly Cache<IR.IRObject, CGObject> cgCache = [];
-        private readonly Cache<CGObject, IR.IRObject> irCache = [];
+        private readonly Cache<IR.IRObject, CompilerObject> cgCache = [];
+        private readonly Cache<CompilerObject, IR.IRObject> irCache = [];
 
         public ObjectCache(ObjectCache parent)
             : this()
@@ -21,42 +21,42 @@ namespace ZSharp.Compiler
             };
         }
 
-        public CGObject? CG(IR.IRObject ir)
+        public CompilerObject? CG(IR.IRObject ir)
             => cgCache.Cache(ir);
 
-        public bool CG(IR.IRObject ir, [NotNullWhen(true)] out CGObject? cg)
+        public bool CG(IR.IRObject ir, [NotNullWhen(true)] out CompilerObject? cg)
             => cgCache.Cache(ir, out cg);
 
         public bool CG<T>(IR.IRObject ir, [NotNullWhen(true)] out T? cg)
-            where T : CGObject
+            where T : CompilerObject
             => cgCache.Cache(ir, out cg);
 
 
-        public CGObject CG(IR.IRObject ir, CGObject cg)
-            => CG<CGObject>(ir, cg);
+        public CompilerObject CG(IR.IRObject ir, CompilerObject cg)
+            => CG<CompilerObject>(ir, cg);
 
         public T CG<T>(IR.IRObject ir, T cg)
-            where T : CGObject
+            where T : CompilerObject
         {
             cgCache.Cache(ir, cg);
             irCache.Cache(cg, ir);
             return cg;
         }
 
-        public IR.IRObject? IR(CGObject cg)
+        public IR.IRObject? IR(CompilerObject cg)
             => irCache.Cache(cg);
 
-        public bool IR(CGObject cg, [NotNullWhen(true)] out IR.IRObject? ir)
+        public bool IR(CompilerObject cg, [NotNullWhen(true)] out IR.IRObject? ir)
             => irCache.Cache(cg, out ir);
 
-        public bool IR<T>(CGObject cg, [NotNullWhen(true)] out T? ir)
+        public bool IR<T>(CompilerObject cg, [NotNullWhen(true)] out T? ir)
             where T : IR.IRObject
             => irCache.Cache(cg, out ir);
 
-        public IR.IRObject IR(CGObject cg, IR.IRObject ir)
+        public IR.IRObject IR(CompilerObject cg, IR.IRObject ir)
             => IR<IR.IRObject>(cg, ir);
 
-        public T IR<T>(CGObject cg, T ir)
+        public T IR<T>(CompilerObject cg, T ir)
             where T : IR.IRObject
         {
             irCache.Cache(cg, ir);
