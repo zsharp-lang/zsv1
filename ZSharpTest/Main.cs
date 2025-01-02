@@ -1,4 +1,5 @@
-﻿using ZSharp.Compiler;
+﻿using System.Text.RegularExpressions;
+using ZSharp.Compiler;
 using ZSharp.Interpreter;
 using ZSharp.Parser;
 using ZSharp.Text;
@@ -122,32 +123,26 @@ var moduleCO_standardMath = interpreter.CompilerIRLoader.Import(moduleIR_standar
 
 interpreter.SourceCompiler.StandardLibraryImporter.Libraries.Add("math", moduleCO_standardMath);
 
-interpreter.SourceCompiler.Operators.Cache(
-    "+",
-    interpreter.CompilerIRLoader.Import(
-        runtime.Import(
-            ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.Concat)
-        )
-    )
-);
+foreach (var moduleIR in new[] { moduleIR_standardIO, moduleIR_standardMath })
+    if (moduleIR.HasFunctions)
+        foreach (var function in moduleIR.Functions)
+        {
+            if (function.Name is null || function.Name == string.Empty)
+                continue;
 
-interpreter.SourceCompiler.Operators.Cache(
-    "<",
-    interpreter.CompilerIRLoader.Import(
-        runtime.Import(
-            ZSharp.Runtime.NET.Utils.GetMethod(Standard.Math.Impl_Globals.LessThan)
-        )
-    )
-);
+            var match = Regex.Match(function.Name, @"^_?(?<OP>[+\-*=?&^%$#@!<>|~]+)_?$");
+            if (match.Success)
+            {
+                var op = match.Groups["OP"].Value;
+                if (!interpreter.SourceCompiler.Operators.Cache(op, out var group))
+                    group = interpreter.SourceCompiler.Operators.Cache(op, new ZSharp.Objects.OverloadGroup(op));
 
-interpreter.SourceCompiler.Operators.Cache(
-    "-",
-    interpreter.CompilerIRLoader.Import(
-        runtime.Import(
-            ZSharp.Runtime.NET.Utils.GetMethod(Standard.Math.Impl_Globals.Subtract)
-        )
-    )
-);
+                if (group is not ZSharp.Objects.OverloadGroup overloadGroup)
+                    throw new Exception("Invalid overload group!");
+
+                overloadGroup.Overloads.Add(interpreter.CompilerIRLoader.Import(function));
+            }
+        }
 
 //var moduleIL_compilerAPI = typeof(ZS.CompilerAPI.Impl_Globals).Module;
 //var moduleIR_compilerAPI = interpreter.HostLoader.Import(moduleIL_compilerAPI);
