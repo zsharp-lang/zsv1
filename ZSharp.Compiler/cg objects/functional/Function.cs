@@ -17,7 +17,7 @@ namespace ZSharp.Objects
     {
         public IR.Function? IR { get; set; }
 
-        public string? Name { get; set; } = name;
+        public string Name { get; set; } = name ?? string.Empty;
 
         public CompilerObject? Body { get; set; }
 
