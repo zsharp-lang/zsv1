@@ -29,7 +29,7 @@ namespace ZSharp.Compiler
             Void = new RawType(compiler.RuntimeModule.TypeSystem.Void, Type);
             Null = new RawType(compiler.RuntimeModule.TypeSystem.Null, Type);
             Boolean = new RawType(compiler.RuntimeModule.TypeSystem.Boolean, Type);
-            Int32 = new Int32Type(compiler.RuntimeModule.TypeSystem.Int32, Type);
+            Int32 = new(compiler.RuntimeModule.TypeSystem.Int32, Type);
             Float32 = new RawType(compiler.RuntimeModule.TypeSystem.Float32, Type);
         }
 
