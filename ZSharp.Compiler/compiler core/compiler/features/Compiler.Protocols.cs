@@ -38,7 +38,7 @@
             if (target is ICTTypeCast typeCast)
                 return typeCast.Cast(this, type);
 
-            throw new NotImplementedException();
+            throw new InvalidCastException(target, type);
         }
 
         /// <summary>
