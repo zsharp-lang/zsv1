@@ -17,6 +17,10 @@ namespace Standard.Math
         public static int Random(int min, int max)
             => new System.Random().Next(min, max);
 
+        [Alias(Name = "_+_")]
+        public static int Add(int a, int b)
+            => a + b;
+
         [Alias(Name = "_<_")]
         public static bool LessThan(int a, int b)
             => a < b;
