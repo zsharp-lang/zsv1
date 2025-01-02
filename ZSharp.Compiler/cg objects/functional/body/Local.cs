@@ -77,12 +77,14 @@ namespace ZSharp.Objects
             if (Type is null)
                 throw new();
 
+            IR ??= CompileIRObject(compiler, null);
+
             var code = compiler.CompileIRCode(compiler.Cast(value, Type));
 
             code.Instructions.AddRange(
                 [
                     new IR.VM.Dup(),
-                    new IR.VM.SetLocal(IR!)
+                    new IR.VM.SetLocal(IR)
                 ]
             );
 
