@@ -67,8 +67,16 @@
 
             owner.Content.Add(result);
 
-            if (result.Name is not null && result.Name != string.Empty)
-                owner.Members.Add(result.Name, result); // TODO: overloading
+            if (result.Name != string.Empty)
+            {
+                if (!owner.Members.TryGetValue(result.Name, out var group))
+                    owner.Members.Add(result.Name, group = new OverloadGroup(result.Name));
+
+                if (group is not OverloadGroup overloadGroup)
+                    throw new InvalidOperationException();
+
+                overloadGroup.Overloads.Add(result);
+            }
 
             return () =>
             {
