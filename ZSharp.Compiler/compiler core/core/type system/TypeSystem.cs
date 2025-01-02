@@ -46,26 +46,25 @@ namespace ZSharp.Compiler
             => throw new NotImplementedException();
 
         public bool IsTyped(CompilerObject @object)
-        {
-            throw new NotImplementedException();
-        }
+            => @object is IDynamicallyTyped;
 
         public bool IsTyped(CompilerObject @object, [NotNullWhen(true)] out CompilerObject? type)
         {
-            if (@object is ITyped typed)
+            if (@object is IDynamicallyTyped typed)
                 return (type = typed.GetType(Compiler)) is not null;
 
             return (type = null) is not null;
         }
 
         public bool IsTypeModifier(CompilerObject @object)
-        {
-            throw new NotImplementedException();
-        }
+            => @object is ITypeModifier;
 
-        public bool IsTypeModifier(CompilerObject @object, [NotNullWhen(true)] out CompilerObject? type)
+        public bool IsTypeModifier(CompilerObject @object, [NotNullWhen(true)] out CompilerObject? innerType)
         {
-            throw new NotImplementedException();
+            if (@object is ITypeModifier modifier)
+                return (innerType = modifier.InnerType) is not null;
+
+            return (innerType = null) is not null;
         }
     }
 }

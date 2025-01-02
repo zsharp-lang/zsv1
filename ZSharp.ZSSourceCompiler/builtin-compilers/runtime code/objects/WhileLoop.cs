@@ -47,7 +47,7 @@ namespace ZSharp.ZSSourceCompiler
             );
         }
 
-        CompilerObject ITyped.GetType(Compiler.Compiler compiler)
+        CompilerObject IDynamicallyTyped.GetType(Compiler.Compiler compiler)
         {
             if (compiler.TypeSystem.IsTyped(While, out var type))
                 return type;

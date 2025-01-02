@@ -1,10 +1,10 @@
 ﻿namespace ZSharp.Compiler
 {
-    public interface ITyped
+    public interface ITyped : IDynamicallyTyped
     {
         public CompilerObject Type { get; }
 
-        public CompilerObject GetType(Compiler compiler)
+        CompilerObject IDynamicallyTyped.GetType(Compiler compiler)
             => Type;
     }
 }
