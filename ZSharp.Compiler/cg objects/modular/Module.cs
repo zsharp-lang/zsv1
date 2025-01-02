@@ -19,7 +19,7 @@ namespace ZSharp.Objects
 
         public IR.Module? IR { get; set; }
 
-        public RTFunction InitFunction { get; } = new(null);
+        //public RTFunction InitFunction { get; } = new(null);
 
         public string? Name { get; set; } = name;
 

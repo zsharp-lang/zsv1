@@ -1,5 +1,6 @@
-﻿using ZSharp.Compiler;
-using ZSharp.IR;
+﻿using CommonZ.Utils;
+using System.Diagnostics.CodeAnalysis;
+using ZSharp.Compiler;
 
 namespace ZSharp.Objects
 {
@@ -17,7 +18,7 @@ namespace ZSharp.Objects
             Owner = 0b100,
         }
 
-        private BuildState _state = BuildState.None;
+        private readonly ObjectBuildState<BuildState> state = new();
 
         CompilerObject ITyped.Type => throw new NotImplementedException();
 
@@ -25,50 +26,23 @@ namespace ZSharp.Objects
 
         public CompilerObject? ReturnType { get; set; }
 
-        public bool IsSignatureBuilt
-        {
-            get => _state.HasFlag(BuildState.Signature);
-            set => _state = value ? _state | BuildState.Signature : _state & ~BuildState.Signature;
-        }
-
-        public bool IsBodyBuilt
-        {
-            get => _state.HasFlag(BuildState.Body);
-            set => _state = value ? _state | BuildState.Body : _state & ~BuildState.Body;
-        }
-
-        public bool IsOwnerBuilt
-        {
-            get => _state.HasFlag(BuildState.Owner);
-            set => _state = value ? _state | BuildState.Owner : _state & ~BuildState.Owner;
-        }
-
-        public CompilerObject Call(IRCode[] arguments)
-        {
-            if (IR is null)
-                throw new("Function not compiled.");
-
-            IRCode code = new();
-
-            foreach (var argument in arguments)
-                code.Append(argument);
-
-            code.Instructions.Add(new IR.VM.Call(IR));
-
-            throw new NotImplementedException();
-            //return new Code(code);
-        }
-
         public override CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             var (args, kwargs) = Utils.SplitArguments(arguments);
 
-            return Call(compiler, args, kwargs);
+            try
+            {
+                return Call(compiler, args, kwargs);
+            }
+            catch (Compiler.InvalidCastException)
+            {
+                throw new ArgumentMismatchException(this, arguments);
+            }
         }
 
-        public CompilerObject Call(Compiler.Compiler compiler, Args args, KwArgs kwArgs)
+        private RawCode Call(Compiler.Compiler compiler, Collection<CompilerObject> args, Mapping<string, CompilerObject> kwArgs)
         {
-            // TODO: type checking (when type system is implemented)
+            IR ??= CompileIRObject(compiler, null);
 
             IRCode
                 argsCode = new(), varArgsCode = new(),
@@ -83,7 +57,7 @@ namespace ZSharp.Objects
                 throw new($"Function {Name} takes {Signature.Args.Count} arguments, but {args.Count} were given.");
 
             for (int i = 0; i < Signature.Args.Count; i++)
-                argsCode.Append(compiler.CompileIRCode(args[i]));
+                argsCode.Append(compiler.CompileIRCode(compiler.Cast(args[i], Signature.Args[i].Type ?? throw new())));
 
             if (kwArgs.Count > Signature.KwArgs.Count)
                 if (Signature.VarKwArgs is null)
@@ -94,7 +68,7 @@ namespace ZSharp.Objects
                 throw new($"Function {Name} takes {Signature.KwArgs.Count} keyword arguments, but {kwArgs.Count} were given.");
 
             foreach (var kwArgParameter in Signature.KwArgs)
-                kwArgsCode.Append(compiler.CompileIRCode(kwArgs[kwArgParameter.Name]));
+                kwArgsCode.Append(compiler.CompileIRCode(compiler.Cast(kwArgs[kwArgParameter.Name], kwArgParameter.Type ?? throw new())));
 
             IRCode result = new();
             result.Append(argsCode);
@@ -102,16 +76,15 @@ namespace ZSharp.Objects
             result.Append(kwArgsCode);
             result.Append(varKwArgsCode); // should be empty
 
-            result.Instructions.Add(new IR.VM.Call(IR!));
+            result.Instructions.Add(new IR.VM.Call(IR));
 
             result.Types.Clear();
             if (ReturnType != compiler.TypeSystem.Void)
-                result.Types.Add(ReturnType ?? throw new()); // TODO: WTF?????? This is here because the 
-            // IR -> CG loader is not yet implemented.
+                result.Types.Add(ReturnType!);
 
             result.MaxStackSize = Math.Max(result.MaxStackSize, result.Types.Count);
 
-            return new RawCode(result);
+            return new(result);
         }
 
         IRCode ICTReadable.Read(Compiler.Compiler compiler)
@@ -122,21 +95,30 @@ namespace ZSharp.Objects
                 Types = [null!], // TODO: fix type
             };
 
+        [MemberNotNull(nameof(ReturnType))]
         public IR.Function CompileIRObject(Compiler.Compiler compiler, IR.Module? owner)
         {
-            IR ??= new(compiler.CompileIRType(ReturnType ?? throw new()))
+            IR ??= 
+                new(
+                    compiler.CompileIRType(
+                        ReturnType ?? throw new PartiallyCompiledObjectException(
+                            this,
+                            Errors.UndefinedReturnType(Name)
+                        )
+                    )
+                )
             {
                 Name = Name
             };
 
-            if (owner is not null && !IsOwnerBuilt)
+            if (owner is not null && !state.Get(BuildState.Owner))
             {
                 owner.Functions.Add(IR);
 
-                IsOwnerBuilt = true;
+                state.Set(BuildState.Owner);
             }
 
-            if (!IsSignatureBuilt)
+            if (!state.Get(BuildState.Signature))
             {
                 foreach (var arg in Signature.Args)
                     IR.Signature.Args.Parameters.Add(compiler.CompileIRObject<IR.Parameter, IR.Signature>(arg, IR.Signature));
@@ -150,17 +132,15 @@ namespace ZSharp.Objects
                 if (Signature.VarKwArgs is not null)
                     IR.Signature.KwArgs.Var = compiler.CompileIRObject<IR.Parameter, IR.Signature>(Signature.VarKwArgs, IR.Signature);
 
-                IsSignatureBuilt = true;
+                state.Set(BuildState.Signature);
             }
 
-            if (Body is not null && !IsBodyBuilt)
+            if (Body is not null && !state.Get(BuildState.Body))
             {
                 IR.Body.Instructions.AddRange(compiler.CompileIRCode(Body).Instructions);
 
-                IsBodyBuilt = true;
+                state.Set(BuildState.Body);
             }
-
-            // TODO: compile signature
 
             return IR;
         }
