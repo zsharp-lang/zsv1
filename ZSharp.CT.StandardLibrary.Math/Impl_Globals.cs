@@ -28,9 +28,5 @@ namespace Standard.Math
         [Alias(Name = "_-_")]
         public static int Subtract(int a, int b)
             => a - b;
-
-        [Alias(Name = "increment")]
-        public static int Increment(int x)
-            => x + 1;
     }
 }

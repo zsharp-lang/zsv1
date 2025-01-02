@@ -1,5 +1,5 @@
 ﻿import { input, print } from "std:io";
-import { ceil, log2, random, increment } from "std:math";
+import { ceil, log2, random } from "std:math";
 //import { random } from "std:random";
 
 module Program;
@@ -16,7 +16,7 @@ fun guessOnce(guess: i32, number: i32, tries: i32): bool {
 		return false;
 	}
 
-	print("You got it in " + string(increment(tries)) + " tries!");
+	print("You got it in " + string(tries + 1) + " tries!");
 	return true;
 }
 
@@ -35,9 +35,9 @@ fun main(): void {
 
 		while (guessOnce(guess, number, tries))
 		{
-			tries = increment(maxTries);
+			tries = maxTries + 1;
 			break;
-		} else tries = increment(tries);
+		} else tries = tries + 1;
 	}
 
 	while (maxTries < tries) { break; }
