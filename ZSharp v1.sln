@@ -42,6 +42,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Runtime.IL", "ZSharp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.CT.StandardLibrary.Math", "ZSharp.CT.StandardLibrary.Math\ZSharp.CT.StandardLibrary.Math.csproj", "{AF9E7F68-2AB3-42F7-AE29-5D7A1CE89DBA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.Objects", "ZSharp.Compiler.Objects\ZSharp.Compiler.Objects.csproj", "{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -120,6 +122,10 @@ Global
 		{AF9E7F68-2AB3-42F7-AE29-5D7A1CE89DBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AF9E7F68-2AB3-42F7-AE29-5D7A1CE89DBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AF9E7F68-2AB3-42F7-AE29-5D7A1CE89DBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
