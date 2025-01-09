@@ -20,11 +20,11 @@ namespace ZSharp.Parser
 
         public override Constructor Parse(Parser parser)
         {
-            var funKeyword = parser.Eat(LangParser.Keywords.New);
+            var newKeyword = parser.Eat(LangParser.Keywords.New);
 
-            string? name = null;
+            Token? name = null;
             if (parser.Is(TokenType.Identifier))
-                name = parser.Eat(TokenType.Identifier).Value;
+                name = parser.Eat(TokenType.Identifier);
 
             parser.Eat(TokenType.LParen);
 
@@ -41,10 +41,14 @@ namespace ZSharp.Parser
 
             var body = ParseConstructorBody(parser);
 
-            return new()
+            return new(new()
+            {
+                Name = name,
+                NewKeyword = newKeyword,
+            })
             {
                 Body = body,
-                Name = name,
+                Name = name?.Value ?? string.Empty,
                 Initializers = initializers,
                 Signature = signature,
             };
