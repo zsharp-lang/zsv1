@@ -1,7 +1,13 @@
 ﻿namespace ZSharp.AST
 {
-    public sealed class Parameter : Node
+    public sealed class Parameter(ParameterTokens tokens) : Node(tokens)
     {
+        public new ParameterTokens TokenInfo
+        {
+            get => As<ParameterTokens>();
+            init => base.TokenInfo = value;
+        }
+
         public string? Alias { get; set; }
 
         public required string Name { get; set; }
