@@ -8,9 +8,9 @@ namespace ZSharp.Parser
     {
         public override Module Parse(Parser parser)
         {
-            parser.Eat(LangParser.Keywords.Module);
+            var moduleKeyword = parser.Eat(LangParser.Keywords.Module);
 
-            var name = parser.Eat(TokenType.Identifier).Value;
+            var name = parser.Eat(TokenType.Identifier);
 
             List<Statement> body;
             if (parser.Is(TokenType.LCurly, eat: true))
@@ -21,10 +21,14 @@ namespace ZSharp.Parser
                 body = ParseModuleBody(parser, TokenType.EOF);
             }
 
-            return new()
+            return new(new()
+            {
+                ModuleKeyword = moduleKeyword,
+                Name = name,
+            })
             {
                 Body = body,
-                Name = name,
+                Name = name.Value,
             };
         }
 
