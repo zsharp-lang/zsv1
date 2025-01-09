@@ -28,11 +28,11 @@ namespace ZSharp.Parser
 
         public override OOPDefinition Parse(Parser parser)
         {
-            var type = parser.Eat(LangParser.Keywords.Class).Value;
+            var type = parser.Eat(LangParser.Keywords.Class);
 
-            string? name = null;
+            Token? name = null;
             if (parser.Is(TokenType.Identifier))
-                name = parser.Eat(TokenType.Identifier).Value;
+                name = parser.Eat(TokenType.Identifier);
 
             Signature? signature = null;
             if (parser.Is(TokenType.LParen, eat: true))
@@ -42,8 +42,12 @@ namespace ZSharp.Parser
                 parser.Eat(TokenType.RParen);
             }
 
+            Expression? of = null;
+            if (parser.Is(LangParser.Keywords.Of, out var ofKeyword, eat: true))
+                of = parser.Parse<Expression>();
+
             List<Expression>? bases = null;
-            if (parser.Is(TokenType.Colon, eat: true))
+            if (parser.Is(TokenType.Colon, out var basesSeparator, eat: true))
             {
                 bases = [];
 
@@ -59,13 +63,20 @@ namespace ZSharp.Parser
             else
                 parser.Eat(TokenType.Semicolon); 
 
-            return new()
+            return new(new()
             {
+                BasesSeparator = basesSeparator,
+                Name = name,
+                OfKeyword = ofKeyword,
                 Type = type,
+            })
+            {
+                Type = type.Value,
                 Signature = signature,
+                Of = of,
                 Bases = bases,
                 Content = body,
-                Name = name,
+                Name = name?.Value ?? string.Empty,
             };
         }
 
