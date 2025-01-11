@@ -1,7 +1,4 @@
-﻿using System.Numerics;
-using System.Security.AccessControl;
-
-namespace ZSharp.ZSSourceCompiler
+﻿namespace ZSharp.ZSSourceCompiler
 {
     public sealed partial class ExpressionCompiler(ZSSourceCompiler compiler)
         : CompilerBase(compiler)
