@@ -1,23 +1,16 @@
 ﻿import { input, print } from "std:io";
 import { ceil, log2, random } from "std:math";
-//import { random } from "std:random";
 
 module Program;
 
 fun guessOnce(guess: i32, number: i32, tries: i32): bool {
-	while (guess < number)
-	{
+	if (guess < number)
 		print("Too low!");
-		return false;
-	}
-	while (number < guess)
-	{
+	else if (number < guess)
 		print("Too high!");
-		return false;
-	}
+	else return true;
 
-	print("You got it in " + string(tries + 1) + " tries!");
-	return true;
+	return false;
 }
 
 fun main(): void {
@@ -33,15 +26,13 @@ fun main(): void {
 		let guessString = input("Guess a number between " + string(minNumber) + " and " + string(maxNumber) + ": ");
 		let guess = i32.parse(guessString);
 
-		while (guessOnce(guess, number, tries))
+		if (guessOnce(guess, number, tries)) 
 		{
-			tries = maxTries + 1;
+			print("You got it in " + string(tries + 1) + " tries!");
 			break;
-		} else tries = tries + 1;
-	}
-
-	while (maxTries < tries) { break; }
-	else print("You didn't get it in " + string(maxTries) + " tries. The number was " + string(number));
+		}
+		else tries = tries + 1;
+	} else print("You didn't get it in " + string(maxTries) + " tries. The number was " + string(number));
 
 	return;
 }
