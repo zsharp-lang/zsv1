@@ -66,12 +66,12 @@ using (StreamReader stream = File.OpenText(filePath))
 
     expressionParser.AddKeywordParser(
         LangParser.Keywords.While,
-        LangParser.ParseWhileExpression
+        LangParser.ParseWhileExpression<ZSharp.AST.Expression>
     );
 
     statementParser.AddKeywordParser(
         LangParser.Keywords.While,
-        Utils.ExpressionStatement(LangParser.ParseWhileExpression, semicolon: false)
+        Utils.ExpressionStatement(LangParser.ParseWhileExpression<ZSharp.AST.Statement>, semicolon: false)
     );
 
     //zsharpParser.Function.AddKeywordParser(
