@@ -12,6 +12,13 @@
                 _ => null
             };
 
+        private CompilerObject Compile(Expression expression)
+            => expression switch
+            {
+                WhileExpression<Statement> @while => Compile(@while),
+                _ => Compiler.CompileNode(expression)
+            };
+
         private CompilerObject Compile(BlockStatement block)
         {
             var result = new Compiler.IRCode();
@@ -29,7 +36,7 @@
             if (expressionStatement.Expression is null)
                 return new Objects.RawCode(new());
 
-            var result = Compiler.Compiler.CompileIRCode(Compiler.CompileNode(expressionStatement.Expression));
+            var result = Compiler.Compiler.CompileIRCode(Compile(expressionStatement.Expression));
 
             if (result.IsValue)
             {
@@ -71,5 +78,8 @@
 
             return result;
         }
+
+        private WhileLoop Compile(WhileExpression<Statement> @while)
+            => new WhileStatementCompiler(Compiler, @while).Compile();
     }
 }

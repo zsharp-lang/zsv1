@@ -71,9 +71,6 @@
 
         public CompilerObject? CompileNode(ZSSourceCompiler compiler, Statement node)
         {
-            if (node is ExpressionStatement es && es.Expression is WhileExpression @while)
-                return new WhileLoopCompiler(compiler, @while).Compile();
-
             if (node is not Return @return)
                 return null;
 

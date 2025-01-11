@@ -10,6 +10,7 @@
                 CallExpression call => Compile(call),
                 IdentifierExpression identifier => Context.CurrentScope.Get(identifier.Name),
                 LiteralExpression literal => CompileNode(literal),
+                WhileExpression<Expression> @while => Compile(@while),
                 _ => null
             };
 
@@ -57,6 +58,11 @@
             var args = call.Arguments.Select(arg => new Compiler.Argument(arg.Name, Compiler.CompileNode(arg.Value)));
 
             return Compiler.Compiler.Call(callable, args.ToArray());
+        }
+
+        private WhileLoop Compile(WhileExpression<Expression> @while)
+        {           
+            return new WhileExpressionCompiler(Compiler, @while, null!).Compile();
         }
     }
 }
