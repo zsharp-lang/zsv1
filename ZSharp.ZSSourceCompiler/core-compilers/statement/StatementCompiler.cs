@@ -8,6 +8,7 @@
             {
                 BlockStatement block => Compile(block),
                 ExpressionStatement expressionStatement => Compile(expressionStatement),
+                IfStatement @if => Compile(@if),
                 ImportStatement import => Compile(import),
                 _ => null
             };
@@ -47,6 +48,18 @@
             result.RequireVoidType();
 
             return new Objects.RawCode(result);
+        }
+
+        private CompilerObject Compile(IfStatement @if)
+        {
+            var result = new Objects.If()
+            {
+                Body = Compiler.CompileNode(@if.If),
+                Condition = Compiler.CompileNode(@if.Condition),
+                Else = @if.Else is null ? null : Compiler.CompileNode(@if.Else)
+            };
+
+            return result;
         }
 
         private CompilerObject Compile(ImportStatement import)
