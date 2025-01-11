@@ -19,7 +19,7 @@ namespace ZSharp.ZSSourceCompiler
 
         public IR.VM.Instruction EndLabel { get; } = new IR.VM.Nop();
 
-        public CompilerObject Type => throw new();
+        public required CompilerObject Type { get; set; }
 
         public IRCode CompileIRCode(Compiler.Compiler compiler)
         {
@@ -30,29 +30,22 @@ namespace ZSharp.ZSSourceCompiler
                 ).Instructions,
 
                 new IR.VM.JumpIfFalse(ElseLabel),
-                
-                .. compiler.CompileIRCode(
-                    compiler.Cast(While, compiler.TypeSystem.Void)
-                    ).Instructions,
+
+                .. compiler.CompileIRCode(While).Instructions,
 
                 new IR.VM.Jump(ConditionLabel),
 
                 ElseLabel,
-                .. Else is null ? [] : compiler.CompileIRCode(
-                    compiler.Cast(Else, compiler.TypeSystem.Void)
-                    ).Instructions,
+                .. Else is null ? [] : compiler.CompileIRCode(Else).Instructions,
 
                 EndLabel
                 ]
-            );
-        }
-
-        CompilerObject IDynamicallyTyped.GetType(Compiler.Compiler compiler)
-        {
-            if (compiler.TypeSystem.IsTyped(While, out var type))
-                return type;
-
-            throw new();
+            )
+            {
+                Types = Type == compiler.TypeSystem.Void
+                    ? []
+                    : [Type]
+            };
         }
     }
 }
