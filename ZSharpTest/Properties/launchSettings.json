@@ -1,6 +1,10 @@
 {
   "profiles": {
-    "ZSharpTest": {
+    "tests/": {
+      "commandName": "Project",
+      "commandLineArgs": "tests/test-"
+    },
+    "guessing-game": {
       "commandName": "Project",
       "commandLineArgs": "guessing-game.zs"
     }
