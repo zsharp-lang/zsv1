@@ -74,6 +74,11 @@ using (StreamReader stream = File.OpenText(filePath))
         Utils.ExpressionStatement(LangParser.ParseWhileExpression<ZSharp.AST.Statement>, semicolon: false)
     );
 
+    statementParser.AddKeywordParser(
+        LangParser.Keywords.If,
+        LangParser.ParseIfStatement
+    );
+
     //zsharpParser.Function.AddKeywordParser(
     //    LangParser.Keywords.While,
     //    Utils.ExpressionStatement(LangParser.ParseWhileExpression, semicolon: false)
