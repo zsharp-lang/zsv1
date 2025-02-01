@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.IR
 {
-    public abstract class OOPType : ModuleMember, IType
+    public abstract class OOPType : ModuleMember
     {
 
     }

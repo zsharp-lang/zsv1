@@ -10,7 +10,7 @@ namespace ZSharp.IR
 
         public Collection<Typeclass> Bases { get; }
 
-        public TemplateParameter Parameter { get; }
+        public GenericParameter Parameter { get; }
 
         public Collection<Method> Methods { get; }
 
