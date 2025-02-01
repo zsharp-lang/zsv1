@@ -4,9 +4,11 @@ namespace ZSharp.Runtime.NET
 {
     internal sealed class ContextCacheIR2IL
     {
+        public Cache<IR.IType, Type> Types { get; } = [];
+
         public Cache<IR.Module, IL.Module> Modules { get; } = [];
 
-        public Cache<IR.IType, Type> Types { get; } = [];
+        public Cache<IR.OOPType, Type> OOPTypes { get; } = [];
 
         public Cache<IR.ICallable, IL.MethodBase> Callables { get; } = [];
 
