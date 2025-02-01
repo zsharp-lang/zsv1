@@ -57,7 +57,10 @@ namespace ZSharp.Objects
             result.Append(kwArgsCode);
             result.Append(varKwArgsCode); // should be empty
 
-            result.Instructions.Add(new IR.VM.CreateInstance(IR!));
+            if (kwArgs.ContainsKey(Signature.Args[0].Name))
+                result.Instructions.Add(new IR.VM.Call(IR!.Method));
+            else
+                result.Instructions.Add(new IR.VM.CreateInstance(IR!));
 
             result.Types.Clear();
             result.Types.Add(Owner ?? throw new());
