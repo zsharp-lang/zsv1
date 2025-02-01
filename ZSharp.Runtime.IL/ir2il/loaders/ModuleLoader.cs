@@ -56,7 +56,7 @@
                     LoadType(type);
         }
 
-        private Type LoadType(IR.IType type)
+        private Type LoadType(IR.OOPType type)
         {
             if (Context.Cache(type, out var result))
                 return result;

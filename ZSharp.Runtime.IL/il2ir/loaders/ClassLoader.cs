@@ -1,4 +1,6 @@
-﻿namespace ZSharp.Runtime.NET.IL2IR
+﻿using ZSharp.IR;
+
+namespace ZSharp.Runtime.NET.IL2IR
 {
     internal sealed class ClassLoader(ILLoader loader, Type input)
         : BaseILLoader<Type, IR.Class>(loader, input, new(input.Name))
@@ -30,7 +32,7 @@
         private void LoadBase()
         {
             if (Input.BaseType is not null)
-                Output.Base = (IR.Class)Loader.LoadType(Input.BaseType);
+                Output.Base = (IR.ConstructedClass)Loader.LoadType(Input.BaseType);
         }
 
         private void LoadInterfaceImplementations()
@@ -74,18 +76,20 @@
             if (mapping.InterfaceMethods.Length != mapping.TargetMethods.Length)
                 throw new InvalidOperationException("Interface mapping is invalid.");
 
-            var implementation = new IR.InterfaceImplementation(Loader.LoadType<IR.Interface>(@interface));
+            throw new NotImplementedException();
 
-            for (int i = 0; i < mapping.InterfaceMethods.Length; i++)
-            {
-                var interfaceMethod = mapping.InterfaceMethods[i];
-                var targetMethod = mapping.TargetMethods[i];
+            //var implementation = new IR.InterfaceImplementation(Loader.LoadType<IR.ConstructedInterface>(@interface));
 
-                implementation.Implementations.Add(
-                    LoadMethod(interfaceMethod),
-                    LoadMethod(targetMethod)
-                );
-            }
+            //for (int i = 0; i < mapping.InterfaceMethods.Length; i++)
+            //{
+            //    var interfaceMethod = mapping.InterfaceMethods[i];
+            //    var targetMethod = mapping.TargetMethods[i];
+
+            //    implementation.Implementations.Add(
+            //        LoadMethod(interfaceMethod),
+            //        LoadMethod(targetMethod)
+            //    );
+            //}
         }
 
         private void LoadField(IL.FieldInfo field)
@@ -136,13 +140,11 @@
             if (!type.IsTypeDefinition)
                 throw new ArgumentException("Type must be a type definition.", nameof(type));
 
-            var result = Context.Cache(type);
-
-            if (result is not null) ;
+            if (Context.Cache(type, out OOPType? result)) ;
             else if (type.IsClass) result = LoadClass(type);
             else if (type.IsInterface) result = LoadInterface(type);
             else if (type.IsEnum) result = LoadEnum(type);
-            else if (type.IsValueType) result= LoadStruct(type);
+            else if (type.IsValueType) result = LoadStruct(type);
             else throw new NotImplementedException();
 
             // TADA: | | | | | | | | | 

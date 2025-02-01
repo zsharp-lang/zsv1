@@ -15,13 +15,21 @@ namespace ZSharp.Runtime.NET.IL2IR
 
             if (type.IsTypeDefinition)
             {
-                if (type.IsClass) result = new ClassLoader(this, type).Load();
+                if (type.IsGenericTypeDefinition)
+                    throw new InvalidOperationException();
+
+                var genericArguments = type.GenericTypeArguments.Select(LoadType).ToList();
+
+                if (type.IsClass) result = new ConstructedClass(new ClassLoader(this, type).Load())
+                {
+                    Arguments = new(genericArguments),
+                };
                 //else if (type.IsInterface) result = new ILInterfaceLoader(this, type).Load();
                 //else if (type.IsEnum) result = new ILEnumLoader(this, type).Load();
                 //else if (type.IsValueType) result = new ILStructLoader(this, type).Load();
                 else throw new ArgumentException("Type must be a type definition.", nameof(type));
 
-                return Context.Cache(type, result);
+                return result;
             }
 
             if (type.IsArray)

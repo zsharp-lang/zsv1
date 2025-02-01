@@ -15,30 +15,30 @@
         {
             Module module = new("Runtime");
 
-            Class @object;
-            Class @string;
-            Class type;
-            Class @void;
-            Class @null;
+            ConstructedClass @object;
+            ConstructedClass @string;
+            ConstructedClass type;
+            ConstructedClass @void;
+            ConstructedClass @null;
 
-            Class boolean;
+            ConstructedClass boolean;
 
-            Class int32;
+            ConstructedClass int32;
 
-            Class float32;
+            ConstructedClass float32;
 
             {
-                module.Types.Add(type = new("Type"));
-                module.Types.Add(@object = new("Object"));
-                module.Types.Add(@string = new("String"));
-                module.Types.Add(@void = new("Void"));
-                module.Types.Add(@null = new("Null"));
+                module.Types.Add((type = new(new("Type"))).Class);
+                module.Types.Add((@object = new(new("Object"))).Class);
+                module.Types.Add((@string = new(new("String"))).Class);
+                module.Types.Add((@void = new(new("Void"))).Class);
+                module.Types.Add((@null = new(new("Null"))).Class);
 
-                module.Types.Add(boolean = new("Boolean"));
+                module.Types.Add((boolean = new(new("Boolean"))).Class);
 
-                module.Types.Add(int32 = new("Int32"));
+                module.Types.Add((int32 = new(new("Int32"))).Class);
 
-                module.Types.Add(float32 = new("Float32"));
+                module.Types.Add((float32 = new(new("Float32"))).Class);
             }
 
             return new(module, new()

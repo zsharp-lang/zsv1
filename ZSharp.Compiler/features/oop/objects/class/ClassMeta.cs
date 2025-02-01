@@ -48,7 +48,7 @@
             return result;
         }
 
-        private CompilerObject? FindSubclassInitializer(Class? @base)
+        private CompilerObject? FindSubclassInitializer(CompilerObject? @base)
         {
             //while (@base is not null)
             //    if (@base.SubclassInitializer is not null) return @base.SubclassInitializer;

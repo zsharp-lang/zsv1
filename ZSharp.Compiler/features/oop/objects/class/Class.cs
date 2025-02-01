@@ -15,11 +15,11 @@ namespace ZSharp.Objects
 
         public string? Name { get; set; }
 
-        public Class? Base { get; set; }
+        public CompilerObject? Base { get; set; }
 
         //public SimpleFunctionOverloadGroup? Constructor { get; set; }
 
-        public Constructor? Constructor { get; set; }
+        public CompilerObject? Constructor { get; set; }
 
         public Constructor? EmptyConstructor { get; set; }
 
@@ -31,14 +31,8 @@ namespace ZSharp.Objects
                 if (EmptyConstructor is null) throw new InvalidOperationException();
                 else return compiler.Call(EmptyConstructor, arguments);
 
-            return new RawCode(
-                new([
-                    new IR.VM.CreateInstance(Constructor!.IR!)
-                ])
-                {
-                    MaxStackSize = 1,
-                    Types = [this]
-                });
+            if (Constructor is null) throw new InvalidOperationException();
+            return compiler.Call(Constructor, arguments);
         }
 
         //public List<Interface>? Interfaces { get; set; }

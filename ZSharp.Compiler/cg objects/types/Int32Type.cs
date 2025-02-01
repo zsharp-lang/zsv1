@@ -3,12 +3,12 @@ using ZSharp.Compiler;
 
 namespace ZSharp.Objects
 {
-    public sealed class Int32Type(IR.Class ir, CompilerObject type)
+    public sealed class Int32Type(IR.ConstructedClass ir, CompilerObject type)
         : CompilerObject
         , ICompileIRType
         , ICTGetMember<MemberName>
     {
-        public IR.Class IR { get; } = ir;
+        public IR.ConstructedClass IR { get; } = ir;
 
         public CompilerObject Type { get; } = type;
 

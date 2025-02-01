@@ -38,6 +38,23 @@ namespace ZSharp.Runtime.NET
             return il;
         }
 
+        public Type? Cache(IR.OOPType ir)
+            => toIL.OOPTypes.Cache(ir);
+
+        public bool Cache(IR.OOPType ir, [NotNullWhen(true)] out Type? il)
+            => toIL.OOPTypes.Cache(ir, out il);
+
+        public Type Cache(IR.OOPType ir, Type il)
+        {
+            if (!toIR.OOPTypes.Contains(il))
+                toIR.OOPTypes.Cache(il, ir);
+
+            if (!toIL.OOPTypes.Contains(ir))
+                toIL.OOPTypes.Cache(ir, il);
+
+            return il;
+        }
+
         public IL.MethodBase? Cache(IR.ICallable ir)
             => toIL.Callables.Cache(ir);
 
