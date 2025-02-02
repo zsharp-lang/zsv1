@@ -4,9 +4,13 @@
       "commandName": "Project",
       "commandLineArgs": "tests/test-"
     },
-    "guessing-game": {
+    "Projects/ToDo": {
       "commandName": "Project",
-      "commandLineArgs": "guessing-game.zs"
+      "commandLineArgs": "projects/todo.zs"
+    },
+    "Projects/Guessing Game": {
+      "commandName": "Project",
+      "commandLineArgs": "projects/guessing-game.zs"
     }
   }
 }
