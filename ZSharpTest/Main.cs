@@ -89,6 +89,11 @@ using (StreamReader stream = File.OpenText(filePath))
         LangParser.ParseForStatement
     );
 
+    statementParser.AddKeywordParser(
+        LangParser.Keywords.Case,
+        LangParser.ParseCaseStatement
+    );
+
     //zsharpParser.Function.AddKeywordParser(
     //    LangParser.Keywords.While,
     //    Utils.ExpressionStatement(LangParser.ParseWhileExpression, semicolon: false)
