@@ -67,6 +67,8 @@ using (StreamReader stream = File.OpenText(filePath))
     expressionParser.Separator(TokenType.RBracket);
     expressionParser.Separator(TokenType.Semicolon);
 
+    expressionParser.Separator(LangParser.Keywords.In); // until it's an operator
+
     expressionParser.AddKeywordParser(
         LangParser.Keywords.While,
         LangParser.ParseWhileExpression<ZSharp.AST.Expression>
@@ -80,6 +82,11 @@ using (StreamReader stream = File.OpenText(filePath))
     statementParser.AddKeywordParser(
         LangParser.Keywords.If,
         LangParser.ParseIfStatement
+    );
+
+    statementParser.AddKeywordParser(
+        LangParser.Keywords.For,
+        LangParser.ParseForStatement
     );
 
     //zsharpParser.Function.AddKeywordParser(
