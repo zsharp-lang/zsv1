@@ -9,10 +9,12 @@
             public const string Case        = "case";
             public const string Class       = "class";
             public const string Else        = "else";
+            public const string For         = "for";
             public const string From        = "from";
             public const string Function    = "fun";
             public const string If          = "if";
             public const string Import      = "import";
+            public const string In          = "in";
             public const string Let         = "let";
             public const string Module      = "module";
             public const string New         = "new";
