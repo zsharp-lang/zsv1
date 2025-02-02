@@ -58,10 +58,13 @@ using (StreamReader stream = File.OpenText(filePath))
     expressionParser.InfixL("**", 80);
 
     expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
+    expressionParser.Led(TokenType.LBracket, LangParser.ParseIndexExpression, 100);
+    expressionParser.Nud(TokenType.LBracket, LangParser.ParseArrayLiteral);
     expressionParser.Led(".", LangParser.ParseMemberAccess, 150);
 
     expressionParser.Separator(TokenType.Comma);
     expressionParser.Separator(TokenType.RParen);
+    expressionParser.Separator(TokenType.RBracket);
     expressionParser.Separator(TokenType.Semicolon);
 
     expressionParser.AddKeywordParser(
