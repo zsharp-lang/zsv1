@@ -28,5 +28,13 @@ namespace Standard.IO
         [Alias(Name = "int32.parse()")]
         public static int ParseInt32(string s)
             => int.Parse(s);
+
+        [Alias(Name = "_==_")]
+        public static bool Equals(string a, string b)
+            => a == b;
+
+        [Alias(Name = "_==_")]
+        public static bool Equals(bool a, bool b)
+            => a == b;
     }
 }
