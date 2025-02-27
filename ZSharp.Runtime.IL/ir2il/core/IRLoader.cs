@@ -38,6 +38,12 @@
                 thisPass.Clear();
             }
 
+            if (module.Initializer is not null)
+                result
+                    .GetType(Constants.GlobalsTypeName)!
+                    .GetMethod(Context.Cache(module.Initializer)!.Name, [])!
+                    .Invoke(null, null);
+
             return result;
         }
 
@@ -48,8 +54,24 @@
 
             return type switch
             {
+                IR.ConstructedClass constructedClass => LoadType(constructedClass),
                 _ => throw new NotImplementedException()
             };
+        }
+
+        public Type LoadType(IR.ConstructedClass constructedClass)
+        {
+            var innerClass = Context.Cache(constructedClass.Class);
+
+            if (innerClass is null)
+                throw new();
+
+            if (constructedClass.Arguments.Count == 0)
+                return innerClass;
+
+            return innerClass.MakeGenericType([
+                .. constructedClass.Arguments.Select(LoadType)
+            ]);
         }
 
         internal void AddToNextPass(Action action)

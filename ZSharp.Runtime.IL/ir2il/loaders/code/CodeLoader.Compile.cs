@@ -162,7 +162,8 @@ namespace ZSharp.Runtime.NET.IR2IL
         {
             Output.Emit(IL.Emit.OpCodes.Pop);
 
-            _stack.Pop();
+            if (_stack.Count > 0)
+                _stack.Pop();
         }
 
         private void Compile(VM.PutBoolean putBoolean)

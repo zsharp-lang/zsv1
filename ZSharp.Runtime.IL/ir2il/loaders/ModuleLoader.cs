@@ -11,7 +11,7 @@
             Context.Cache(Input, Output);
 
             globals = Output.DefineType(
-                "<Globals>",
+                Constants.GlobalsTypeName,
                 IL.TypeAttributes.Public |
                 IL.TypeAttributes.Abstract |
                 IL.TypeAttributes.Sealed
@@ -26,9 +26,9 @@
 
             LoadGlobals();
 
-            LoadFunctions();
-
             LoadTypes();
+
+            LoadFunctions();
 
             Loader.AddToNextPass(() => globals.CreateType());
 
@@ -71,6 +71,12 @@
         private Type LoadClass(IR.Class @class)
         {
             var type = Output.DefineType(@class.Name ?? string.Empty, IL.TypeAttributes.Public);
+
+            Context.Cache(@class, type);
+
+            new ClassLoader(Loader, @class, type).Load();
+
+            type.CreateType();
 
             return type;
         }

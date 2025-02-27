@@ -3,6 +3,11 @@
     internal sealed class ClassLoader(IRLoader loader, IR.Class input, IL.Emit.TypeBuilder output)
         : BaseIRLoader<IR.Class, IL.Emit.TypeBuilder>(loader, input, output)
     {
+        private List<Action> thisPass = [], nextPass = [];
+
+        private void AddToNextPass(Action action)
+            => nextPass.Add(action);
+
         public void Load()
         {
             //LoadNestedTypes();
@@ -11,15 +16,24 @@
 
             //LoadInterfaces();
 
-            LoadConstructors();
-
             LoadFields();
+
+            LoadConstructors();
 
             //LoadEvents();
 
             LoadMethods();
 
             //LoadProperties();
+
+            do
+            {
+                (thisPass, nextPass) = (nextPass, thisPass);
+                nextPass.Clear();
+
+                foreach (var action in thisPass)
+                    action();
+            } while (thisPass.Count > 0);
         }
 
         private void LoadNestedTypes()
@@ -77,7 +91,7 @@
                 Position = p.Index
             });
 
-            var result = Output.DefineConstructor(IL.MethodAttributes.Public, IL.CallingConventions.HasThis, irParams.Select(p => Loader.LoadType(p.Type)).ToArray());
+            var result = Output.DefineConstructor(IL.MethodAttributes.Public, IL.CallingConventions.HasThis, irParams.Skip(1).Select(p => Loader.LoadType(p.Type)).ToArray());
 
             Context.Cache(constructor.Method, result);
 
@@ -116,7 +130,12 @@
             if (method.IsStatic)
                 attributes |= IL.MethodAttributes.Static;
 
-            var result = Output.DefineMethod(method.Name ?? string.Empty, attributes, Loader.LoadType(method.ReturnType), parameters.Select(p => p.Type).ToArray());
+            var result = Output.DefineMethod(
+                method.Name ?? Constants.AnonymousMethod, 
+                attributes, 
+                Loader.LoadType(method.ReturnType), 
+                (method.IsInstance || method.IsVirtual ? parameters.Skip(1) : parameters).Select(p => p.Type).ToArray()
+            );
 
             Context.Cache(method, result);
 
@@ -129,7 +148,7 @@
             foreach (var local in method.Body.Locals)
                 codeLoader.Locals[local] = ilGen.DeclareLocal(Loader.LoadType(local.Type));
 
-            codeLoader.Load();
+            AddToNextPass(() => codeLoader.Load());
         }
     }
 }

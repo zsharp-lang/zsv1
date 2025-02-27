@@ -69,6 +69,9 @@ namespace ZSharp.Runtime.NET
         public Type Import(IR.IType type)
             => irLoader.LoadType(type);
 
+        public IR.IType Import(Type type)
+            => Context.Cache(type, out IR.IType? result) ? result : throw new();
+
         public IR.Module Import(IL.Module module)
         {
             if (!Context.Cache(module, out var result))
