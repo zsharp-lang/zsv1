@@ -20,6 +20,8 @@ namespace ZSharp.Compiler
 
         public CompilerObject Float32 { get; }
 
+        public CompilerObject Object { get; }
+
         internal TypeSystem(Compiler compiler)
             : base(compiler)
         {
@@ -31,6 +33,7 @@ namespace ZSharp.Compiler
             Boolean = new RawType(compiler.RuntimeModule.TypeSystem.Boolean, Type);
             Int32 = new(compiler.RuntimeModule.TypeSystem.Int32, Type);
             Float32 = new RawType(compiler.RuntimeModule.TypeSystem.Float32, Type);
+            Object = new RawType(compiler.RuntimeModule.TypeSystem.Object, Type);
         }
 
         public CompilerObject EvaluateType(CompilerObject @object)
