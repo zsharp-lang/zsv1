@@ -2,7 +2,10 @@
 {
     public sealed partial class ExpressionCompiler
     {
-        public CompilerObject CompileNode(LiteralExpression literal)
+        public Objects.ArrayLiteral Compile(ArrayLiteral array)
+            => new(array.Items.Select(Compiler.CompileNode));
+
+        public CompilerObject Compile(LiteralExpression literal)
             => literal.Type switch
             {
                 LiteralType.String => Compiler.Compiler.CreateString(literal.Value),

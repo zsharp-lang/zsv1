@@ -6,10 +6,11 @@
         public CompilerObject? CompileNode(Expression expression)
             => expression switch
             {
+                ArrayLiteral array => Compile(array),
                 BinaryExpression binary => Compile(binary),
                 CallExpression call => Compile(call),
                 IdentifierExpression identifier => Context.CurrentScope.Get(identifier.Name),
-                LiteralExpression literal => CompileNode(literal),
+                LiteralExpression literal => Compile(literal),
                 WhileExpression<Expression> @while => Compile(@while),
                 _ => null
             };
@@ -30,7 +31,7 @@
                 else if (binary.Right is not LiteralExpression literal)
                     throw new("Expected a literal expression on the right side of the dot operator.");
 
-                else member = CompileNode(literal);
+                else member = Compile(literal);
 
                 if (Compiler.Compiler.IsString(member, out var memberName))
                     return Compiler.Compiler.Member(left, memberName);
