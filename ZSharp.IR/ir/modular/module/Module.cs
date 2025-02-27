@@ -4,6 +4,7 @@ namespace ZSharp.IR
 {
     public sealed class Module(string? name) : ModuleMember
     {
+        private Function? _initializer;
         private ModuleCollection<ImportedModule>? _importedModules;
         private ModuleCollection<Function>? _functions;
         private GlobalCollection? _globals;
@@ -13,6 +14,22 @@ namespace ZSharp.IR
         public string? Name { get; set; } = name;
 
         public ModuleAttributes Attributes { get; set; } = ModuleAttributes.None;
+
+        public Function? Initializer
+        {
+            get => _initializer;
+            set
+            {
+                if (value is not null)
+                {
+                    if (value.Owner is null)
+                        Functions.Add(value);
+                    else if (value.Owner != this)
+                        throw new InvalidOperationException("Module initializer cannot reside in a different module.");
+                    _initializer = value;
+                }
+            }
+        }
 
         public Collection<ImportedModule> ImportedModules
         {
