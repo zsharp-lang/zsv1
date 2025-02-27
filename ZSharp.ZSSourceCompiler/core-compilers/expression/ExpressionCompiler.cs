@@ -53,7 +53,7 @@
 
         private CompilerObject Compile(CallExpression call)
         {
-            var callable = Compiler.CompileNode(call.Callee);
+            var callable = Compiler.Compiler.Evaluate(Compiler.CompileNode(call.Callee));
 
             var args = call.Arguments.Select(arg => new Compiler.Argument(arg.Name, Compiler.CompileNode(arg.Value)));
 
