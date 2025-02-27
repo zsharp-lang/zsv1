@@ -46,6 +46,25 @@ namespace ZSharp.Objects
             foreach (var item in Content)
                 compiler.CompileIRObject(item, IR);
 
+            if (IR.HasGlobals)
+            {
+                // TODO: initialize according to dependency order
+
+                var initializer = IR.Initializer = new(compiler.RuntimeModule.TypeSystem.Void)
+                {
+                    Name = "<Initializer>"
+                };
+
+                foreach (var global in IR.Globals)
+                    if (global.Initializer is not null)
+                        initializer.Body.Instructions.AddRange([
+                            .. global.Initializer,
+                            new IR.VM.SetGlobal(global),
+                        ]);
+
+                initializer.Body.Instructions.Add(new IR.VM.Return());
+            }
+
             return IR;
         }
     }

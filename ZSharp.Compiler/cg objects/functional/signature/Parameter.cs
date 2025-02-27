@@ -20,14 +20,16 @@ namespace ZSharp.Objects
             if (Type is null)
                 throw new("Parameter type not set.");
 
-            IR ??= new(Name, compiler.CompileIRType(Type));
+            IR ??= new(Name, compiler.RuntimeModule.TypeSystem.Void);
+            if (IR.Type == compiler.RuntimeModule.TypeSystem.Void)
+                IR.Type = compiler.CompileIRType(Type);
 
             return IR;
         }
 
         public IRCode Read(Compiler.Compiler compiler)
             => new([
-                new IR.VM.GetArgument(IR!),
+                new IR.VM.GetArgument(IR ?? compiler.CompileIRObject<IR.Parameter, IR.Signature>(this, null)),
             ])
             {
                 MaxStackSize = 1,
