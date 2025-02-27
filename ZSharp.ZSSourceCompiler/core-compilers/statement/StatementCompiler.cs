@@ -7,6 +7,7 @@
             => statement switch
             {
                 BlockStatement block => Compile(block),
+                CaseStatement @case => Compile(@case),
                 ExpressionStatement expressionStatement => Compile(expressionStatement),
                 IfStatement @if => Compile(@if),
                 ImportStatement import => Compile(import),
@@ -48,6 +49,29 @@
             result.RequireVoidType();
 
             return new Objects.RawCode(result);
+        }
+
+        private CompilerObject Compile(CaseStatement @case)
+        {
+            var result = new Objects.Case()
+            {
+                Of = @case.Of is null ? Compiler.Operators.Cache("==")! : Compiler.CompileNode(@case.Of),
+                Value = @case.Value is null ? Compiler.Compiler.CreateTrue() : Compiler.CompileNode(@case.Value),
+                Else = @case.Else is null ? null : Compiler.CompileNode(@case.Else),
+            };
+
+            foreach (var whenClause in @case.WhenClauses)
+            {
+                var clause = new Objects.Case.When()
+                {
+                    Body = Compiler.CompileNode(whenClause.Body ?? throw new()),
+                    Value = Compiler.CompileNode(whenClause.Value)
+                };
+
+                result.Clauses.Add(clause);
+            }
+
+            return result;
         }
 
         private CompilerObject Compile(IfStatement @if)
