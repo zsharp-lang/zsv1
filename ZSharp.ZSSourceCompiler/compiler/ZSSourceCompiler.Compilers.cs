@@ -9,7 +9,10 @@
 
         public ModuleCompiler CreateModuleCompiler(Module module)
         {
-            var compiler = new ModuleCompiler(this, module);
+            var compiler = new ModuleCompiler(this, module)
+            {
+                DefaultMetaClass = DefaultMetaClass,
+            };
 
             compiler.oopTypesCompilers.Add("class", (c, oop) =>
             {
@@ -17,14 +20,9 @@
 
                 // for C# types, we should create an uninitialized object via System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject
                 // ConstructorInfo.Invoke has an overload which takes `this` as the first parameter (for late initialization).
-                if (metaClass is not null) c.LogError("Metaclasses are not supported yet.", oop); 
+                if (metaClass is not null) c.LogError("Metaclasses are not supported yet.", oop);
 
-                var @object = new Objects.Class()
-                {
-                    Name = oop.Name,
-                };
-
-                return new ClassCompiler(c, oop, @object);
+                return new ClassCompiler(c, oop, compiler.DefaultMetaClass);
             });
 
             compiler.oopTypesCompilers.Add("interface", (c, oop) =>
