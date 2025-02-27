@@ -3,27 +3,28 @@ import { ceil, log2, random } from "std:math";
 
 module Program;
 
+let minNumber = 1;
+let maxNumber = 100;
+
+let maxTries = ceil(log2(maxNumber - minNumber));
+let number = random(minNumber, maxNumber);
+
+let inputMessage = "Guess a number between " + string(minNumber) + " and " + string(maxNumber) + ": ";
+
 fun guessOnce(guess: i32, number: i32, tries: i32): bool {
-	if (guess < number)
-		print("Too low!");
-	else if (number < guess)
-		print("Too high!");
-	else return true;
+	case (true) {
+	when (guess < number) print("Too low!");
+	when (number < guess) print("Too high!");
+	} else return true;
 
 	return false;
 }
 
 fun main(): void {
-	let minNumber = 1;
-	let maxNumber = 100;
-
-	let number = random(minNumber, maxNumber);
-	let maxTries = ceil(log2(maxNumber - minNumber));
-
 	var tries = 0;
 
 	while (tries < maxTries) {
-		let guessString = input("Guess a number between " + string(minNumber) + " and " + string(maxNumber) + ": ");
+		let guessString = input(inputMessage);
 		let guess = i32.parse(guessString);
 
 		if (guessOnce(guess, number, tries)) 
