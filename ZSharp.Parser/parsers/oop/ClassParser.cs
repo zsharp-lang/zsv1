@@ -17,6 +17,10 @@ namespace ZSharp.Parser
                 Utils.ExpressionStatement(LangParser.ParseLetExpression)
             );
             AddKeywordParser(
+                LangParser.Keywords.Var,
+                Utils.ExpressionStatement(LangParser.ParseVarExpression)
+            );
+            AddKeywordParser(
                 LangParser.Keywords.Function,
                 Utils.DefinitionStatement(Method.Parse)
             );
