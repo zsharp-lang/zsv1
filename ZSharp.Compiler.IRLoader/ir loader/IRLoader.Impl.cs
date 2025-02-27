@@ -33,6 +33,10 @@
                 foreach (var function in module.Functions)
                     actions.Add(Load(function, result));
 
+            if (module.HasTypes)
+                foreach (var type in module.Types)
+                    actions.Add(Load(type));
+
             foreach (var action in actions)
                 action();
 
@@ -97,7 +101,34 @@
 
         private Action Load(IR.Class @class)
         {
-            throw new NotImplementedException();
+            GenericClass result = new()
+            {
+                Name = @class.Name ?? string.Empty,
+            };
+
+            Context.Objects.Cache(@class, result);
+
+            if (@class.Base is not null)
+                result.Base = Load(@class.Base);
+
+            return () =>
+            {
+                if (@class.HasFields)
+                    foreach (var field in @class.Fields)
+                    {
+                        Field resultField = new(field.Name)
+                        {
+                            IR = field,
+                            Type = Load(field.Type),
+                        };
+                        if (field.Initializer is not null)
+                            resultField.Initializer = new RawCode(new(field.Initializer)
+                            {
+                                Types = [resultField.Type]
+                            });
+                        result.Members.Add(resultField.Name, resultField);
+                    };
+            };
         }
 
         private CompilerObject Load(IR.IType type)
@@ -106,6 +137,21 @@
                 return result;
 
             throw new NotImplementedException();
+        }
+
+        private GenericClassInstance Load(IR.ConstructedClass constructed)
+        {
+            var origin = Context.Objects.Cache<GenericClass>(constructed.Class) ?? throw new();
+
+            var args = new CommonZ.Utils.Mapping<GenericParameter, CompilerObject>();
+
+            if (origin.GenericParameters.Count != constructed.Arguments.Count)
+                throw new();
+
+            for (var i = 0; i < constructed.Arguments.Count; i++)
+                args[origin.GenericParameters[i]] = Import(constructed.Arguments[i]);
+
+            return new(origin, args);
         }
 
         private Signature Load(IR.Signature signature)
