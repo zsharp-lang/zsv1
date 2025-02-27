@@ -11,6 +11,14 @@
     "Projects/Guessing Game": {
       "commandName": "Project",
       "commandLineArgs": "projects/guessing-game.zs"
+    },
+    "Projects/Simple User System": {
+      "commandName": "Project",
+      "commandLineArgs": "projects/simple-user-system.zs"
+    },
+    "Tests/Test Class Fields": {
+      "commandName": "Project",
+      "commandLineArgs": "tests/test-class-fields.zs"
     }
   }
 }
