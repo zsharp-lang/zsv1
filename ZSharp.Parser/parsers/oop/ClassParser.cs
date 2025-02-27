@@ -22,7 +22,7 @@ namespace ZSharp.Parser
             );
             AddKeywordParser(
                 LangParser.Keywords.New,
-                Constructor.Parse
+                Utils.DefinitionStatement(Constructor.Parse)
             );
         }
 
