@@ -10,6 +10,8 @@ namespace ZSharp.ZSSourceCompiler
 
         public readonly Mapping<string, Func<ZSSourceCompiler, OOPDefinition, ContextCompiler>> oopTypesCompilers = [];
 
+        public required Objects.ClassMetaClass DefaultMetaClass { get; set; }
+
         public void AddToNextPass(Action action)
             => nextPass.Add(action);
 
@@ -100,7 +102,10 @@ namespace ZSharp.ZSSourceCompiler
 
         private Action Compile(Module module)
         {
-            var compiler = new ModuleCompiler(Compiler, module);
+            var compiler = new ModuleCompiler(Compiler, module)
+            {
+                DefaultMetaClass = DefaultMetaClass,
+            };
 
             Object.Content.Add(compiler.Object);
 

@@ -1,16 +1,38 @@
-﻿namespace ZSharp.ZSSourceCompiler
+﻿using System.Linq;
+using ZSharp.IR;
+using ZSharp.Objects;
+
+namespace ZSharp.ZSSourceCompiler
 {
-    public sealed class ClassCompiler(ZSSourceCompiler compiler, OOPDefinition oop, CompilerObject @object)
-        : ContextCompiler<OOPDefinition, CompilerObject>(compiler, oop, @object)
+    public sealed class ClassCompiler(
+        ZSSourceCompiler compiler, 
+        OOPDefinition node, 
+        ClassMetaClass metaClass
+    )
+        : ContextCompiler<OOPDefinition, GenericClass>(
+            compiler, node, new()
+            {
+                Name = node.Name
+            }
+        )
     {
-        public override CompilerObject Compile()
+        public override GenericClass Compile()
         {
-            var metaClass = Node.Of is null ? null : Compiler.CompileNode(Node.Of);
+            if (Node.Bases is not null)
+            {
+                var bases = Node.Bases.Select(Compiler.CompileType).ToArray();
 
-            var cls = (Objects.Class)Object;
+                if (bases.Length > 0)
+                {
+                    int interfacesIndex = 0;
+                    if (bases[0] is GenericClassInstance)
+                        Object.Base = (GenericClassInstance)bases[interfacesIndex++];
+                }
+            }
 
-            if (Node.Bases is not null && Node.Bases.Count > 0)
-                cls.Base = (Objects.Class)Compiler.Compiler.Evaluate(Compiler.CompileNode(Node.Bases[0]));
+            using (Context.Compiler(this))
+            using (Context.Scope(Object))
+                new ClassBodyCompiler(Compiler, Node, Object).Compile();
 
             return base.Compile();
         }
