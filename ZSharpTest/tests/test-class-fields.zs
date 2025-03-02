@@ -16,6 +16,10 @@ class MyClass : MyBase {
 		this.age = age;
 	}
 
+	new Old(this) {
+		MyClass(this: this, 80);
+	}
+
 	fun printAge(this): void {
 		return MyClass.printAge(this, "this.age = ");
 	}
@@ -30,6 +34,9 @@ class MyClass : MyBase {
 
 fun main(): void {
 	let myClass = MyClass(15);
+	let old = MyClass.Old();
+
+	MyClass.printAge(old);
 
 	print(string(myClass.age));
 
