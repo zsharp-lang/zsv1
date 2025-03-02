@@ -41,14 +41,19 @@ namespace ZSharp.Objects
 
             IR.VM.Instruction invocationInstruction;
 
-            if (kwArgs.ContainsKey(Signature.Args[0].Name))
+            bool hasReturn = false;
+            if (kwArgs.TryGetValue(Signature.Args[0].Name, out var thisArgument))
             {
                 invocationInstruction = new IR.VM.Call(IR!.Method);
+                kwArgs.Remove(Signature.Args[0].Name);
+                args.Insert(0, thisArgument);
             }
             else
             {
                 if (Owner is null)
                     throw new();
+
+                hasReturn = true;
 
                 invocationInstruction = new IR.VM.CreateInstance(IR!);
                 args.Insert(0, new RawCode(new()
@@ -92,7 +97,8 @@ namespace ZSharp.Objects
             result.Instructions.Add(invocationInstruction);
 
             result.Types.Clear();
-            result.Types.Add(Owner ?? throw new());
+            if (hasReturn)
+                result.Types.Add(Owner ?? throw new());
 
             result.MaxStackSize = Math.Max(result.MaxStackSize, result.Types.Count);
 
