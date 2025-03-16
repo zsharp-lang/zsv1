@@ -36,7 +36,7 @@ fun main(): void {
 	let myClass = MyClass(15);
 	let old = MyClass.Old();
 
-	MyClass.printAge(old);
+	old.printAge();
 
 	print(string(myClass.age));
 
@@ -44,7 +44,8 @@ fun main(): void {
 
 	print("myClass.age = " + string(myClass.age));
 
-	MyClass.printAge(myClass);
+	myClass.printAge();
+	myClass.printAge("Hello!");
 
 	return;
 }
