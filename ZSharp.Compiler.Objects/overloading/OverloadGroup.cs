@@ -9,7 +9,7 @@ namespace ZSharp.Objects
     {
         public string Name { get; set; } = name;
 
-        public Collection<CompilerObject> Overloads { get; } = [];
+        public Collection<CompilerObject> Overloads { get; init; } = [];
 
         public CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments)
         {

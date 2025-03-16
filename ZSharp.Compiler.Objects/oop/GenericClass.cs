@@ -112,6 +112,15 @@ namespace ZSharp.Objects
             if (memberObject is IRTBoundMember boundMember)
                 return boundMember.Bind(compiler, value);
 
+            if (memberObject is OverloadGroup group)
+                return new OverloadGroup(group.Name)
+                {
+                    Overloads = [.. group.Overloads.Select(
+                        overload => overload is IRTBoundMember boundMember ?
+                        boundMember.Bind(compiler, value) : overload
+                    )],
+                };
+
             return memberObject;
         }
     }
