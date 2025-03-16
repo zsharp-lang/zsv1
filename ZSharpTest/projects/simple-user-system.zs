@@ -2,9 +2,9 @@
  * [-] Primary constructor
  * [-] Auto-fields from primary constructor parameters
  * [x] Fields
- * [ ] Anonymous constructor
- * [ ] Named constructor
- * [ ] Methods
+ * [x] Anonymous constructor
+ * [x] Named constructor
+ * [x] Methods
  * [x] Case-Of
  * [ ] Automatic type inference for first parameter in methods
  * [ ] Automatic instance binding when accessing instance method/field from instance method
