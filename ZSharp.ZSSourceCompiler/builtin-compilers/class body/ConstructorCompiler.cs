@@ -81,6 +81,15 @@
             if (member is Objects.IRTBoundMember boundMember)
                 return boundMember.Bind(Compiler.Compiler, This);
 
+            if (member is Objects.OverloadGroup group)
+                return new Objects.OverloadGroup(group.Name)
+                {
+                    Overloads = [.. group.Overloads.Select(
+                        overload => overload is Objects.IRTBoundMember boundMember ?
+                        boundMember.Bind(Compiler.Compiler, This) : overload
+                    )],
+                };
+
             return member;
         }
 
