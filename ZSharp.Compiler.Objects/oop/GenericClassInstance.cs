@@ -9,6 +9,7 @@ namespace ZSharp.Objects
     )
         : CompilerObject
         , ICTGetMember<MemberName>
+        , IRTGetMember<MemberName>
         , ICTCallable
         , IReference
         , ICompileIRType<IR.ConstructedClass>
@@ -32,6 +33,31 @@ namespace ZSharp.Objects
             if (Arguments.Count != 0)
                 //origin = compiler.CreateReference(origin, Context);
                 throw new NotImplementedException();
+
+            return Members[member] = origin;
+        }
+
+        public CompilerObject Member(Compiler.Compiler compiler, CompilerObject instance, string member)
+        {
+            if (Members.ContainsKey(member)) return Members[member];
+
+            var origin = compiler.Member(Origin, member);
+
+            if (Arguments.Count != 0)
+                //origin = compiler.CreateReference(origin, Context);
+                throw new NotImplementedException();
+
+            if (origin is IRTBoundMember boundMember)
+                return boundMember.Bind(compiler, instance);
+
+            if (origin is OverloadGroup group)
+                return new OverloadGroup(group.Name)
+                {
+                    Overloads = [.. group.Overloads.Select(
+                        overload => overload is IRTBoundMember boundMember ?
+                        boundMember.Bind(compiler, instance) : overload
+                    )],
+                };
 
             return Members[member] = origin;
         }
