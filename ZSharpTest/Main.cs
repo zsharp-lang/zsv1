@@ -57,6 +57,7 @@ using (StreamReader stream = File.OpenText(filePath))
     expressionParser.InfixL("*", 70);
     expressionParser.InfixL("**", 80);
 
+    expressionParser.InfixL("==", 30);
     expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
     expressionParser.Led(TokenType.LBracket, LangParser.ParseIndexExpression, 100);
     expressionParser.Nud(TokenType.LBracket, LangParser.ParseArrayLiteral);
