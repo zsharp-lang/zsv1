@@ -24,9 +24,9 @@
             //    IL.MethodAttributes.PrivateScope
             //);
 
-            LoadGlobals();
-
             LoadTypes();
+
+            LoadGlobals();
 
             LoadFunctions();
 
