@@ -36,5 +36,9 @@ namespace Standard.IO
         [Alias(Name = "_==_")]
         public static bool Equals(bool a, bool b)
             => a == b;
+
+        [Alias(Name = "_!=_")]
+        public static bool NotEquals(string a, string b)
+            => a != b;
     }
 }
