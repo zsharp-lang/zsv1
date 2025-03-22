@@ -13,6 +13,9 @@
  */
 
 
+import { input, print } from "std:io";
+
+
 module Program;
 
 
@@ -83,6 +86,8 @@ fun signIn(): void {
 	when (user) print("USER"); // userTerminal();
 	when (admin) print("ADMIN"); // adminTerminal();
 	} else print("Invalid credentials.");
+
+	return;
 }
 
 
