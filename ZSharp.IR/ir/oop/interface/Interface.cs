@@ -8,7 +8,7 @@ namespace ZSharp.IR
 
         public InterfaceAttributes Attributes { get; set; } = InterfaceAttributes.None;
 
-        public Collection<Interface> Bases { get; set; }
+        public Collection<OOPTypeReference<Interface>> Bases { get; set; }
 
         public Collection<Method> Methods { get; }
 

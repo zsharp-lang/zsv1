@@ -2,13 +2,13 @@
 
 namespace ZSharp.IR
 {
-    public sealed class Structure
+    public sealed class Structure : OOPType
     {
         public string? Name { get; set; }
 
         public StructureAttributes Attributes { get; set; } = StructureAttributes.None;
 
-        public Collection<Structure> Bases { get; set; }
+        public Collection<OOPTypeReference<Structure>> Bases { get; set; }
 
         public Collection<Method> Methods { get; }
 

@@ -12,9 +12,9 @@ namespace ZSharp.IR
 
         public ClassAttributes Attributes { get; set; } = ClassAttributes.None;
 
-        public ConstructedClass? Base { get; set; }
+        public OOPTypeReference<Class>? Base { get; set; }
 
-        public Class(string? name, ConstructedClass? @base)
+        public Class(string? name, OOPTypeReference<Class>? @base)
             : this(name)
         {
             Base = @base;

@@ -8,7 +8,7 @@ namespace ZSharp.IR
 
         public TypeclassAttributes Attributes { get; set; } = TypeclassAttributes.None;
 
-        public Collection<Typeclass> Bases { get; }
+        public Collection<OOPTypeReference<Typeclass>> Bases { get; }
 
         public GenericParameter Parameter { get; }
 
