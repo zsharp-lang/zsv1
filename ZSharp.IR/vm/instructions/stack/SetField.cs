@@ -1,11 +1,11 @@
 ﻿namespace ZSharp.IR.VM
 {
-    public sealed class SetField(Field field)
+    public sealed class SetField(MemberReference<Field> field)
         : Instruction
-        , IHasOperand<Field>
+        , IHasOperand<MemberReference<Field>>
     {
-        public Field Field { get; set; } = field;
+        public MemberReference<Field> Field { get; set; } = field;
 
-        Field IHasOperand<Field>.Operand => Field;
+        MemberReference<Field> IHasOperand<MemberReference<Field>>.Operand => Field;
     }
 }
