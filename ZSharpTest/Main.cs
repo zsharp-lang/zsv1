@@ -114,6 +114,15 @@ using (StreamReader stream = File.OpenText(filePath))
 #region Compilation
 
 var interpreter = new Interpreter();
+
+interpreter.SourceCompiler.StringImporter.Importers.Add(
+    "net",
+    new ZSharp.DotNETImporter(interpreter)
+);
+
+new Referencing(interpreter.Compiler);
+new OOP(interpreter.Compiler);
+
 ZSharp.Runtime.NET.Runtime runtime = new(interpreter);
 
 interpreter.Runtime = runtime;

@@ -2,11 +2,16 @@
 
 namespace ZSharp.IR
 {
-    public sealed class Class(string? name) : OOPType
+    public sealed class Class(string? name) 
+        : OOPType
+        , ICustomMetadataProvider
     {
+        private Collection<CustomMetadata>? _customMetadata;
         private Collection<GenericParameter>? _genericParameters;
 
+        private Collection<Constructor>? _constructors;
         private FieldCollection? _fields;
+        private Collection<Method>? _methods;
 
         public string? Name { get; set; } = name;
 
@@ -19,6 +24,20 @@ namespace ZSharp.IR
         {
             Base = @base;
         }
+
+        public Collection<CustomMetadata> CustomMetadata
+        {
+            get
+            {
+                if (_customMetadata is not null)
+                    return _customMetadata;
+
+                Interlocked.CompareExchange(ref _customMetadata, [], null);
+                return _customMetadata;
+            }
+        }
+
+        public bool HasCustomMetadata => !_customMetadata.IsNullOrEmpty();
 
         public Collection<InterfaceImplementation> InterfacesImplementations { get; } = [];
 
@@ -36,6 +55,21 @@ namespace ZSharp.IR
 
         public bool HasGenericParameters => !_genericParameters.IsNullOrEmpty();
 
+        public Collection<Constructor> Constructors
+        {
+            get
+            {
+                if (_constructors is not null)
+                    return _constructors;
+
+                Interlocked.CompareExchange(ref _constructors, [], null);
+
+                return _constructors;
+            }
+        }
+
+        public bool HasConstructors => !_constructors.IsNullOrEmpty();
+
         public Collection<Field> Fields
         {
             get
@@ -50,14 +84,25 @@ namespace ZSharp.IR
 
         public bool HasFields => !_fields.IsNullOrEmpty();
 
-        public Collection<Method> Methods { get; } = [];
+        public Collection<Method> Methods
+        {
+            get
+            {
+                if (_methods is not null)
+                    return _methods;
+
+                Interlocked.CompareExchange(ref _methods, [], null);
+
+                return _methods;
+            }
+        }
+
+        public bool HasMethods => !_methods.IsNullOrEmpty();
 
         public Collection<Property> Properties { get; } = [];
 
-        //public Collection<ZSObject> NestedTypes { get; } = new();
+        public Collection<OOPType> NestedTypes { get; } = [];
 
         //public Collection<Event> Events { get; }
-
-        public Collection<Constructor> Constructors { get; } = [];
     }
 }

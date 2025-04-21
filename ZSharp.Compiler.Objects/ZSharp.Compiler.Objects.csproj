@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.Features\ZSharp.Compiler.Features.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
   </ItemGroup>
 

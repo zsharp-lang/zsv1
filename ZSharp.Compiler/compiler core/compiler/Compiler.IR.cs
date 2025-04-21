@@ -70,6 +70,17 @@
             if ((irType = @object as ICompileIRType<T>) is not null)
                 return irType.CompileIRType(this);
 
+            if (@object is ICompileIRType irUntypedType)
+                return (T)irUntypedType.CompileIRType(this);
+
+            throw new NotImplementedException(); // TODO: return null
+        }
+
+        public T CompileIRReference<T>(CompilerObject @object)
+        {
+            if (@object is ICompileIRReference<T> irReference)
+                return irReference.CompileIRReference(this);
+
             throw new NotImplementedException(); // TODO: return null
         }
     }

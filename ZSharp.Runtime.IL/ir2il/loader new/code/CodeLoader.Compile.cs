@@ -8,8 +8,7 @@ namespace ZSharp.Runtime.NET.IR2IL
 
         private void Compile(VM.Call call)
         {
-            if (!Context.Cache(call.Callable, out var callable))
-                throw new();
+            var callable = Loader.LoadReference(call.Callable);
 
             foreach (var _ in call.Callable.Signature.GetParameters())
                 _stack.Pop();
@@ -38,8 +37,7 @@ namespace ZSharp.Runtime.NET.IR2IL
 
         private void Compile(VM.CallVirtual callVirtual)
         {
-            if (!Context.Cache<IL.MethodInfo>(callVirtual.Method, out var method))
-                throw new();
+            var method = Loader.LoadReference(callVirtual.Method);
 
             if (!method.IsVirtual && !method.IsAbstract)
                 throw new($"Method {method} is not virtual or abstract!");
@@ -52,8 +50,7 @@ namespace ZSharp.Runtime.NET.IR2IL
 
         private void Compile(VM.CreateInstance createInstance)
         {
-            if (!Context.Cache<IL.ConstructorInfo>(createInstance.Constructor.Method, out var constructor))
-                throw new();
+            var constructor = Loader.LoadReference(createInstance.Constructor);
 
             Output.Emit(IL.Emit.OpCodes.Newobj, constructor);
 
@@ -90,8 +87,7 @@ namespace ZSharp.Runtime.NET.IR2IL
 
         private void Compile(VM.GetField getField)
         {
-            if (!Context.Cache(getField.Field, out var field))
-                throw new();
+            var field = Loader.LoadReference(getField.Field);
 
             Output.Emit(field.IsStatic ? IL.Emit.OpCodes.Ldsfld : IL.Emit.OpCodes.Ldfld, field);
 
@@ -220,8 +216,7 @@ namespace ZSharp.Runtime.NET.IR2IL
 
         private void Compile(VM.SetField setField)
         {
-            if (!Context.Cache(setField.Field, out var field))
-                throw new();
+            var field = Loader.LoadReference(setField.Field);
 
             Output.Emit(field.IsStatic ? IL.Emit.OpCodes.Stsfld : IL.Emit.OpCodes.Stfld, field);
 

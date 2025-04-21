@@ -22,14 +22,16 @@
                     Object.Signature.Args.Add(Compile(parameter));
 
             if (Node.Signature.VarArgs is not null)
-                Object.Signature.VarArgs = Compile(Node.Signature.VarArgs);
+                //Object.Signature.VarArgs = Compile(Node.Signature.VarArgs);
+                throw new NotImplementedException();
 
             if (Node.Signature.KwArgs is not null)
                 foreach (var parameter in Node.Signature.KwArgs)
                     Object.Signature.KwArgs.Add(Compile(parameter));
 
             if (Node.Signature.VarKwArgs is not null)
-                Object.Signature.VarKwArgs = Compile(Node.Signature.VarKwArgs);
+                //Object.Signature.VarKwArgs = Compile(Node.Signature.VarKwArgs);
+                throw new NotImplementedException();
 
             if (Node.ReturnType is not null)
                 Object.ReturnType = Compiler.CompileType(Node.ReturnType);

@@ -1,7 +1,7 @@
 ﻿namespace ZSharp.Runtime.NET.IR2IL
 {
-    internal sealed partial class CodeLoader(IRLoader loader, IR.ICallable code, IL.Emit.ILGenerator method)
-        : BaseIRLoader<IR.ICallable, IL.Emit.ILGenerator>(loader, code, method)
+    internal sealed partial class CodeLoader(RootModuleLoader loader, IR.ICallable code, IL.Emit.ILGenerator method)
+        : ModuleContentLoader<IR.ICallable, IL.Emit.ILGenerator>(loader, code, method)
         , ICodeLoader
     {
         private readonly Dictionary<IR.VM.Instruction, IL.Emit.Label> labels = [];
@@ -12,7 +12,7 @@
 
         public Dictionary<IR.VM.Local, IL.Emit.LocalBuilder> Locals { get; } = [];
 
-        public void Load()
+        protected override void DoLoad()
         {
             CompileCode();
         }

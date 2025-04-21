@@ -1,11 +1,16 @@
 ﻿using ZSharp.Compiler;
 
+using Args = CommonZ.Utils.Collection<ZSharp.Objects.CompilerObject>;
+using KwArgs = CommonZ.Utils.Mapping<string, ZSharp.Objects.CompilerObject>;
+
+
 namespace ZSharp.Objects
 {
     public sealed class Constructor(string? name)
         : CompilerObject
         , ICTCallable
         , ICompileIRObject<IR.Constructor, IR.Class>
+        , IReferencable<ConstructorReference>
     {
         [Flags]
         enum BuildState
@@ -50,15 +55,20 @@ namespace ZSharp.Objects
             }
             else
             {
-                if (Owner is null)
-                    throw new();
+                var type = Owner ?? Signature.Args[0].Type;
 
                 hasReturn = true;
 
-                invocationInstruction = new IR.VM.CreateInstance(IR!);
+                invocationInstruction = new IR.VM.CreateInstance(new IR.ConstructorReference(IR!)
+                {
+                    OwningType = (IR?.Method.Owner is null 
+                        ? IR!.Method.Signature.Args.Parameters[0].Type as IR.OOPTypeReference
+                        : new IR.ClassReference(IR!.Method.Owner as IR.Class ?? throw new()))
+                        ?? throw new()
+                });
                 args.Insert(0, new RawCode(new()
                 {
-                    Types = [Owner]
+                    Types = [type]
                 }));
             }
 
@@ -98,7 +108,7 @@ namespace ZSharp.Objects
 
             result.Types.Clear();
             if (hasReturn)
-                result.Types.Add(Owner ?? throw new());
+                result.Types.Add(Owner ?? Signature.Args[0].Type);
 
             result.MaxStackSize = Math.Max(result.MaxStackSize, result.Types.Count);
 
@@ -145,6 +155,11 @@ namespace ZSharp.Objects
             }
 
             return IR;
+        }
+
+        ConstructorReference IReferencable<ConstructorReference>.CreateReference(Referencing @ref, ReferenceContext context)
+        {
+            return new(this, context);
         }
     }
 }

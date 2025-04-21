@@ -1,12 +1,12 @@
-﻿namespace ZSharp.Runtime.NET.IR2IL
+﻿using System.Collections.Generic;
+
+namespace ZSharp.Runtime.NET.IR2IL
 {
     /// <summary>
     /// Wraps an IR module in a C# module.
     /// </summary>
     public class IRLoader(Context context, IR.RuntimeModule? runtimeModule = null)
     {
-        private List<Action> thisPass = [], nextPass = [];
-
         public Context Context { get; } = context;
 
         public IR.RuntimeModule RuntimeModule { get; } = runtimeModule ?? IR.RuntimeModule.Standard;
@@ -18,25 +18,7 @@
             if (Context.Cache(module, out var result))
                 return result;
 
-            var assemblybuilder = IL.Emit.AssemblyBuilder.DefineDynamicAssembly(
-                new IL.AssemblyName(module.Name ?? "<AnonymousAssembly>"),
-                IL.Emit.AssemblyBuilderAccess.RunAndCollect);
-
-            result = new ModuleLoader(this, module, assemblybuilder.DefineDynamicModule(module.Name ?? "<AnonymousModule>")).Load();
-
-            if (module.HasSubmodules)
-                foreach (var submodule in module.Submodules)
-                    new ModuleLoader(this, submodule, assemblybuilder.DefineDynamicModule(result.Name + '.' + (module.Name ?? "<AnonymousModule>"))).Load();
-
-            while (nextPass.Count > 0)
-            {
-                (thisPass, nextPass) = (nextPass, thisPass);
-
-                foreach (var action in thisPass)
-                    action();
-
-                thisPass.Clear();
-            }
+             result = new RootModuleLoader(this, module).Load();
 
             if (module.Initializer is not null)
                 result
@@ -55,26 +37,116 @@
             return type switch
             {
                 IR.ConstructedClass constructedClass => LoadType(constructedClass),
+                IR.OOPTypeReference reference => LoadType(reference),
                 _ => throw new NotImplementedException()
             };
         }
 
-        public Type LoadType(IR.ConstructedClass constructedClass)
+        public Type LoadType(IR.OOPTypeReference typeReference)
         {
-            var innerClass = Context.Cache(constructedClass.Class);
+            var type = Context.Cache(typeReference.Definition);
 
-            if (innerClass is null)
+            if (type is null)
                 throw new();
 
-            if (constructedClass.Arguments.Count == 0)
-                return innerClass;
+            List<Type> genericArguments = [];
 
-            return innerClass.MakeGenericType([
-                .. constructedClass.Arguments.Select(LoadType)
-            ]);
+            if (typeReference.OwningType is not null)
+                genericArguments.AddRange(LoadType(typeReference.OwningType).GetGenericArguments());
+
+            if (typeReference is IR.ConstructedType constructedType)
+                genericArguments.AddRange(constructedType.Arguments.Select(LoadType));
+
+            return type.MakeGenericType([.. genericArguments]);
         }
 
-        internal void AddToNextPass(Action action)
-            => nextPass.Add(action);
+        public Type LoadType(IR.ConstructedClass constructedClass)
+        {
+            var result = LoadType(constructedClass as IR.OOPTypeReference);
+
+            return result;
+            //var innerClass = LoadType(constructedClass as IR.OOPTypeReference);
+
+            //if (innerClass is null)
+            //    throw new();
+
+            //if (constructedClass.Arguments.Count == 0)
+            //    return innerClass;
+
+            //return innerClass.MakeGenericType([
+            //    .. constructedClass.Arguments.Select(LoadType)
+            //]);
+        }
+
+        public IL.MethodBase LoadReference(IR.ICallable callable)
+        {
+            if (Context.Cache(callable) is IL.MethodBase result)
+                return result;
+
+            if (callable is IR.MemberReference<IR.Method> methodReference)
+                return LoadReference(methodReference);
+
+            throw new NotImplementedException();
+        }
+
+        public IL.ConstructorInfo LoadReference(IR.MemberReference<IR.Constructor> @ref)
+        {
+            var type = LoadType(@ref.OwningType);
+
+            if (!Context.Cache(@ref.Member.Method, out var def))
+                throw new InvalidOperationException($"Method {@ref.Member.Name} was not loaded");
+
+            var method = type.GetConstructor([]);
+
+            if (method is null)
+                throw new();
+
+            if (method.HasSameMetadataDefinitionAs(def))
+                return method;
+
+            throw new();
+        }
+
+        public IL.FieldInfo LoadReference(IR.MemberReference<IR.Field> @ref)
+        {
+            var type = LoadType(@ref.OwningType);
+
+            if (!Context.Cache(@ref.Member, out var def))
+                throw new InvalidOperationException($"Field {@ref.Member.Name} was not loaded");
+
+            var field = type.GetField(def.Name);
+
+            if (field is null)
+                throw new();
+
+            if (field.HasSameMetadataDefinitionAs(def))
+                return field;
+
+            throw new();
+        }
+
+        public IL.MethodInfo LoadReference(IR.MemberReference<IR.Method> @ref)
+        {
+            var type = LoadType(@ref.OwningType);
+
+            if (!Context.Cache(@ref.Member, out var def))
+                throw new InvalidOperationException($"Method {@ref.Member.Name} was not loaded");
+
+            var types = ((IR.ICallable)@ref).Signature.GetParameters().Select(p => p.Type).Skip(@ref.Member.IsStatic ? 0 : 1).Select(LoadType).ToArray();
+
+            var method = type.GetMethod(
+                def.Name, 
+                def.GetGenericArguments().Length,
+                types
+            );
+
+            if (method is null)
+                throw new();
+
+            if (method.HasSameMetadataDefinitionAs(def))
+                return method;
+
+            throw new();
+        }
     }
 }

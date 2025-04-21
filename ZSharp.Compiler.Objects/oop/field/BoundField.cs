@@ -23,7 +23,9 @@ namespace ZSharp.Objects
                 new IR.VM.Dup(),
                 ..instanceCode.Instructions,
                 new IR.VM.Swap(),
-                new IR.VM.SetField(Field.IR!),
+                new IR.VM.SetField(new IR.FieldReference(Field.IR!) {
+                    OwningType = new IR.ClassReference(Field.IR!.Owner ?? throw new())
+                }),
                 ])
             {
                 MaxStackSize = Math.Max(Math.Max(instanceCode.MaxStackSize, valueCode.MaxStackSize), 2),
@@ -37,7 +39,9 @@ namespace ZSharp.Objects
 
             return new([
                 ..code.Instructions,
-                new IR.VM.GetField(Field.IR!)
+                new IR.VM.GetField(new IR.FieldReference(Field.IR!) {
+                    OwningType = new IR.ClassReference(Field.IR!.Owner ?? throw new())
+                })
                 ])
             {
                 MaxStackSize = Math.Max(code.MaxStackSize, 1),

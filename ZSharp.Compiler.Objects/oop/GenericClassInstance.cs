@@ -4,8 +4,7 @@ using ZSharp.Compiler;
 namespace ZSharp.Objects
 {
     public sealed class GenericClassInstance(
-        GenericClass origin,
-        Mapping<GenericParameter, CompilerObject> genericArguments
+        GenericClass origin
     )
         : CompilerObject
         , ICTGetMember<MemberName>
@@ -13,14 +12,15 @@ namespace ZSharp.Objects
         , ICTCallable
         , IReference
         , ICompileIRType<IR.ConstructedClass>
+        , ICompileIRReference<IR.OOPTypeReference<IR.Class>>
+        , ICompileIRReference<IR.OOPTypeReference>
+        , IReferencable<GenericClassInstance>
     {
         CompilerObject IReference.Origin => Origin;
 
-        public ReferenceContext? Context { get; set; } = null;
+        public required ReferenceContext Context { get; set; } = null;
 
         public GenericClass Origin { get; set; } = origin;
-
-        public Mapping<GenericParameter, CompilerObject> Arguments { get; set; } = genericArguments;
 
         public Mapping<MemberName, CompilerObject> Members { get; set; } = [];
 
@@ -30,7 +30,7 @@ namespace ZSharp.Objects
 
             var origin = compiler.Member(Origin, member);
 
-            if (Arguments.Count != 0)
+            if (Origin.GenericParameters.Count != 0)
                 //origin = compiler.CreateReference(origin, Context);
                 throw new NotImplementedException();
 
@@ -43,23 +43,9 @@ namespace ZSharp.Objects
 
             var origin = compiler.Member(Origin, member);
 
-            if (Arguments.Count != 0)
-                //origin = compiler.CreateReference(origin, Context);
-                throw new NotImplementedException();
+            Members[member] = origin = compiler.Map(origin, @object => compiler.Feature<Referencing>().CreateReference(@object, Context));
 
-            if (origin is IRTBoundMember boundMember)
-                return boundMember.Bind(compiler, instance);
-
-            if (origin is OverloadGroup group)
-                return new OverloadGroup(group.Name)
-                {
-                    Overloads = [.. group.Overloads.Select(
-                        overload => overload is IRTBoundMember boundMember ?
-                        boundMember.Bind(compiler, instance) : overload
-                    )],
-                };
-
-            return Members[member] = origin;
+            return compiler.Map(origin, @object => @object is IRTBoundMember bindable ? bindable.Bind(compiler, instance) : @object);
         }
 
         IR.ConstructedClass ICompileIRType<IR.ConstructedClass>.CompileIRType(Compiler.Compiler compiler)
@@ -69,7 +55,7 @@ namespace ZSharp.Objects
             );
 
             foreach (var parameter in Origin.GenericParameters)
-                result.Arguments.Add(compiler.CompileIRType(Arguments[parameter]));
+                result.Arguments.Add(compiler.CompileIRType(Context.CompileTimeValues.Cache(parameter) ?? throw new()));
 
             return result;
         }
@@ -78,13 +64,50 @@ namespace ZSharp.Objects
         {
             CompilerObject? constructor = null;
 
-            if (Origin.GenericParameters.Count == 0)
-                constructor = Origin.Constructor;
+            //if (Origin.GenericParameters.Count == 0)
+            constructor = Origin.Constructor;
 
             if (constructor is null)
                 throw new NotImplementedException();
 
+            var @ref = compiler.Feature<Referencing>();
+
+            if (Context is not null)
+                constructor = compiler.Map(constructor, @object => @ref.CreateReference(@object, Context));
+
             return compiler.Call(constructor, arguments);
         }
+
+        IR.OOPTypeReference<IR.Class> ICompileIRReference<IR.OOPTypeReference<IR.Class>>.CompileIRReference(Compiler.Compiler compiler)
+            => compiler.CompileIRType<IR.ConstructedClass>(this);
+
+        GenericClassInstance IReferencable<GenericClassInstance>.CreateReference(Referencing @ref, ReferenceContext context)
+        {
+            Mapping<GenericParameter, CompilerObject> arguments = [];
+
+            return new(Origin)
+            {
+                Context = context
+            };
+        }
+
+        public override bool Equals(object? obj)
+        {
+            // TODO: instead of type == type, use assignable to
+            if (obj is not GenericClassInstance other)
+                return false;
+
+            if (Origin != other.Origin)
+                return false;
+
+            foreach (var genericParameter in Origin.GenericParameters)
+                if (Context[genericParameter] != other.Context[genericParameter])
+                    return false;
+
+            return true;
+        }
+
+        IR.OOPTypeReference ICompileIRReference<IR.OOPTypeReference>.CompileIRReference(Compiler.Compiler compiler)
+            => compiler.CompileIRType<IR.ConstructedClass>(this);
     }
 }

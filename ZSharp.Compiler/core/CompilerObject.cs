@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Objects
 {
-    public abstract class CompilerObject
+    public interface CompilerObject
     {
     }
 }

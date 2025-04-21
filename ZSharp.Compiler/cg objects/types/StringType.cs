@@ -2,12 +2,12 @@
 
 namespace ZSharp.Objects
 {
-    public sealed class StringType(IR.ConstructedClass stringType, CompilerObject type)
+    public sealed class StringType(IR.OOPTypeReference<IR.Class> stringType, CompilerObject type)
         : CompilerObject
         , ICompileIRType
         , ICTCallable
     {
-        public IR.ConstructedClass IR { get; } = stringType;
+        public IR.OOPTypeReference<IR.Class> IR { get; } = stringType;
 
         public CompilerObject Type { get; } = type;
 

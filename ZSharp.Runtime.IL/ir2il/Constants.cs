@@ -4,6 +4,10 @@
     {
         public const string GlobalsTypeName = "<Globals>";
 
+        public const string AnonymousClass = "<AnonymousClass>";
+
         public const string AnonymousMethod = "<AnonymousMethod>";
+
+        public const string AnonymousModule = "<AnonymousModule>";
     }
 }

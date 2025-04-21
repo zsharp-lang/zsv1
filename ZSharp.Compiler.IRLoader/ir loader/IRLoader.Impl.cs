@@ -35,7 +35,7 @@
 
             if (module.HasTypes)
                 foreach (var type in module.Types)
-                    actions.Add(Load(type));
+                    actions.Add(Load(type, result));
 
             foreach (var action in actions)
                 action();
@@ -90,26 +90,47 @@
             };
         }
 
-        private Action Load(IR.OOPType type)
+        private Action Load(IR.OOPType type, Module owner)
             => type switch
             {
-                IR.Class @class => Load(@class),
+                IR.Class @class => Load(@class, owner),
                 //IR.Interface @interface => Load(@interface),
                 //IR.Struct @struct => Load(@struct),
                 _ => throw new NotImplementedException(),
             };
 
-        private Action Load(IR.Class @class)
+        private Action Load(IR.Class @class, Module owner)
         {
             GenericClass result = new()
             {
                 Name = @class.Name ?? string.Empty,
+                IR = new(@class),
+                Defined = true,
             };
 
             Context.Objects.Cache(@class, result);
 
+            owner.Content.Add(result);
+
+            if (result.Name is not null && result.Name != string.Empty)
+                owner.Members.Add(result.Name, result);
+
             if (@class.Base is not null)
                 result.Base = Load(@class.Base);
+
+            if (@class.HasGenericParameters)
+                foreach (var parameter in @class.GenericParameters)
+                {
+                    var genericParameter = new GenericParameter()
+                    {
+                        Name = parameter.Name,
+                        IR = parameter,
+                    };
+
+                    Context.Types.Cache(parameter, genericParameter);
+
+                    result.GenericParameters.Add(genericParameter);
+                }
 
             return () =>
             {
@@ -128,6 +149,55 @@
                             });
                         result.Members.Add(resultField.Name, resultField);
                     };
+
+                if (@class.Constructors.Count > 0)
+                    foreach (var constructor in @class.Constructors)
+                    {
+                        Constructor resultConstructor = new(constructor.Name)
+                        {
+                            Owner = result,
+                            IR = constructor,
+                        };
+                        if (resultConstructor.Name is not null && resultConstructor.Name != string.Empty)
+                        {
+                            if (!result.Members.TryGetValue(resultConstructor.Name, out var group))
+                                result.Members.Add(resultConstructor.Name, group = new OverloadGroup(resultConstructor.Name));
+
+                            if (group is not OverloadGroup overloadGroup)
+                                throw new InvalidOperationException();
+
+                            overloadGroup.Overloads.Add(resultConstructor);
+                        } else
+                        {
+                            if (result.Constructor is not OverloadGroup group)
+                                result.Constructor = group = new OverloadGroup(string.Empty);
+
+                            group.Overloads.Add(resultConstructor);
+                        }
+                        resultConstructor.Signature = Load(constructor.Method.Signature);
+                    }
+
+                if (@class.Methods.Count > 0)
+                    foreach (var method in @class.Methods)
+                    {
+                        Method resultMethod = new(method.Name)
+                        {
+                            IR = method,
+                            Defined = true,
+                        };
+                        if (resultMethod.Name is not null && resultMethod.Name != string.Empty)
+                        {
+                            if (!result.Members.TryGetValue(resultMethod.Name, out var group))
+                                result.Members.Add(resultMethod.Name, group = new OverloadGroup(resultMethod.Name));
+
+                            if (group is not OverloadGroup overloadGroup)
+                                throw new InvalidOperationException();
+
+                            overloadGroup.Overloads.Add(resultMethod);
+                        }
+                        resultMethod.Signature = Load(method.Signature);
+                        resultMethod.ReturnType = Load(method.ReturnType);
+                    }
             };
         }
 
@@ -136,22 +206,41 @@
             if (Context.Types.Cache(type, out var result))
                 return result;
 
-            throw new NotImplementedException();
+            if (type is IR.ConstructedClass constructed)
+                return Load(constructed);
+
+            return null!;
+            //throw new NotImplementedException();
         }
 
-        private GenericClassInstance Load(IR.ConstructedClass constructed)
+        private CompilerObject Load(IR.ConstructedClass constructed)
         {
-            var origin = Context.Objects.Cache<GenericClass>(constructed.Class) ?? throw new();
+            var origin = 
+                Context.Objects.Cache<GenericClass>(constructed.Class) ??
+                Context.Types.Cache(constructed)
+                ?? throw new();
 
-            var args = new CommonZ.Utils.Mapping<GenericParameter, CompilerObject>();
+            var args = new CommonZ.Utils.Cache<CompilerObject, CompilerObject>();
 
-            if (origin.GenericParameters.Count != constructed.Arguments.Count)
-                throw new();
+            if (origin is GenericClass genericClass)
+            {
+                if (genericClass.GenericParameters.Count != constructed.Arguments.Count)
+                    throw new();
 
-            for (var i = 0; i < constructed.Arguments.Count; i++)
-                args[origin.GenericParameters[i]] = Import(constructed.Arguments[i]);
+                for (var i = 0; i < constructed.Arguments.Count; i++)
+                    args.Cache(genericClass.GenericParameters[i], Import(constructed.Arguments[i]));
 
-            return new(origin, args);
+                return new GenericClassInstance(genericClass)
+                {
+                    Context = new()
+                    {
+                        Scope = genericClass,
+                        CompileTimeValues = args
+                    }
+                };
+            }
+
+            return origin;
         }
 
         private Signature Load(IR.Signature signature)
@@ -160,22 +249,22 @@
 
             if (signature.HasArgs)
                 foreach (var arg in signature.Args.Parameters)
-                    result.Args.Add(Load(arg));
+                    result.Args.Add(LoadParameter(arg));
 
             if (signature.IsVarArgs)
-                result.VarArgs = Load(signature.Args.Var!);
+                result.VarArgs = LoadVarParameter(signature.Args.Var!);
 
             if (signature.HasKwArgs)
                 foreach (var arg in signature.KwArgs.Parameters)
-                    result.KwArgs.Add(Load(arg));
+                    result.KwArgs.Add(LoadParameter(arg));
 
             if (signature.IsVarKwArgs)
-                result.VarKwArgs = Load(signature.KwArgs.Var!);
+                result.VarKwArgs = LoadKeywordVarParameter(signature.KwArgs.Var!);
 
             return result;
         }
 
-        private Parameter Load(IR.Parameter parameter)
+        private Parameter LoadParameter(IR.Parameter parameter)
         {
             var type = Load(parameter.Type);
 
@@ -186,6 +275,31 @@
                 {
                     Types = [type]
                 }),
+                Type = type,
+            };
+        }
+
+        private VarParameter LoadVarParameter(IR.Parameter parameter)
+        {
+            var type = Load(parameter.Type);
+
+            if (parameter.Initializer is not null)
+                throw new NotImplementedException();
+
+            return new(parameter.Name)
+            {
+                IR = parameter,
+                Type = type,
+            };
+        }
+
+        private KeywordVarParameter LoadKeywordVarParameter(IR.Parameter parameter)
+        {
+            var type = Load(parameter.Type);
+
+            return new(parameter.Name)
+            {
+                IR = parameter,
                 Type = type,
             };
         }

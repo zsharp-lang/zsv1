@@ -15,14 +15,14 @@ namespace ZSharp.Runtime.NET.IL2IR
 
             if (type.IsTypeDefinition)
             {
-                if (type.IsGenericTypeDefinition)
-                    throw new InvalidOperationException();
-
                 var genericArguments = type.GenericTypeArguments.Select(LoadType).ToList();
 
-                if (type.IsClass) result = new ConstructedClass(new ClassLoader(this, type).Load())
+                var @class = new ClassLoader(this, type).Load();
+
+                if (genericArguments.Count == 0) result = new ClassReference(@class);
+                else if (type.IsClass) result = new ConstructedClass(@class)
                 {
-                    Arguments = new(genericArguments),
+                    Arguments = [.. genericArguments],
                 };
                 //else if (type.IsInterface) result = new ILInterfaceLoader(this, type).Load();
                 //else if (type.IsEnum) result = new ILEnumLoader(this, type).Load();
@@ -40,7 +40,25 @@ namespace ZSharp.Runtime.NET.IL2IR
                 throw new NotImplementedException();
 
             if (type.IsConstructedGenericType)
-                throw new NotImplementedException();
+            {
+                var definition = type.GetGenericTypeDefinition();
+
+                var definitionIR = LoadType(definition);
+
+                var genericArguments = type.GenericTypeArguments.Select(LoadType).ToList();
+
+                if (definitionIR is not OOPTypeReference typeReference)
+                    throw new ArgumentException("Type must be a type definition.", nameof(type));
+
+                return typeReference.Definition switch
+                {
+                    Class @class => new ConstructedClass(@class)
+                    {
+                        Arguments = [.. genericArguments],
+                    },
+                    _ => throw new NotImplementedException()
+                };
+            }
 
             throw new();
         }

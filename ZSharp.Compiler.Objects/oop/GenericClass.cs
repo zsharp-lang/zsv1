@@ -5,9 +5,10 @@ namespace ZSharp.Objects
 {
     public class GenericClass
         : CompilerObject
+        , ICTGetIndex
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
-        , IReferencable
+        , IReferencable<GenericClassInstance>
         , ICompileIRObject<IR.Class, IR.Module>
         , IEvaluable
     {
@@ -19,16 +20,27 @@ namespace ZSharp.Objects
             Interfaces = 0b10,
             Body = 0b100,
             Owner = 0b1000,
+            Generic = 0b10000,
         }
         private readonly ObjectBuildState<BuildState> state = new();
 
         public IR.ConstructedClass? IR { get; set; }
 
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
+
+        public bool Defined { init
+            {
+                if (value)
+                {
+                    foreach (var item in Enum.GetValues<BuildState>())
+                        state[item] = true;
+                }
+            } 
+        }
 
         public Collection<GenericParameter> GenericParameters { get; set; } = [];
 
-        public GenericClassInstance? Base { get; set; }
+        public CompilerObject? Base { get; set; }
 
         public Mapping<CompilerObject, Implementation> Implementations { get; set; } = [];
 
@@ -41,29 +53,37 @@ namespace ZSharp.Objects
         public CompilerObject Member(Compiler.Compiler compiler, MemberName member)
             => Members[member];
 
-        public CompilerObject CreateReference(Compiler.Compiler compiler, ReferenceContext context)
+        public GenericClassInstance CreateReference(Referencing @ref, ReferenceContext context)
         {
-            int currentErrors = compiler.Log.Logs.Count(l => l.Level == LogLevel.Error);
+            int currentErrors = @ref.Compiler.Log.Logs.Count(l => l.Level == LogLevel.Error);
 
             foreach (var genericParameter in GenericParameters)
-                if (!context.CompileTimeValues.ContainsKey(genericParameter))
-                    compiler.Log.Error(
-                        $"Missing generic argument for parameter {genericParameter.Name} in type {this.Name}",
+                if (!context.CompileTimeValues.Contains(genericParameter))
+                    @ref.Compiler.Log.Error(
+                        $"Missing generic argument for parameter {genericParameter.Name} in type {Name}",
                         this
                     );
 
-            if (compiler.Log.Logs.Count(l => l.Level == LogLevel.Error) > currentErrors)
+            if (@ref.Compiler.Log.Logs.Count(l => l.Level == LogLevel.Error) > currentErrors)
                 throw new(); // TODO: Huh???
 
-            Mapping<GenericParameter, CompilerObject> genericArguments = [];
-
-            foreach (var genericParameter in GenericParameters)
-                genericArguments[genericParameter] = context.CompileTimeValues[genericParameter];
-
-            return new GenericClassInstance(this, genericArguments)
+            return new GenericClassInstance(this)
             {
-                Context = context,
+                Context = new(context)
+                {
+                    Scope = this
+                },
             };
+        }
+
+        CompilerObject ICTGetIndex.Index(Compiler.Compiler compiler, Argument[] index)
+        {
+            var context = new ReferenceContext();
+
+            foreach (var (genericParameter, genericArgument) in GenericParameters.Zip(index))
+                context[genericParameter] = genericArgument.Object;
+
+            return compiler.Feature<Referencing>().CreateReference(this, context);
         }
 
         IR.Class ICompileIRObject<IR.Class, IR.Module>.CompileIRObject(Compiler.Compiler compiler, IR.Module? owner)
@@ -83,7 +103,7 @@ namespace ZSharp.Objects
             {
                 state.Set(BuildState.Base);
 
-                @class.Base = compiler.CompileIRType<IR.ConstructedClass>(Base);
+                @class.Base = compiler.CompileIRType<IR.OOPTypeReference<IR.Class>>(Base);
             }
 
             if (Content.Count > 0 && !state.Get(BuildState.Body))
@@ -94,6 +114,15 @@ namespace ZSharp.Objects
                     compiler.CompileIRObject(item, @class);
             }
 
+            if (GenericParameters.Count > 0 && !state.Get(BuildState.Generic))
+            {
+                state.Set(BuildState.Generic);
+                foreach (var parameter in GenericParameters)
+                    @class.GenericParameters.Add(
+                        compiler.CompileIRType<IR.GenericParameter>(parameter)
+                    );
+            }
+
             return @class;
         }
 
@@ -102,11 +131,20 @@ namespace ZSharp.Objects
             if (GenericParameters.Count != 0)
                 return this;
 
-            return new GenericClassInstance(this, []);
+            return new GenericClassInstance(this)
+            {
+                Context = new()
+                {
+                    Scope = this
+                }
+            };
         }
 
         CompilerObject IRTGetMember<string>.Member(Compiler.Compiler compiler, CompilerObject value, string member)
         {
+            if (GenericParameters.Count > 0)
+                throw new InvalidOperationException();
+
             var memberObject = compiler.Member(this, member);
 
             if (memberObject is IRTBoundMember boundMember)

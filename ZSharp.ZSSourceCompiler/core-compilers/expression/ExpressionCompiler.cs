@@ -1,4 +1,6 @@
-﻿namespace ZSharp.ZSSourceCompiler
+﻿using ZSharp.IR.VM;
+
+namespace ZSharp.ZSSourceCompiler
 {
     public sealed partial class ExpressionCompiler(ZSSourceCompiler compiler)
         : CompilerBase(compiler)
@@ -10,6 +12,7 @@
                 BinaryExpression binary => Compile(binary),
                 CallExpression call => Compile(call),
                 IdentifierExpression identifier => Context.CurrentScope.Get(identifier.Name),
+                IndexExpression index => Compile(index),
                 LiteralExpression literal => Compile(literal),
                 WhileExpression<Expression> @while => Compile(@while),
                 _ => null
@@ -59,6 +62,15 @@
             var args = call.Arguments.Select(arg => new Compiler.Argument(arg.Name, Compiler.CompileNode(arg.Value)));
 
             return Compiler.Compiler.Call(callable, args.ToArray());
+        }
+
+        private CompilerObject Compile(IndexExpression index)
+        {
+            var indexable = Compiler.Compiler.Evaluate(Compiler.CompileNode(index.Target));
+
+            var args = index.Arguments.Select(arg => new Compiler.Argument(arg.Name, Compiler.CompileNode(arg.Value)));
+
+            return Compiler.Compiler.Index(indexable, args.ToArray());
         }
 
         private WhileLoop Compile(WhileExpression<Expression> @while)

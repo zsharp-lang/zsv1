@@ -8,7 +8,7 @@
 
         public required OOPTypeReference OwningType { get; set; }
 
-        public Signature Signature => Member.Signature;
+        public Signature Signature { get; init; } = method.Signature;
 
         public bool HasBody => Member.HasBody;
 

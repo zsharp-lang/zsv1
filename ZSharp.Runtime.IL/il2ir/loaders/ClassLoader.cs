@@ -1,16 +1,24 @@
-﻿using ZSharp.IR;
+﻿using CommonZ.Utils;
+using System.Reflection;
+using ZSharp.IR;
 
 namespace ZSharp.Runtime.NET.IL2IR
 {
     internal sealed class ClassLoader(ILLoader loader, Type input)
         : BaseILLoader<Type, IR.Class>(loader, input, new(input.Name))
     {
+        private IR.OOPTypeReference<IR.Class> Self { get; set; }
+
         public override IR.Class Load()
         {
             if (Context.Cache<IR.Class>(Input, out var result))
                 return result;
 
             Context.Cache(Input, Output);
+
+            Self = new IR.ClassReference(Output);
+
+            LoadGenericParameters();
 
             LoadBase();
 
@@ -32,7 +40,27 @@ namespace ZSharp.Runtime.NET.IL2IR
         private void LoadBase()
         {
             if (Input.BaseType is not null)
-                Output.Base = (IR.ConstructedClass)Loader.LoadType(Input.BaseType);
+                Output.Base = (OOPTypeReference<Class>)Loader.LoadType(Input.BaseType);
+        }
+
+        private void LoadGenericParameters()
+        {
+            if (!Input.IsGenericTypeDefinition)
+                return;
+
+            Output.Name = Input.Name.Split('`')[0];
+
+            foreach (var parameter in Input.GetGenericArguments())
+            {
+                var genericParameter = new IR.GenericParameter(parameter.Name);
+                Context.Cache(parameter, genericParameter);
+                Output.GenericParameters.Add(genericParameter);
+            }
+
+            Self = new IR.ConstructedClass(Output)
+            {
+                Arguments = [.. Output.GenericParameters]
+            };
         }
 
         private void LoadInterfaceImplementations()
@@ -62,7 +90,8 @@ namespace ZSharp.Runtime.NET.IL2IR
         private void LoadMethods()
         {
             foreach (var method in Input.GetMethods())
-                LoadMethod(method);
+                if (method.DeclaringType == Input)
+                    LoadMethod(method);
         }
 
         private void LoadTypes()
@@ -76,7 +105,7 @@ namespace ZSharp.Runtime.NET.IL2IR
             if (mapping.InterfaceMethods.Length != mapping.TargetMethods.Length)
                 throw new InvalidOperationException("Interface mapping is invalid.");
 
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
 
             //var implementation = new IR.InterfaceImplementation(Loader.LoadType<IR.ConstructedInterface>(@interface));
 
@@ -94,9 +123,13 @@ namespace ZSharp.Runtime.NET.IL2IR
 
         private void LoadField(IL.FieldInfo field)
         {
-            throw new NotImplementedException();
+            var result = new IR.Field(field.Name, Loader.LoadType(field.FieldType))
+            {
+                IsStatic = field.IsStatic,
+                IsReadOnly = field.IsInitOnly,
+            };
 
-            // TODO: implement this by adding a property, since it's impossible for the VM to access C# fields directly.
+            Output.Fields.Add(result);
         }
 
         private void LoadProperty(IL.PropertyInfo property)
@@ -117,6 +150,11 @@ namespace ZSharp.Runtime.NET.IL2IR
                 Method = new(Loader.RuntimeModule.TypeSystem.Void),
             };
 
+            Context.Cache(constructor, result.Method);
+
+            if (!constructor.IsStatic)
+                result.Method.Signature.Args.Parameters.Add(new("this", Self));
+
             foreach (var parameter in constructor.GetParameters())
                 result.Method.Signature.Args.Parameters.Add(new(parameter.Name ?? string.Empty, Loader.LoadType(parameter.ParameterType)));
 
@@ -125,7 +163,15 @@ namespace ZSharp.Runtime.NET.IL2IR
 
         private IR.Method LoadMethod(IL.MethodInfo method)
         {
-            var result = new IR.Method(Loader.LoadType(method.ReturnType));
+            var result = new IR.Method(Loader.LoadType(method.ReturnType))
+            {
+                Name = method.GetCustomAttribute<AliasAttribute>()?.Name ?? method.Name,
+            };
+
+            Context.Cache(method, result);
+
+            if (!method.IsStatic)
+                result.Signature.Args.Parameters.Add(new("this", Self));
 
             foreach (var parameter in method.GetParameters())
                 result.Signature.Args.Parameters.Add(new(parameter.Name ?? string.Empty, Loader.LoadType(parameter.ParameterType)));
@@ -147,28 +193,27 @@ namespace ZSharp.Runtime.NET.IL2IR
             else if (type.IsValueType) result = LoadStruct(type);
             else throw new NotImplementedException();
 
-            // TADA: | | | | | | | | | 
-            // TODO: V V V V V V V V V
-            //Output.Types.Add(result);
+            Output.NestedTypes.Add(result);
         }
 
         private IR.Class LoadClass(Type type)
-        {
-            throw new NotImplementedException();
-        }
+            => new ClassLoader(Loader, type).Load();
 
         private IR.Interface LoadInterface(Type type)
         {
+            return new();
             throw new NotImplementedException();
         }
 
         private IR.Enumclass LoadEnum(Type type)
         {
+            return new();
             throw new NotImplementedException();
         }
 
         private IR.ValueType LoadStruct(Type type)
         {
+            return new();
             throw new NotImplementedException();
         }
     }

@@ -11,5 +11,18 @@
         {
             State = (T)(ValueType)(State.ToInt32(null) | state.ToInt32(null));
         }
+
+        public static bool operator &(ObjectBuildState<T> instance, T value)
+            => instance.Get(value);
+
+        public bool this[T flag]
+        {
+            get => Get(flag);
+            set
+            {
+                if (value)
+                    Set(flag);
+            }
+        }
     }
 }

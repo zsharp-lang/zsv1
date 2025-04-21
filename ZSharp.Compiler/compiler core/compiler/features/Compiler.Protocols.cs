@@ -32,7 +32,7 @@
 
         public CompilerObject Cast(CompilerObject target, CompilerObject type)
         {
-            if (TypeSystem.IsTyped(target, out var targetType) && targetType == type)
+            if (TypeSystem.IsTyped(target, out var targetType) && targetType.Equals(type))
                 return target;
 
             if (target is ICTTypeCast typeCast)
@@ -49,6 +49,9 @@
         /// <returns></returns>
         public CompilerObject Index(CompilerObject instanceTarget, Argument[] index)
         {
+            if (instanceTarget is ICTGetIndex ctGetIndex)
+                return ctGetIndex.Index(this, index);
+
             throw new NotImplementedException();
         }
 
@@ -62,6 +65,14 @@
         public CompilerObject Index(CompilerObject instanceTarget, Argument[] index, CompilerObject value)
         {
             throw new NotImplementedException();
+        }
+
+        public CompilerObject Map(CompilerObject @object, Func<CompilerObject, CompilerObject> func)
+        {
+            if (@object is IMappable mappable)
+                return mappable.Map(func);
+
+            return func(@object);
         }
 
         /// <summary>

@@ -1,5 +1,9 @@
 ﻿using ZSharp.Compiler;
 
+using Args = CommonZ.Utils.Collection<ZSharp.Objects.CompilerObject>;
+using KwArgs = CommonZ.Utils.Mapping<string, ZSharp.Objects.CompilerObject>;
+
+
 namespace ZSharp.Objects
 {
     public static class Utils

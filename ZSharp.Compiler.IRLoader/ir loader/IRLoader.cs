@@ -16,6 +16,7 @@
                 Compiler.TypeSystem.Int32,
                 Compiler.TypeSystem.Void,
                 Compiler.TypeSystem.Boolean,
+                Compiler.TypeSystem.Object,
             })
                 Context.Types.Cache(Compiler.CompileIRType(type), type);
         }

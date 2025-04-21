@@ -6,6 +6,8 @@ namespace ZSharp.Objects
         : CompilerObject
         , ICTReadable
         , ICompileIRObject<IR.Parameter, IR.Signature>
+        , IReferencable<Parameter>
+        , IParameter
     {
         public IR.Parameter? IR { get; set; }
 
@@ -14,6 +16,12 @@ namespace ZSharp.Objects
         public CompilerObject? Type { get; set; }
 
         public CompilerObject? Initializer { get; set; }
+
+        public CompilerObject? Default
+        {
+            get => Initializer;
+            set => Initializer = value;
+        }
 
         public IR.Parameter CompileIRObject(Compiler.Compiler compiler, IR.Signature? owner)
         {
@@ -35,5 +43,22 @@ namespace ZSharp.Objects
                 MaxStackSize = 1,
                 Types = [Type ?? throw new()]
             };
+
+        Parameter IReferencable<Parameter>.CreateReference(Referencing @ref, ReferenceContext context)
+        {
+            return new(Name)
+            {
+                Initializer = Initializer is null ? null : @ref.CreateReference(Initializer, context),
+                Type = Type is null ? null : @ref.CreateReference(Type, context),
+            };
+        }
+
+        CompilerObject IParameter.MatchArgument(Compiler.Compiler compiler, CompilerObject argument)
+        {
+            if (Type is null)
+                throw new InvalidOperationException($"Parameter's {Name} type is not defined");
+
+            return compiler.Cast(argument, Type);
+        }
     }
 }

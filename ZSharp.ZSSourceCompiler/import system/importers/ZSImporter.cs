@@ -1,5 +1,4 @@
 ﻿using CommonZ.Utils;
-using System.Data;
 using ZSharp.Compiler;
 
 namespace ZSharp.ZSSourceCompiler

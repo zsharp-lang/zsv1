@@ -19,6 +19,14 @@
     "Tests/Test Class Fields": {
       "commandName": "Project",
       "commandLineArgs": "tests/test-class-fields.zs"
+    },
+    "Projects/Better User System": {
+      "commandName": "Project",
+      "commandLineArgs": "projects/better-user-system.zs"
+    },
+    "Simple Test": {
+      "commandName": "Project",
+      "commandLineArgs": "tests/simple.zs"
     }
   }
 }
