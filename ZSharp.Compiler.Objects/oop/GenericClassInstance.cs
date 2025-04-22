@@ -18,7 +18,7 @@ namespace ZSharp.Objects
     {
         CompilerObject IReference.Origin => Origin;
 
-        public required ReferenceContext Context { get; set; } = null;
+        public required ReferenceContext Context { get; set; }
 
         public GenericClass Origin { get; set; } = origin;
 
