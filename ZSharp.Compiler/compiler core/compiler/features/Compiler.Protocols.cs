@@ -47,12 +47,12 @@
         /// <param name="instanceTarget"></param>
         /// <param name="index"></param>
         /// <returns></returns>
-        public CompilerObject Index(CompilerObject instanceTarget, Argument[] index)
+        public CompilerObject? Index(CompilerObject instanceTarget, Argument[] index)
         {
             if (instanceTarget is ICTGetIndex ctGetIndex)
                 return ctGetIndex.Index(this, index);
 
-            throw new NotImplementedException();
+            return null;
         }
 
         /// <summary>
