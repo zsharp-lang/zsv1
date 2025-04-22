@@ -31,15 +31,15 @@ namespace ZSharp.Objects
             var origin = compiler.Member(Origin, member);
 
             if (Origin.GenericParameters.Count != 0)
-                //origin = compiler.CreateReference(origin, Context);
-                throw new NotImplementedException();
+                origin = compiler.Map(origin, @object => compiler.Feature<Referencing>().CreateReference(@object, Context));
 
             return Members[member] = origin;
         }
 
         public CompilerObject Member(Compiler.Compiler compiler, CompilerObject instance, string member)
         {
-            if (Members.ContainsKey(member)) return Members[member];
+            if (Members.ContainsKey(member)) 
+                return compiler.Map(Members[member], @object => @object is IRTBoundMember bindable ? bindable.Bind(compiler, instance) : @object);
 
             var origin = compiler.Member(Origin, member);
 
