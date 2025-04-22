@@ -84,6 +84,9 @@ namespace ZSharp.Runtime.NET.IR2IL
                 return result;
 
             if (callable is IR.MemberReference<IR.Method> methodReference)
+            if (callable is IR.GenericFunctionInstance genericFunctionInstance)
+                return LoadReference(genericFunctionInstance);
+
                 return LoadReference(methodReference);
 
             throw new NotImplementedException();
@@ -147,6 +150,14 @@ namespace ZSharp.Runtime.NET.IR2IL
                 return method;
 
             throw new();
+        }
+
+        public IL.MethodInfo LoadReference(IR.GenericFunctionInstance @ref)
+        {
+            if (!Context.Cache<IL.MethodInfo>(@ref.Function, out var def))
+                throw new InvalidOperationException($"Method {@ref.Function.Name} was not loaded");
+
+            return def.MakeGenericMethod([.. @ref.Arguments.Select(LoadType)]);
         }
     }
 }

@@ -70,7 +70,7 @@ namespace ZSharp.ZSSourceCompiler
 
             var args = index.Arguments.Select(arg => new Compiler.Argument(arg.Name, Compiler.CompileNode(arg.Value)));
 
-            return Compiler.Compiler.Index(indexable, args.ToArray());
+            return Compiler.Compiler.Map(indexable, @object => Compiler.Compiler.Index(@object, [.. args]));
         }
 
         private WhileLoop Compile(WhileExpression<Expression> @while)

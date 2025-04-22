@@ -62,6 +62,9 @@
 
         private Action Load(IR.Function function, Module owner)
         {
+            if (function.HasGenericParameters)
+                return LoadGenericFunction(function, owner);
+
             RTFunction result = new(function.Name)
             {
                 IR = function
@@ -241,6 +244,50 @@
             }
 
             return origin;
+        }
+
+        private Action LoadGenericFunction(IR.Function function, Module owner)
+        {
+            GenericFunction result = new(function.Name)
+            {
+                IR = function,
+                Defined = true,
+            };
+
+            Context.Objects.Cache(function, result);
+
+            owner.Content.Add(result);
+
+            if (result.Name != string.Empty)
+            {
+                if (!owner.Members.TryGetValue(result.Name, out var group))
+                    owner.Members.Add(result.Name, group = new OverloadGroup(result.Name));
+
+                if (group is not OverloadGroup overloadGroup)
+                    throw new InvalidOperationException();
+
+                overloadGroup.Overloads.Add(result);
+            }
+
+            return () =>
+            {
+                foreach (var parameter in function.GenericParameters)
+                {
+                    var genericParameter = new GenericParameter()
+                    {
+                        Name = parameter.Name,
+                        IR = parameter,
+                    };
+
+                    Context.Types.Cache(parameter, genericParameter);
+
+                    result.GenericParameters.Add(genericParameter);
+                }
+
+                    result.Signature = Load(function.Signature);
+
+                result.ReturnType = Load(function.ReturnType);
+            };
         }
 
         private Signature Load(IR.Signature signature)
