@@ -1,5 +1,5 @@
-﻿//import { list } from "std:list";
-import { print, input, List } from "std:io";
+﻿import { List } from "net:ZLoad.Test.dll";
+import { print, input } from "std:io";
 
 
 module Program {

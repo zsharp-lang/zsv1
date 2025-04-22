@@ -1,5 +1,5 @@
-﻿import { List, input, print } from "std:io";
-import { Console, greet, id } from "net:ZLoad.Test.dll";
+﻿import { input, print } from "std:io";
+import { Console, List, greet, id } from "net:ZLoad.Test.dll";
 // import { Console } from "net:C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\8.0.13\\System.Console.dll";
 
 module Program;
