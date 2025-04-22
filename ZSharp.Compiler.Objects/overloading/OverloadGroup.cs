@@ -35,7 +35,7 @@ namespace ZSharp.Objects
         {
             return new OverloadGroup(Name)
             {
-                Overloads = [.. Overloads.Select(func)]
+                Overloads = [.. Overloads.Select(func).Where(item => item is not null)]
             };
         }
     }
