@@ -9,7 +9,7 @@ namespace ZSharp.Objects
     public sealed class MethodReference(Method origin, ReferenceContext context)
         : CompilerObject
         , ICTCallable
-        , ICompileIRReference<IR.MemberReference<IR.Method>>
+        , ICompileIRReference<IR.MethodReference>
         , IRTBoundMember
     {
         public Method Origin { get; } = origin;
@@ -47,7 +47,7 @@ namespace ZSharp.Objects
                 code.Append(compiler.CompileIRCode(args[param]));
 
             code.Append(new([
-                new IR.VM.Call((IR.MethodReference)compiler.CompileIRReference<IR.MemberReference<IR.Method>>(this))
+                new IR.VM.Call(compiler.CompileIRReference<IR.MethodReference>(this))
             ]));
 
             code.Types.Clear();
@@ -57,7 +57,7 @@ namespace ZSharp.Objects
             return new RawCode(code);
         }
 
-        IR.MemberReference<IR.Method> ICompileIRReference<IR.MemberReference<IR.Method>>.CompileIRReference(Compiler.Compiler compiler)
+        IR.MethodReference ICompileIRReference<IR.MethodReference>.CompileIRReference(Compiler.Compiler compiler)
         {
             var type = compiler.Feature<Referencing>().CreateReference(Owner, Context);
 

@@ -1,11 +1,11 @@
 ﻿namespace ZSharp.IR.VM
 {
-    public sealed class CreateInstance(MemberReference<Constructor> constructor) 
+    public sealed class CreateInstance(ConstructorReference constructor) 
         : Instruction
-        , IHasOperand<MemberReference<Constructor>>
+        , IHasOperand<ConstructorReference>
     {
-        public MemberReference<Constructor> Constructor { get; set; } = constructor;
+        public ConstructorReference Constructor { get; set; } = constructor;
 
-        MemberReference<Constructor> IHasOperand<MemberReference<Constructor>>.Operand => Constructor;
+        ConstructorReference IHasOperand<ConstructorReference>.Operand => Constructor;
     }
 }

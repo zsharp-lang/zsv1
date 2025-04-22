@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace ZSharp.Runtime.NET.IR2IL
+﻿namespace ZSharp.Runtime.NET.IR2IL
 {
     /// <summary>
     /// Wraps an IR module in a C# module.
@@ -83,16 +81,16 @@ namespace ZSharp.Runtime.NET.IR2IL
             if (Context.Cache(callable) is IL.MethodBase result)
                 return result;
 
-            if (callable is IR.MemberReference<IR.Method> methodReference)
             if (callable is IR.GenericFunctionInstance genericFunctionInstance)
                 return LoadReference(genericFunctionInstance);
 
+            if (callable is IR.MethodReference methodReference)
                 return LoadReference(methodReference);
 
             throw new NotImplementedException();
         }
 
-        public IL.ConstructorInfo LoadReference(IR.MemberReference<IR.Constructor> @ref)
+        public IL.ConstructorInfo LoadReference(IR.ConstructorReference @ref)
         {
             var type = LoadType(@ref.OwningType);
 
@@ -110,7 +108,7 @@ namespace ZSharp.Runtime.NET.IR2IL
             throw new();
         }
 
-        public IL.FieldInfo LoadReference(IR.MemberReference<IR.Field> @ref)
+        public IL.FieldInfo LoadReference(IR.FieldReference @ref)
         {
             var type = LoadType(@ref.OwningType);
 
@@ -128,14 +126,14 @@ namespace ZSharp.Runtime.NET.IR2IL
             throw new();
         }
 
-        public IL.MethodInfo LoadReference(IR.MemberReference<IR.Method> @ref)
+        public IL.MethodInfo LoadReference(IR.MethodReference @ref)
         {
             var type = LoadType(@ref.OwningType);
 
-            if (!Context.Cache(@ref.Member, out var def))
-                throw new InvalidOperationException($"Method {@ref.Member.Name} was not loaded");
+            if (!Context.Cache(@ref.Method, out var def))
+                throw new InvalidOperationException($"Method {@ref.Method.Name} was not loaded");
 
-            var types = ((IR.ICallable)@ref).Signature.GetParameters().Select(p => p.Type).Skip(@ref.Member.IsStatic ? 0 : 1).Select(LoadType).ToArray();
+            var types = ((IR.ICallable)@ref).Signature.GetParameters().Select(p => p.Type).Skip(@ref.Method.IsStatic ? 0 : 1).Select(LoadType).ToArray();
 
             var method = type.GetMethod(
                 def.Name, 

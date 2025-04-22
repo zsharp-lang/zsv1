@@ -1,17 +1,16 @@
 ﻿namespace ZSharp.IR
 {
-    public sealed class MethodReference(Method method)
-        : MemberReference<Method>
-        , ICallable
+    public class MethodReference(Method method)
+        : ICallable
     {
-        public Method Member { get; set; } = method;
+        public Method Method { get; set; } = method;
 
         public required OOPTypeReference OwningType { get; set; }
 
         public Signature Signature { get; init; } = method.Signature;
 
-        public bool HasBody => Member.HasBody;
+        public bool HasBody => Method.HasBody;
 
-        public ICallableBody? Body => Member.HasBody ? Member.Body : null;
+        public ICallableBody? Body => Method.HasBody ? Method.Body : null;
     }
 }

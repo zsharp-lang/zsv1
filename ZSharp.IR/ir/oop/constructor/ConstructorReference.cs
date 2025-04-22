@@ -1,8 +1,7 @@
 ﻿namespace ZSharp.IR
 {
     public sealed class ConstructorReference(Constructor constructor)
-        : MemberReference<Constructor>
-        , ICallable
+        :  ICallable
     {
         public Constructor Member { get; set; } = constructor;
 
