@@ -144,6 +144,9 @@
             if (method is null)
                 throw new();
 
+            if (@ref is IR.GenericMethodInstance genericMethodInstance)
+                method = method.MakeGenericMethod([.. genericMethodInstance.Arguments.Select(LoadType)]);
+
             if (method.HasSameMetadataDefinitionAs(def))
                 return method;
 
