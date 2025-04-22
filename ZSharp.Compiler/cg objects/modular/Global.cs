@@ -56,7 +56,7 @@ namespace ZSharp.Objects
 
             if (!IsInitializerBuilt && Initializer is not null)
             {
-                IR.Initializer = compiler.CompileIRCode(Initializer).Instructions.ToArray();
+                IR.Initializer = compiler.CompileIRCode(compiler.Cast(Initializer, Type)).Instructions.ToArray();
 
                 IsInitializerBuilt = true;
             }
