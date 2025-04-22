@@ -54,10 +54,16 @@ namespace ZSharp.Runtime.NET.IL2IR
 
         private void LoadMethod(IL.MethodInfo method)
         {
-            var function = new IR.Function(Loader.LoadType(method.ReturnType))
+            var function = new IR.Function(Loader.RuntimeModule.TypeSystem.Void)
             {
                 Name = method.GetCustomAttribute<AliasAttribute>() is AliasAttribute alias ? alias.Name : method.Name,
             };
+
+            if (method.ContainsGenericParameters)
+                foreach (var genericParameter in method.GetGenericArguments())
+                    function.GenericParameters.Add(Context.Cache<IR.GenericParameter>(genericParameter, new(genericParameter.Name)));
+
+            function.ReturnType = Loader.LoadType(method.ReturnType);
 
             foreach (var parameter in method.GetParameters())
                 function.Signature.Args.Parameters.Add(new(parameter.Name!, Loader.LoadType(parameter.ParameterType)));
