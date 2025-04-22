@@ -11,6 +11,8 @@
 
         protected override void DoLoad()
         {
+            Context.Cache(Input, Output);
+
             LoadNestedTypes();
 
             ModuleLoader.AddToNextPass(LoadDefinition);
@@ -23,6 +25,8 @@
 
             if (Input.HasMethods)
                 ModuleLoader.AddToNextPass(LoadMethods);
+
+            ModuleLoader.AddToCleanUp(() => Output.CreateType());
         }
 
         private void LoadDefinition()

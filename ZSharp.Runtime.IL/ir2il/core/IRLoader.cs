@@ -55,6 +55,9 @@
             if (typeReference is IR.ConstructedType constructedType)
                 genericArguments.AddRange(constructedType.Arguments.Select(LoadType));
 
+            if (genericArguments.Count == 0)
+                return type;
+
             return type.MakeGenericType([.. genericArguments]);
         }
 
@@ -97,13 +100,24 @@
             if (!Context.Cache(@ref.Member.Method, out var def))
                 throw new InvalidOperationException($"Method {@ref.Member.Name} was not loaded");
 
-            var method = type.GetConstructor([]);
+            var types = @ref.Signature.GetParameters().Select(p => p.Type).Skip(1).Select(LoadType).ToArray();
 
-            if (method is null)
-                throw new();
+            try
+            {
+                var method = type.GetConstructor(
+                    types
+                );
 
-            if (method.HasSameMetadataDefinitionAs(def))
-                return method;
+                if (method is null)
+                    throw new();
+
+                if (method.HasSameMetadataDefinitionAs(def))
+                    return method;
+            }
+            catch (NotSupportedException)
+            {
+                return (IL.ConstructorInfo)def;
+            }
 
             throw new();
         }
@@ -115,13 +129,19 @@
             if (!Context.Cache(@ref.Member, out var def))
                 throw new InvalidOperationException($"Field {@ref.Member.Name} was not loaded");
 
-            var field = type.GetField(def.Name);
+            try
+            {
+                var field = type.GetField(def.Name);
 
-            if (field is null)
-                throw new();
+                if (field is null)
+                    throw new();
 
-            if (field.HasSameMetadataDefinitionAs(def))
-                return field;
+                if (field.HasSameMetadataDefinitionAs(def))
+                    return field;
+            } catch (NotSupportedException)
+            {
+                return def;
+            }           
 
             throw new();
         }
@@ -135,20 +155,26 @@
 
             var types = ((IR.ICallable)@ref).Signature.GetParameters().Select(p => p.Type).Skip(@ref.Method.IsStatic ? 0 : 1).Select(LoadType).ToArray();
 
-            var method = type.GetMethod(
-                def.Name, 
-                def.GetGenericArguments().Length,
-                types
-            );
+            try
+            {
+                var method = type.GetMethod(
+                    def.Name,
+                    def.GetGenericArguments().Length,
+                    types
+                );
 
-            if (method is null)
-                throw new();
+                if (method is null)
+                    throw new();
 
-            if (@ref is IR.GenericMethodInstance genericMethodInstance)
-                method = method.MakeGenericMethod([.. genericMethodInstance.Arguments.Select(LoadType)]);
+                if (@ref is IR.GenericMethodInstance genericMethodInstance)
+                    method = method.MakeGenericMethod([.. genericMethodInstance.Arguments.Select(LoadType)]);
 
-            if (method.HasSameMetadataDefinitionAs(def))
-                return method;
+                if (method.HasSameMetadataDefinitionAs(def))
+                    return method;
+            } catch (NotSupportedException)
+            {
+                return (IL.MethodInfo)def;
+            }
 
             throw new();
         }
