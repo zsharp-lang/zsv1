@@ -6,9 +6,9 @@
  * [x] Named constructor
  * [x] Methods
  * [x] Case-Of
- * [ ] Automatic type inference for first parameter in methods
- * [ ] Automatic instance binding when accessing instance method/field from instance method
- * [ ] Instance method as function with `this` first parameter
+ * [x] Automatic type inference for first parameter in methods
+ * [x] Automatic instance binding when accessing instance method/field from instance method
+ * [x] Instance method as function with `this` first parameter
  * [x] Module globals initializers
  */
 
