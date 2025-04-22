@@ -42,6 +42,18 @@ using (StreamReader stream = File.OpenText(filePath))
         }
     );
     expressionParser.Nud(
+        TokenType.LParen,
+        parser =>
+        {
+            parser.Eat(TokenType.LParen);
+            var expression = parser.Parse<ZSharp.AST.Expression>();
+            parser.Eat(TokenType.RParen);
+
+            return expression;
+        },
+        10000
+    );
+    expressionParser.Nud(
         LangParser.Keywords.Let,
         LangParser.ParseLetExpression
     );
