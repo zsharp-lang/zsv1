@@ -8,6 +8,11 @@ namespace Standard.List
 
         public List() { }
 
+        [Alias(Name = "length")]
+        public int Length()
+            => _inner.Count;
+
+
         [Alias(Name = "append")]
         public void Add(T item)
         {
@@ -19,5 +24,9 @@ namespace Standard.List
         {
             return _inner[index];
         }
+
+        [Alias(Name = "removeAt")]
+        public void RemoveAt(int index)
+            => _inner.RemoveAt(index);
     }
 }
