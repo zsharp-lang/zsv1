@@ -98,7 +98,7 @@
             => type switch
             {
                 IR.Class @class => Load(@class, owner),
-                //IR.Interface @interface => Load(@interface),
+                IR.Interface @interface => Load(@interface, owner),
                 //IR.Struct @struct => Load(@struct),
                 _ => throw new NotImplementedException(),
             };
@@ -172,6 +172,66 @@
 
                 if (@class.Methods.Count > 0)
                     foreach (var method in @class.Methods)
+                    {
+                        Method resultMethod = new(method.Name)
+                        {
+                            IR = method,
+                            Defined = true,
+                        };
+                        if (resultMethod.Name is not null && resultMethod.Name != string.Empty)
+                        {
+                            if (!result.Members.TryGetValue(resultMethod.Name, out var group))
+                                result.Members.Add(resultMethod.Name, group = new OverloadGroup(resultMethod.Name));
+
+                            if (group is not OverloadGroup overloadGroup)
+                                throw new InvalidOperationException();
+
+                            overloadGroup.Overloads.Add(resultMethod);
+                        }
+                        resultMethod.Signature = Load(method.Signature);
+                        resultMethod.ReturnType = Load(method.ReturnType);
+                    }
+            };
+        }
+
+        private Action Load(IR.Interface @interface, Module owner)
+        {
+            Interface result = new(@interface.Name)
+            {
+                Name = @interface.Name ?? string.Empty,
+                IR = @interface,
+                IsDefined = true,
+            };
+
+            Context.Objects.Cache(@interface, result);
+
+            owner.Content.Add(result);
+
+            if (result.Name is not null && result.Name != string.Empty)
+                owner.Members.Add(result.Name, result);
+
+            //if (@interface.HasGenericParameters)
+            //    foreach (var parameter in @interface.GenericParameters)
+            //    {
+            //        var genericParameter = new GenericParameter()
+            //        {
+            //            Name = parameter.Name,
+            //            IR = parameter,
+            //        };
+
+            //        Context.Types.Cache(parameter, genericParameter);
+
+            //        result.GenericParameters.Add(genericParameter);
+            //    }
+
+            if (@interface.HasBases)
+                foreach (var @base in @interface.Bases)
+                    result.Bases.Add(Load(@base));
+
+            return () =>
+            {
+                if (@interface.HasMethods)
+                    foreach (var method in @interface.Methods)
                     {
                         Method resultMethod = new(method.Name)
                         {
