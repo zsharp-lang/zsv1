@@ -22,6 +22,8 @@
                 // ConstructorInfo.Invoke has an overload which takes `this` as the first parameter (for late initialization).
                 if (metaClass is not null) c.LogError("Metaclasses are not supported yet.", oop);
 
+                // TODO: if has generic, return generic class compiler
+
                 return new ClassCompiler(c, oop, compiler.DefaultMetaClass);
             });
 
