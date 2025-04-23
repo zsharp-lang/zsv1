@@ -1,22 +1,21 @@
-﻿using CommonZ.Utils;
-using System.Reflection;
+﻿using System.Reflection;
 using ZSharp.IR;
 
 namespace ZSharp.Runtime.NET.IL2IR
 {
-    internal sealed class ClassLoader(ILLoader loader, Type input)
-        : BaseILLoader<Type, Class>(loader, input, new(input.Name))
+    internal sealed class InterfaceLoader(ILLoader loader, Type input)
+        : BaseILLoader<Type, Interface>(loader, input, new(input.Name))
     {
-        private OOPTypeReference<Class> Self { get; set; }
+        private OOPTypeReference<Interface> Self { get; set; }
 
-        public override Class Load()
+        public override Interface Load()
         {
-            if (Context.Cache<Class>(Input, out var result))
+            if (Context.Cache<Interface>(Input, out var result))
                 return result;
 
             Context.Cache(Input, Output);
 
-            Self = new ClassReference(Output);
+            Self = new InterfaceReference(Output);
 
             LoadGenericParameters();
 
@@ -24,11 +23,7 @@ namespace ZSharp.Runtime.NET.IL2IR
 
             LoadInterfaceImplementations();
 
-            LoadFields();
-
             LoadProperties();
-
-            LoadConstructors();
 
             LoadMethods();
 
@@ -39,8 +34,8 @@ namespace ZSharp.Runtime.NET.IL2IR
 
         private void LoadBase()
         {
-            if (Input.BaseType is not null)
-                Output.Base = (OOPTypeReference<Class>)Loader.LoadType(Input.BaseType);
+            foreach (var @interface in Input.GetInterfaces())
+                Output.Bases.Add(Loader.LoadType<OOPTypeReference<Interface>>(@interface));
         }
 
         private void LoadGenericParameters()
@@ -52,12 +47,12 @@ namespace ZSharp.Runtime.NET.IL2IR
 
             foreach (var parameter in Input.GetGenericArguments())
             {
-                var genericParameter = new GenericParameter(parameter.Name);
+                var genericParameter = new IR.GenericParameter(parameter.Name);
                 Context.Cache(parameter, genericParameter);
                 Output.GenericParameters.Add(genericParameter);
             }
 
-            Self = new ConstructedClass(Output)
+            Self = new ConstructedInterface(Output)
             {
                 Arguments = [.. Output.GenericParameters]
             };
@@ -69,22 +64,10 @@ namespace ZSharp.Runtime.NET.IL2IR
                 LoadInterfaceImplementation(@interface, Input.GetInterfaceMap(@interface));
         }
 
-        private void LoadFields()
-        {
-            foreach (var field in Input.GetFields())
-                LoadField(field);
-        }
-
         private void LoadProperties()
         {
             foreach (var property in Input.GetProperties())
                 LoadProperty(property);
-        }
-
-        private void LoadConstructors()
-        {
-            foreach (var constructor in Input.GetConstructors())
-                LoadConstructor(constructor);
         }
 
         private void LoadMethods()
@@ -121,18 +104,7 @@ namespace ZSharp.Runtime.NET.IL2IR
             //}
         }
 
-        private void LoadField(IL.FieldInfo field)
-        {
-            var result = new Field(field.Name, Loader.LoadType(field.FieldType))
-            {
-                IsStatic = field.IsStatic,
-                IsReadOnly = field.IsInitOnly,
-            };
-
-            Output.Fields.Add(result);
-        }
-
-        private void LoadProperty(IL.PropertyInfo property)
+        private void LoadProperty(PropertyInfo property)
         {
             var result = new Property(property.Name, Loader.LoadType(property.PropertyType))
             {
@@ -140,28 +112,10 @@ namespace ZSharp.Runtime.NET.IL2IR
                 Setter = property.SetMethod is null ? null : LoadMethod(property.SetMethod),
             };
 
-            Output.Properties.Add(result);
+            // TODO: add property metadata
         }
 
-        private void LoadConstructor(IL.ConstructorInfo constructor)
-        {
-            var result = new Constructor(null)
-            {
-                Method = new(Loader.RuntimeModule.TypeSystem.Void),
-            };
-
-            Context.Cache(constructor, result.Method);
-
-            if (!constructor.IsStatic)
-                result.Method.Signature.Args.Parameters.Add(new("this", Self));
-
-            foreach (var parameter in constructor.GetParameters())
-                result.Method.Signature.Args.Parameters.Add(new(parameter.Name ?? string.Empty, Loader.LoadType(parameter.ParameterType)));
-
-            Output.Constructors.Add(result);
-        }
-
-        private Method LoadMethod(IL.MethodInfo method)
+        private Method LoadMethod(MethodInfo method)
         {
             var result = new Method(Loader.LoadType(method.ReturnType))
             {
@@ -193,7 +147,8 @@ namespace ZSharp.Runtime.NET.IL2IR
             else if (type.IsValueType) result = LoadStruct(type);
             else throw new NotImplementedException();
 
-            Output.NestedTypes.Add(result);
+            // TODO: add nested types
+            //Output.NestedTypes.Add(result);
         }
 
         private Class LoadClass(Type type)

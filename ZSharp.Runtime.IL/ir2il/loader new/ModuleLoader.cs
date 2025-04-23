@@ -1,4 +1,6 @@
-﻿namespace ZSharp.Runtime.NET.IR2IL
+﻿using System;
+
+namespace ZSharp.Runtime.NET.IR2IL
 {
     internal sealed class ModuleLoader(
         RootModuleLoader loader, 
@@ -46,10 +48,10 @@
             foreach (var type in Input.Types)
                 (type switch
                 {
-                    IR.Class @class => new ClassLoader(ModuleLoader, Output, @class),
-                    //IR.Interface @interface => new InterfaceLoader(loader, Output, @interface),
-                    _ => throw new NotImplementedException()
-                }).Load();
+                    IR.Class @class => new ClassLoader(ModuleLoader, Output, @class).Load,
+                    IR.Interface @interface => new InterfaceLoader(loader, Output, @interface).Load,
+                    _ => (Func<IL.Emit.TypeBuilder>)null! ?? throw new NotImplementedException()
+                })();
         }
 
         private void LoadFunctions(IL.Emit.TypeBuilder globals)
