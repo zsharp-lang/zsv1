@@ -2,7 +2,7 @@
 
 namespace ZSharp.ZSSourceCompiler
 {
-    public sealed class ClassBodyCompiler(ZSSourceCompiler compiler, OOPDefinition oop, GenericClass @class)
+    public sealed class ClassBodyCompiler(ZSSourceCompiler compiler, OOPDefinition oop, Objects.Class @class)
         : CompilerBase(compiler)
         , IMultipassCompiler
     {
@@ -10,7 +10,7 @@ namespace ZSharp.ZSSourceCompiler
 
         public OOPDefinition Node { get; } = oop;
 
-        public GenericClass Class { get; } = @class;
+        public Objects.Class Class { get; } = @class;
 
         public void AddToNextPass(Action action)
             => nextPass.Add(action);
@@ -128,7 +128,7 @@ namespace ZSharp.ZSSourceCompiler
                 field.IR = Compiler.Compiler.CompileIRObject<IR.Field, IR.Class>(field, null);
 
                 if (field.Initializer is not null)
-                    field.Initializer = Compiler.Compiler.Cast(field.Initializer, field.Type);
+                    field.Initializer = Compiler.Compiler.TypeSystem.ImplicitCast(field.Initializer, field.Type).Unwrap();
             };
         }
 
@@ -160,7 +160,7 @@ namespace ZSharp.ZSSourceCompiler
                 field.IR = Compiler.Compiler.CompileIRObject<IR.Field, IR.Class>(field, null);
 
                 if (field.Initializer is not null)
-                    field.Initializer = Compiler.Compiler.Cast(field.Initializer, field.Type);
+                    field.Initializer = Compiler.Compiler.TypeSystem.ImplicitCast(field.Initializer, field.Type).Unwrap();
             };
         }
     }

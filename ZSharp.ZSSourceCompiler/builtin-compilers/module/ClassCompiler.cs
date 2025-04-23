@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using ZSharp.IR;
-using ZSharp.Objects;
+﻿using ZSharp.Objects;
 
 namespace ZSharp.ZSSourceCompiler
 {
@@ -9,14 +7,14 @@ namespace ZSharp.ZSSourceCompiler
         OOPDefinition node, 
         ClassMetaClass metaClass
     )
-        : ContextCompiler<OOPDefinition, GenericClass>(
+        : ContextCompiler<OOPDefinition, Class>(
             compiler, node, new()
             {
                 Name = node.Name
             }
         )
     {
-        public override GenericClass Compile()
+        public override Class Compile()
         {
             if (Node.Bases is not null)
             {
