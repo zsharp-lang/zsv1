@@ -97,8 +97,8 @@
         {
             var type = LoadType(@ref.OwningType);
 
-            if (!Context.Cache(@ref.Member.Method, out var def))
-                throw new InvalidOperationException($"Method {@ref.Member.Name} was not loaded");
+            if (!Context.Cache(@ref.Constructor.Method, out var def))
+                throw new InvalidOperationException($"Constructor {@ref.Constructor.Name ?? "<Anonymous>"} was not loaded");
 
             var types = @ref.Signature.GetParameters().Select(p => p.Type).Skip(1).Select(LoadType).ToArray();
 

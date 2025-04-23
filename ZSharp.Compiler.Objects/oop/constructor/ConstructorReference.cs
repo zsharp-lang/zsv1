@@ -28,7 +28,7 @@ namespace ZSharp.Objects
             {
                 var type = compiler.CompileIRReference<IR.OOPTypeReference<IR.Class>>(ownerReference);
 
-                createInstance.Constructor = new IR.ConstructorReference(createInstance.Constructor.Member)
+                createInstance.Constructor = new IR.ConstructorReference(createInstance.Constructor.Constructor)
                 {
                     OwningType = type
                 };
