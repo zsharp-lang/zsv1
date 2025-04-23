@@ -48,6 +48,43 @@ namespace ZSharp.Compiler
         public CompilerObject Reference(CompilerObject type)
             => throw new NotImplementedException();
 
+        public bool AreEqual(CompilerObject left, CompilerObject right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+
+            if (Equals(left, right))
+                return true;
+
+            // TODO: this function should do more stuff
+
+            return false;
+        }
+
+        public CompilerObjectResult ImplicitCast(CompilerObject value, CompilerObject type)
+        {
+            CompilerObjectResult result = CompilerObjectResult.Error(
+                $"ImplicitCast for value:{value}, type:{type} is not supported."
+            );
+
+            if (type is IImplicitCastFromValue castFromValue)
+                result = Compiler.Wrap(c => castFromValue.ImplicitCastFromValue(c, value));
+
+            if (result.IsOk)
+                return result;
+
+            if (value is IImplicitCastToType castToType)
+                result = Compiler.Wrap(c => castToType.ImplicitCastToType(c, type));
+
+            if (result.IsOk)
+                return result;
+
+            if (IsTyped(value, out var valueType) && AreEqual(valueType, type))
+                result = CompilerObjectResult.Ok(value);
+
+            return result;
+        }
+
         public bool IsTyped(CompilerObject @object)
             => @object is IDynamicallyTyped;
 
