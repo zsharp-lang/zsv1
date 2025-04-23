@@ -130,7 +130,7 @@
 
             local.IR = Compiler.Compiler.CompileIRObject<IR.VM.Local, IR.VM.MethodBody>(local, Object.IR!.Body);
 
-            var code = Compiler.Compiler.CompileIRCode(Compiler.Compiler.Cast(local.Initializer, local.Type!));
+            var code = Compiler.Compiler.CompileIRCode(Compiler.Compiler.TypeSystem.ImplicitCast(local.Initializer, local.Type!).Unwrap());
 
             code.Instructions.Add(new IR.VM.Dup());
             code.Instructions.Add(new IR.VM.SetLocal(local.IR));
@@ -163,7 +163,7 @@
 
             if (local.Initializer is not null)
             {
-                var code = Compiler.Compiler.CompileIRCode(Compiler.Compiler.Cast(local.Initializer, local.Type!));
+                var code = Compiler.Compiler.CompileIRCode(Compiler.Compiler.TypeSystem.ImplicitCast(local.Initializer, local.Type !).Unwrap());
 
                 code.Instructions.Add(new IR.VM.Dup());
                 code.Instructions.Add(new IR.VM.SetLocal(local.IR));

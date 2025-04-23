@@ -96,7 +96,7 @@ namespace ZSharp.ZSSourceCompiler
                 global.IR = Compiler.Compiler.CompileIRObject<IR.Global, IR.Module>(global, null);
 
                 if (global.Initializer is not null)
-                    global.Initializer = Compiler.Compiler.Cast(global.Initializer, global.Type);
+                    global.Initializer = Compiler.Compiler.TypeSystem.ImplicitCast(global.Initializer, global.Type).Unwrap();
             };
         }
 
@@ -161,7 +161,7 @@ namespace ZSharp.ZSSourceCompiler
                 global.IR = Compiler.Compiler.CompileIRObject<IR.Global, IR.Module>(global, null);
 
                 if (global.Initializer is not null)
-                    global.Initializer = Compiler.Compiler.Cast(global.Initializer, global.Type);
+                    global.Initializer = Compiler.Compiler.TypeSystem.ImplicitCast(global.Initializer, global.Type).Unwrap();
             };
         }
     }

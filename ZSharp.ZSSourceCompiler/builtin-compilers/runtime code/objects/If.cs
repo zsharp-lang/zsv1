@@ -18,7 +18,7 @@ namespace ZSharp.Objects
 
         public IRCode CompileIRCode(Compiler.Compiler compiler)
             => new([
-                .. compiler.CompileIRCode(compiler.Cast(Condition, compiler.TypeSystem.Boolean)).Instructions,
+                .. compiler.CompileIRCode(compiler.TypeSystem.ImplicitCast(Condition, compiler.TypeSystem.Boolean).Unwrap()).Instructions,
                 
                 new IR.VM.JumpIfFalse(ElseLabel),
 

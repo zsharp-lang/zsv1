@@ -20,7 +20,10 @@
 
             Object.Type ??= type;
 
-            var code = Compiler.Compiler.CompileIRCode(Compiler.Compiler.Cast(value, type));
+            if (!Compiler.Compiler.TypeSystem.ImplicitCast(value, Object.Type).Ok(out var breakValue))
+                throw new Compiler.InvalidCastException(value, Object.Type);
+
+            var code = Compiler.Compiler.CompileIRCode(breakValue);
 
             return new Objects.RawCode(
                 new([
@@ -39,7 +42,7 @@
                 return new Objects.RawCode(new([new IR.VM.Jump(Object.EndLabel)]));
             }
 
-            return Compiler.Compiler.Cast(Compiler.CompileNode(Node.Else!), Object.Type);
+            return Compiler.Compiler.TypeSystem.ImplicitCast(Compiler.CompileNode(Node.Else!), Object.Type).Unwrap();
         }
     }
 }

@@ -26,7 +26,7 @@ namespace ZSharp.ZSSourceCompiler
             return new([
                 ConditionLabel,
                 .. compiler.CompileIRCode(
-                    compiler.Cast(Condition, compiler.TypeSystem.Boolean)
+                    compiler.TypeSystem.ImplicitCast(Condition, compiler.TypeSystem.Boolean).Unwrap()
                 ).Instructions,
 
                 new IR.VM.JumpIfFalse(ElseLabel),
