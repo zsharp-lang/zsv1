@@ -104,11 +104,14 @@
 
         private Action Load(IR.Class @class, Module owner)
         {
-            GenericClass result = new()
+            if (@class.HasGenericParameters)
+                return LoadGenericClass(@class, owner);
+
+            Class result = new()
             {
                 Name = @class.Name ?? string.Empty,
-                IR = new(@class),
-                Defined = true,
+                IR = @class,
+                IsDefined = true,
             };
 
             Context.Objects.Cache(@class, result);
@@ -120,20 +123,6 @@
 
             if (@class.Base is not null)
                 result.Base = Load(@class.Base);
-
-            if (@class.HasGenericParameters)
-                foreach (var parameter in @class.GenericParameters)
-                {
-                    var genericParameter = new GenericParameter()
-                    {
-                        Name = parameter.Name,
-                        IR = parameter,
-                    };
-
-                    Context.Types.Cache(parameter, genericParameter);
-
-                    result.GenericParameters.Add(genericParameter);
-                }
 
             return () =>
             {
@@ -244,6 +233,110 @@
             }
 
             return origin;
+        }
+
+        private Action LoadGenericClass(IR.Class @class, Module owner)
+        {
+            GenericClass result = new()
+            {
+                Name = @class.Name ?? string.Empty,
+                IR = new(@class),
+                Defined = true,
+            };
+
+            Context.Objects.Cache(@class, result);
+
+            owner.Content.Add(result);
+
+            if (result.Name is not null && result.Name != string.Empty)
+                owner.Members.Add(result.Name, result);
+
+            if (@class.Base is not null)
+                result.Base = Load(@class.Base);
+
+            if (@class.HasGenericParameters)
+                foreach (var parameter in @class.GenericParameters)
+                {
+                    var genericParameter = new GenericParameter()
+                    {
+                        Name = parameter.Name,
+                        IR = parameter,
+                    };
+
+                    Context.Types.Cache(parameter, genericParameter);
+
+                    result.GenericParameters.Add(genericParameter);
+                }
+
+            return () =>
+            {
+                if (@class.HasFields)
+                    foreach (var field in @class.Fields)
+                    {
+                        Field resultField = new(field.Name)
+                        {
+                            IR = field,
+                            Type = Load(field.Type),
+                        };
+                        if (field.Initializer is not null)
+                            resultField.Initializer = new RawCode(new(field.Initializer)
+                            {
+                                Types = [resultField.Type]
+                            });
+                        result.Members.Add(resultField.Name, resultField);
+                    }
+                ;
+
+                if (@class.Constructors.Count > 0)
+                    foreach (var constructor in @class.Constructors)
+                    {
+                        Constructor resultConstructor = new(constructor.Name)
+                        {
+                            Owner = result,
+                            IR = constructor,
+                        };
+                        if (resultConstructor.Name is not null && resultConstructor.Name != string.Empty)
+                        {
+                            if (!result.Members.TryGetValue(resultConstructor.Name, out var group))
+                                result.Members.Add(resultConstructor.Name, group = new OverloadGroup(resultConstructor.Name));
+
+                            if (group is not OverloadGroup overloadGroup)
+                                throw new InvalidOperationException();
+
+                            overloadGroup.Overloads.Add(resultConstructor);
+                        }
+                        else
+                        {
+                            if (result.Constructor is not OverloadGroup group)
+                                result.Constructor = group = new OverloadGroup(string.Empty);
+
+                            group.Overloads.Add(resultConstructor);
+                        }
+                        resultConstructor.Signature = Load(constructor.Method.Signature);
+                    }
+
+                if (@class.Methods.Count > 0)
+                    foreach (var method in @class.Methods)
+                    {
+                        Method resultMethod = new(method.Name)
+                        {
+                            IR = method,
+                            Defined = true,
+                        };
+                        if (resultMethod.Name is not null && resultMethod.Name != string.Empty)
+                        {
+                            if (!result.Members.TryGetValue(resultMethod.Name, out var group))
+                                result.Members.Add(resultMethod.Name, group = new OverloadGroup(resultMethod.Name));
+
+                            if (group is not OverloadGroup overloadGroup)
+                                throw new InvalidOperationException();
+
+                            overloadGroup.Overloads.Add(resultMethod);
+                        }
+                        resultMethod.Signature = Load(method.Signature);
+                        resultMethod.ReturnType = Load(method.ReturnType);
+                    }
+            };
         }
 
         private Action LoadGenericFunction(IR.Function function, Module owner)
