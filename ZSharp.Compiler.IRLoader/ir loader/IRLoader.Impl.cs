@@ -67,7 +67,8 @@
 
             RTFunction result = new(function.Name)
             {
-                IR = function
+                IR = function,
+                IsDefined = true,
             };
 
             Context.Objects.Cache(function, result);
