@@ -26,6 +26,9 @@ namespace ZSharp.Objects
             } catch (ArgumentsCountMismatchException argumentsCountMismatch)
             {
                 throw new ArgumentMismatchException(this, arguments, innerException: argumentsCountMismatch);
+            } catch (Compiler.InvalidCastException invalidCast)
+            {
+                throw new ArgumentMismatchException(this, arguments, innerException: invalidCast);
             }
         }
 
@@ -51,7 +54,9 @@ namespace ZSharp.Objects
                 if (!positionalArgumentsQueue.TryDequeue(out var arg))
                     arg = param.Default ?? throw new ArgumentsCountMismatchException($"Expected {@params.Count} positional arguments but got {args.Count}");
 
-                result[param] = param.MatchArgument(compiler, arg);
+                if (param.MatchArgument(compiler, arg).Ok(out var argumentResult))
+                    result[param] = argumentResult;
+                else throw new Compiler.InvalidCastException(arg, null!);
             }
 
             if (varParams is not null)

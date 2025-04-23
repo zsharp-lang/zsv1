@@ -6,6 +6,6 @@
 
         public CompilerObject? Default { get; }
 
-        public CompilerObject MatchArgument(Compiler.Compiler compiler, CompilerObject argument);
+        public CompilerObjectResult MatchArgument(Compiler.Compiler compiler, CompilerObject argument);
     }
 }

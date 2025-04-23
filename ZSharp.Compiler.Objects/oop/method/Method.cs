@@ -36,7 +36,7 @@ namespace ZSharp.Objects
 
         public IR.Method? IR { get; set; }
 
-        public string? Name { get; set; } = name;
+        public string Name { get; set; } = name ?? string.Empty;
 
         public Signature Signature { get; set; } = new();
 
@@ -49,63 +49,37 @@ namespace ZSharp.Objects
 
         public CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments)
         {
-            var (args, kwargs) = Utils.SplitArguments(arguments);
+            if (ReturnType is null)
+                throw new PartiallyCompiledObjectException(this, Errors.UndefinedReturnType(Name));
 
-            try
-            {
-                return Call(compiler, args, kwargs);
-            }
-            catch
-            {
-                throw new ArgumentMismatchException(this, arguments);
-            }
-        }
+            var args = (Signature as ISignature).MatchArguments(compiler, arguments);
 
-        public CompilerObject Call(Compiler.Compiler compiler, Args args, KwArgs kwArgs)
-        {
-            // TODO: type checking (when type system is implemented)
+            IRCode code = new();
 
-            IRCode
-                argsCode = new(), varArgsCode = new(),
-                kwArgsCode = new(), varKwArgsCode = new();
+            List<CompilerObject> @params = [];
 
-            if (args.Count > Signature.Args.Count)
-                if (Signature.VarArgs is null)
-                    throw new($"Function {Name} takes {Signature.Args.Count} arguments, but {args.Count} were given.");
-                else
-                    throw new NotImplementedException("var args");
-            else if (args.Count < Signature.Args.Count)
-                throw new($"Function {Name} takes {Signature.Args.Count} arguments, but {args.Count} were given.");
+            @params.AddRange(Signature.Args);
 
-            for (int i = 0; i < Signature.Args.Count; i++)
-                argsCode.Append(compiler.CompileIRCode(args[i]));
+            if (Signature.VarArgs is not null)
+                @params.Add(Signature.VarArgs);
 
-            if (kwArgs.Count > Signature.KwArgs.Count)
-                if (Signature.VarKwArgs is null)
-                    throw new($"Function {Name} takes {Signature.KwArgs.Count} keyword arguments, but {kwArgs.Count} were given.");
-                else
-                    throw new NotImplementedException("var kwargs");
-            else if (kwArgs.Count < Signature.KwArgs.Count)
-                throw new($"Function {Name} takes {Signature.KwArgs.Count} keyword arguments, but {kwArgs.Count} were given.");
+            @params.AddRange(Signature.KwArgs);
 
-            foreach (var kwArgParameter in Signature.KwArgs)
-                kwArgsCode.Append(compiler.CompileIRCode(kwArgs[kwArgParameter.Name]));
+            if (Signature.VarKwArgs is not null)
+                @params.Add(Signature.VarKwArgs);
 
-            IRCode result = new();
-            result.Append(argsCode);
-            result.Append(varArgsCode); // should be empty
-            result.Append(kwArgsCode);
-            result.Append(varKwArgsCode); // should be empty
+            foreach (var param in @params)
+                code.Append(compiler.CompileIRCode(args[param]));
 
-            result.Instructions.Add(new IR.VM.Call(IR!));
+            code.Append(new([
+                new IR.VM.Call(compiler.CompileIRObject<IR.Method, IR.OOPType>(this, null))
+            ]));
 
-            result.Types.Clear();
+            code.Types.Clear();
             if (ReturnType != compiler.TypeSystem.Void)
-                result.Types.Add(ReturnType!);
+                code.Types.Add(ReturnType);
 
-            result.MaxStackSize = Math.Max(result.MaxStackSize, result.Types.Count);
-
-            return new RawCode(result);
+            return new RawCode(code);
         }
 
         [MemberNotNull(nameof(ReturnType))]
@@ -125,33 +99,28 @@ namespace ZSharp.Objects
                     IsInstance = true,
                 };
 
-            if (owner is not null && !state.Get(BuildState.Owner))
+            if (ReturnType is null)
+                throw new PartiallyCompiledObjectException(
+                    this, Errors.UndefinedReturnType(Name)
+                );
+
+            if (owner is not null && !state[BuildState.Owner])
             {
-                state.Set(BuildState.Owner);
+                state[BuildState.Owner] = true;
 
                 owner.Methods.Add(IR);
             }
 
-            if (!state.Get(BuildState.Signature))
+            if (!state[BuildState.Signature])
             {
-                state.Set(BuildState.Signature);
+                state[BuildState.Signature] = true;
 
-                foreach (var arg in Signature.Args)
-                    IR.Signature.Args.Parameters.Add(compiler.CompileIRObject<IR.Parameter, IR.Signature>(arg, IR.Signature));
-
-                if (Signature.VarArgs is not null)
-                    IR.Signature.Args.Var = compiler.CompileIRObject<IR.Parameter, IR.Signature>(Signature.VarArgs, IR.Signature);
-
-                foreach (var kwArg in Signature.KwArgs)
-                    IR.Signature.KwArgs.Parameters.Add(compiler.CompileIRObject<IR.Parameter, IR.Signature>(kwArg, IR.Signature));
-
-                if (Signature.VarKwArgs is not null)
-                    IR.Signature.KwArgs.Var = compiler.CompileIRObject<IR.Parameter, IR.Signature>(Signature.VarKwArgs, IR.Signature);
+                compiler.CompileIRObject<IR.Signature, IR.Signature>(Signature, IR.Signature);
             }
 
-            if (Body is not null && !state.Get(BuildState.Body))
+            if (Body is not null && !state[BuildState.Body])
             {
-                state.Set(BuildState.Body);
+                state[BuildState.Body] = true;
 
                 IR.Body.Instructions.AddRange(compiler.CompileIRCode(Body).Instructions);
             }

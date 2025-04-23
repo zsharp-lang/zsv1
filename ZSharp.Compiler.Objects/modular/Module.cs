@@ -5,9 +5,9 @@ namespace ZSharp.Objects
 {
     public sealed class Module(string name)
         : CompilerObject
+        , ICompileIRObject<IR.Module, IR.Module>
         , ICTGetMember<MemberName>
         , ICTReadable
-        , ICompileIRObject<IR.Module, IR.Module>
     {
         CompilerObject ITyped.Type => throw new NotImplementedException();
 

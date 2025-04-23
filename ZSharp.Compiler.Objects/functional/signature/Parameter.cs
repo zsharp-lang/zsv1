@@ -53,12 +53,12 @@ namespace ZSharp.Objects
             };
         }
 
-        CompilerObject IParameter.MatchArgument(Compiler.Compiler compiler, CompilerObject argument)
+        CompilerObjectResult IParameter.MatchArgument(Compiler.Compiler compiler, CompilerObject argument)
         {
             if (Type is null)
-                throw new InvalidOperationException($"Parameter's {Name} type is not defined");
+                throw new PartiallyCompiledObjectException(this, $"Parameter's {Name} type is not defined");
 
-            return compiler.Cast(argument, Type);
+            return compiler.TypeSystem.ImplicitCast(argument, Type);
         }
     }
 }

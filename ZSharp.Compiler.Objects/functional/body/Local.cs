@@ -17,23 +17,13 @@ namespace ZSharp.Objects
             Initializer = 0b100,
         }
 
-        private BuildState _state = BuildState.None;
+        private readonly ObjectBuildState<BuildState> state = new();
 
         public IR.VM.Local? IR { get; set; }
 
         public required string Name { get; set; }
 
-        public bool IsOwnerBuilt
-        {
-            get => _state.HasFlag(BuildState.Owner);
-            set => _state = value ? _state | BuildState.Owner : _state & ~BuildState.Owner;
-        }
-
-        public bool IsInitializerBuilt
-        {
-            get => _state.HasFlag(BuildState.Initializer);
-            set => _state = value ? _state | BuildState.Initializer : _state & ~BuildState.Initializer;
-        }
+        public bool IsReadOnly { get; set; }
 
         public CompilerObject? Type { get; set; }
 
@@ -42,22 +32,24 @@ namespace ZSharp.Objects
         public IR.VM.Local CompileIRObject(Compiler.Compiler compiler, ICallableBody? owner)
         {
             if (Type is null)
-                throw new();
+                throw new PartiallyCompiledObjectException(
+                    this, $"Local variable {Name} does not have a type"
+                );
 
             IR ??= new(Name, compiler.CompileIRType(Type));
 
-            if (!IsOwnerBuilt && owner is not null)
+            if (owner is not null && !state[BuildState.Owner])
             {
-                owner.Locals.Add(IR);
+                state[BuildState.Owner] = true;
 
-                IsOwnerBuilt = true;
+                owner.Locals.Add(IR);
             }
 
-            if (!IsInitializerBuilt && Initializer is not null)
+            if (Initializer is not null && !state[BuildState.Initializer])
             {
-                IR.Initializer = compiler.CompileIRCode(Initializer).Instructions.ToArray();
+                state[BuildState.Initializer] = true;
 
-                IsInitializerBuilt = true;
+                IR.Initializer = [.. compiler.CompileIRCode(Initializer).Instructions];
             }
 
             return IR;
@@ -72,14 +64,20 @@ namespace ZSharp.Objects
 
         public CompilerObject Assign(Compiler.Compiler compiler, CompilerObject value)
         {
-            // TODO: check if read-only
+            if (IsReadOnly)
+                throw new();
 
             if (Type is null)
-                throw new();
+                if (compiler.TypeSystem.IsTyped(value, out var valueType))
+                    Type = valueType;
+                else throw new PartiallyCompiledObjectException(this, $"Local variable {Name} does not have a type");
 
             IR ??= CompileIRObject(compiler, null);
 
-            var code = compiler.CompileIRCode(compiler.Cast(value, Type));
+            if (!compiler.TypeSystem.ImplicitCast(value, Type).Ok(out var cast))
+                throw new Compiler.InvalidCastException(value, Type);
+
+            var code = compiler.CompileIRCode(cast);
 
             code.Instructions.AddRange(
                 [

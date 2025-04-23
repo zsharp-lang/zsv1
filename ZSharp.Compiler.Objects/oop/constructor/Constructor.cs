@@ -29,7 +29,7 @@ namespace ZSharp.Objects
 
         public Signature Signature { get; set; } = new();
 
-        public GenericClass? Owner { get; set; }
+        public CompilerObject? Owner { get; set; }
 
         public CompilerObject? Body { get; set; }
 
@@ -130,21 +130,11 @@ namespace ZSharp.Objects
                 state.Set(BuildState.Owner);
             }
 
-            if (!state.Get(BuildState.Signature))
+            if (!state[BuildState.Signature])
             {
-                foreach (var arg in Signature.Args)
-                    IR.Method.Signature.Args.Parameters.Add(compiler.CompileIRObject<IR.Parameter, IR.Signature>(arg, IR.Method.Signature));
+                state[BuildState.Signature] = true;
 
-                if (Signature.VarArgs is not null)
-                    IR.Method.Signature.Args.Var = compiler.CompileIRObject<IR.Parameter, IR.Signature>(Signature.VarArgs, IR.Method.Signature);
-
-                foreach (var kwArg in Signature.KwArgs)
-                    IR.Method.Signature.KwArgs.Parameters.Add(compiler.CompileIRObject<IR.Parameter, IR.Signature>(kwArg, IR.Method.Signature));
-
-                if (Signature.VarKwArgs is not null)
-                    IR.Method.Signature.KwArgs.Var = compiler.CompileIRObject<IR.Parameter, IR.Signature>(Signature.VarKwArgs, IR.Method.Signature);
-
-                state.Set(BuildState.Signature);
+                compiler.CompileIRObject<IR.Signature, IR.Signature>(Signature, IR.Method.Signature);
             }
 
             if (Body is not null && !state.Get(BuildState.Body))

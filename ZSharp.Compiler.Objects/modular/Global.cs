@@ -8,6 +8,8 @@ namespace ZSharp.Objects
         , ICTReadable
         , ICompileIRObject<IR.Global, IR.Module>
     {
+        #region Build State
+
         [Flags]
         enum BuildState
         {
@@ -16,7 +18,19 @@ namespace ZSharp.Objects
             Initializer = 0b10,
         }
 
-        private BuildState _state = BuildState.None;
+        private readonly ObjectBuildState<BuildState> state = new();
+
+        public bool IsDefined
+        {
+            init
+            {
+                if (value)
+                    foreach (var item in Enum.GetValues<BuildState>())
+                        state[item] = true;
+            }
+        }
+
+        #endregion
 
         public IR.Global? IR { get; set; }
 
@@ -24,41 +38,37 @@ namespace ZSharp.Objects
 
         public bool IsReadOnly { get; set; }
 
-        public bool IsOwnerBuilt
-        {
-            get => _state.HasFlag(BuildState.Owner);
-            set => _state = value ? _state | BuildState.Owner : _state & ~BuildState.Owner;
-        }
-
-        public bool IsInitializerBuilt
-        {
-            get => _state.HasFlag(BuildState.Initializer);
-            set => _state = value ? _state | BuildState.Initializer : _state & ~BuildState.Initializer;
-        }
-
         public CompilerObject? Initializer { get; set; }
 
         public CompilerObject? Type { get; set; }
 
+        #region Protocols
+
         public IR.Global CompileIRObject(Compiler.Compiler compiler, IR.Module? owner)
         {
             if (Type is null)
-                throw new();
+                throw new PartiallyCompiledObjectException(
+                    this,
+                    Errors.UndefinedGlobalType(Name)
+                );
 
             IR ??= new(Name, compiler.CompileIRType(Type));
 
-            if (!IsOwnerBuilt && owner is not null)
+            if (owner is not null && !state[BuildState.Owner])
             {
-                owner.Globals.Add(IR!);
+                state[BuildState.Owner] = true;
 
-                IsOwnerBuilt = true;
+                owner.Globals.Add(IR!);
             }
 
-            if (!IsInitializerBuilt && Initializer is not null)
+            if (Initializer is not null && !state[BuildState.Initializer])
             {
-                IR.Initializer = compiler.CompileIRCode(compiler.Cast(Initializer, Type)).Instructions.ToArray();
+                state[BuildState.Initializer] = true;
 
-                IsInitializerBuilt = true;
+                if (!compiler.TypeSystem.ImplicitCast(Initializer, Type).Ok(out var initializer))
+                    throw new Compiler.InvalidCastException(Initializer, Type);
+
+                IR.Initializer = [.. compiler.CompileIRCode(initializer).Instructions];
             }
 
             return IR;
@@ -81,7 +91,9 @@ namespace ZSharp.Objects
 
             IR = compiler.CompileIRObject<IR.Global, IR.Module>(this, null);
 
-            var cast = compiler.Cast(value, Type);
+            if (!compiler.TypeSystem.ImplicitCast(value, Type).Ok(out var cast))
+                throw new Compiler.InvalidCastException(value, Type);
+
             var code = compiler.CompileIRCode(cast);
 
             code.Instructions.AddRange(
@@ -90,10 +102,12 @@ namespace ZSharp.Objects
                     new IR.VM.SetGlobal(IR),
                 ]
             );
-            
+
             code.RequireValueType();
 
             return new RawCode(code);
         }
+
+        #endregion
     }
 }

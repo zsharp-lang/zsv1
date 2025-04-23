@@ -15,11 +15,7 @@ namespace ZSharp.Objects
         : CompilerObject
         , ICTCallable
     {
-        public IR.Function? IR { get; set; }
 
-        public string Name { get; set; } = name ?? string.Empty;
-
-        public CompilerObject? Body { get; set; }
 
         public abstract CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments);
     }
