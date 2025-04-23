@@ -34,7 +34,6 @@
 
             return type switch
             {
-                IR.ConstructedClass constructedClass => LoadType(constructedClass),
                 IR.OOPTypeReference reference => LoadType(reference),
                 _ => throw new NotImplementedException()
             };
@@ -61,24 +60,6 @@
             return type.MakeGenericType([.. genericArguments]);
         }
 
-        public Type LoadType(IR.ConstructedClass constructedClass)
-        {
-            var result = LoadType(constructedClass as IR.OOPTypeReference);
-
-            return result;
-            //var innerClass = LoadType(constructedClass as IR.OOPTypeReference);
-
-            //if (innerClass is null)
-            //    throw new();
-
-            //if (constructedClass.Arguments.Count == 0)
-            //    return innerClass;
-
-            //return innerClass.MakeGenericType([
-            //    .. constructedClass.Arguments.Select(LoadType)
-            //]);
-        }
-
         public IL.MethodBase LoadReference(IR.ICallable callable)
         {
             if (Context.Cache(callable) is IL.MethodBase result)
@@ -100,26 +81,20 @@
             if (!Context.Cache(@ref.Constructor.Method, out var def))
                 throw new InvalidOperationException($"Constructor {@ref.Constructor.Name ?? "<Anonymous>"} was not loaded");
 
-            var types = @ref.Signature.GetParameters().Select(p => p.Type).Skip(1).Select(LoadType).ToArray();
+            if (def is not IL.ConstructorInfo constructorInfo)
+                throw new InvalidOperationException($"Method {@ref.Constructor.Name ?? "<Anonymous>"} was not compiled to an IL method");
 
-            try
-            {
-                var method = type.GetConstructor(
-                    types
-                );
+            if (!type.IsGenericType)
+                return constructorInfo;
 
-                if (method is null)
-                    throw new();
+            if (type.GetGenericTypeDefinition() is IL.Emit.TypeBuilder typeBuilder)
+                if (!typeBuilder.IsCreated())
+                    return IL.Emit.TypeBuilder.GetConstructor(type, constructorInfo);
 
-                if (method.HasSameMetadataDefinitionAs(def))
-                    return method;
-            }
-            catch (NotSupportedException)
-            {
-                return (IL.ConstructorInfo)def;
-            }
-
-            throw new();
+            return (IL.ConstructorInfo)(IL.MethodBase.GetMethodFromHandle(
+                constructorInfo.MethodHandle,
+                type.TypeHandle
+            ) ?? throw new("Could not create constructor from method handle"));
         }
 
         public IL.FieldInfo LoadReference(IR.FieldReference @ref)
@@ -129,21 +104,17 @@
             if (!Context.Cache(@ref.Member, out var def))
                 throw new InvalidOperationException($"Field {@ref.Member.Name} was not loaded");
 
-            try
-            {
-                var field = type.GetField(def.Name);
-
-                if (field is null)
-                    throw new();
-
-                if (field.HasSameMetadataDefinitionAs(def))
-                    return field;
-            } catch (NotSupportedException)
-            {
+            if (!type.IsGenericType)
                 return def;
-            }           
 
-            throw new();
+            if (type.GetGenericTypeDefinition() is IL.Emit.TypeBuilder typeBuilder)
+                if (!typeBuilder.IsCreated())
+                    return IL.Emit.TypeBuilder.GetField(type, def);
+
+            return IL.FieldInfo.GetFieldFromHandle(
+                def.FieldHandle,
+                type.TypeHandle
+            );
         }
 
         public IL.MethodInfo LoadReference(IR.MethodReference @ref)
@@ -153,30 +124,20 @@
             if (!Context.Cache(@ref.Method, out var def))
                 throw new InvalidOperationException($"Method {@ref.Method.Name} was not loaded");
 
-            var types = ((IR.ICallable)@ref).Signature.GetParameters().Select(p => p.Type).Skip(@ref.Method.IsStatic ? 0 : 1).Select(LoadType).ToArray();
+            if (def is not IL.MethodInfo methodInfo)
+                throw new InvalidOperationException($"Method {@ref.Method.Name} was not compiled to an IL method");
 
-            try
-            {
-                var method = type.GetMethod(
-                    def.Name,
-                    def.GetGenericArguments().Length,
-                    types
-                );
+            if (!type.IsGenericType)
+                return methodInfo;
 
-                if (method is null)
-                    throw new();
+            if (type.GetGenericTypeDefinition() is IL.Emit.TypeBuilder typeBuilder)
+                if (!typeBuilder.IsCreated())
+                    return IL.Emit.TypeBuilder.GetMethod(type, methodInfo);
 
-                if (@ref is IR.GenericMethodInstance genericMethodInstance)
-                    method = method.MakeGenericMethod([.. genericMethodInstance.Arguments.Select(LoadType)]);
-
-                if (method.HasSameMetadataDefinitionAs(def))
-                    return method;
-            } catch (NotSupportedException)
-            {
-                return (IL.MethodInfo)def;
-            }
-
-            throw new();
+            return (IL.MethodInfo)(IL.MethodBase.GetMethodFromHandle(
+                methodInfo.MethodHandle,
+                type.TypeHandle
+            ) ?? throw new("Could not create method from method handle"));
         }
 
         public IL.MethodInfo LoadReference(IR.GenericFunctionInstance @ref)
