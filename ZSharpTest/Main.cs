@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 using ZSharp.Compiler;
 using ZSharp.Interpreter;
 using ZSharp.Parser;
@@ -213,10 +214,13 @@ if (mainModule is not null)
     var mainModuleIL = runtime.Import(mainModuleIR);
     var mainModuleGlobals = mainModuleIL.GetType("<Globals>") ?? throw new();
 
-    var mainMethod = mainModuleGlobals.GetMethod("main", []);
+    //foreach (var type in mainModuleIL.GetTypes())
+    //    DecompileType(type);
 
-    if (mainMethod is not null)
-        Decompile(mainMethod);
+    //foreach (var method in mainModuleIL.GetMethods())
+    //    Decompile(method);
+
+    var mainMethod = mainModuleGlobals.GetMethod("main", []);
 
     mainMethod?.Invoke(null, null);
 }
@@ -230,9 +234,42 @@ Console.WriteLine("Press any key to exit...");
 Console.ReadKey();
 
 
+static void DecompileType(Type type)
+{
+    Console.WriteLine("========== Type: " + type.Name + " ==========");
+
+    foreach (var method in type.GetMethods())
+    {
+        if (method.DeclaringType != type)
+            continue;
+
+        Decompile(method);
+    }
+
+    Console.WriteLine("========== Type ==========");
+}
+
+
 static void Decompile(System.Reflection.MethodBase method)
 {
-    Console.WriteLine("========== Disassmebly: " + method.Name + " ==========");
+    StringBuilder signatureBuilder = new();
+    foreach (var parameter in method.GetParameters())
+    {
+        if (signatureBuilder.Length > 0)
+            signatureBuilder.Append(", ");
+        signatureBuilder.Append(parameter.ParameterType.Name);
+    }
+
+    string modifier = string.Empty;
+    if (method.IsStatic)
+        modifier = "static ";
+    else if (method.IsVirtual)
+        modifier = "virtual ";
+    else if (method.IsAbstract)
+        modifier = "abstract ";
+    else modifier = "instance ";
+
+    Console.WriteLine($"========== Disassmebly: {modifier}{method.Name}({signatureBuilder}) ==========");
 
     foreach (var instruction in Mono.Reflection.Disassembler.GetInstructions(method))
     {
