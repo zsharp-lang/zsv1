@@ -19,6 +19,9 @@ namespace ZSharp.Compiler
             if (@object is IReferencable<T> referencable)
                 return referencable.CreateReference(this, context);
 
+            if (@object is T result)
+                return result;
+
             throw new NotImplementedException();
         }
     }
