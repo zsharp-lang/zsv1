@@ -2,11 +2,11 @@
 
 namespace ZSharp.Objects
 {
-    public sealed class Float32Literal(float value, CompilerObject type)
+    public sealed class Float32Literal(float value, IType type)
         : Literal<float>(value)
         , ICTReadable
     {
-        public override CompilerObject Type { get; } = type;
+        public override IType Type { get; } = type;
 
         public override IRCode Read(Compiler.Compiler compiler)
             => new(

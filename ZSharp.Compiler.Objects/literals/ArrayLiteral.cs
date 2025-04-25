@@ -8,7 +8,7 @@ namespace ZSharp.Objects
     {
         public List<CompilerObject> Items { get; } = new(items ?? []);
 
-        CompilerObject ICTTypeCast.Cast(Compiler.Compiler compiler, CompilerObject targetType)
+        CompilerObject ICTTypeCast.Cast(Compiler.Compiler compiler, IType targetType)
         {
             var instance = compiler.Call(targetType, []);
 

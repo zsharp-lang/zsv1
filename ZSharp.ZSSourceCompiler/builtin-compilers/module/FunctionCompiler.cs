@@ -115,7 +115,7 @@
             Context.CurrentScope.Set(let.Name, local);
 
             local.Type = let.Type is not null
-                ? Compiler.CompileNode(let.Type)
+                ? Compiler.CompileType(let.Type)
                 : Compiler.Compiler.TypeSystem.IsTyped(local.Initializer, out var type)
                 ? type
                 : null;
@@ -144,7 +144,7 @@
             Context.CurrentScope.Set(var.Name, local);
 
             local.Type = var.Type is not null
-                ? Compiler.CompileNode(var.Type)
+                ? Compiler.CompileType(var.Type)
                 : local.Initializer is null
                 ? null
                 : Compiler.Compiler.TypeSystem.IsTyped(local.Initializer, out var type)

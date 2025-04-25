@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using CommonZ.Utils;
+using System.Diagnostics.CodeAnalysis;
 using ZSharp.Compiler;
 
 using Args = CommonZ.Utils.Collection<ZSharp.Objects.CompilerObject>;
@@ -13,7 +14,11 @@ namespace ZSharp.Objects
         , ICTCallable
         , ICompileIRObject<IR.Method, IR.Class>
         , ICompileIRObject<IR.Method, IR.OOPType>
+        , ICompileIRReference<IR.MethodReference>
+        , IImplementsSpecification
+        , IImplicitCastToType
         , IReferencable<MethodReference>
+        , ITyped
     {
         [Flags]
         enum BuildState
@@ -25,6 +30,7 @@ namespace ZSharp.Objects
         }
 
         private readonly ObjectBuildState<BuildState> state = new();
+        private bool isVirtual;
 
         public bool Defined { init
             {
@@ -40,9 +46,22 @@ namespace ZSharp.Objects
 
         public Signature Signature { get; set; } = new();
 
-        public CompilerObject? ReturnType { get; set; }
+        public IType? ReturnType { get; set; }
 
         public CompilerObject? Body { get; set; }
+
+        public Collection<(IAbstraction, CompilerObject)> Specifications { get; } = [];
+
+        IType ITyped.Type
+        {
+            get
+            {
+                if (ReturnType is null)
+                    throw new InvalidOperationException();
+
+                return new MethodType(Signature, ReturnType);
+            }
+        }
 
         public CompilerObject Bind(Compiler.Compiler compiler, CompilerObject value)
             => new BoundMethod(this, value);
@@ -71,8 +90,12 @@ namespace ZSharp.Objects
             foreach (var param in @params)
                 code.Append(compiler.CompileIRCode(args[param]));
 
+            var ir = compiler.CompileIRReference<IR.MethodReference>(this);
+
             code.Append(new([
-                new IR.VM.Call(compiler.CompileIRObject<IR.Method, IR.OOPType>(this, null))
+                IR.IsVirtual
+                ? new IR.VM.CallVirtual(ir)
+                : new IR.VM.Call(ir)
             ]));
 
             code.Types.Clear();
@@ -85,24 +108,7 @@ namespace ZSharp.Objects
         [MemberNotNull(nameof(ReturnType))]
         public IR.Method CompileIRObject(Compiler.Compiler compiler, IR.Class? owner)
         {
-            IR ??=
-                new(
-                    compiler.CompileIRType(
-                        ReturnType ?? throw new PartiallyCompiledObjectException(
-                            this,
-                            Errors.UndefinedReturnType(Name)
-                        )
-                    )
-                )
-                {
-                    Name = Name,
-                    IsInstance = true,
-                };
-
-            if (ReturnType is null)
-                throw new PartiallyCompiledObjectException(
-                    this, Errors.UndefinedReturnType(Name)
-                );
+            CompileIR(compiler);
 
             if (owner is not null && !state[BuildState.Owner])
             {
@@ -111,19 +117,9 @@ namespace ZSharp.Objects
                 owner.Methods.Add(IR);
             }
 
-            if (!state[BuildState.Signature])
-            {
-                state[BuildState.Signature] = true;
+            CompileDefinition(compiler);
 
-                compiler.CompileIRObject<IR.Signature, IR.Signature>(Signature, IR.Signature);
-            }
-
-            if (Body is not null && !state[BuildState.Body])
-            {
-                state[BuildState.Body] = true;
-
-                IR.Body.Instructions.AddRange(compiler.CompileIRCode(Body).Instructions);
-            }
+            ReturnType ??= null!;
 
             return IR;
         }
@@ -143,7 +139,44 @@ namespace ZSharp.Objects
 
         IR.Method ICompileIRObject<IR.Method, IR.OOPType>.CompileIRObject(Compiler.Compiler compiler, IR.OOPType? owner)
         {
-            IR ??=
+            CompileIR(compiler);
+
+            CompileDefinition(compiler);
+
+            return IR;
+        }
+
+        IR.IRObject ICompileIRObject.CompileIRObject(Compiler.Compiler compiler)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override string ToString()
+            => $"<Method {Name}({Signature}): {ReturnType?.ToString() ?? "<Unknown>"}>";
+
+        CompilerObject IImplicitCastToType.ImplicitCastToType(Compiler.Compiler compiler, IType type)
+        {
+            if (type is not ICallableType callableType)
+                throw new Compiler.InvalidCastException(this, type);
+
+            throw new Compiler.InvalidCastException(this, type);
+        }
+
+        IR.MethodReference ICompileIRReference<IR.MethodReference>.CompileIRReference(Compiler.Compiler compiler)
+            => new(
+                compiler.CompileIRObject<IR.Method, IR.OOPType>(this, null)
+            )
+            {
+                OwningType = (IR.OOPTypeReference)IR!.Signature.Args.Parameters[0].Type, // TODO: add Owner property
+            };
+
+        void IImplementsSpecification.OnImplementSpecification(Compiler.Compiler compiler, IAbstraction abstraction, CompilerObject specification)
+            => Specifications.Add((abstraction, specification));
+
+        [MemberNotNull(nameof(IR))]
+        private IR.Method CompileIR(Compiler.Compiler compiler)
+        {
+            return IR ??=
                 new(
                     compiler.CompileIRType(
                         ReturnType ?? throw new PartiallyCompiledObjectException(
@@ -155,38 +188,28 @@ namespace ZSharp.Objects
                 {
                     Name = Name,
                     IsInstance = true,
+                    IsVirtual = Specifications.Count > 0,
                 };
+        }
 
-            if (!state.Get(BuildState.Signature))
+        private void CompileDefinition(Compiler.Compiler compiler)
+        {
+            if (IR is null)
+                throw new InvalidOperationException();
+
+            if (!state[BuildState.Signature])
             {
-                state.Set(BuildState.Signature);
+                state[BuildState.Signature] = true;
 
-                foreach (var arg in Signature.Args)
-                    IR.Signature.Args.Parameters.Add(compiler.CompileIRObject<IR.Parameter, IR.Signature>(arg, IR.Signature));
-
-                if (Signature.VarArgs is not null)
-                    IR.Signature.Args.Var = compiler.CompileIRObject<IR.Parameter, IR.Signature>(Signature.VarArgs, IR.Signature);
-
-                foreach (var kwArg in Signature.KwArgs)
-                    IR.Signature.KwArgs.Parameters.Add(compiler.CompileIRObject<IR.Parameter, IR.Signature>(kwArg, IR.Signature));
-
-                if (Signature.VarKwArgs is not null)
-                    IR.Signature.KwArgs.Var = compiler.CompileIRObject<IR.Parameter, IR.Signature>(Signature.VarKwArgs, IR.Signature);
+                compiler.CompileIRObject<IR.Signature, IR.Signature>(Signature, IR.Signature);
             }
 
-            if (Body is not null && !state.Get(BuildState.Body))
+            if (Body is not null && !state[BuildState.Body])
             {
-                state.Set(BuildState.Body);
+                state[BuildState.Body] = true;
 
                 IR.Body.Instructions.AddRange(compiler.CompileIRCode(Body).Instructions);
             }
-
-            return IR;
-        }
-
-        IR.IRObject ICompileIRObject.CompileIRObject(Compiler.Compiler compiler)
-        {
-            throw new NotImplementedException();
         }
     }
 }

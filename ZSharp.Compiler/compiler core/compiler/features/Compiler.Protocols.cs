@@ -30,9 +30,9 @@
             throw new("Object of this type is not callable.");
         }
 
-        public CompilerObject Cast(CompilerObject target, CompilerObject type)
+        public CompilerObject Cast(CompilerObject target, IType type)
         {
-            if (TypeSystem.IsTyped(target, out var targetType) && targetType.Equals(type))
+            if (TypeSystem.IsTyped(target, out var targetType) && TypeSystem.AreEqual(type, targetType))
                 return target;
 
             if (target is ICTTypeCast typeCast)

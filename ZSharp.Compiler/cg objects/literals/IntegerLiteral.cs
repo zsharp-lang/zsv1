@@ -2,11 +2,11 @@
 
 namespace ZSharp.Objects
 {
-    public sealed class IntegerLiteral(DefaultIntegerType value, CompilerObject type)
+    public sealed class IntegerLiteral(DefaultIntegerType value, IType type)
         : Literal<DefaultIntegerType>(value)
         , ICTReadable
     {
-        public override CompilerObject Type { get; } = type;
+        public override IType Type { get; } = type;
 
         public override IRCode Read(Compiler.Compiler compiler)
             => new(

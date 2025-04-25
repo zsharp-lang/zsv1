@@ -35,7 +35,7 @@
             throw new($"Could not find suitable compiler for node of type {node.GetType().Name}"); // TODO: proper exception: could not find suitable compiler for T
         }
 
-        public CompilerObject CompileType(Expression expression)
+        public Compiler.IType CompileType(Expression expression)
             => Compiler.TypeSystem.EvaluateType(CompileNode(expression));
     }
 }

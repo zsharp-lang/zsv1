@@ -29,7 +29,7 @@ namespace ZSharp.Objects
 
         public Signature Signature { get; set; } = new();
 
-        public CompilerObject? Owner { get; set; }
+        public IType? Owner { get; set; }
 
         public CompilerObject? Body { get; set; }
 

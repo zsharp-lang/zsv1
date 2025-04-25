@@ -2,6 +2,6 @@
 {
     public interface IDynamicallyTyped
     {
-        public CompilerObject GetType(Compiler compiler);
+        public IType GetType(Compiler compiler);
     }
 }

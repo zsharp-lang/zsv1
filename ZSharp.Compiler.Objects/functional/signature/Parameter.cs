@@ -13,7 +13,7 @@ namespace ZSharp.Objects
 
         public string Name { get; } = name;
 
-        public CompilerObject? Type { get; set; }
+        public IType? Type { get; set; }
 
         public CompilerObject? Initializer { get; set; }
 
@@ -49,7 +49,7 @@ namespace ZSharp.Objects
             return new(Name)
             {
                 Initializer = Initializer is null ? null : @ref.CreateReference(Initializer, context),
-                Type = Type is null ? null : @ref.CreateReference(Type, context),
+                Type = Type is null ? null : @ref.CreateReference<IType>(Type, context),
             };
         }
 

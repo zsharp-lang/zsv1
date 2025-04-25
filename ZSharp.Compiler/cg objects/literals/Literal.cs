@@ -6,7 +6,7 @@ namespace ZSharp.Objects
         : CompilerObject
         , ICTReadable
     {
-        public abstract CompilerObject Type { get; }
+        public abstract IType Type { get; }
 
         public object? Value { get; } = value;
 

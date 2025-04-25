@@ -1,5 +1,4 @@
 ﻿using ZSharp.Compiler;
-using ZSharp.IR;
 
 namespace ZSharp.Objects
 {
@@ -7,7 +6,7 @@ namespace ZSharp.Objects
         : CompilerObject
         , ICTAssignable
         , ICTReadable
-        , ICompileIRObject<IR.VM.Local, ICallableBody>
+        , ICompileIRObject<IR.VM.Local, IR.ICallableBody>
     {
         [Flags]
         enum BuildState
@@ -25,11 +24,11 @@ namespace ZSharp.Objects
 
         public bool IsReadOnly { get; set; }
 
-        public CompilerObject? Type { get; set; }
+        public IType? Type { get; set; }
 
         public CompilerObject? Initializer { get; set; }
 
-        public IR.VM.Local CompileIRObject(Compiler.Compiler compiler, ICallableBody? owner)
+        public IR.VM.Local CompileIRObject(Compiler.Compiler compiler, IR.ICallableBody? owner)
         {
             if (Type is null)
                 throw new PartiallyCompiledObjectException(

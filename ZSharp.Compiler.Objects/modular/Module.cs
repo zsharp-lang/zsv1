@@ -9,7 +9,7 @@ namespace ZSharp.Objects
         , ICTGetMember<MemberName>
         , ICTReadable
     {
-        CompilerObject ITyped.Type => throw new NotImplementedException();
+        IType ITyped.Type => throw new NotImplementedException();
 
         public Collection<CompilerObject> Content { get; } = [];
 

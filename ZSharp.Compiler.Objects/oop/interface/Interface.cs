@@ -5,10 +5,13 @@ namespace ZSharp.Objects
 {
     public sealed class Interface(string? name)
         : CompilerObject
+        , IAbstraction
         , ICompileIRObject<IR.Interface, IR.Module>
         , ICompileIRReference<IR.OOPTypeReference<IR.Interface>>
+        , ICompileIRType<IR.OOPTypeReference<IR.Interface>>
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
+        , IType
     {
         #region Build State
 
@@ -47,6 +50,8 @@ namespace ZSharp.Objects
 
         #region Protocols
 
+        Collection<CompilerObject> IAbstraction.Specifications => Content;
+
         CompilerObject ICTGetMember<string>.Member(Compiler.Compiler compiler, string member)
             => Members[member];
 
@@ -84,6 +89,11 @@ namespace ZSharp.Objects
         }
 
         IR.OOPTypeReference<IR.Interface> ICompileIRReference<IR.OOPTypeReference<IR.Interface>>.CompileIRReference(Compiler.Compiler compiler)
+            => new IR.InterfaceReference(
+                compiler.CompileIRObject<IR.Interface, IR.Module>(this, null)
+            );
+
+        IR.OOPTypeReference<IR.Interface> ICompileIRType<IR.OOPTypeReference<IR.Interface>>.CompileIRType(Compiler.Compiler compiler)
             => new IR.InterfaceReference(
                 compiler.CompileIRObject<IR.Interface, IR.Module>(this, null)
             );

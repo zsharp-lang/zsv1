@@ -15,6 +15,7 @@ namespace ZSharp.Objects
         , ICompileIRReference<IR.OOPTypeReference<IR.Class>>
         , ICompileIRReference<IR.OOPTypeReference>
         , IReferencable<GenericClassInstance>
+        , IType
     {
         CompilerObject IReference.Origin => Origin;
 
@@ -91,17 +92,20 @@ namespace ZSharp.Objects
             };
         }
 
-        public override bool Equals(object? obj)
+        bool IType.IsEqualTo(Compiler.Compiler compiler, IType type)
         {
-            // TODO: instead of type == type, use assignable to
-            if (obj is not GenericClassInstance other)
+            if (type is not GenericClassInstance other)
                 return false;
 
             if (Origin != other.Origin)
                 return false;
 
             foreach (var genericParameter in Origin.GenericParameters)
-                if (Context[genericParameter] != other.Context[genericParameter])
+                if (Context[genericParameter] is not IType thisGenericArgument)
+                    throw new Compiler.InvalidCastException(Context[genericParameter], compiler.TypeSystem.Type);
+                else if (other.Context[genericParameter] is not IType otherGenericArgument)
+                    throw new Compiler.InvalidCastException(other.Context[genericParameter], compiler.TypeSystem.Type);
+                else if (!compiler.TypeSystem.AreEqual(thisGenericArgument, otherGenericArgument))
                     return false;
 
             return true;

@@ -7,6 +7,6 @@
 
     public interface IImplicitCastToType
     {
-        public CompilerObject ImplicitCastToType(Compiler compiler, CompilerObject type);
+        public CompilerObject ImplicitCastToType(Compiler compiler, IType type);
     }
 }

@@ -1,6 +1,8 @@
 ﻿namespace ZSharp.Objects
 {
     public interface IClass
+        : CompilerObject
+        , Compiler.IType
     {
         public string Name { get; set; }
 

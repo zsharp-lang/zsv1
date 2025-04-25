@@ -9,7 +9,7 @@
 
         private void Initialize()
         {
-            foreach (var type in new CompilerObject[] {
+            foreach (var type in new IType[] {
                 Compiler.TypeSystem.Type,
                 Compiler.TypeSystem.Float32,
                 Compiler.TypeSystem.String,

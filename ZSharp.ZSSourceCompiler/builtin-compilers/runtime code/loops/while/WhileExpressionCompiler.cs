@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.ZSSourceCompiler
 {
-    public sealed class WhileExpressionCompiler(ZSSourceCompiler compiler, WhileExpression<Expression> node, CompilerObject type)
+    public sealed class WhileExpressionCompiler(ZSSourceCompiler compiler, WhileExpression<Expression> node, Compiler.IType type)
         : WhileLoopCompiler<Expression>(compiler, node, type)
     {
         protected override CompilerObject CompileBreak(BreakStatement @break)

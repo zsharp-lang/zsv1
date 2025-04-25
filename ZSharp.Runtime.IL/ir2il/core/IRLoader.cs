@@ -34,12 +34,12 @@
 
             return type switch
             {
-                IR.OOPTypeReference reference => LoadType(reference),
+                IR.OOPTypeReference reference => LoadTypeReference(reference),
                 _ => throw new NotImplementedException()
             };
         }
 
-        public Type LoadType(IR.OOPTypeReference typeReference)
+        public Type LoadTypeReference(IR.OOPTypeReference typeReference)
         {
             var type = Context.Cache(typeReference.Definition);
 

@@ -1,16 +1,17 @@
 ﻿using CommonZ.Utils;
 using ZSharp.Compiler;
-using ZSharp.IR;
 
 namespace ZSharp.Objects
 {
     public sealed class Class
         : CompilerObject
         , ICompileIRObject<IR.Class, IR.Module>
-        , ICompileIRType<OOPTypeReference<IR.Class>>
+        , ICompileIRType<IR.OOPTypeReference<IR.Class>>
         , ICTCallable
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
+        , IType
+        , ITypeAssignableToType
     {
         #region Build State
 
@@ -41,11 +42,13 @@ namespace ZSharp.Objects
 
         public string? Name { get; set; }
 
-        public CompilerObject? Base { get; set; }
+        public IType? Base { get; set; }
 
         public CompilerObject? Constructor { get; set; }
 
-        public Collection<CompilerObject> Interfaces { get; } = [];
+        public Collection<IType> Interfaces { get; } = [];
+
+        public Collection<Implementation> InterfaceImplementations { get; } = [];
 
         public Collection<CompilerObject> Content { get; } = [];
 
@@ -57,23 +60,18 @@ namespace ZSharp.Objects
         {
             IR ??= new(Name);
 
+            if (owner is not null && !state[BuildState.Owner])
+            {
+                state[BuildState.Owner] = true;
+
+                owner.Types.Add(IR);
+            }
+
             if (Base is not null && !state[BuildState.Base])
             {
                 state[BuildState.Base] = true;
 
                 IR.Base = compiler.CompileIRReference<IR.OOPTypeReference<IR.Class>>(Base);
-            }
-
-            if (!state[BuildState.Interfaces])
-            {
-                state[BuildState.Interfaces] = true;
-
-                foreach (var @interface in Interfaces)
-                {
-                    IR.InterfacesImplementations.Add(new(compiler.CompileIRReference<OOPTypeReference<IR.Interface>>(@interface)));
-
-                    // TODO: check for interface implementation
-                }
             }
 
             if (Content.Count > 0 && !state[BuildState.Body])
@@ -84,11 +82,25 @@ namespace ZSharp.Objects
                     compiler.CompileIRObject(item, IR);
             }
 
-            if (owner is not null && !state[BuildState.Owner])
+            if (InterfaceImplementations.Count > 0 && !state[BuildState.Interfaces])
             {
-                state[BuildState.Owner] = true;
+                state[BuildState.Interfaces] = true;
 
-                owner.Types.Add(IR);
+                foreach (var @interfaceImplementation in InterfaceImplementations)
+                {
+                    IR.InterfaceImplementation implementation = new(
+                        compiler.CompileIRReference<IR.OOPTypeReference<IR.Interface>>(interfaceImplementation.Abstract)
+                    );
+
+                    IR.InterfacesImplementations.Add(implementation);
+
+                    foreach (var (@abstract, concrete) in interfaceImplementation.Mapping)
+                    {
+                        var abstractMethod = compiler.CompileIRReference<IR.MethodReference>(@abstract);
+                        var concreteMethod = compiler.CompileIRObject<IR.Method, IR.Class>(concrete, IR);
+                        implementation.Implementations.Add(abstractMethod, concreteMethod);
+                    }
+                }
             }
 
             return IR;
@@ -102,9 +114,9 @@ namespace ZSharp.Objects
             return compiler.Map(Members[member], @object => @object is IRTBoundMember bindable ? bindable.Bind(compiler, instance) : @object);
         }
 
-        OOPTypeReference<IR.Class> ICompileIRType<OOPTypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler)
+        IR.OOPTypeReference<IR.Class> ICompileIRType<IR.OOPTypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler)
         {
-            return new ClassReference(compiler.CompileIRObject<IR.Class, IR.Module>(this, null));
+            return new IR.ClassReference(compiler.CompileIRObject<IR.Class, IR.Module>(this, null));
         }
 
         CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
@@ -113,6 +125,20 @@ namespace ZSharp.Objects
                 throw new InvalidOperationException($"Class {Name} is not constructible");
 
             return compiler.Call(Constructor, arguments);
+        }
+
+        bool? ITypeAssignableToType.IsAssignableTo(Compiler.Compiler compiler, IType target)
+        {
+            if (Base is not null && compiler.TypeSystem.IsAssignableTo(Base, target))
+                return true;
+
+            foreach (var @interface in Interfaces)
+            {
+                if (compiler.TypeSystem.IsAssignableTo(@interface, target))
+                    return true;
+            }
+
+            return null;
         }
 
         #endregion

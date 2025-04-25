@@ -10,12 +10,12 @@ namespace ZSharp.Objects
 
         public IRCode Code => code;
 
-        public CompilerObject Type => code.RequireValueType();
+        public IType Type => code.RequireValueType();
 
         public IRCode Read(Compiler.Compiler _)
             => code;
 
-        CompilerObject IDynamicallyTyped.GetType(Compiler.Compiler compiler)
+        IType IDynamicallyTyped.GetType(Compiler.Compiler compiler)
             => code.IsVoid ? compiler.TypeSystem.Void : code.RequireValueType();
     }
 }

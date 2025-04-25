@@ -120,6 +120,7 @@ namespace ZSharp.Runtime.NET.IL2IR
             var result = new Method(Loader.LoadType(method.ReturnType))
             {
                 Name = method.GetCustomAttribute<AliasAttribute>()?.Name ?? method.Name,
+                IsVirtual = true,
             };
 
             Context.Cache(method, result);

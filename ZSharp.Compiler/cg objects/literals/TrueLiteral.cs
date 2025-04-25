@@ -2,11 +2,11 @@
 
 namespace ZSharp.Objects
 {
-    public sealed class TrueLiteral(CompilerObject type)
+    public sealed class TrueLiteral(IType type)
         : CompilerObject
         , ICTReadable
     {
-        public CompilerObject Type { get; } = type;
+        public IType Type { get; } = type;
 
         public IRCode Read(Compiler.Compiler compiler)
             => new([

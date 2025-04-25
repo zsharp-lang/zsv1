@@ -8,7 +8,7 @@
 
         public IR.Parameter? IR { get; set; }
 
-        public CompilerObject? Type { get; set; }
+        public Compiler.IType? Type { get; set; }
 
         CompilerObject IVarParameter.MatchArguments(Compiler.Compiler compiler, CompilerObject[] argument)
         {

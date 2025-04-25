@@ -52,7 +52,7 @@ namespace ZSharp.Objects
 
             code.Types.Clear();
             if (Origin.ReturnType != compiler.TypeSystem.Void)
-                code.Types.Add(compiler.Feature<Referencing>().CreateReference(Origin.ReturnType, Context));
+                code.Types.Add(compiler.Feature<Referencing>().CreateReference<IType>(Origin.ReturnType, Context));
 
             return new RawCode(code);
         }

@@ -25,7 +25,7 @@ namespace ZSharp.Compiler
         public CompilerObject CreateNull()
             => CreateNull(TypeSystem.Null);
 
-        public CompilerObject CreateNull(CompilerObject type)
+        public CompilerObject CreateNull(IType type)
         {
             if (!nullLiterals.TryGetValue(type, out var nullLiteral))
                 nullLiterals[type] = nullLiteral = new(type);

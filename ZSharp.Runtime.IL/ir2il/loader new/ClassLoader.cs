@@ -26,6 +26,9 @@
             if (Input.HasMethods)
                 ModuleLoader.AddToNextPass(LoadMethods);
 
+            if (Input.InterfacesImplementations.Count > 0)
+                ModuleLoader.AddToNextPass(LoadInterfaceImplementations);
+
             ModuleLoader.AddToCleanUp(() => Output.CreateType());
         }
 
@@ -54,6 +57,23 @@
                     // TODO: Context.Uncache(ir);
                 }
             });
+        }
+
+        private void LoadInterfaceImplementations()
+        {
+            foreach (var interfaceImplementation in Input.InterfacesImplementations)
+            {
+                var @interface = Loader.LoadType(interfaceImplementation.Interface);
+                Output.AddInterfaceImplementation(@interface);
+
+                foreach (var (@abstract, concrete) in interfaceImplementation.Implementations)
+                {
+                    var specification = Loader.LoadReference(@abstract);
+                    var implementation = Context.Cache<IL.MethodInfo>(concrete) ?? throw new();
+
+                    Output.DefineMethodOverride(implementation, specification);
+                }
+            }
         }
 
         private void LoadNestedTypes()
@@ -133,6 +153,8 @@
 
             if (method.IsStatic)
                 attributes |= IL.MethodAttributes.Static;
+            if (method.IsVirtual)
+                attributes |= IL.MethodAttributes.Virtual | IL.MethodAttributes.NewSlot;
 
             var result = Output.DefineMethod(
                 method.Name ?? Constants.AnonymousMethod,

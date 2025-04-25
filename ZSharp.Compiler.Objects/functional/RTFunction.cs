@@ -37,11 +37,11 @@ namespace ZSharp.Objects
 
         public CompilerObject? Body { get; set; }
 
-        CompilerObject ITyped.Type => throw new NotImplementedException();
+        IType ITyped.Type => throw new NotImplementedException();
 
         public Signature Signature { get; set; } = new();
 
-        public CompilerObject? ReturnType { get; set; }
+        public IType? ReturnType { get; set; }
 
         CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
         {

@@ -21,7 +21,7 @@ namespace ZSharp.Objects
             if (owner is null)
                 throw new();
 
-            var ownerReference = compiler.Feature<Referencing>().CreateReference(owner, Context);
+            var ownerReference = compiler.Feature<Referencing>().CreateReference<IType>(owner, Context);
 
             var invocationInstruction = rawCode.Code.Instructions.Last();
             if (invocationInstruction is IR.VM.CreateInstance createInstance)

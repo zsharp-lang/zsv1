@@ -2,10 +2,10 @@
 
 namespace ZSharp.Objects
 {
-    public sealed class StringLiteral(string value, CompilerObject type)
+    public sealed class StringLiteral(string value, IType type)
         : Literal<string>(value)
     {
-        public override CompilerObject Type { get; } = type;
+        public override IType Type { get; } = type;
 
         public override IRCode Read(Compiler.Compiler compiler)
             => new([

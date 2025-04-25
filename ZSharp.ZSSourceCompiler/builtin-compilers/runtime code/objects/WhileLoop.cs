@@ -19,7 +19,7 @@ namespace ZSharp.ZSSourceCompiler
 
         public IR.VM.Instruction EndLabel { get; } = new IR.VM.Nop();
 
-        public required CompilerObject Type { get; set; }
+        public required IType Type { get; set; }
 
         public IRCode CompileIRCode(Compiler.Compiler compiler)
         {

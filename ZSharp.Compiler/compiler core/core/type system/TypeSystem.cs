@@ -8,19 +8,19 @@ namespace ZSharp.Compiler
     {
         public StringType String { get; }
 
-        public CompilerObject Type { get; }
+        public IType Type { get; }
 
-        public CompilerObject Void { get; }
+        public IType Void { get; }
 
-        public CompilerObject Null { get; }
+        public IType Null { get; }
 
-        public CompilerObject Boolean { get; }
+        public IType Boolean { get; }
 
         public Int32Type Int32 { get; }
 
-        public CompilerObject Float32 { get; }
+        public IType Float32 { get; }
 
-        public CompilerObject Object { get; }
+        public IType Object { get; }
 
         internal TypeSystem(Compiler compiler)
             : base(compiler)
@@ -36,32 +36,28 @@ namespace ZSharp.Compiler
             Object = new RawType(compiler.RuntimeModule.TypeSystem.Object, Type);
         }
 
-        public CompilerObject EvaluateType(CompilerObject @object)
-            => Compiler.Evaluate(@object);
+        public IType EvaluateType(CompilerObject @object)
+            => (IType)Compiler.Evaluate(@object);
 
-        public CompilerObject Array(CompilerObject type)
+        public IType Array(CompilerObject type)
             => throw new NotImplementedException();
 
-        public CompilerObject Pointer(CompilerObject type)
+        public IType Pointer(CompilerObject type)
             => throw new NotImplementedException();
 
-        public CompilerObject Reference(CompilerObject type)
+        public IType Reference(CompilerObject type)
             => throw new NotImplementedException();
 
-        public bool AreEqual(CompilerObject left, CompilerObject right)
+        public bool AreEqual(IType left, IType right)
         {
-            if (ReferenceEquals(left, right))
+            if (left.IsEqualTo(Compiler, right))
                 return true;
-
-            if (Equals(left, right))
+            if (right.IsEqualTo(Compiler, left))
                 return true;
-
-            // TODO: this function should do more stuff
-
             return false;
         }
 
-        public CompilerObjectResult ImplicitCast(CompilerObject value, CompilerObject type)
+        public CompilerObjectResult ImplicitCast(CompilerObject value, IType type)
         {
             CompilerObjectResult result = CompilerObjectResult.Error(
                 $"ImplicitCast for value:{value}, type:{type} is not supported."
@@ -79,16 +75,33 @@ namespace ZSharp.Compiler
             if (result.IsOk)
                 return result;
 
-            if (IsTyped(value, out var valueType) && AreEqual(valueType, type))
+            if (IsTyped(value, out var valueType) && (AreEqual(valueType, type) || IsAssignableTo(valueType, type)))
                 result = CompilerObjectResult.Ok(value);
 
             return result;
         }
 
+        public bool IsAssignableTo(IType source, IType target)
+        {
+            if (source is ITypeAssignableToType to && to.IsAssignableTo(Compiler, target) is bool assignableTo)
+                return assignableTo;
+
+            if (target is ITypeAssignableFromType from && from.IsAssignableFrom(Compiler, source) is bool assignableFrom)
+                return assignableFrom;
+
+            if (AreEqual(source, target))
+                return true;
+
+            return false;
+        }
+
+        public bool IsAssignableFrom(IType target, IType source)
+            => IsAssignableTo(source, target);
+
         public bool IsTyped(CompilerObject @object)
             => @object is IDynamicallyTyped;
 
-        public bool IsTyped(CompilerObject @object, [NotNullWhen(true)] out CompilerObject? type)
+        public bool IsTyped(CompilerObject @object, [NotNullWhen(true)] out IType? type)
         {
             if (@object is IDynamicallyTyped typed)
                 return (type = typed.GetType(Compiler)) is not null;

@@ -3,14 +3,15 @@ using ZSharp.Compiler;
 
 namespace ZSharp.Objects
 {
-    public sealed class Int32Type(IR.OOPTypeReference<IR.Class> ir, CompilerObject type)
+    public sealed class Int32Type(IR.OOPTypeReference<IR.Class> ir, IType type)
         : CompilerObject
         , ICompileIRType
         , ICTGetMember<MemberName>
+        , IType
     {
         public IR.OOPTypeReference<IR.Class> IR { get; } = ir;
 
-        public CompilerObject Type { get; } = type;
+        public IType Type { get; } = type;
 
         public Mapping<string, CompilerObject> Members { get; } = [];
 

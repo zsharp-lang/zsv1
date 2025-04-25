@@ -2,7 +2,7 @@
 
 namespace ZSharp.ZSSourceCompiler
 {
-    public sealed class ClassBodyCompiler(ZSSourceCompiler compiler, OOPDefinition oop, Objects.Class @class)
+    public sealed class ClassBodyCompiler(ZSSourceCompiler compiler, OOPDefinition oop, Class @class)
         : CompilerBase(compiler)
         , IMultipassCompiler
     {
@@ -10,32 +10,40 @@ namespace ZSharp.ZSSourceCompiler
 
         public OOPDefinition Node { get; } = oop;
 
-        public Objects.Class Class { get; } = @class;
+        public Class Class { get; } = @class;
 
         public void AddToNextPass(Action action)
             => nextPass.Add(action);
 
         public void Compile()
         {
-            using (Context.Compiler(this))
-                CompileContent();
-        }
-
-        private void CompileContent()
-        {
             if (Node.Content is null)
                 return;
 
-            currentPass = Node.Content.Statements.Select(Compile).ToList();
+            currentPass = [.. Node.Content.Statements.Select(Compile)];
+        }
 
-            while (currentPass.Count > 0)
-            {
-                foreach (var item in currentPass)
-                    item();
+        public bool CompileSinglePass()
+        {
+            using (Context.Compiler(this))
+                return CompileSinglePassImpl();
+        }
 
-                (currentPass, nextPass) = (nextPass, currentPass);
-                nextPass.Clear();
-            }
+        public void CompileUntilComplete()
+        {
+            using (Context.Compiler(this))
+                while (CompileSinglePassImpl()) ;
+        }
+
+        private bool CompileSinglePassImpl()
+        {
+            foreach (var item in currentPass)
+                item();
+
+            (currentPass, nextPass) = (nextPass, currentPass);
+            nextPass.Clear();
+
+            return currentPass.Count > 0;
         }
 
         private Action Compile(Statement statement)
@@ -83,7 +91,7 @@ namespace ZSharp.ZSSourceCompiler
 
         private Action Compile(AST.Function function)
         {
-            var compiler = new MethodCompiler(Compiler, function, Class);
+            var compiler = new MethodCompiler(Compiler, function, Class, Class);
 
             Class.Content.Add(compiler.Object);
 

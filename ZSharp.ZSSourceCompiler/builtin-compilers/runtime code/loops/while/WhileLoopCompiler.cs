@@ -1,7 +1,7 @@
 ﻿
 namespace ZSharp.ZSSourceCompiler
 {
-    public abstract class WhileLoopCompiler<TElse>(ZSSourceCompiler compiler, WhileExpression<TElse> node, CompilerObject type)
+    public abstract class WhileLoopCompiler<TElse>(ZSSourceCompiler compiler, WhileExpression<TElse> node, Compiler.IType type)
         : ContextCompiler<WhileExpression<TElse>, WhileLoop>(compiler, node, new()
         {
             Type = type

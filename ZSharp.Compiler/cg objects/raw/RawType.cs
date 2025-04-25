@@ -1,22 +1,22 @@
 ﻿using ZSharp.Compiler;
-using ZSharp.IR;
 
 namespace ZSharp.Objects
 {
-    public sealed class RawType(IRType type, CompilerObject metaType)
+    public sealed class RawType(IRType type, IType metaType)
         : CompilerObject
         , ICTReadable
         , ICompileIRType
+        , IType
     {
         private IRType type = type;
 
-        public CompilerObject Type { get; internal set; } = metaType;
+        public IType Type { get; internal set; } = metaType;
 
-        public IType CompileIRType(Compiler.Compiler compiler)
+        public IRType CompileIRType(Compiler.Compiler compiler)
             => type;
 
         public IRCode Read(Compiler.Compiler compiler)
-            => type is IRObject ir ? new([
+            => type is IR.IRObject ir ? new([
                 new IR.VM.GetObject(ir)
             ])
             {

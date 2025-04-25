@@ -2,9 +2,9 @@
 {
     public interface ITyped : IDynamicallyTyped
     {
-        public CompilerObject Type { get; }
+        public IType Type { get; }
 
-        CompilerObject IDynamicallyTyped.GetType(Compiler compiler)
+        IType IDynamicallyTyped.GetType(Compiler compiler)
             => Type;
     }
 }

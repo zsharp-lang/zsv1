@@ -11,7 +11,7 @@ namespace ZSharp.Objects
 
         public CompilerObject Instance { get; } = instance;
 
-        public CompilerObject? Type => Field.Type;
+        public IType? Type => Field.Type;
 
         public CompilerObject Assign(Compiler.Compiler compiler, CompilerObject value)
         {

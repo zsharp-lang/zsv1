@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.ZSSourceCompiler
 {
-    public sealed class MethodCompiler(ZSSourceCompiler compiler, Function node, CompilerObject owner)
+    public sealed class MethodCompiler(ZSSourceCompiler compiler, Function node, CompilerObject owner, Compiler.IType self)
         : ContextCompiler<Function, Objects.Method>(compiler, node, new(node.Name))
         , IOverrideCompileStatement
     {
@@ -37,7 +37,7 @@
                 Object.ReturnType = Compiler.CompileType(Node.ReturnType);
             else throw new(); // TODO: Implement Infer type
 
-            (This = Object.Signature.Args[0]).Type ??= owner;
+            (This = Object.Signature.Args[0]).Type ??= self;
 
             //Object.IR = Compiler.Compiler.CompileIRObject<IR.Method, IR.Class>(Object, null);
 
@@ -120,7 +120,7 @@
             Context.CurrentScope.Set(let.Name, local);
 
             local.Type = let.Type is not null
-                ? Compiler.CompileNode(let.Type)
+                ? Compiler.CompileType(let.Type)
                 : Compiler.Compiler.TypeSystem.IsTyped(local.Initializer, out var type)
                 ? type
                 : null;
@@ -149,7 +149,7 @@
             Context.CurrentScope.Set(var.Name, local);
 
             local.Type = var.Type is not null
-                ? Compiler.CompileNode(var.Type)
+                ? Compiler.CompileType(var.Type)
                 : local.Initializer is null
                 ? null
                 : Compiler.Compiler.TypeSystem.IsTyped(local.Initializer, out var type)
