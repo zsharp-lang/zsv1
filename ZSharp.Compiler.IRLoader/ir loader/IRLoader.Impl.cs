@@ -238,6 +238,9 @@
                             IR = method,
                             Defined = true,
                         };
+                        
+                        result.Content.Add(resultMethod);
+                        
                         if (resultMethod.Name is not null && resultMethod.Name != string.Empty)
                         {
                             if (!result.Members.TryGetValue(resultMethod.Name, out var group))
@@ -254,29 +257,26 @@
             };
         }
 
-        private CompilerObject Load(IR.IType type)
+        private IType Load(IR.IType type)
         {
             if (Context.Types.Cache(type, out var result))
                 return result;
 
-            if (type is IR.ConstructedClass constructed)
-                return Load(constructed);
-
-            return null!;
-            //throw new NotImplementedException();
+            return type switch
+            {
+                IR.ConstructedClass constructedClass => Load(constructedClass),
+                IR.InterfaceReference interfaceReference => Load(interfaceReference),
+                _ => null!
+            };
         }
 
-        private CompilerObject Load(IR.ConstructedClass constructed)
+        private IType Load(IR.ConstructedClass constructed)
         {
-            var origin = 
-                Context.Objects.Cache<GenericClass>(constructed.Class) ??
-                Context.Types.Cache(constructed)
-                ?? throw new();
 
-            var args = new CommonZ.Utils.Cache<CompilerObject, CompilerObject>();
-
-            if (origin is GenericClass genericClass)
+            if (Context.Objects.Cache<GenericClass>(constructed.Class, out var genericClass))
             {
+                var args = new CommonZ.Utils.Cache<CompilerObject, CompilerObject>();
+
                 if (genericClass.GenericParameters.Count != constructed.Arguments.Count)
                     throw new();
 
@@ -293,8 +293,11 @@
                 };
             }
 
-            return origin;
+            return Context.Types.Cache(constructed) ?? throw new();
         }
+
+        private IType Load(IR.InterfaceReference interfaceReference)
+            => Context.Objects.Cache<Interface>(interfaceReference.Definition) ?? throw new();
 
         private Action LoadGenericClass(IR.Class @class, Module owner)
         {
@@ -315,6 +318,15 @@
             if (@class.Base is not null)
                 result.Base = Load(@class.Base);
 
+            var self = new GenericClassInstance(result)
+            {
+                Context = new()
+                {
+                    Scope = result,
+                    CompileTimeValues = new()
+                }
+            };
+
             if (@class.HasGenericParameters)
                 foreach (var parameter in @class.GenericParameters)
                 {
@@ -325,12 +337,15 @@
                     };
 
                     Context.Types.Cache(parameter, genericParameter);
+                    self.Context[genericParameter] = genericParameter;
 
                     result.GenericParameters.Add(genericParameter);
                 }
 
             return () =>
             {
+                
+
                 if (@class.HasFields)
                     foreach (var field in @class.Fields)
                     {
@@ -353,7 +368,7 @@
                     {
                         Constructor resultConstructor = new(constructor.Name)
                         {
-                            Owner = result,
+                            Owner = self,
                             IR = constructor,
                         };
                         if (resultConstructor.Name is not null && resultConstructor.Name != string.Empty)
