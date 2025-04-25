@@ -3,7 +3,7 @@
 namespace ZSharp.Objects
 {
     public sealed class AmbiguousOverloadException(
-        OverloadGroup group, 
+        CompilerObject group, 
         Argument[] arguments,
         CompilerObject[] overloads
     ) 

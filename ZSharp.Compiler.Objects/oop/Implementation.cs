@@ -7,7 +7,7 @@ namespace ZSharp.Objects
         CompilerObject concrete
     )
     {
-        public Mapping<CompilerObject, CompilerObject> Mapping { get; } = [];
+        public Mapping<CompilerObject, IImplementsSpecification> Mapping { get; } = [];
 
         public IAbstraction Abstract { get; } = @abstract;
 

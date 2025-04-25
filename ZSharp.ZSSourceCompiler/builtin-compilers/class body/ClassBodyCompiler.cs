@@ -98,8 +98,8 @@ namespace ZSharp.ZSSourceCompiler
             if (function.Name != string.Empty)
             {
                 if (!Context.CurrentScope.Get(function.Name, out var result, lookupParent: false))
-                    Context.CurrentScope.Set(function.Name, result = new OverloadGroup(function.Name));
-                if (result is not OverloadGroup group)
+                    Context.CurrentScope.Set(function.Name, result = new MethodOverloadGroup(function.Name));
+                if (result is not MethodOverloadGroup group)
                     throw new();
                 group.Overloads.Add(compiler.Object);
 

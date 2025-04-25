@@ -12,4 +12,8 @@
     <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="oop\method\generic\" />
+  </ItemGroup>
+
 </Project>

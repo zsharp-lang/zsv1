@@ -6,5 +6,8 @@ namespace ZLoad.Test
     {
         [Alias(Name = "do")]
         public void Do();
+
+        [Alias(Name = "do")]
+        public int Calc(int x);
     }
 }

@@ -75,7 +75,7 @@ namespace ZSharp.Compiler
             if (result.IsOk)
                 return result;
 
-            if (IsTyped(value, out var valueType) && (AreEqual(valueType, type) || IsAssignableTo(valueType, type)))
+            if (IsTyped(value, out var valueType) && IsAssignableTo(valueType, type))
                 result = CompilerObjectResult.Ok(value);
 
             return result;

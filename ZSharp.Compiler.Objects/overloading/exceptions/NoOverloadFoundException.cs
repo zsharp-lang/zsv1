@@ -2,7 +2,7 @@
 
 namespace ZSharp.Objects
 {
-    public sealed class NoOverloadFoundException(OverloadGroup group, Argument[] arguments)
+    public sealed class NoOverloadFoundException(CompilerObject group, Argument[] arguments)
         : OverloadException(group, arguments)
     {
     }

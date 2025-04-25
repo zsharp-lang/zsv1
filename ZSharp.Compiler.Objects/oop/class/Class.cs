@@ -10,6 +10,7 @@ namespace ZSharp.Objects
         , ICTCallable
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
+        , IImplementsAbstraction
         , IType
         , ITypeAssignableToType
     {
