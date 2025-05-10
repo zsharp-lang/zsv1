@@ -6,6 +6,7 @@ namespace ZSharp.Objects
     public sealed class Class
         : CompilerObject
         , ICompileIRObject<IR.Class, IR.Module>
+        , ICompileIRReference<IR.ClassReference>
         , ICompileIRType<IR.OOPTypeReference<IR.Class>>
         , ICTCallable
         , ICTGetMember<MemberName>
@@ -119,6 +120,12 @@ namespace ZSharp.Objects
         {
             return new IR.ClassReference(compiler.CompileIRObject<IR.Class, IR.Module>(this, null));
         }
+
+        IR.ClassReference ICompileIRReference<IR.ClassReference>.CompileIRReference(Compiler.Compiler compiler)
+        {
+            return new IR.ClassReference(compiler.CompileIRObject<IR.Class, IR.Module>(this, null));
+        }
+
 
         CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
         {

@@ -32,7 +32,6 @@ namespace ZSharp.Objects
         }
 
         private readonly ObjectBuildState<BuildState> state = new();
-        private bool isVirtual;
 
         public bool Defined { init
             {
@@ -48,7 +47,11 @@ namespace ZSharp.Objects
 
         public Signature Signature { get; set; } = new();
 
-        public IType? ReturnType { get; set; }
+        public IType? ReturnType
+        {
+            get => Signature.ReturnType;
+            set => Signature.ReturnType = value;
+        }
 
         public CompilerObject? Body { get; set; }
 
@@ -158,7 +161,7 @@ namespace ZSharp.Objects
 
         CompilerObject IImplicitCastToType.ImplicitCastToType(Compiler.Compiler compiler, IType type)
         {
-            if (type is not ICallableType callableType)
+            if (type is not ISignature callableType)
                 throw new Compiler.InvalidCastException(this, type);
 
             throw new Compiler.InvalidCastException(this, type);
@@ -218,48 +221,18 @@ namespace ZSharp.Objects
         {
             implementation = null;
 
-            if (!compiler.TypeSystem.IsTyped(specification, out var specificationType) || specificationType is not ICallableType callableType)
+            if (!compiler.TypeSystem.IsTyped<ISignature>(specification, out var specificationType))
                 return (implementation = null) is not null;
 
-            if (Signature.Args.Count != callableType.Args.Count) return false;
-            if (Signature.KwArgs.Count != callableType.KwArgs.Count) return false;
+            var args = (Argument[])[new Argument(new TypedUndefined(Signature.Args[0].Type ?? throw new()))]; // TODO: owner
+            var specificationPartial = PartialCall.CreateFrom(compiler, specification, specificationType, args);
+            var implementationPartial = PartialCall.CreateFrom(compiler, this, Signature, args);
 
-            if (
-                Signature.VarArgs is null && callableType.VarArgs is not null ||
-                Signature.VarArgs is not null && callableType.VarArgs is null
-            )
-                return false;
-            if (
-                !(Signature.VarArgs is null && callableType.VarArgs is null) &&
-                !compiler.TypeSystem.IsAssignableFrom(Signature.VarArgs!.Type!, callableType.VarArgs!)
-            )
+            if (!compiler.TypeSystem.AreEqual(specificationPartial.Signature, implementationPartial.Signature))
                 return false;
 
-            if (
-                Signature.VarKwArgs is null && callableType.VarKwArgs is not null ||
-                Signature.VarKwArgs is not null && callableType.VarKwArgs is null
-            )
-                return false;
-            if (
-                !(Signature.VarKwArgs is null && callableType.VarKwArgs is null) &&
-                !compiler.TypeSystem.IsAssignableFrom(Signature.VarKwArgs!.Type!, callableType.VarKwArgs!)
-            )
-                return false;
-
-            if (!compiler.TypeSystem.IsAssignableTo(ReturnType!, callableType.ReturnType))
-                return false;
-
-            foreach (var (left, right) in Signature.Args.Skip(1).Zip(callableType.Args.Skip(1)))
-                if (!compiler.TypeSystem.IsAssignableFrom(left.Type!, right))
-                    return false;
-
-            foreach (var kwArg in Signature.KwArgs)
-                if (!callableType.KwArgs.TryGetValue(kwArg.Name, out var otherKwArgType))
-                    return false;
-                else if (!compiler.TypeSystem.IsAssignableFrom(kwArg.Type!, otherKwArgType))
-                    return false;
-
-            return (implementation = this) is not null;
+            implementation = this;
+            return true;
         }
     }
 }

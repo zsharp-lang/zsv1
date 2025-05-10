@@ -1,4 +1,6 @@
-﻿namespace ZSharp.Objects
+﻿using CommonZ.Utils;
+
+namespace ZSharp.Objects
 {
     public sealed class VarParameter(string name)
         : CompilerObject
@@ -10,7 +12,7 @@
 
         public Compiler.IType? Type { get; set; }
 
-        CompilerObject IVarParameter.MatchArguments(Compiler.Compiler compiler, CompilerObject[] argument)
+        CompilerObject IVarParameter.MatchArguments(Compiler.Compiler compiler, Collection<Compiler.Argument> arguments)
         {
             throw new NotImplementedException();
         }

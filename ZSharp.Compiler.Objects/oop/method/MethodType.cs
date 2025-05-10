@@ -5,22 +5,18 @@ namespace ZSharp.Objects
 {
     public sealed class MethodType(Signature signature, IType returnType)
         : CompilerObject
-        , ICallableType
+        , ISignature
     {
         public Signature Signature { get; } = signature;
 
-        Collection<IType> ICallableType.Args => [.. Signature.Args.Select(p => p.Type ?? throw new InvalidOperationException())];
+        IEnumerable<IParameter> ISignature.Args => Signature.Args;
 
-        IType? ICallableType.VarArgs => Signature.VarArgs?.Type;
+        IVarParameter? ISignature.VarArgs => Signature.VarArgs;
 
-        Mapping<string, IType> ICallableType.KwArgs => new(Signature.KwArgs
-            .ToDictionary(
-                p => p.Name,
-                p => p.Type ?? throw new InvalidOperationException()
-            ));
+        IEnumerable<IParameter> ISignature.KwArgs => Signature.KwArgs;
 
-        IType? ICallableType.VarKwArgs => Signature.VarKwArgs?.Type;
+        IVarParameter? ISignature.VarKwArgs => Signature.VarKwArgs;
 
-        IType ICallableType.ReturnType { get; } = returnType;
+        IType ISignature.ReturnType => Signature.ReturnType;
     }
 }

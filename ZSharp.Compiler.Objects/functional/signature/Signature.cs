@@ -17,7 +17,19 @@ namespace ZSharp.Objects
 
         public Parameters KwArgs { get; init; } = [];
 
-        public KeywordVarParameter? VarKwArgs { get; set; }
+        public VarParameter? VarKwArgs { get; set; }
+
+        public IType? ReturnType { get; set; }
+
+        IEnumerable<IParameter> ISignature.Args => Args;
+
+        IVarParameter? ISignature.VarArgs => VarArgs;
+
+        IEnumerable<IParameter> ISignature.KwArgs => KwArgs;
+
+        IVarParameter? ISignature.VarKwArgs => VarKwArgs;
+
+        IType ISignature.ReturnType => ReturnType ?? throw new();
 
         IR.Signature ICompileIRObject<IR.Signature, IR.Signature>.CompileIRObject(Compiler.Compiler compiler, IR.Signature? owner)
         {
@@ -55,21 +67,9 @@ namespace ZSharp.Objects
             result.KwArgs.AddRange(KwArgs.Select(arg => @ref.CreateReference<Parameter>(arg, context)));
 
             if (VarKwArgs is not null)
-                result.VarKwArgs = @ref.CreateReference<KeywordVarParameter>(VarKwArgs, context);
+                result.VarKwArgs = @ref.CreateReference<VarParameter>(VarKwArgs, context);
 
             return result;
         }
-
-        IEnumerable<IParameter>? ISignature.GetArgs(Compiler.Compiler compiler)
-            => Args;
-
-        IEnumerable<IParameter>? ISignature.GetKwArgs(Compiler.Compiler compiler)
-            => KwArgs;
-
-        IVarParameter? ISignature.GetVarArgs(Compiler.Compiler compiler)
-            => VarArgs;
-
-        IKeywordVarParameter? ISignature.GetVarKwArgs(Compiler.Compiler compiler)
-            => VarKwArgs;
     }
 }

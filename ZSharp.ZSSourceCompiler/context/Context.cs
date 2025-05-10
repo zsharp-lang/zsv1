@@ -4,12 +4,12 @@
     {
         public ZSSourceCompiler SourceCompiler { get; }
 
-        public Context(ZSSourceCompiler compiler, Scope? globalScope = null)
+        public Context(ZSSourceCompiler compiler, ScopeContext? globalScope = null)
         {
             SourceCompiler = compiler;
 
-            GlobalScope = globalScope ?? new(null);
-            CurrentScope = GlobalScope;
+            GlobalScope = globalScope ?? new();
+            compiler.Compiler.UseContext(CurrentScope = GlobalScope);
 
             compilerStack.Push(new DefaultContextCompiler(compiler));
         }

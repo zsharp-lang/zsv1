@@ -1,6 +1,10 @@
-﻿namespace ZSharp.Objects
+﻿using ZSharp.Compiler;
+
+namespace ZSharp.Objects
 {
-    public interface IParameter : CompilerObject
+    public interface IParameter 
+        : CompilerObject
+        , ITyped
     {
         public string Name { get; }
 

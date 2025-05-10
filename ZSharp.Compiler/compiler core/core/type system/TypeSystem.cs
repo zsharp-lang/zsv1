@@ -109,6 +109,10 @@ namespace ZSharp.Compiler
             return (type = null) is not null;
         }
 
+        public bool IsTyped<T>(CompilerObject @object, [NotNullWhen(true)] out T? type)
+            where T : class, IType
+            => (type = IsTyped(@object, out var objectType) ? objectType as T : null) is not null;
+
         public bool IsTypeModifier(CompilerObject @object)
             => @object is ITypeModifier;
 

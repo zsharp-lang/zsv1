@@ -1,15 +1,33 @@
-﻿namespace ZSharp.IR
+﻿using CommonZ.Utils;
+
+namespace ZSharp.IR
 {
     public sealed class Method 
         : IRObject
         , ICallable
     {
+        private Collection<GenericParameter>? _genericParameters;
+
         private Signature _signature;
         private VM.MethodBody? _body;
 
         public string? Name { get; set; }
 
         public MethodAttributes Attributes { get; set; } = MethodAttributes.None;
+
+        public Collection<GenericParameter> GenericParameters
+        {
+            get
+            {
+                if (_genericParameters is not null)
+                    return _genericParameters;
+
+                Interlocked.CompareExchange(ref _genericParameters, [], null);
+                return _genericParameters;
+            }
+        }
+
+        public bool HasGenericParameters => !_genericParameters.IsNullOrEmpty();
 
         public IType ReturnType
         {

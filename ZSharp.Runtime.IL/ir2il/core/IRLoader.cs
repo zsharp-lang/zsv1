@@ -127,17 +127,23 @@
             if (def is not IL.MethodInfo methodInfo)
                 throw new InvalidOperationException($"Method {@ref.Method.Name} was not compiled to an IL method");
 
-            if (!type.IsGenericType)
-                return methodInfo;
+            if (type.IsGenericType)
+                if (type.GetGenericTypeDefinition() is IL.Emit.TypeBuilder typeBuilder)
+                {
+                    if (!typeBuilder.IsCreated())
+                        methodInfo = IL.Emit.TypeBuilder.GetMethod(type, methodInfo);
+                } else 
+                    methodInfo = (IL.MethodInfo)(IL.MethodBase.GetMethodFromHandle(
+                        methodInfo.MethodHandle,
+                        type.TypeHandle
+                    ) ?? throw new("Could not create method from method handle"));
 
-            if (type.GetGenericTypeDefinition() is IL.Emit.TypeBuilder typeBuilder)
-                if (!typeBuilder.IsCreated())
-                    return IL.Emit.TypeBuilder.GetMethod(type, methodInfo);
+            if (@ref is IR.ConstructedMethod constructed)
+                methodInfo = methodInfo.MakeGenericMethod([
+                    .. constructed.Arguments.Select(LoadType)
+                ]);
 
-            return (IL.MethodInfo)(IL.MethodBase.GetMethodFromHandle(
-                methodInfo.MethodHandle,
-                type.TypeHandle
-            ) ?? throw new("Could not create method from method handle"));
+            return methodInfo;
         }
 
         public IL.MethodInfo LoadReference(IR.GenericFunctionInstance @ref)

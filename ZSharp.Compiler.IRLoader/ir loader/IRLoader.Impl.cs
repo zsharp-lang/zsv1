@@ -173,25 +173,53 @@
                 if (@class.Methods.Count > 0)
                     foreach (var method in @class.Methods)
                     {
-                        Method resultMethod = new(method.Name)
+                        CompilerObject resultMethod;
+                        if (method.HasGenericParameters)
+                            resultMethod = LoadGenericMethod(method, result);
+                        else
                         {
-                            IR = method,
-                            Defined = true,
-                        };
-                        if (resultMethod.Name is not null && resultMethod.Name != string.Empty)
+                            resultMethod = new Method(method.Name)
+                            {
+                                IR = method,
+                                Defined = true,
+                                Signature = Load(method.Signature)
+                            };
+                        }
+                        if (method.Name is not null && method.Name != string.Empty)
                         {
-                            if (!result.Members.TryGetValue(resultMethod.Name, out var group))
-                                result.Members.Add(resultMethod.Name, group = new OverloadGroup(resultMethod.Name));
+                            if (!result.Members.TryGetValue(method.Name, out var group))
+                                result.Members.Add(method.Name, group = new OverloadGroup(method.Name));
 
                             if (group is not OverloadGroup overloadGroup)
                                 throw new InvalidOperationException();
 
                             overloadGroup.Overloads.Add(resultMethod);
                         }
-                        resultMethod.Signature = Load(method.Signature);
-                        resultMethod.ReturnType = Load(method.ReturnType);
                     }
             };
+        }
+
+        private GenericMethod LoadGenericMethod(IR.Method method, CompilerObject owner)
+        {
+            GenericMethod result = new(method.Name)
+            {
+                Defined = true,
+                IR = method,
+                Owner = owner
+            };
+
+            foreach (var genericParameter in method.GenericParameters)
+                result.GenericParameters.Add(
+                    Context.Types.Cache(genericParameter, new GenericParameter()
+                    {
+                        IR = genericParameter,
+                        Name = genericParameter.Name
+                    })
+                );
+
+            result.Signature = Load(method.Signature);
+
+            return result;
         }
 
         private Action Load(IR.Interface @interface, Module owner)
@@ -264,11 +292,15 @@
 
             return type switch
             {
+                IR.ClassReference classReference => Load(classReference),
                 IR.ConstructedClass constructedClass => Load(constructedClass),
                 IR.InterfaceReference interfaceReference => Load(interfaceReference),
                 _ => null!
             };
         }
+
+        private IType Load(IR.ClassReference classReference)
+            => Context.Objects.Cache<Class>(classReference.Definition) ?? throw new();
 
         private IType Load(IR.ConstructedClass constructed)
         {
@@ -453,15 +485,16 @@
                     result.GenericParameters.Add(genericParameter);
                 }
 
-                    result.Signature = Load(function.Signature);
-
-                result.ReturnType = Load(function.ReturnType);
+                result.Signature = Load(function.Signature);
             };
         }
 
         private Signature Load(IR.Signature signature)
         {
-            Signature result = new();
+            Signature result = new()
+            {
+                ReturnType = Load(signature.ReturnType)
+            };
 
             if (signature.HasArgs)
                 foreach (var arg in signature.Args.Parameters)
@@ -475,7 +508,7 @@
                     result.KwArgs.Add(LoadParameter(arg));
 
             if (signature.IsVarKwArgs)
-                result.VarKwArgs = LoadKeywordVarParameter(signature.KwArgs.Var!);
+                result.VarKwArgs = LoadVarParameter(signature.KwArgs.Var!);
 
             return result;
         }
@@ -501,17 +534,6 @@
 
             if (parameter.Initializer is not null)
                 throw new NotImplementedException();
-
-            return new(parameter.Name)
-            {
-                IR = parameter,
-                Type = type,
-            };
-        }
-
-        private KeywordVarParameter LoadKeywordVarParameter(IR.Parameter parameter)
-        {
-            var type = Load(parameter.Type);
 
             return new(parameter.Name)
             {

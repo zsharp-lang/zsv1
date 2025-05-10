@@ -41,7 +41,11 @@ namespace ZSharp.Objects
 
         public Signature Signature { get; set; } = new();
 
-        public IType? ReturnType { get; set; }
+        public IType? ReturnType
+        {
+            get => Signature.ReturnType;
+            set => Signature.ReturnType = value;
+        }
 
         CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
         {

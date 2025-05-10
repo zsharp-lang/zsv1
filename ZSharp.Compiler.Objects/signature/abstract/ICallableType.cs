@@ -1,30 +1,22 @@
-﻿using CommonZ.Utils;
-using ZSharp.Compiler;
+﻿using ZSharp.Compiler;
 
 namespace ZSharp.Objects
 {
     public interface ICallableType
         : IType
         , ITypeAssignableToType
+        , ISignature
     {
-        public Collection<IType> Args { get; }
-
-        public IType? VarArgs { get; }
-
-        public Mapping<string, IType> KwArgs { get; }
-
-        public IType? VarKwArgs { get; }
-
         public IType ReturnType { get; }
 
         #region Protocols
 
         bool IType.IsEqualTo(Compiler.Compiler compiler, IType type)
         {
-            if (type is not ICallableType callableType)
+            if (type is not ISignature callableType)
                 return false;
 
-            if (Args.Count != callableType.Args.Count)
+            if (Args.Count() != callableType.Args.Count())
                 return false;
 
             if (
@@ -34,11 +26,11 @@ namespace ZSharp.Objects
                 return false;
             if (
                 !(VarArgs is null && callableType.VarArgs is null) &&
-                !compiler.TypeSystem.AreEqual(VarArgs!, callableType.VarArgs!)
+                !compiler.TypeSystem.AreEqual(VarArgs!.Type, callableType.VarArgs!.Type)
             )
                 return false;
 
-            if (KwArgs.Count != callableType.KwArgs.Count)
+            if (KwArgs.Count() != callableType.KwArgs.Count())
                 return false;
 
             if (
@@ -48,7 +40,7 @@ namespace ZSharp.Objects
                 return false;
             if (
                 !(VarKwArgs is null && callableType.VarKwArgs is null) &&
-                !compiler.TypeSystem.AreEqual(VarKwArgs!, callableType.VarKwArgs!)
+                !compiler.TypeSystem.AreEqual(VarKwArgs!.Type, callableType.VarKwArgs!.Type)
             )
                 return false;
 
@@ -56,13 +48,15 @@ namespace ZSharp.Objects
                 return false;
 
             foreach (var (left, right) in Args.Zip(callableType.Args))
-                if (!compiler.TypeSystem.AreEqual(left, right))
+                if (!compiler.TypeSystem.AreEqual(left.Type, right.Type))
                     return false;
 
-            foreach (var (name, kwArgType) in KwArgs)
-                if (!callableType.KwArgs.TryGetValue(name, out var otherKwArgType))
+            var otherKwArgs = callableType.KwArgs.ToDictionary(param => param.Name);
+
+            foreach (var kwArg in KwArgs)
+                if (!otherKwArgs.TryGetValue(kwArg.Name, out var otherKwArg))
                     return false;
-                else if (!compiler.TypeSystem.AreEqual(kwArgType, otherKwArgType))
+                else if (!compiler.TypeSystem.AreEqual(kwArg.Type, otherKwArg.Type))
                     return false;
 
             return true;
@@ -70,11 +64,11 @@ namespace ZSharp.Objects
 
         bool? ITypeAssignableToType.IsAssignableTo(Compiler.Compiler compiler, IType target)
         {
-            if (target is not ICallableType callableType)
-                return null;
+            if (target is not ISignature callableType)
+                return false;
 
-            if (Args.Count != callableType.Args.Count) return false;
-            if (KwArgs.Count != callableType.KwArgs.Count) return false;
+            if (Args.Count() != callableType.Args.Count())
+                return false;
 
             if (
                 VarArgs is null && callableType.VarArgs is not null ||
@@ -83,8 +77,11 @@ namespace ZSharp.Objects
                 return false;
             if (
                 !(VarArgs is null && callableType.VarArgs is null) &&
-                !compiler.TypeSystem.IsAssignableFrom(VarArgs!, callableType.VarArgs!)
+                !compiler.TypeSystem.IsAssignableFrom(VarArgs!.Type, callableType.VarArgs!.Type)
             )
+                return false;
+
+            if (KwArgs.Count() != callableType.KwArgs.Count())
                 return false;
 
             if (
@@ -94,7 +91,7 @@ namespace ZSharp.Objects
                 return false;
             if (
                 !(VarKwArgs is null && callableType.VarKwArgs is null) &&
-                !compiler.TypeSystem.IsAssignableFrom(VarKwArgs!, callableType.VarKwArgs!)
+                !compiler.TypeSystem.IsAssignableFrom(VarKwArgs!.Type, callableType.VarKwArgs!.Type)
             )
                 return false;
 
@@ -102,13 +99,15 @@ namespace ZSharp.Objects
                 return false;
 
             foreach (var (left, right) in Args.Zip(callableType.Args))
-                if (!compiler.TypeSystem.IsAssignableFrom(left, right))
+                if (!compiler.TypeSystem.IsAssignableFrom(left.Type, right.Type))
                     return false;
 
-            foreach (var (name, kwArgType) in KwArgs)
-                if (!callableType.KwArgs.TryGetValue(name, out var otherKwArgType))
+            var otherKwArgs = callableType.KwArgs.ToDictionary(param => param.Name);
+
+            foreach (var kwArg in KwArgs)
+                if (!otherKwArgs.TryGetValue(kwArg.Name, out var otherKwArg))
                     return false;
-                else if (!compiler.TypeSystem.IsAssignableFrom(kwArgType, otherKwArgType))
+                else if (!compiler.TypeSystem.IsAssignableFrom(kwArg.Type, otherKwArg.Type))
                     return false;
 
             return true;

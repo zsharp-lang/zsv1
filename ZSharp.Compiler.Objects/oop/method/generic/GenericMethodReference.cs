@@ -1,18 +1,18 @@
 ﻿using ZSharp.Compiler;
 
-using Args = CommonZ.Utils.Collection<ZSharp.Objects.CompilerObject>;
-using KwArgs = CommonZ.Utils.Mapping<string, ZSharp.Objects.CompilerObject>;
-
-
 namespace ZSharp.Objects
 {
-    public sealed class MethodReference(Method origin, ReferenceContext context)
+    public sealed class GenericMethodReference(
+        GenericMethod origin,
+        ReferenceContext context
+    )
         : CompilerObject
         , ICTCallable
         , ICompileIRReference<IR.MethodReference>
+        , IReferencable<GenericMethodInstance>
         , IRTBoundMember
     {
-        public Method Origin { get; } = origin;
+        public GenericMethod Origin { get; } = origin;
 
         public ReferenceContext Context { get; } = context;
 
@@ -69,7 +69,7 @@ namespace ZSharp.Objects
         }
 
         CompilerObject IRTBoundMember.Bind(Compiler.Compiler compiler, CompilerObject value)
-            => PartialCall.CreateFrom(compiler, this, Signature, [new(value)]);
+            => new BoundGenericMethodReference(this, value);
 
         private IR.Signature CompileSignature(Compiler.Compiler compiler)
         {
@@ -95,5 +95,34 @@ namespace ZSharp.Objects
 
             return SignatureIR;
         }
+
+        #region Reference
+
+        GenericMethodInstance IReferencable<GenericMethodInstance>.CreateReference(Referencing @ref, ReferenceContext context)
+        {
+            int currentErrors = @ref.Compiler.Log.Logs.Count(l => l.Level == LogLevel.Error);
+
+            foreach (var genericParameter in Origin.GenericParameters)
+                if (!context.CompileTimeValues.Contains(genericParameter))
+                    @ref.Compiler.Log.Error(
+                        $"Missing generic argument for parameter {genericParameter.Name} in type {Origin.Name}",
+                        this
+                    );
+
+            if (@ref.Compiler.Log.Logs.Count(l => l.Level == LogLevel.Error) > currentErrors)
+                throw new(); // TODO: Huh???
+
+            return new GenericMethodInstance(Origin)
+            {
+                Context = new(context)
+                {
+                    Scope = this
+                },
+                Signature = @ref.CreateReference<Signature>(Signature, context),
+                Owner = Owner ?? Signature.Args.First()?.Type ?? throw new()
+            };
+        }
+
+        #endregion
     }
 }

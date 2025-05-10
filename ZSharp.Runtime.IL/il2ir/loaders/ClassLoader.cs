@@ -163,12 +163,21 @@ namespace ZSharp.Runtime.NET.IL2IR
 
         private Method LoadMethod(IL.MethodInfo method)
         {
+            List<IR.GenericParameter> genericParameters = [];
+
+            if (method.IsGenericMethodDefinition)
+                foreach (var genericParameter in method.GetGenericArguments())
+                    genericParameters.Add(Context.Cache(genericParameter, new IR.GenericParameter(genericParameter.Name)));
+
             var result = new Method(Loader.LoadType(method.ReturnType))
             {
                 Name = method.GetCustomAttribute<AliasAttribute>()?.Name ?? method.Name,
             };
 
             Context.Cache(method, result);
+
+            if (genericParameters.Count > 0)
+                result.GenericParameters.AddRange(genericParameters);
 
             if (!method.IsStatic)
                 result.Signature.Args.Parameters.Add(new("this", Self));

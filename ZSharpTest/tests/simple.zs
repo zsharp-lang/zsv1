@@ -1,5 +1,12 @@
 ﻿import { input, print } from "std:io";
-import { Console, List, TestInterface, greet, id } from "net:ZLoad.Test.dll";
+import { 
+	Console, 
+	List, 
+	TestClass, 
+	TestInterface, 
+	greet, 
+	id 
+} from "net:ZLoad.Test.dll";
 
 module Program;
 
@@ -48,6 +55,9 @@ fun main(): void {
 
 	testInterface(c1);
 	testInterface(c2);
+
+	let tc = TestClass();
+	print(tc.id[string]("Id<T> [T: string] of TestClass"));
 
 	return;
 }

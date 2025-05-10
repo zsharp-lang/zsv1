@@ -11,7 +11,7 @@ namespace ZSharp.ZSSourceCompiler
                 ArrayLiteral array => Compile(array),
                 BinaryExpression binary => Compile(binary),
                 CallExpression call => Compile(call),
-                IdentifierExpression identifier => Context.CurrentScope.Get(identifier.Name),
+                IdentifierExpression identifier => Compile(identifier),
                 IndexExpression index => Compile(index),
                 LiteralExpression literal => Compile(literal),
                 WhileExpression<Expression> @while => Compile(@while),
@@ -62,6 +62,23 @@ namespace ZSharp.ZSSourceCompiler
             var args = call.Arguments.Select(arg => new Compiler.Argument(arg.Name, Compiler.CompileNode(arg.Value)));
 
             return Compiler.Compiler.Call(callable, args.ToArray());
+        }
+
+        private CompilerObject Compile(IdentifierExpression identifier)
+        {
+            CompilerObject? result = null;
+
+            Compiler.Compiler.CurrentContext.PerformOperation<IScopeContext>(
+                scope =>
+                {
+                    return scope.Get(identifier.Name, out result);
+                }
+            );
+
+            if (result is not null) return result;
+
+            Compiler.LogError($"Could not resolve name {identifier.Name}", identifier);
+            return Compiler.Compiler.CreateString($"<UnresolvedName {identifier.Name}>"); // TODO: return an object that knows it doesn't exist.
         }
 
         private CompilerObject Compile(IndexExpression index)
