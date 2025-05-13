@@ -48,7 +48,13 @@ namespace ZSharp.Objects
             {
                 state[BuildState.Initializer] = true;
 
-                IR.Initializer = [.. compiler.CompileIRCode(Initializer).Instructions];
+                IR.Initializer = [..
+                    compiler.CompileIRCode(
+                        compiler.TypeSystem.ImplicitCast(Initializer, Type).Unwrap()
+                    ).Instructions,
+                    new IR.VM.Dup(),
+                    new IR.VM.SetLocal(IR)
+                ];
             }
 
             return IR;

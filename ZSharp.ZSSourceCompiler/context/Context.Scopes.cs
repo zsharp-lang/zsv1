@@ -7,9 +7,9 @@ namespace ZSharp.ZSSourceCompiler
         private readonly Mapping<CompilerObject, ScopeContext> objectContainerScopes = [];
         private readonly Mapping<CompilerObject, ScopeContext> objectContainedScopes = [];
 
-        public ScopeContext GlobalScope { get; }
+        public IScopeContext GlobalScope { get; }
 
-        public ScopeContext CurrentScope { get; private set; }
+        public IScopeContext CurrentScope { get; private set; }
 
         public ScopeContext CreateScope()
             => new();
@@ -17,7 +17,7 @@ namespace ZSharp.ZSSourceCompiler
         public ContextManager Scope()
             => Scope(CreateScope());
 
-        public ContextManager Scope(ScopeContext scope)
+        public ContextManager Scope(IScopeContext scope)
         {
             (CurrentScope, scope) = (scope, CurrentScope);
             var revert = CurrentCompiler.Compiler.Compiler.UseContext(CurrentScope);

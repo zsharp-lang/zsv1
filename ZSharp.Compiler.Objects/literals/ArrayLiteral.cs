@@ -5,6 +5,7 @@ namespace ZSharp.Objects
     public sealed class ArrayLiteral(IEnumerable<CompilerObject>? items = null)
         : CompilerObject
         , ICTTypeCast
+        , IImplicitCastToType
     {
         public List<CompilerObject> Items { get; } = new(items ?? []);
 
@@ -37,5 +38,8 @@ namespace ZSharp.Objects
 
             return new RawCode(code);
         }
+
+        CompilerObject IImplicitCastToType.ImplicitCastToType(Compiler.Compiler compiler, IType type)
+            => compiler.Cast(this, type);
     }
 }

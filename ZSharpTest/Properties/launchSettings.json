@@ -27,6 +27,10 @@
     "Simple Test": {
       "commandName": "Project",
       "commandLineArgs": "tests/simple.zs"
+    },
+    "Profile 1": {
+      "commandName": "Project",
+      "commandLineArgs": "test.zs"
     }
   }
 }

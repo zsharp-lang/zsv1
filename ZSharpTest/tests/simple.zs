@@ -1,5 +1,6 @@
 ﻿import { input, print } from "std:io";
 import { 
+	BaseClass,
 	Console, 
 	List, 
 	TestClass, 
@@ -49,6 +50,11 @@ fun testInterface(test: TestInterface): void {
 	return;
 }
 
+fun testBaseClass(test: BaseClass): void {
+	test.doVirtual();
+	return;
+}
+
 fun main(): void {
 	let c1 = MyClass();
 	let c2 = OtherClass(5);
@@ -58,6 +64,9 @@ fun main(): void {
 
 	let tc = TestClass();
 	print(tc.id[string]("Id<T> [T: string] of TestClass"));
+
+	testBaseClass(BaseClass());
+	testBaseClass(tc);
 
 	return;
 }

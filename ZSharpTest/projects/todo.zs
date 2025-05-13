@@ -20,22 +20,12 @@ module Program {
 	}
 
 	fun getTodos(): void {
-		var i = 0;
-
-		while (i < todo.length()) 
-		{
-			let item = todo.get(i);
-			print(string(i + 1) + ". " + item);
-
-			i = i + 1;
-		}
-		/*
-		for (let item = 0 in todo)
+		var i = 1;
+		for (let item in todo)
 		{
 			print(string(i) + ". " + item);
 			i = i + 1;
 		}
-		*/
 
 		return;
 	}
@@ -44,6 +34,8 @@ module Program {
 		let index = i32.parse(input("Enter item number to remove: "));
 
 		todo.removeAt(index - 1);
+
+		getTodos();
 
 		return;
 	}

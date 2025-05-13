@@ -8,6 +8,7 @@
         public override Objects.RTFunction Compile()
         {
             using (Context.Compiler(this))
+            using (Compiler.Compiler.ContextScope(new FunctionContext(Compiler.Compiler, Object)))
             using (Context.Scope(Object))
                 CompileFunction();
 
@@ -42,6 +43,7 @@
                 multipassCompiler.AddToNextPass(() =>
                 {
                     using (Context.Compiler(this))
+                    using (Compiler.Compiler.ContextScope(new FunctionContext(Compiler.Compiler, Object)))
                     using (Context.Scope(Object))
                     using (Context.Scope())
                         CompileFunctionBody();
@@ -125,12 +127,13 @@
 
             local.IR = Compiler.Compiler.CompileIRObject<IR.VM.Local, IR.VM.FunctionBody>(local, Object.IR!.Body);
 
-            var code = Compiler.Compiler.CompileIRCode(Compiler.Compiler.TypeSystem.ImplicitCast(local.Initializer, local.Type !).Unwrap());
+            if (local.IR.Initializer is not null)
+                return new Objects.RawCode(new(local.IR.Initializer)
+                {
+                    Types = [local.Type]
+                });
 
-            code.Instructions.Add(new IR.VM.Dup());
-            code.Instructions.Add(new IR.VM.SetLocal(local.IR));
-
-            return new Objects.RawCode(code);
+            return new Objects.RawCode(new());
         }
 
         private CompilerObject CompileNode(VarExpression var)
@@ -156,15 +159,11 @@
 
             local.IR = Compiler.Compiler.CompileIRObject<IR.VM.Local, IR.VM.FunctionBody>(local, Object.IR!.Body);
 
-            if (local.Initializer is not null)
-            {
-                var code = Compiler.Compiler.CompileIRCode(Compiler.Compiler.TypeSystem.ImplicitCast(local.Initializer, local.Type !).Unwrap());
-
-                code.Instructions.Add(new IR.VM.Dup());
-                code.Instructions.Add(new IR.VM.SetLocal(local.IR));
-
-                return new Objects.RawCode(code);
-            }
+            if (local.IR.Initializer is not null)
+                return new Objects.RawCode(new(local.IR.Initializer)
+                {
+                    Types = [local.Type]
+                });
 
             return new Objects.RawCode(new());
         }

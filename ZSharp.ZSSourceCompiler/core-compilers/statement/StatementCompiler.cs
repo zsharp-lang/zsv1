@@ -9,6 +9,7 @@
                 BlockStatement block => Compile(block),
                 CaseStatement @case => Compile(@case),
                 ExpressionStatement expressionStatement => Compile(expressionStatement),
+                ForStatement @for => Compile(@for),
                 IfStatement @if => Compile(@if),
                 ImportStatement import => Compile(import),
                 _ => null
@@ -73,6 +74,9 @@
 
             return result;
         }
+
+        private ForLoop Compile(ForStatement @for)
+            => new ForStatementCompiler(Compiler, @for).Compile();
 
         private CompilerObject Compile(IfStatement @if)
         {

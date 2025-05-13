@@ -67,13 +67,10 @@ namespace ZSharp.Objects
             if (@ref.Compiler.Log.Logs.Count(l => l.Level == LogLevel.Error) > currentErrors)
                 throw new(); // TODO: Huh???
 
-            return new GenericClassInstance(this)
+            return new GenericClassInstance(this, new(context)
             {
-                Context = new(context)
-                {
-                    Scope = this
-                },
-            };
+                Scope = this
+            });
         }
 
         CompilerObject ICTGetIndex.Index(Compiler.Compiler compiler, Argument[] index)
@@ -131,13 +128,10 @@ namespace ZSharp.Objects
             if (GenericParameters.Count != 0)
                 return this;
 
-            return new GenericClassInstance(this)
+            return new GenericClassInstance(this, new()
             {
-                Context = new()
-                {
-                    Scope = this
-                }
-            };
+                Scope = this
+            });
         }
 
         CompilerObject IRTGetMember<string>.Member(Compiler.Compiler compiler, CompilerObject value, string member)

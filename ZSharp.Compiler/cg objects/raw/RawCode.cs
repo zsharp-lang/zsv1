@@ -5,6 +5,7 @@ namespace ZSharp.Objects
     public sealed class RawCode(IRCode code)
         : CompilerObject
         , ICTReadable
+        ,ICTTypeCast
     {
         private readonly IRCode code = code;
 
@@ -14,6 +15,25 @@ namespace ZSharp.Objects
 
         public IRCode Read(Compiler.Compiler _)
             => code;
+
+        CompilerObject ICTTypeCast.Cast(Compiler.Compiler compiler, IType targetType)
+        {
+            if (targetType == compiler.TypeSystem.Void)
+            {
+                if (code.IsVoid) return this;
+
+                return new RawCode(new([
+                    ..code.Instructions,
+                    .. code.Types.Select(_ => new IR.VM.Pop())
+                ])
+                {
+                    MaxStackSize = code.MaxStackSize,
+                    Types = []
+                });
+            }
+
+            throw new NotImplementedException();
+        }
 
         IType IDynamicallyTyped.GetType(Compiler.Compiler compiler)
             => code.IsVoid ? compiler.TypeSystem.Void : code.RequireValueType();

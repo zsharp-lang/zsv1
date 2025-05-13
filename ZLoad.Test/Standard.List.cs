@@ -28,5 +28,12 @@ namespace Standard.List
         [Alias(Name = "removeAt")]
         public void RemoveAt(int index)
             => _inner.RemoveAt(index);
+
+        [Alias(Name = "getIterator")]
+        public ListIterator<T> GetIterator()
+            => new()
+            {
+                Enumerator = _inner.GetEnumerator()
+            };
     }
 }

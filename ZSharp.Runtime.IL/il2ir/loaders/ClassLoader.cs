@@ -182,6 +182,9 @@ namespace ZSharp.Runtime.NET.IL2IR
             if (!method.IsStatic)
                 result.Signature.Args.Parameters.Add(new("this", Self));
 
+            if (method.IsVirtual)
+                result.IsVirtual = true;
+
             foreach (var parameter in method.GetParameters())
                 result.Signature.Args.Parameters.Add(new(parameter.Name ?? string.Empty, Loader.LoadType(parameter.ParameterType)));
 

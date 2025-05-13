@@ -36,7 +36,10 @@ namespace ZSharp.Objects
             if (IR is not null)
                 return IR;
 
-            owner ??= new(compiler.RuntimeModule.TypeSystem.Void);
+            if (ReturnType is null)
+                throw new PartiallyCompiledObjectException(this, "ReturnType is not defined");
+
+            owner ??= new(compiler.CompileIRType(ReturnType));
 
             IR = owner;
 
@@ -57,7 +60,13 @@ namespace ZSharp.Objects
 
         Signature IReferencable<Signature>.CreateReference(Referencing @ref, ReferenceContext context)
         {
-            Signature result = new();
+            if (ReturnType is null)
+                throw new PartiallyCompiledObjectException(this, "ReturnType is not defined");
+
+            Signature result = new()
+            {
+                ReturnType = @ref.CreateReference<IType>(ReturnType, context)
+            };
 
             result.Args.AddRange(Args.Select(arg => @ref.CreateReference<Parameter>(arg, context)));
 

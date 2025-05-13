@@ -315,14 +315,11 @@
                 for (var i = 0; i < constructed.Arguments.Count; i++)
                     args.Cache(genericClass.GenericParameters[i], Import(constructed.Arguments[i]));
 
-                return new GenericClassInstance(genericClass)
+                return new GenericClassInstance(genericClass, new()
                 {
-                    Context = new()
-                    {
-                        Scope = genericClass,
-                        CompileTimeValues = args
-                    }
-                };
+                    Scope = genericClass,
+                    CompileTimeValues = args
+                });
             }
 
             return Context.Types.Cache(constructed) ?? throw new();
@@ -350,14 +347,11 @@
             if (@class.Base is not null)
                 result.Base = Load(@class.Base);
 
-            var self = new GenericClassInstance(result)
+            var self = new GenericClassInstance(result, new()
             {
-                Context = new()
-                {
-                    Scope = result,
-                    CompileTimeValues = new()
-                }
-            };
+                Scope = result,
+                CompileTimeValues = new()
+            });
 
             if (@class.HasGenericParameters)
                 foreach (var parameter in @class.GenericParameters)
@@ -442,7 +436,6 @@
                             overloadGroup.Overloads.Add(resultMethod);
                         }
                         resultMethod.Signature = Load(method.Signature);
-                        resultMethod.ReturnType = Load(method.ReturnType);
                     }
             };
         }

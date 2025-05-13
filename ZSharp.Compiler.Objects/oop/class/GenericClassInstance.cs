@@ -3,9 +3,7 @@ using ZSharp.Compiler;
 
 namespace ZSharp.Objects
 {
-    public sealed class GenericClassInstance(
-        GenericClass origin
-    )
+    public sealed class GenericClassInstance
         : CompilerObject
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
@@ -19,11 +17,26 @@ namespace ZSharp.Objects
     {
         CompilerObject IReference.Origin => Origin;
 
-        public required ReferenceContext Context { get; set; }
+        public ReferenceContext Context { get; set; }
 
-        public GenericClass Origin { get; set; } = origin;
+        public GenericClass Origin { get; set; }
+
+        public Mapping<GenericParameter, CompilerObject> GenericArguments { get; } = [];
 
         public Mapping<MemberName, CompilerObject> Members { get; set; } = [];
+
+        #region Constructors
+
+        public GenericClassInstance(GenericClass origin, ReferenceContext context)
+        {
+            Context = context;
+            Origin = origin;
+
+            foreach (var genricParameter in origin.GenericParameters)
+                GenericArguments[genricParameter] = Context[genricParameter];
+        }
+
+        #endregion
 
         public CompilerObject Member(Compiler.Compiler compiler, string member)
         {
@@ -56,7 +69,11 @@ namespace ZSharp.Objects
             );
 
             foreach (var parameter in Origin.GenericParameters)
-                result.Arguments.Add(compiler.CompileIRType(Context.CompileTimeValues.Cache(parameter) ?? throw new()));
+                result.Arguments.Add(
+                    compiler.CompileIRType(
+                        Context.CompileTimeValues.Cache(GenericArguments[parameter]) ?? GenericArguments[parameter]
+                    )
+                );
 
             return result;
         }
@@ -84,12 +101,15 @@ namespace ZSharp.Objects
 
         GenericClassInstance IReferencable<GenericClassInstance>.CreateReference(Referencing @ref, ReferenceContext context)
         {
-            Mapping<GenericParameter, CompilerObject> arguments = [];
-
-            return new(Origin)
+            context = new(context)
             {
-                Context = context
+                Scope = this
             };
+
+            foreach (var (key, value) in GenericArguments)
+                context.CompileTimeValues.Cache(key, context.CompileTimeValues.Cache(value) ?? value);
+
+            return new(Origin, context);
         }
 
         bool IType.IsEqualTo(Compiler.Compiler compiler, IType type)
@@ -101,10 +121,10 @@ namespace ZSharp.Objects
                 return false;
 
             foreach (var genericParameter in Origin.GenericParameters)
-                if (Context[genericParameter] is not IType thisGenericArgument)
-                    throw new Compiler.InvalidCastException(Context[genericParameter], compiler.TypeSystem.Type);
-                else if (other.Context[genericParameter] is not IType otherGenericArgument)
-                    throw new Compiler.InvalidCastException(other.Context[genericParameter], compiler.TypeSystem.Type);
+                if (GenericArguments[genericParameter] is not IType thisGenericArgument)
+                    throw new Compiler.InvalidCastException(GenericArguments[genericParameter], compiler.TypeSystem.Type);
+                else if (other.GenericArguments[genericParameter] is not IType otherGenericArgument)
+                    throw new Compiler.InvalidCastException(other.GenericArguments[genericParameter], compiler.TypeSystem.Type);
                 else if (!compiler.TypeSystem.AreEqual(thisGenericArgument, otherGenericArgument))
                     return false;
 

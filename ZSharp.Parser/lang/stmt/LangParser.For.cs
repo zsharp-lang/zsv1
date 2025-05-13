@@ -15,7 +15,7 @@ namespace ZSharp.Parser
 			parser.Eat(TokenType.LParen);
 #endif
 
-            var currentItem = parser.Parse<Expression>();
+            var currentItem = ParseForValue(parser);
 
             var inKeyword = parser.Eat(Keywords.In);
 
@@ -38,11 +38,36 @@ namespace ZSharp.Parser
 
             return new()
             {
-                CurrentItem = currentItem,
-                Iterable = iterable,
+                Value = currentItem,
+                Source = iterable,
                 Body = @for,
                 Else = @else,
             };
 		}
+
+        private static ForValue ParseForValue(Parser parser)
+        {
+            if (parser.Is(Keywords.Let))
+                return ParseLetForValue(parser);
+
+            throw new ParseError($"Expected 'let', got {parser.Token}");
+        }
+
+        private static LetForValue ParseLetForValue(Parser parser)
+        {
+            parser.Eat(Keywords.Let);
+
+            var name = parser.Eat(TokenType.Identifier).Value;
+
+            Expression? type = null;
+            if (parser.Is(TokenType.Colon, eat: true))
+                type = parser.Parse<Expression>();
+
+            return new()
+            {
+                Name = name,
+                Type = type
+            };
+        }
 	}
 }
