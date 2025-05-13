@@ -122,6 +122,8 @@ namespace ZSharp.Objects
                 Method = new(compiler.RuntimeModule.TypeSystem.Void)
             };
 
+            Signature.ReturnType ??= compiler.TypeSystem.Void;
+
             if (owner is not null && !state.Get(BuildState.Owner))
             {
                 owner.Constructors.Add(IR);

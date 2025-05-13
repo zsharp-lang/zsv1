@@ -6,29 +6,18 @@
  * [x] Named constructor
  * [x] Methods
  * [x] Case-Of
- * [ ] Automatic type inference for first parameter in methods
- * [ ] Automatic instance binding when accessing instance method/field from instance method
- * [ ] Instance method as function with `this` first parameter
+ * [x] Automatic type inference for first parameter in methods
+ * [x] Automatic instance binding when accessing instance method/field from instance method
+ * [x] Instance method as function with `this` first parameter
  * [x] Module globals initializers
  */
 
 
 import { input, print } from "std:io";
-import { List } from "std:list";
+import { List } from "net:ZLoad.Test.dll";
 
 
 module Program;
-
-
-class Authentication {
-	var username: string;
-	var password: string;
-
-	new(this, username: string, password: string) {
-		this.username = username;
-		this.password = password;
-	}
-}
 
 
 class User {
@@ -56,10 +45,6 @@ class User {
 
 		return true;
 	}
-
-	fun login(auth: Authentication, this: User): bool {
-		return this.login(auth.username, auth.password);
-	}
 }
 
 
@@ -83,10 +68,15 @@ fun signIn(): void {
 	let username = input("Username: ");
 	let password = input("Password: ");
 
-	case (Authentication(username, password)) of (User.login) {
-	when (user) print("USER"); // userTerminal();
-	when (admin) print("ADMIN"); // adminTerminal();
-	} else print("Invalid credentials.");
+
+	for (let user in users) {
+		if (user.login(username, password)) {
+			print("Successfully logged in to user: " + user.username);
+			break;
+		}
+	} else {
+		print("Could not log in with provided credentials");
+	}
 
 	return;
 }
@@ -94,11 +84,13 @@ fun signIn(): void {
 
 fun main(): void {
 	while (mainMenu()) ;
-	else print("Thank you for using Simple User System!");
+	else print("Thank you for using Better User System!");
 
 	return;
 }
 
 
-let user = User("user", "123");
-let admin = User.Admin("admin", "321");
+let users: List[User] = [
+	User("user", "123"),
+	User.Admin("admin", "321")
+];

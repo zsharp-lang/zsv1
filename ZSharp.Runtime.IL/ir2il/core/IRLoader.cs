@@ -90,11 +90,16 @@
             if (type.GetGenericTypeDefinition() is IL.Emit.TypeBuilder typeBuilder)
                 if (!typeBuilder.IsCreated())
                     return IL.Emit.TypeBuilder.GetConstructor(type, constructorInfo);
-
-            return (IL.ConstructorInfo)(IL.MethodBase.GetMethodFromHandle(
-                constructorInfo.MethodHandle,
-                type.TypeHandle
-            ) ?? throw new("Could not create constructor from method handle"));
+            try
+            {
+                return (IL.ConstructorInfo)(IL.MethodBase.GetMethodFromHandle(
+                    constructorInfo.MethodHandle,
+                    type.TypeHandle
+                ) ?? throw new("Could not create constructor from method handle"));
+            } catch (NotSupportedException)
+            {
+                return IL.Emit.TypeBuilder.GetConstructor(type, constructorInfo);
+            }
         }
 
         public IL.FieldInfo LoadReference(IR.FieldReference @ref)
@@ -133,10 +138,16 @@
                     if (!typeBuilder.IsCreated())
                         methodInfo = IL.Emit.TypeBuilder.GetMethod(type, methodInfo);
                 } else 
-                    methodInfo = (IL.MethodInfo)(IL.MethodBase.GetMethodFromHandle(
-                        methodInfo.MethodHandle,
-                        type.TypeHandle
-                    ) ?? throw new("Could not create method from method handle"));
+                    try
+                    {
+                        methodInfo = (IL.MethodInfo)(IL.MethodBase.GetMethodFromHandle(
+                            methodInfo.MethodHandle,
+                            type.TypeHandle
+                        ) ?? throw new("Could not create method from method handle"));
+                    } catch (NotSupportedException)
+                    {
+                        methodInfo = IL.Emit.TypeBuilder.GetMethod(type, methodInfo);
+                    }
 
             if (@ref is IR.ConstructedMethod constructed)
                 methodInfo = methodInfo.MakeGenericMethod([

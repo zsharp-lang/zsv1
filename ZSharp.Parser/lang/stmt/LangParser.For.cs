@@ -29,7 +29,9 @@ namespace ZSharp.Parser
             parser.Eat(Symbols.ThenDo);
 #endif
 
-			var @for = parser.Parse<Statement>();
+			Statement @for;
+            using (parser.Stack(LoopBody.Content))
+                @for = parser.Parse<Statement>();
 
             Statement? @else = null;
 

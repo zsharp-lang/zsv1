@@ -1,4 +1,6 @@
-﻿namespace ZSharp.ZSSourceCompiler
+﻿using ZSharp.Compiler;
+
+namespace ZSharp.ZSSourceCompiler
 {
     public sealed class ConstructorCompiler(ZSSourceCompiler compiler, Constructor node)
         : ContextCompiler<Constructor, Objects.Constructor>(compiler, node, new(node.Name))
@@ -77,8 +79,17 @@
 
         private CompilerObject? Compile(IdentifierExpression identifier)
         {
-            if (!Context.CurrentScope.Get(identifier.Name, out var member))
-                return null;
+            CompilerObject? member = null;
+
+            Compiler.Compiler.CurrentContext.PerformOperation<ILookupContext>(
+                scope =>
+                {
+                    return scope.Get(identifier.Name, out member);
+                },
+                new UntilContextTypeStrategy<IObjectContext<Objects.Class>>(
+                    new ParentContextStrategy()
+                )
+            );
 
             if (member is Objects.IRTBoundMember boundMember)
                 return boundMember.Bind(Compiler.Compiler, This);

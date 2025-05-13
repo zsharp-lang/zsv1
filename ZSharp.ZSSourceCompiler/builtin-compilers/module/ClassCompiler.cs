@@ -34,6 +34,7 @@ namespace ZSharp.ZSSourceCompiler
             var bodyCompiler = new ClassBodyCompiler(Compiler, Node, Object);
 
             using (Context.Compiler(this))
+            using (Compiler.Compiler.ContextScope(new ClassContext(Object)))
             using (Context.Scope(Object))
             {
                 bodyCompiler.Compile();
@@ -45,6 +46,7 @@ namespace ZSharp.ZSSourceCompiler
                     ResolveImplementation(abstraction);
 
             using (Context.Compiler(this))
+            using (Compiler.Compiler.ContextScope(new ClassContext(Object)))
             using (Context.Scope(Object))
                 bodyCompiler.CompileUntilComplete();
 

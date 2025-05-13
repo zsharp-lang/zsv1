@@ -13,6 +13,7 @@ namespace ZSharp.ZSSourceCompiler
 
         public CompilerObject? Get(string name)
             => scope.TryGetValue(name, out var result) ? result : null;
+
         public void Set(string name, CompilerObject @object)
             => scope[name] = @object;
     }
