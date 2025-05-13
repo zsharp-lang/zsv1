@@ -1,7 +1,10 @@
 ﻿namespace ZSharp.ZSSourceCompiler
 {
     public sealed class MethodCompiler(ZSSourceCompiler compiler, Function node, CompilerObject owner, Compiler.IType self)
-        : ContextCompiler<Function, Objects.Method>(compiler, node, new(node.Name))
+        : ContextCompiler<Function, Objects.Method>(compiler, node, new(node.Name)
+        {
+            Owner = owner
+        })
         , IOverrideCompileStatement
     {
         public Objects.Parameter? This { get; private set; } = null;

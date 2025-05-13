@@ -8,6 +8,7 @@ import {
 	greet, 
 	id 
 } from "net:ZLoad.Test.dll";
+import { Directory } from "net:ZSharp.CT.StandardLibrary.FileSystem.dll";
 
 module Program;
 
@@ -67,6 +68,12 @@ fun main(): void {
 
 	testBaseClass(BaseClass());
 	testBaseClass(tc);
+
+	let cwd = Directory.cwd();
+	print(cwd.toString());
+	let filePath = cwd.sub("tests").sub("simple.zs");
+	print(filePath.toString());
+	print(filePath.asFile().toString());
 
 	return;
 }

@@ -50,6 +50,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Testing", "Testing\Testing.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZLoad.Test", "ZLoad.Test\ZLoad.Test.csproj", "{9BF2A06B-C3D5-4BF9-BD44-84FAD008D2E3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.CT.StandardLibrary.FileSystem", "ZSharp.CT.StandardLibrary.FileSystem\ZSharp.CT.StandardLibrary.FileSystem.csproj", "{7E9F2ABB-373C-40BF-8D62-CBDD64DA8E36}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -144,6 +146,10 @@ Global
 		{9BF2A06B-C3D5-4BF9-BD44-84FAD008D2E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9BF2A06B-C3D5-4BF9-BD44-84FAD008D2E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9BF2A06B-C3D5-4BF9-BD44-84FAD008D2E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E9F2ABB-373C-40BF-8D62-CBDD64DA8E36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E9F2ABB-373C-40BF-8D62-CBDD64DA8E36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E9F2ABB-373C-40BF-8D62-CBDD64DA8E36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E9F2ABB-373C-40BF-8D62-CBDD64DA8E36}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

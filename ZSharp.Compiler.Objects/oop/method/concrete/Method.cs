@@ -45,6 +45,8 @@ namespace ZSharp.Objects
 
         public string Name { get; set; } = name ?? string.Empty;
 
+        public CompilerObject Owner { get; set; }
+
         public Signature Signature { get; set; } = new();
 
         public IType? ReturnType
@@ -172,7 +174,7 @@ namespace ZSharp.Objects
                 compiler.CompileIRObject<IR.Method, IR.OOPType>(this, null)
             )
             {
-                OwningType = (IR.OOPTypeReference)IR!.Signature.Args.Parameters[0].Type, // TODO: add Owner property
+                OwningType = compiler.CompileIRType<IR.OOPTypeReference>(Owner)
             };
 
         void IImplementsSpecification.OnImplementSpecification(Compiler.Compiler compiler, IAbstraction abstraction, CompilerObject specification)

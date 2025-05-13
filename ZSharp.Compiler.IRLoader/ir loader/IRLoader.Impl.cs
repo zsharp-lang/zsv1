@@ -182,6 +182,7 @@
                             {
                                 IR = method,
                                 Defined = true,
+                                Owner = result,
                                 Signature = Load(method.Signature)
                             };
                         }
@@ -265,6 +266,7 @@
                         {
                             IR = method,
                             Defined = true,
+                            Owner = result
                         };
                         
                         result.Content.Add(resultMethod);
@@ -424,6 +426,7 @@
                         {
                             IR = method,
                             Defined = true,
+                            Owner = result
                         };
                         if (resultMethod.Name is not null && resultMethod.Name != string.Empty)
                         {

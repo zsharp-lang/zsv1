@@ -1,5 +1,4 @@
-﻿using CommonZ.Utils;
-using System.Reflection;
+﻿using System.Reflection;
 using ZSharp.IR;
 
 namespace ZSharp.Runtime.NET.IL2IR
@@ -181,6 +180,7 @@ namespace ZSharp.Runtime.NET.IL2IR
 
             if (!method.IsStatic)
                 result.Signature.Args.Parameters.Add(new("this", Self));
+            else result.IsStatic = true;
 
             if (method.IsVirtual)
                 result.IsVirtual = true;
