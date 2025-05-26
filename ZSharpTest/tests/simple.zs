@@ -10,6 +10,8 @@ import {
 } from "net:ZLoad.Test.dll";
 import { Directory } from "net:ZSharp.CT.StandardLibrary.FileSystem.dll";
 
+print("Hello, Document!");
+
 module Program;
 
 class MyClass : TestInterface {
@@ -71,7 +73,7 @@ fun main(): void {
 
 	let cwd = Directory.cwd();
 	print(cwd.toString());
-	let filePath = cwd.sub("tests").sub("simple.zs");
+	let filePath = cwd / "tests" / "simple.zs";
 	print(filePath.toString());
 	print(filePath.asFile().toString());
 
