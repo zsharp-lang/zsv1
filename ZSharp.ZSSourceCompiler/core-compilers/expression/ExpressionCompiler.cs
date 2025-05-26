@@ -49,7 +49,7 @@ namespace ZSharp.ZSSourceCompiler
             if (binary.Operator == "=")
                 return Compiler.Compiler.Assign(left, right);
 
-            if (!Compiler.Operators.Cache(binary.Operator, out var @operator))
+            if (!Compiler.Operators.Binary.Cache(binary.Operator, out var @operator))
                 Compiler.LogError($"Operator '{binary.Operator}' is not defined.", binary);
 
             return Compiler.Compiler.Call(@operator, [new(left), new(right)]);

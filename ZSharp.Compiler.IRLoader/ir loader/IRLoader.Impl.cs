@@ -1,4 +1,6 @@
-﻿namespace ZSharp.Compiler.IRLoader
+﻿using System.Text.RegularExpressions;
+
+namespace ZSharp.Compiler.IRLoader
 {
     public partial class IRLoader
     {
@@ -39,6 +41,28 @@
 
             foreach (var action in actions)
                 action();
+
+            var ops = Compiler.Feature<Ops>();
+
+            if (module.HasFunctions)
+                foreach (var function in module.Functions)
+                {
+                    if (function.Name is null || function.Name == string.Empty)
+                        continue;
+
+                    var match = Regex.Match(function.Name, @"^_?(?<OP>[+\-*/=?&^%$#@!<>|~]+)_?$");
+                    if (match.Success)
+                    {
+                        var op = match.Groups["OP"].Value;
+                        if (!ops.Binary.Cache(op, out var group))
+                            group = ops.Binary.Cache(op, new OverloadGroup(op));
+
+                        if (group is not OverloadGroup overloadGroup)
+                            throw new Exception("Invalid overload group!");
+
+                        overloadGroup.Overloads.Add(Import(function));
+                    }
+                }
 
             return result;
         }

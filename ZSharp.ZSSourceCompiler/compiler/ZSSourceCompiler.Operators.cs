@@ -1,9 +1,7 @@
-﻿using CommonZ.Utils;
-
-namespace ZSharp.ZSSourceCompiler
+﻿namespace ZSharp.ZSSourceCompiler
 {
     public partial class ZSSourceCompiler
     {
-        public Cache<string, CompilerObject> Operators { get; } = [];
+        public Compiler.Ops Operators { get; }
     }
 }

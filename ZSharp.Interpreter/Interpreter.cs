@@ -22,6 +22,8 @@
 
             Compiler = new(RuntimeModule);
 
+            new Compiler.Ops(Compiler);
+
             CompilerIRLoader = new(Compiler);
             SourceCompiler = new(Compiler);
 

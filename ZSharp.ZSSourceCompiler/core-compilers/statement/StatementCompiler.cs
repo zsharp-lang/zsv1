@@ -56,7 +56,7 @@
         {
             var result = new Objects.Case()
             {
-                Of = @case.Of is null ? Compiler.Operators.Cache("==")! : Compiler.CompileNode(@case.Of),
+                Of = @case.Of is null ? Compiler.Operators.Binary.Cache("==")! : Compiler.CompileNode(@case.Of),
                 Value = @case.Value is null ? Compiler.Compiler.CreateTrue() : Compiler.CompileNode(@case.Value),
                 Else = @case.Else is null ? null : Compiler.CompileNode(@case.Else),
             };

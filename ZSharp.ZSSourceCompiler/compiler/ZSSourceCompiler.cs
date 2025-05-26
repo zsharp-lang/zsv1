@@ -1,4 +1,6 @@
-﻿namespace ZSharp.ZSSourceCompiler
+﻿using ZSharp.Compiler;
+
+namespace ZSharp.ZSSourceCompiler
 {
     public sealed partial class ZSSourceCompiler : Compiler.Feature
     {
@@ -15,6 +17,8 @@
 
             ExpressionCompiler = new(this);
             StatementCompiler = new(this);
+
+            Operators = compiler.Feature<Ops>();
 
             Initialize();
         }

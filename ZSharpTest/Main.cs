@@ -68,6 +68,7 @@ using (StreamReader stream = File.OpenText(filePath))
     expressionParser.InfixL("+", 50);
     expressionParser.InfixL("-", 50);
     expressionParser.InfixL("*", 70);
+    expressionParser.InfixL("/", 70);
     expressionParser.InfixL("**", 80);
 
     expressionParser.InfixL("==", 30);
@@ -168,26 +169,6 @@ var moduleCO_standardMath = interpreter.CompilerIRLoader.Import(moduleIR_standar
 
 interpreter.SourceCompiler.StandardLibraryImporter.Libraries.Add("math", moduleCO_standardMath);
 
-foreach (var moduleIR in new[] { moduleIR_standardIO, moduleIR_standardMath })
-    if (moduleIR.HasFunctions)
-        foreach (var function in moduleIR.Functions)
-        {
-            if (function.Name is null || function.Name == string.Empty)
-                continue;
-
-            var match = Regex.Match(function.Name, @"^_?(?<OP>[+\-*=?&^%$#@!<>|~]+)_?$");
-            if (match.Success)
-            {
-                var op = match.Groups["OP"].Value;
-                if (!interpreter.SourceCompiler.Operators.Cache(op, out var group))
-                    group = interpreter.SourceCompiler.Operators.Cache(op, new ZSharp.Objects.OverloadGroup(op));
-
-                if (group is not ZSharp.Objects.OverloadGroup overloadGroup)
-                    throw new Exception("Invalid overload group!");
-
-                overloadGroup.Overloads.Add(interpreter.CompilerIRLoader.Import(function));
-            }
-        }
 
 //var moduleIL_compilerAPI = typeof(ZS.CompilerAPI.Impl_Globals).Module;
 //var moduleIR_compilerAPI = interpreter.HostLoader.Import(moduleIL_compilerAPI);
