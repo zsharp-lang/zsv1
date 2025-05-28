@@ -6,62 +6,36 @@ namespace ZSharp.IR
         : IRObject
         , ICallable
     {
-        private Collection<GenericParameter>? _genericParameters;
+        public Function UnderlyingFunction { get; set; }
 
-        private Signature _signature;
-        private VM.MethodBody? _body;
-
-        public string? Name { get; set; }
+        public string? Name {
+            get => UnderlyingFunction.Name;
+            set => UnderlyingFunction.Name = value;
+        }
 
         public MethodAttributes Attributes { get; set; } = MethodAttributes.None;
 
-        public Collection<GenericParameter> GenericParameters
-        {
-            get
-            {
-                if (_genericParameters is not null)
-                    return _genericParameters;
+        public Collection<GenericParameter> GenericParameters => UnderlyingFunction.GenericParameters;
 
-                Interlocked.CompareExchange(ref _genericParameters, [], null);
-                return _genericParameters;
-            }
-        }
-
-        public bool HasGenericParameters => !_genericParameters.IsNullOrEmpty();
+        public bool HasGenericParameters => UnderlyingFunction.HasGenericParameters;
 
         public IType ReturnType
         {
-            get => _signature.ReturnType;
-            set => _signature.ReturnType = value;
+            get => UnderlyingFunction.ReturnType;
+            set => UnderlyingFunction.ReturnType = value;
         }
 
         public Signature Signature
         {
-            get => _signature;
-            set
-            {
-                if (value.Owner is not null)
-                    throw new InvalidOperationException();
-                _signature.Owner = null;
-                (_signature = value).Owner = this;
-            }
+            get => UnderlyingFunction.Signature;
+            set => UnderlyingFunction.Signature = value;
         }
 
-        ICallableBody? ICallable.Body => _body;
+        ICallableBody? ICallable.Body => UnderlyingFunction.Body;
 
-        public VM.MethodBody Body
-        {
-            get
-            {
-                if (_body is not null)
-                    return _body;
+        public VM.FunctionBody Body => UnderlyingFunction.Body;
 
-                Interlocked.CompareExchange(ref _body, new(this), null);
-                return _body;
-            }
-        }
-
-        public bool HasBody => _body is not null;
+        public bool HasBody => UnderlyingFunction.HasBody;
 
         public OOPType? Owner { get; set; }
 
@@ -110,14 +84,20 @@ namespace ZSharp.IR
         }
 
         public Method(IType returnType)
+            : this(new Signature(returnType))
         {
-            _signature = new(returnType) { Owner = this };
+            
         }
 
         public Method(Signature signature)
-            : this((null as IType)!)
+            : this(new Function(signature))
         {
-            Signature = signature;
+            
+        }
+
+        public Method(Function function)
+        {
+            UnderlyingFunction = function;
         }
     }
 }
