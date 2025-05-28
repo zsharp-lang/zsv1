@@ -44,7 +44,7 @@ namespace ZSharp.Compiler
 
         public static readonly IRCode Empty = new()
         {
-            Instructions = Collection<IR.VM.Instruction>.Empty,
+            Instructions = IRInstructions.Empty,
             MaxStackSize = 0,
             Types = [],
         };
