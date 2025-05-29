@@ -82,8 +82,8 @@
         {
             var result = new Objects.If()
             {
-                Body = Compiler.CompileNode(@if.If),
                 Condition = Compiler.CompileNode(@if.Condition),
+                Body = Compiler.CompileNode(@if.If),
                 Else = @if.Else is null ? null : Compiler.CompileNode(@if.Else)
             };
 

@@ -1,4 +1,5 @@
 ﻿//using ZSharp.Interop.IR2IL;
+using ZSharp.Compiler;
 using ZSharp.Objects;
 using ZSharp.Runtime.NET.IR2IL;
 
@@ -7,7 +8,9 @@ using ZSharp.Runtime.NET.IR2IL;
 
 namespace ZSharp.Runtime.NET
 {
-    internal sealed class IRCodeEvaluator(Runtime runtime) : Compiler.Evaluator
+    internal sealed class IRCodeEvaluator(Runtime runtime) 
+        : Compiler.Evaluator
+        , Compiler.IIREvaluator
     {
         private readonly Runtime runtime = runtime;
 
@@ -69,6 +72,26 @@ namespace ZSharp.Runtime.NET
             }
 
             else throw new NotImplementedException();
+        }
+
+        public CompilerObject? EvaluateCT(IRCode code)
+        {
+            throw new NotImplementedException();
+
+            var function = new IR.Function(Interpreter.Compiler.CompileIRType(code.RequireValueType()))
+            {
+                Name = "evaluate"
+            };
+
+            IL.Emit.DynamicMethod method = new(string.Empty, runtime.Import(function.ReturnType), null);
+
+            CodeLoader codeLoader = new(
+                runtime.irLoader, 
+                function, 
+                method.GetILGenerator()
+            );
+
+            codeLoader.Load();
         }
     }
 }

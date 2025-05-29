@@ -5,12 +5,15 @@ namespace ZSharp.Objects
 {
     public sealed class Class
         : CompilerObject
+        , IClass
         , ICompileIRObject<IR.Class, IR.Module>
         , ICompileIRReference<IR.ClassReference>
         , ICompileIRType<IR.OOPTypeReference<IR.Class>>
         , ICTCallable
+        , IRTCastTo
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
+        , IRTTypeMatch
         , IImplementsAbstraction
         , IType
         , ITypeAssignableToType
@@ -44,7 +47,7 @@ namespace ZSharp.Objects
 
         public string? Name { get; set; }
 
-        public IType? Base { get; set; }
+        public IClass? Base { get; set; }
 
         public CompilerObject? Constructor { get; set; }
 
@@ -149,6 +152,117 @@ namespace ZSharp.Objects
             return null;
         }
 
+        Result<TypeMatch, string> IRTTypeMatch.Match(Compiler.Compiler compiler, CompilerObject value, IType type)
+        {
+            var nullableType = new Nullable(type);
+            var castToTypeResult = compiler.CG.Cast(value, nullableType);
+
+            TypeCast castToType;
+
+            if (castToTypeResult.Error(out var error))
+                return Result<TypeMatch, string>.Error(error);
+            else castToType = castToTypeResult.Unwrap();
+
+            var castToTypeCodeResult = compiler.IR.CompileCode(castToType.Cast);
+
+            IRCode castToTypeCode;
+
+            if (castToTypeCodeResult.Error(out error))
+                return Result<TypeMatch, string>.Error(error);
+            else castToTypeCode = castToTypeCodeResult.Unwrap();
+
+            IR.VM.Nop onMatch = new();
+
+            return Result<TypeMatch, string>.Ok(new()
+            {
+                Match = new RawCode(new([
+                    .. castToTypeCode.Instructions,
+                    castToType.OnCast,
+                    new IR.VM.Dup(),
+                    new IR.VM.IsNotNull(),
+                    new IR.VM.JumpIfTrue(onMatch),
+                ])
+                {
+                    Types = [castToTypeCode.RequireValueType()]
+                }),
+                OnMatch = onMatch
+            });
+        }
+
+        Result<TypeCast, string> IRTCastTo.Cast(Compiler.Compiler compiler, CompilerObject value, IType targetType)
+        {
+            if (targetType is not Class targetClass)
+                return Result<TypeCast, string>.Error(
+                    "Casting class to non-class object is not supported yet"
+                );
+
+            if (IsSubclassOf(targetClass))
+                return Result<TypeCast, string>.Ok(
+                    new()
+                    {
+                        Cast = value,
+                    }
+                );
+
+            var valueCodeResult = compiler.IR.CompileCode(value);
+
+            IRCode valueCode;
+
+            if (valueCodeResult.Error(out var error))
+                return Result<TypeCast, string>.Error(error);
+            else valueCode = valueCodeResult.Unwrap();
+
+            if (targetClass.IsSubclassOf(this))
+            {
+                var targetClassIRResult = 
+                    compiler.IR.CompileReference<IR.OOPTypeReference<IR.Class>>(targetClass);
+
+                IR.OOPTypeReference<IR.Class> targetClassIR;
+
+                if (targetClassIRResult.Error(out error))
+                    return Result<TypeCast, string>.Error(error);
+                else targetClassIR = targetClassIRResult.Unwrap();
+
+                IR.VM.Nop onCast = new();
+                IR.VM.Nop onFail = new();
+
+                return Result<TypeCast, string>.Ok(
+                    new()
+                    {
+                        Cast = new RawCode(new([
+                            .. valueCode.Instructions,
+                            new IR.VM.CastReference(targetClassIR),
+                            new IR.VM.Dup(),
+                            new IR.VM.IsNotNull(),
+                            new IR.VM.JumpIfTrue(onCast),
+                            new IR.VM.Pop(),
+                            new IR.VM.Jump(onFail),
+                        ])
+                        {
+                            Types = [targetType]
+                        }),
+                        OnCast = onCast,
+                        OnFail = onFail,
+                    }
+                );
+            }
+
+            return Result<TypeCast, Error>.Error(
+                "Object does not support type cast to the specified type"
+            );
+        }
+
         #endregion
+
+        public bool IsSubclassOf(Class @base)
+        {
+            for (
+                IType? current = Base;
+                current is Class baseClass;
+                current = baseClass.Base
+            )
+                if (current == @base) return true;
+            return false;
+        }
     }
 }

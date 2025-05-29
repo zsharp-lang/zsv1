@@ -3,12 +3,14 @@
     public sealed partial class Compiler
     {
         public Compiler()
-            : this(IR.RuntimeModule.Standard) { }
+            : this(ZSharp.IR.RuntimeModule.Standard) { }
 
-        public Compiler(IR.RuntimeModule runtimeModule)
+        public Compiler(ZSharp.IR.RuntimeModule runtimeModule)
         {
             RuntimeModule = runtimeModule;
 
+            CG = new(this);
+            IR = new(this);
             TypeSystem = new(this);
 
             Initialize();

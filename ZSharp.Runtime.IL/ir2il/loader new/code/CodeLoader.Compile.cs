@@ -48,6 +48,16 @@ namespace ZSharp.Runtime.NET.IR2IL
                 _stack.Push(method.ReturnType);
         }
 
+        private void Compile(VM.CastReference castReference)
+        {
+            var targetType = Loader.LoadType(castReference.Type);
+
+            Output.Emit(IL.Emit.OpCodes.Isinst, targetType);
+
+            _stack.Pop();
+            _stack.Push(targetType);
+        }
+
         private void Compile(VM.CreateInstance createInstance)
         {
             var constructor = Loader.LoadReference(createInstance.Constructor);
@@ -83,6 +93,14 @@ namespace ZSharp.Runtime.NET.IR2IL
                 Output.Emit(IL.Emit.OpCodes.Ldarg, index);
 
             _stack.Push(p.Type);
+        }
+
+        private void Compile(VM.GetClass getClass)
+        {
+            var typeObjectId = Loader.GetTypeObject(getClass.Class);
+
+            Output.Emit(IL.Emit.OpCodes.Ldc_I4, typeObjectId);
+            Output.Emit(IL.Emit.OpCodes.Call, Utils.GetMethod(IRLoader._GetTypeObject));
         }
 
         private void Compile(VM.GetField getField)
@@ -127,7 +145,30 @@ namespace ZSharp.Runtime.NET.IR2IL
 
         private void Compile(VM.GetObject getObject)
         {
-            Loader.GetObjectFunction(this, getObject);
+            throw new NotSupportedException(
+                $"The {nameof(VM.GetObject)} instruction is obsolete and being " +
+                $"removed. Please do not use this instruction. To get a function " +
+                $"you can use GetFunction. To get a class you can use {nameof(VM.GetClass)}." +
+                $" To get a virtual method, use GetVirtualMethod."
+            );
+        }
+
+        private void Compile(VM.IsNotNull _)
+        {
+            Output.Emit(IL.Emit.OpCodes.Ldnull);
+            Output.Emit(IL.Emit.OpCodes.Cgt_Un);
+
+            _stack.Pop();
+            _stack.Push(typeof(bool));
+        }
+
+        private void Compile(VM.IsNull _)
+        {
+            Output.Emit(IL.Emit.OpCodes.Ldnull);
+            Output.Emit(IL.Emit.OpCodes.Ceq);
+
+            _stack.Pop();
+            _stack.Push(typeof(bool));
         }
 
         private void Compile(VM.Jump jump)

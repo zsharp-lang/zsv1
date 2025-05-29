@@ -18,7 +18,7 @@ namespace ZSharp.Compiler
 
         public IRCode() { }
 
-        public IRCode(IEnumerable<IR.VM.Instruction> instructions)
+        public IRCode(IEnumerable<ZSharp.IR.VM.Instruction> instructions)
         {
             Instructions = [.. instructions];
         }

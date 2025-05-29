@@ -6,8 +6,8 @@ namespace ZSharp.Runtime.NET
         : Interpreter.IRuntime
         , Interpreter.IHostLoader
     {
-        private readonly IL2IR.ILLoader ilLoader;
-        private readonly IR2IL.IRLoader irLoader;
+        internal readonly IL2IR.ILLoader ilLoader;
+        internal readonly IR2IL.IRLoader irLoader;
 
         private readonly Cache<Type, object> typeObjects = [];
 
@@ -90,13 +90,14 @@ namespace ZSharp.Runtime.NET
 
         public object GetObject(Type type)
         {
+            throw new NotSupportedException();
             if (typeObjects.Cache(type, out var result))
                 return result;
 
             var ir = ilLoader.LoadType(type);
             var co = Interpreter.CompilerIRLoader.Import(ir);
 
-            return typeObjects.Cache(type, new TypeObject(type, ir, co));
+            //return typeObjects.Cache(type, new TypeObject(type, ir));
         }
     }
 }

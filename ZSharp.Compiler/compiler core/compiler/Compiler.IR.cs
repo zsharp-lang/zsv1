@@ -2,7 +2,7 @@
 {
     public sealed partial class Compiler
     {
-        public IR.RuntimeModule RuntimeModule { get; }
+        public ZSharp.IR.RuntimeModule RuntimeModule { get; }
 
         public IRCode CompileIRCode(CompilerObject @object)
         {
@@ -15,16 +15,16 @@
             throw new NotImplementedException(); // TODO: return null
         }
 
-        public IR.IRObject CompileIRObject(CompilerObject @object)
+        public ZSharp.IR.IRObject CompileIRObject(CompilerObject @object)
         {
             if (@object is ICompileIRObject irObject)
                 return irObject.CompileIRObject(this);
 
-            return CompileIRObject<IR.IRObject>(@object, null);
+            return CompileIRObject<ZSharp.IR.IRObject>(@object, null);
         }
 
-        public IR.IRObject CompileIRObject<Owner>(CompilerObject @object, Owner? owner)
-            where Owner : IR.IRObject
+        public ZSharp.IR.IRObject CompileIRObject<Owner>(CompilerObject @object, Owner? owner)
+            where Owner : ZSharp.IR.IRObject
         {
             if (@object is ICompileIRObject<Owner> irObject)
                 return irObject.CompileIRObject(this, owner);
@@ -33,7 +33,7 @@
         }
 
         public T CompileIRObject<T, Owner>(CompilerObject @object, Owner? owner)
-            where T : IR.IRObject
+            where T : ZSharp.IR.IRObject
             where Owner : class
         {
             if (@object is ICompileIRObject<T, Owner> irObject)

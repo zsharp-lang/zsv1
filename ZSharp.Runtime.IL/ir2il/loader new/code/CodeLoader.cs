@@ -1,7 +1,7 @@
 ﻿namespace ZSharp.Runtime.NET.IR2IL
 {
-    internal sealed partial class CodeLoader(RootModuleLoader loader, IR.ICallable code, IL.Emit.ILGenerator method)
-        : ModuleContentLoader<IR.ICallable, IL.Emit.ILGenerator>(loader, code, method)
+    internal sealed partial class CodeLoader(IRLoader loader, IR.ICallable code, IL.Emit.ILGenerator method)
+        : BaseIRLoader<IR.ICallable, IL.Emit.ILGenerator>(loader, code, method)
         , ICodeLoader
     {
         private readonly Dictionary<IR.VM.Instruction, IL.Emit.Label> labels = [];
@@ -12,7 +12,7 @@
 
         public Dictionary<IR.VM.Local, IL.Emit.LocalBuilder> Locals { get; } = [];
 
-        protected override void DoLoad()
+        public void Load()
         {
             CompileCode();
         }
@@ -57,13 +57,17 @@
                 case IR.VM.CallIndirect callIndirect: Compile(callIndirect); break;
                 case IR.VM.CallInternal callInternal: Compile(callInternal); break;
                 case IR.VM.CallVirtual callVirtual: Compile(callVirtual); break;
+                case IR.VM.CastReference castReference: Compile(castReference); break;
                 case IR.VM.CreateInstance createInstance: Compile(createInstance); break;
                 case IR.VM.Dup dup: Compile(dup); break;
                 case IR.VM.GetArgument getArgument: Compile(getArgument); break;
+                case IR.VM.GetClass getClass: Compile(getClass); break;
                 case IR.VM.GetField getField: Compile(getField); break;
                 case IR.VM.GetGlobal getGlobal: Compile(getGlobal); break;
                 case IR.VM.GetLocal getLocal: Compile(getLocal); break;
                 case IR.VM.GetObject getObject: Compile(getObject); break;
+                case IR.VM.IsNotNull isNotNull: Compile(isNotNull); break;
+                case IR.VM.IsNull isNull: Compile(isNull); break;
                 case IR.VM.Jump jump: Compile(jump); break;
                 case IR.VM.JumpIfTrue jumpIfTrue: Compile(jumpIfTrue); break;
                 case IR.VM.JumpIfFalse jumpIfFalse: Compile(jumpIfFalse); break;

@@ -40,7 +40,7 @@ namespace ZSharp.Objects
 
         public Collection<GenericParameter> GenericParameters { get; set; } = [];
 
-        public CompilerObject? Base { get; set; }
+        public IClass? Base { get; set; }
 
         public Mapping<CompilerObject, Implementation> Implementations { get; set; } = [];
 

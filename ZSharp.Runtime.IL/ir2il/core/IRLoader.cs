@@ -3,7 +3,7 @@
     /// <summary>
     /// Wraps an IR module in a C# module.
     /// </summary>
-    public class IRLoader(Context context, IR.RuntimeModule? runtimeModule = null)
+    public sealed partial class IRLoader(Context context, IR.RuntimeModule? runtimeModule = null)
     {
         public Context Context { get; } = context;
 

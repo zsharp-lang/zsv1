@@ -89,7 +89,7 @@ namespace ZSharp.Runtime.NET.IR2IL
             Context.Cache(function, result);
 
             var ilGen = result.GetILGenerator();
-            var codeLoader = new CodeLoader(ModuleLoader, function, ilGen);
+            var codeLoader = new CodeLoader(Loader, function, ilGen);
 
             foreach (var (ir, parameter) in irParams.Zip(parameters))
                 codeLoader.Args[ir] = parameter;

@@ -24,8 +24,8 @@ namespace ZSharp.Objects
             if (bases.Length > 0)
             {
                 int interfacesIndex = 0;
-                if (bases[0] is GenericClassInstance)
-                    @class.Base = (GenericClassInstance)bases[interfacesIndex++];
+                if (bases[0] is IClass)
+                    @class.Base = (IClass)bases[interfacesIndex++];
 
                 //for (; interfacesIndex < bases.Length; interfacesIndex++)
                 //    if (bases[interfacesIndex] is not IAbstraction @abstract)

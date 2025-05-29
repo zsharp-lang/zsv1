@@ -4,6 +4,8 @@
     {
         public const string GlobalsTypeName = "<Globals>";
 
+        public const string AnonymousAssembly = "<AnonymousAssembly>";
+
         public const string AnonymousClass = "<AnonymousClass>";
 
         public const string AnonymousInterface = "<AnonymousInterface>";

@@ -1,6 +1,4 @@
-﻿using ZSharp.IR.VM;
-
-namespace ZSharp.ZSSourceCompiler
+﻿namespace ZSharp.ZSSourceCompiler
 {
     public sealed partial class ExpressionCompiler(ZSSourceCompiler compiler)
         : CompilerBase(compiler)
@@ -13,6 +11,7 @@ namespace ZSharp.ZSSourceCompiler
                 CallExpression call => Compile(call),
                 IdentifierExpression identifier => Compile(identifier),
                 IndexExpression index => Compile(index),
+                IsOfExpression isOf => Compile(isOf),
                 LiteralExpression literal => Compile(literal),
                 WhileExpression<Expression> @while => Compile(@while),
                 _ => null
@@ -88,6 +87,76 @@ namespace ZSharp.ZSSourceCompiler
             var args = index.Arguments.Select(arg => new Compiler.Argument(arg.Name, Compiler.CompileNode(arg.Value)));
 
             return Compiler.Compiler.Map(indexable, @object => Compiler.Compiler.Index(@object, [.. args]));
+        }
+
+        private CompilerObject Compile(IsOfExpression isOf)
+        {
+            var value = Compiler.CompileNode(isOf.Expression);
+            var type = Compiler.CompileType(isOf.OfType);
+
+            if (!Compiler.UnpackResult(
+                    Compiler.Compiler.CG.TypeMatch(value, type), 
+                    out var match, 
+                    isOf
+                )
+            )
+                return Compiler.Compiler.CreateFalse();
+
+            if (!Compiler.UnpackResult(
+                    Compiler.Compiler.IR.CompileCode(match.Match),
+                    out var matchCode,
+                    isOf
+                )
+            )
+                return Compiler.Compiler.CreateFalse();
+
+            IR.VM.Nop noMatch = new();
+
+            matchCode.Instructions.AddRange([
+                new IR.VM.Pop(),
+                new IR.VM.PutFalse(),
+                new IR.VM.Jump(noMatch),
+            ]);
+
+            if (isOf.Name is not null && isOf.Name != string.Empty && isOf.Name != "_")
+            {
+                var allocator = Compiler.Compiler.CurrentContext.FindContext<IMemoryAllocator>();
+                if (allocator is null)
+                {
+                    Compiler.LogError($"Could not find memory allocator in context chain", isOf);
+
+                    return Compiler.Compiler.CreateFalse();
+                }
+
+                var local = allocator.Allocate(
+                    isOf.Name,
+                    type,
+                    new Objects.RawCode(new([
+                        match.OnMatch
+                    ])
+                    {
+                        Types = [type]
+                    })
+                );
+
+                if (local is not Objects.Local localObject)
+                    throw new NotImplementedException();
+
+                Compiler.Context.CurrentScope.Set(isOf.Name, local);
+
+                matchCode.Instructions.AddRange([
+                    .. localObject.IR!.Initializer!,
+                    new IR.VM.Pop(),
+                    new IR.VM.PutTrue(),
+                ]);
+            }
+
+            matchCode.Instructions.Add(noMatch);
+
+            matchCode.Types.Clear();
+            matchCode.Types.Add(Compiler.Compiler.TypeSystem.Boolean);
+
+            return new Objects.RawCode(matchCode);
         }
 
         private WhileLoop Compile(WhileExpression<Expression> @while)

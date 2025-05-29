@@ -5,6 +5,7 @@ namespace ZSharp.Objects
 {
     public sealed class GenericClassInstance
         : CompilerObject
+        , IClass
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
         , ICTCallable
@@ -22,6 +23,18 @@ namespace ZSharp.Objects
         public GenericClass Origin { get; set; }
 
         public Mapping<GenericParameter, CompilerObject> GenericArguments { get; } = [];
+
+        public string Name
+        {
+            get => Origin.Name;
+            set => Origin.Name = value;
+        }
+
+        public IClass? Base
+        {
+            get => throw new NotImplementedException();
+            set => throw new NotImplementedException();
+        }
 
         public Mapping<MemberName, CompilerObject> Members { get; set; } = [];
 

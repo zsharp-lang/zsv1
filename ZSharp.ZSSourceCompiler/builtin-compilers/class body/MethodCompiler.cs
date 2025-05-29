@@ -131,7 +131,7 @@
             if (local.Type is null)
                 Compiler.LogError("Could not infer type of local variable.", let);
 
-            local.IR = Compiler.Compiler.CompileIRObject<IR.VM.Local, IR.VM.MethodBody>(local, Object.IR!.Body);
+            local.IR = Compiler.Compiler.CompileIRObject<IR.VM.Local, IR.VM.FunctionBody>(local, Object.IR!.Body);
 
             if (local.IR.Initializer is not null)
                 return new Objects.RawCode(new(local.IR.Initializer)
@@ -163,7 +163,7 @@
             if (local.Type is null)
                 Compiler.LogError("Could not infer type of local variable.", var);
 
-            local.IR = Compiler.Compiler.CompileIRObject<IR.VM.Local, IR.VM.MethodBody>(local, Object.IR!.Body);
+            local.IR = Compiler.Compiler.CompileIRObject<IR.VM.Local, IR.VM.FunctionBody>(local, Object.IR!.Body);
 
             if (local.IR.Initializer is not null)
                 return new Objects.RawCode(new(local.IR.Initializer)

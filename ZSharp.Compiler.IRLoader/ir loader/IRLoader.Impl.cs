@@ -6,19 +6,19 @@ namespace ZSharp.Compiler.IRLoader
     {
         public Context Context { get; } = new();
 
-        public partial Module Import(IR.Module module)
+        public partial Module Import(ZSharp.IR.Module module)
             => Import(module, new(module.Name!)
             {
                 IR = module,
             });
 
-        public CompilerObject Import(IR.IType type)
+        public CompilerObject Import(ZSharp.IR.IType type)
             => Load(type);
 
-        public CompilerObject Import(IR.Function function)
+        public CompilerObject Import(ZSharp.IR.Function function)
             => Context.Objects.Cache(function)!;
 
-        private Module Import(IR.Module module, Module result)
+        private Module Import(ZSharp.IR.Module module, Module result)
         {
             result ??= new(module.Name!)
             {
@@ -67,7 +67,7 @@ namespace ZSharp.Compiler.IRLoader
             return result;
         }
 
-        private Action Load(IR.Module module, Module owner)
+        private Action Load(ZSharp.IR.Module module, Module owner)
         {
             Module result = new(module.Name!)
             {
@@ -84,7 +84,7 @@ namespace ZSharp.Compiler.IRLoader
             return () => Import(module, result);
         }
 
-        private Action Load(IR.Function function, Module owner)
+        private Action Load(ZSharp.IR.Function function, Module owner)
         {
             if (function.HasGenericParameters)
                 return LoadGenericFunction(function, owner);
@@ -118,16 +118,16 @@ namespace ZSharp.Compiler.IRLoader
             };
         }
 
-        private Action Load(IR.OOPType type, Module owner)
+        private Action Load(ZSharp.IR.OOPType type, Module owner)
             => type switch
             {
-                IR.Class @class => Load(@class, owner),
-                IR.Interface @interface => Load(@interface, owner),
-                //IR.Struct @struct => Load(@struct),
+                ZSharp.IR.Class @class => Load(@class, owner),
+                ZSharp.IR.Interface @interface => Load(@interface, owner),
+                //ZSharp.IR.Struct @struct => Load(@struct),
                 _ => throw new NotImplementedException(),
             };
 
-        private Action Load(IR.Class @class, Module owner)
+        private Action Load(ZSharp.IR.Class @class, Module owner)
         {
             if (@class.HasGenericParameters)
                 return LoadGenericClass(@class, owner);
@@ -147,7 +147,7 @@ namespace ZSharp.Compiler.IRLoader
                 owner.Members.Add(result.Name, result);
 
             if (@class.Base is not null)
-                result.Base = Load(@class.Base);
+                result.Base = (IClass)Load(@class.Base);
 
             return () =>
             {
@@ -224,7 +224,7 @@ namespace ZSharp.Compiler.IRLoader
             };
         }
 
-        private GenericMethod LoadGenericMethod(IR.Method method, CompilerObject owner)
+        private GenericMethod LoadGenericMethod(ZSharp.IR.Method method, CompilerObject owner)
         {
             GenericMethod result = new(method.Name)
             {
@@ -247,7 +247,7 @@ namespace ZSharp.Compiler.IRLoader
             return result;
         }
 
-        private Action Load(IR.Interface @interface, Module owner)
+        private Action Load(ZSharp.IR.Interface @interface, Module owner)
         {
             Interface result = new(@interface.Name)
             {
@@ -311,24 +311,24 @@ namespace ZSharp.Compiler.IRLoader
             };
         }
 
-        private IType Load(IR.IType type)
+        private IType Load(ZSharp.IR.IType type)
         {
             if (Context.Types.Cache(type, out var result))
                 return result;
 
             return type switch
             {
-                IR.ClassReference classReference => Load(classReference),
-                IR.ConstructedClass constructedClass => Load(constructedClass),
-                IR.InterfaceReference interfaceReference => Load(interfaceReference),
+                ZSharp.IR.ClassReference classReference => Load(classReference),
+                ZSharp.IR.ConstructedClass constructedClass => Load(constructedClass),
+                ZSharp.IR.InterfaceReference interfaceReference => Load(interfaceReference),
                 _ => null!
             };
         }
 
-        private IType Load(IR.ClassReference classReference)
+        private IType Load(ZSharp.IR.ClassReference classReference)
             => Context.Objects.Cache<Class>(classReference.Definition) ?? throw new();
 
-        private IType Load(IR.ConstructedClass constructed)
+        private IType Load(ZSharp.IR.ConstructedClass constructed)
         {
 
             if (Context.Objects.Cache<GenericClass>(constructed.Class, out var genericClass))
@@ -351,10 +351,10 @@ namespace ZSharp.Compiler.IRLoader
             return Context.Types.Cache(constructed) ?? throw new();
         }
 
-        private IType Load(IR.InterfaceReference interfaceReference)
+        private IType Load(ZSharp.IR.InterfaceReference interfaceReference)
             => Context.Objects.Cache<Interface>(interfaceReference.Definition) ?? throw new();
 
-        private Action LoadGenericClass(IR.Class @class, Module owner)
+        private Action LoadGenericClass(ZSharp.IR.Class @class, Module owner)
         {
             GenericClass result = new()
             {
@@ -371,7 +371,7 @@ namespace ZSharp.Compiler.IRLoader
                 owner.Members.Add(result.Name, result);
 
             if (@class.Base is not null)
-                result.Base = Load(@class.Base);
+                result.Base = (IClass)Load(@class.Base);
 
             var self = new GenericClassInstance(result, new()
             {
@@ -467,7 +467,7 @@ namespace ZSharp.Compiler.IRLoader
             };
         }
 
-        private Action LoadGenericFunction(IR.Function function, Module owner)
+        private Action LoadGenericFunction(ZSharp.IR.Function function, Module owner)
         {
             GenericFunction result = new(function.Name)
             {
@@ -509,7 +509,7 @@ namespace ZSharp.Compiler.IRLoader
             };
         }
 
-        private Signature Load(IR.Signature signature)
+        private Signature Load(ZSharp.IR.Signature signature)
         {
             Signature result = new()
             {
@@ -533,7 +533,7 @@ namespace ZSharp.Compiler.IRLoader
             return result;
         }
 
-        private Parameter LoadParameter(IR.Parameter parameter)
+        private Parameter LoadParameter(ZSharp.IR.Parameter parameter)
         {
             var type = Load(parameter.Type);
 
@@ -548,7 +548,7 @@ namespace ZSharp.Compiler.IRLoader
             };
         }
 
-        private VarParameter LoadVarParameter(IR.Parameter parameter)
+        private VarParameter LoadVarParameter(ZSharp.IR.Parameter parameter)
         {
             var type = Load(parameter.Type);
 

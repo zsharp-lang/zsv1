@@ -2,6 +2,6 @@
 {
     public partial class IRLoader
     {
-        public partial Module Import(IR.Module module);
+        public partial Module Import(ZSharp.IR.Module module);
     }
 }

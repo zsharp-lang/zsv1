@@ -78,7 +78,7 @@
             Context.Cache(constructor.Method, result);
 
             var ilGen = result.GetILGenerator();
-            var codeLoader = new CodeLoader(ModuleLoader, constructor.Method, ilGen);
+            var codeLoader = new CodeLoader(Loader, constructor.Method, ilGen);
 
             foreach (var (ir, parameter) in irParams.Zip(parameters))
                 codeLoader.Args[ir] = parameter;
@@ -127,7 +127,7 @@
             Context.Cache(method, result);
 
             var ilGen = result.GetILGenerator();
-            var codeLoader = new CodeLoader(ModuleLoader, method, ilGen);
+            var codeLoader = new CodeLoader(Loader, method, ilGen);
 
             foreach (var (ir, parameter) in irParams.Zip(parameters))
                 codeLoader.Args[ir] = parameter;

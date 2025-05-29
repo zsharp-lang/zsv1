@@ -46,6 +46,25 @@ class OtherClass : TestInterface {
 	}
 }
 
+class Base {
+	fun baseMethod(this): void {
+		print("Base::baseMethod");
+
+		return;
+	}
+}
+
+class Derived : Base {
+
+	new() {}
+
+	fun derivedMethod(this): void {
+		print("Derived::derivedMethod");
+
+		return;
+	}
+}
+
 fun testInterface(test: TestInterface): void {
 
 	test.do();
@@ -59,6 +78,7 @@ fun testBaseClass(test: BaseClass): void {
 }
 
 fun main(): void {
+/*
 	let c1 = MyClass();
 	let c2 = OtherClass(5);
 
@@ -76,6 +96,12 @@ fun main(): void {
 	let filePath = cwd / "tests" / "simple.zs";
 	print(filePath.toString());
 	print(filePath.asFile().toString());
+	*/
+	let base: Base = Derived();
+	base.baseMethod();
+
+	if (base is derived of Derived)
+		derived.derivedMethod();
 
 	return;
 }

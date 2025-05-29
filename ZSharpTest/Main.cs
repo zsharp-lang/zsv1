@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using System.Text.RegularExpressions;
 using ZSharp.Compiler;
 using ZSharp.Interpreter;
 using ZSharp.Parser;
@@ -78,6 +77,7 @@ using (StreamReader stream = File.OpenText(filePath))
     expressionParser.Led(TokenType.LBracket, LangParser.ParseIndexExpression, 100);
     expressionParser.Nud(TokenType.LBracket, LangParser.ParseArrayLiteral);
     expressionParser.Led(".", LangParser.ParseMemberAccess, 150);
+    expressionParser.Led(LangParser.Keywords.Is, LangParser.ParseIsOfExpression, 20);
 
     expressionParser.Separator(TokenType.Comma);
     expressionParser.Separator(TokenType.RParen);

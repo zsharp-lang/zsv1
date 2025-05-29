@@ -15,6 +15,7 @@
             public const string If          = "if";
             public const string Import      = "import";
             public const string In          = "in";
+            public const string Is          = "is";
             public const string Let         = "let";
             public const string Module      = "module";
             public const string New         = "new";
