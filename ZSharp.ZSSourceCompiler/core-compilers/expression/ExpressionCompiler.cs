@@ -1,4 +1,6 @@
-﻿namespace ZSharp.ZSSourceCompiler
+﻿using ZSharp.Compiler;
+
+namespace ZSharp.ZSSourceCompiler
 {
     public sealed partial class ExpressionCompiler(ZSSourceCompiler compiler)
         : CompilerBase(compiler)
@@ -9,6 +11,7 @@
                 ArrayLiteral array => Compile(array),
                 BinaryExpression binary => Compile(binary),
                 CallExpression call => Compile(call),
+                CastExpression cast => Compile(cast),
                 IdentifierExpression identifier => Compile(identifier),
                 IndexExpression index => Compile(index),
                 IsOfExpression isOf => Compile(isOf),
@@ -61,6 +64,51 @@
             var args = call.Arguments.Select(arg => new Compiler.Argument(arg.Name, Compiler.CompileNode(arg.Value)));
 
             return Compiler.Compiler.Call(callable, args.ToArray());
+        }
+
+        private CompilerObject Compile(CastExpression cast)
+        {
+            var expression = Compiler.CompileNode(cast.Expression);
+
+            var targetType = Compiler.CompileType(cast.TargetType);
+
+            if (targetType is not Objects.Nullable)
+            {
+                Compiler.LogError("Casting to non-nullable type is not supported yet", cast);
+
+                targetType = new Objects.Nullable(targetType);
+            }
+
+            var castResult = Compiler.Compiler.CG.Cast(expression, targetType);
+
+            TypeCast typeCast;
+
+            if (castResult.Error(out var error))
+            {
+                Compiler.LogError(error, cast);
+
+                return Compiler.Compiler.CreateNull();
+            }
+            else typeCast = castResult.Unwrap();
+
+            var castCodeResult = Compiler.Compiler.IR.CompileCode(typeCast.Cast);
+
+            IRCode castCode;
+
+            if (castCodeResult.Error(out error))
+            {
+                Compiler.LogError(error, cast);
+
+                return Compiler.Compiler.CreateNull();
+            } else castCode = castCodeResult.Unwrap();
+
+            castCode.Instructions.Add(typeCast.OnCast);
+            if (typeCast.CanFail)
+                castCode.Instructions.Add(typeCast.OnFail);
+
+            castCode.Types[0] = (targetType as Objects.Nullable)!.UnderlyingType;
+
+            return new Objects.RawCode(castCode); // TODO: add OnCast and OnFail handlers
         }
 
         private CompilerObject Compile(IdentifierExpression identifier)
