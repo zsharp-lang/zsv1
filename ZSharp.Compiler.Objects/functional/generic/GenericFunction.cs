@@ -6,6 +6,7 @@ namespace ZSharp.Objects
     public sealed class GenericFunction(string? name = null)
         : CompilerObject
         , ICompileIRObject<IR.Function, IR.Module>
+        , ICTCallable
         , ICTGetIndex
         , IReferencable<GenericFunctionInstance>
     {
@@ -37,7 +38,11 @@ namespace ZSharp.Objects
 
         public Collection<GenericParameter> GenericParameters { get; set; } = [];
 
-        public CompilerObject? ReturnType { get; set; }
+        public IType? ReturnType
+        {
+            get => Signature.ReturnType;
+            set => Signature.ReturnType = value;
+        }
 
         public Signature Signature { get; set; } = new();
 
@@ -121,8 +126,42 @@ namespace ZSharp.Objects
 
             return new(this)
             {
-                Context = context
+                Context = context,
+                Signature = @ref.CreateReference<Signature>(Signature, context)
             };
+        }
+
+        CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        {
+            ITypeInferenceContext infer;
+
+            using var _ = compiler.ContextScope(infer = new SimpleInferenceContext(compiler));
+
+            List<InferredType> inferredTypes = [];
+            ReferenceContext context = new();
+
+            foreach (var genericParameter in GenericParameters)
+            {
+                var inferredType = infer.CreateInferredType();
+                inferredTypes.Add(inferredType);
+                context.CompileTimeValues.Cache(genericParameter, inferredType);
+            }
+
+            var reference = compiler.Feature<Referencing>().CreateReference<GenericFunctionInstance>(this, context);
+
+            var args = (reference.Signature as ISignature)!.MatchArguments(compiler, arguments);
+
+            foreach (var genericParameter in GenericParameters)
+                context.CompileTimeValues.Cache(
+                    genericParameter,
+                    context.CompileTimeValues.Cache<InferredType>(genericParameter)!.Resolve(),
+                    set: true
+                );
+
+            return compiler.Call(
+                compiler.Feature<Referencing>().CreateReference(this, context), 
+                arguments
+            );
         }
     }
 }
