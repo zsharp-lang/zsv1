@@ -2,7 +2,7 @@
 {
     public sealed class IsOfExpression : Expression
     {
-        public Expression Expression { get; set; }
+        public required Expression Expression { get; set; }
 
         public string? Name { get; set; }
 
