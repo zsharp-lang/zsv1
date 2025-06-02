@@ -1,5 +1,4 @@
-﻿using System;
-using ZSharp.Compiler;
+﻿using ZSharp.Compiler;
 
 namespace ZSharp.Objects
 {
@@ -35,21 +34,24 @@ namespace ZSharp.Objects
                 return Result<TypeCast, Error>.Error(error);
             else innerCastCode = innerCastCodeResult.Unwrap();
 
+            IR.VM.Nop onCast = new();
+
             return Result<TypeCast, Error>.Ok(
                 new()
                 {
                     Cast = new RawCode(new([
                             .. innerCastCode.Instructions,
+                            new IR.VM.Jump(onCast),
                             .. (IR.VM.Instruction[])(innerCast.CanFail ? [
                                 innerCast.OnFail,
                                 new IR.VM.PutNull(),
                             ] : []),
+                            onCast,
                         ])
                     {
                         Types = [this]
                     }
                     ),
-                    OnCast = innerCast.OnCast
                 }
             );
         }
@@ -77,21 +79,24 @@ namespace ZSharp.Objects
                 return Result<TypeCast, Error>.Error(error);
             else innerCastCode = innerCastCodeResult.Unwrap();
 
+            IR.VM.Nop onCast = new();
+
             return Result<TypeCast, Error>.Ok(
                 new()
                 {
                     Cast = new RawCode(new([
                             .. innerCastCode.Instructions,
+                            new IR.VM.Jump(onCast),
                             .. (IR.VM.Instruction[])(innerCast.CanFail ? [
                                 innerCast.OnFail,
                                 new IR.VM.PutNull(),
                             ] : []),
+                            onCast,
                         ])
                         {
                             Types = [targetType]
                         }
                     ),
-                    OnCast = innerCast.OnCast
                 }
             );
         }

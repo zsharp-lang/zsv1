@@ -177,7 +177,6 @@ namespace ZSharp.Objects
             {
                 Match = new RawCode(new([
                     .. castToTypeCode.Instructions,
-                    castToType.OnCast,
                     new IR.VM.Dup(),
                     new IR.VM.IsNotNull(),
                     new IR.VM.JumpIfTrue(onMatch),
@@ -237,11 +236,11 @@ namespace ZSharp.Objects
                             new IR.VM.JumpIfTrue(onCast),
                             new IR.VM.Pop(),
                             new IR.VM.Jump(onFail),
+                            onCast,
                         ])
                         {
                             Types = [targetType]
                         }),
-                        OnCast = onCast,
                         OnFail = onFail,
                     }
                 );

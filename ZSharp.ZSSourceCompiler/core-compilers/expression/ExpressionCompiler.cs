@@ -102,7 +102,6 @@ namespace ZSharp.ZSSourceCompiler
                 return Compiler.Compiler.CreateNull();
             } else castCode = castCodeResult.Unwrap();
 
-            castCode.Instructions.Add(typeCast.OnCast);
             if (typeCast.CanFail)
                 castCode.Instructions.Add(typeCast.OnFail);
 

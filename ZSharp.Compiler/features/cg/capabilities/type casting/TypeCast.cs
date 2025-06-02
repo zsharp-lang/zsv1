@@ -6,8 +6,6 @@ namespace ZSharp.Compiler
     {
         public required CompilerObject Cast { get; set; }
 
-        public ZSharp.IR.VM.Instruction OnCast { get; init; } = new ZSharp.IR.VM.Nop();
-
         public ZSharp.IR.VM.Instruction? OnFail { get; init; } = null;
 
         [MemberNotNullWhen(true, nameof(OnFail))]
