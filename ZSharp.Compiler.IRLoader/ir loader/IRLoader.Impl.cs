@@ -146,11 +146,11 @@ namespace ZSharp.Compiler.IRLoader
             if (result.Name is not null && result.Name != string.Empty)
                 owner.Members.Add(result.Name, result);
 
-            if (@class.Base is not null)
-                result.Base = (IClass)Load(@class.Base);
-
             return () =>
             {
+                if (@class.Base is not null)
+                    result.Base = (IClass)Load(@class.Base);
+
                 if (@class.HasFields)
                     foreach (var field in @class.Fields)
                     {
