@@ -35,7 +35,7 @@ namespace ZSharp.ZSSourceCompiler
                             Compiler.Compiler.IR.CompileCode(
                                 Compiler.CompileNode(expression).Unwrap()
                             ).Unwrap()
-                        ) ?? throw new()
+                        ) ?? new Objects.RawCode(new())
                     ),
                 };
 
