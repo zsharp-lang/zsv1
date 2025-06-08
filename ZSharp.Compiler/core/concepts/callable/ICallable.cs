@@ -4,17 +4,13 @@
     /// Should be implemented by any binding that is callable.
     /// </summary>
     public interface ICTCallable
-        : CompilerObject
+        : ICTCallable_NEW
     {
-        public CompilerObject Call(Compiler compiler, Argument[] arguments);
-    }
+        CompilerObjectResult ICTCallable_NEW.Call(Compiler compiler, Argument_NEW<CompilerObject>[] arguments)
+            => CompilerObjectResult.Ok(
+                Call(compiler, arguments.Select(arg => new Argument(arg.Name, arg.Value)).ToArray())
+            );
 
-    /// <summary>
-    /// Should be implementedby any type that is callable.
-    /// </summary>
-    public interface IRTCallable
-        : CompilerObject
-    {
-        public CompilerObject Call(Compiler compiler, CompilerObject callable, Argument[] arguments);
+        public CompilerObject Call(Compiler compiler, Argument[] arguments);
     }
 }

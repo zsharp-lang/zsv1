@@ -19,10 +19,6 @@
             if (target is ICTCallable ctCallable)
                 return ctCallable.Call(this, arguments);
 
-            if (target is ICTReadable readable)
-                if (readable.Type is IRTCallable rtCallable)
-                    return rtCallable.Call(this, target, arguments);
-
             // implements typeclass Callable?
 
             // overloads call operator?
@@ -106,10 +102,10 @@
         /// <returns></returns>
         public CompilerObject Member(CompilerObject instance, MemberName member)
         {
-            if (instance is ICTGetMember<MemberName> ctGetMember)
+            if (instance is ICTGetMember_Old<MemberName> ctGetMember)
                 return ctGetMember.Member(this, member);
 
-            if (instance is ICTReadable readable && readable.Type is IRTGetMember<MemberName> rtGetMember)
+            if (instance is ICTReadable readable && readable.Type is IRTGetMember_Old<MemberName> rtGetMember)
                 return rtGetMember.Member(this, instance, member);
 
             throw new NotImplementedException();

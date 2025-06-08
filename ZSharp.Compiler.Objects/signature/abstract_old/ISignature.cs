@@ -68,7 +68,6 @@ namespace ZSharp.Objects
             else if (positionalArgumentsQueue.Count > 0)
                 throw new ArgumentsCountMismatchException($"Expected {@params.Count} positional arguments but got {args.Count}");
 
-            var keywordArguments = kwArgs.ToDictionary();
             var varKeywordArguments = new Collection<Compiler.Argument>();
 
             foreach (var kwParam in kwParams)
@@ -82,7 +81,7 @@ namespace ZSharp.Objects
 
             if (VarKwArgs is not null)
                 result[VarKwArgs] = VarKwArgs.MatchArguments(compiler, [.. varKeywordArguments]);
-            else if (keywordArguments.Count > 0)
+            else if (kwArgs.Count > 0)
                 throw new ArgumentsCountMismatchException($"Expected {@params.Count} named arguments but got {args.Count}");
 
             return result;

@@ -101,29 +101,22 @@
 
         private void LoadConstructor(IR.Constructor constructor)
         {
-            var irParams = constructor.Method.Signature.GetParameters();
-
-            var parameters = irParams.Select(p => new Parameter()
-            {
-                Name = p.Name,
-                Type = Loader.LoadType(p.Type),
-                Position = p.Index
-            });
-
-            var result = Output.DefineConstructor(IL.MethodAttributes.Public, IL.CallingConventions.HasThis, [.. irParams.Skip(1).Select(p => Loader.LoadType(p.Type))]);
+            var result = Output.DefineConstructor(
+                IL.MethodAttributes.Public, 
+                IL.CallingConventions.HasThis, 
+                [.. constructor.Method.Signature.GetParameters().Skip(1).Select(p => Loader.LoadType(p.Type))]
+            );
 
             Context.Cache(constructor.Method, result);
 
-            var ilGen = result.GetILGenerator();
-            var codeLoader = new CodeLoader(Loader, constructor.Method, ilGen);
-
-            foreach (var (ir, parameter) in irParams.Zip(parameters))
-                codeLoader.Args[ir] = parameter;
+            var context = Code.FunctionCodeContext.From(Loader, result, constructor.Method.UnderlyingFunction);
 
             foreach (var local in constructor.Method.Body.Locals)
-                codeLoader.Locals[local] = ilGen.DeclareLocal(Loader.LoadType(local.Type));
+                result.GetILGenerator().DeclareLocal(Loader.LoadType(local.Type));
 
-            ModuleLoader.AddToNextPass(() => codeLoader.Load());
+            var codeLoader = new Code.CodeCompiler(context);
+
+            ModuleLoader.AddToNextPass(() => codeLoader.CompileCode(constructor.Method.Body.Instructions));
         }
 
         private void LoadField(IR.Field field)
@@ -140,15 +133,6 @@
 
         private void LoadMethod(IR.Method method)
         {
-            var irParams = method.Signature.GetParameters();
-
-            var parameters = irParams.Select(p => new Parameter()
-            {
-                Name = p.Name,
-                Type = Loader.LoadType(p.Type),
-                Position = p.Index,
-            });
-
             var attributes = IL.MethodAttributes.Public;
 
             if (method.IsStatic)
@@ -160,21 +144,24 @@
                 method.Name ?? Constants.AnonymousMethod,
                 attributes,
                 Loader.LoadType(method.ReturnType),
-                [.. (method.IsInstance || method.IsVirtual ? parameters.Skip(1) : parameters).Select(p => p.Type)]
+                [.. (
+                        method.IsInstance || method.IsVirtual 
+                        ? method.Signature.GetParameters().Skip(1) 
+                        : method.Signature.GetParameters()
+                    ).Select(p => Loader.LoadType(p.Type))
+                ]
             );
 
             Context.Cache(method, result);
 
-            var ilGen = result.GetILGenerator();
-            var codeLoader = new CodeLoader(Loader, method, ilGen);
-
-            foreach (var (ir, parameter) in irParams.Zip(parameters))
-                codeLoader.Args[ir] = parameter;
+            var context = Code.FunctionCodeContext.From(Loader, result, method.UnderlyingFunction);
 
             foreach (var local in method.Body.Locals)
-                codeLoader.Locals[local] = ilGen.DeclareLocal(Loader.LoadType(local.Type));
+                result.GetILGenerator().DeclareLocal(Loader.LoadType(local.Type));
 
-            ModuleLoader.AddToNextPass(() => codeLoader.Load());
+            var codeLoader = new Code.CodeCompiler(context);
+
+            ModuleLoader.AddToNextPass(() => codeLoader.CompileCode(method.Body.Instructions));
         }
 
         private static IL.Emit.TypeBuilder CreateDefinition(IL.Emit.ModuleBuilder module, IR.Class @in)

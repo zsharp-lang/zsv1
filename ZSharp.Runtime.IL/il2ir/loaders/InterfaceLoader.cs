@@ -129,7 +129,10 @@ namespace ZSharp.Runtime.NET.IL2IR
                 result.Signature.Args.Parameters.Add(new("this", Self));
 
             foreach (var parameter in method.GetParameters())
-                result.Signature.Args.Parameters.Add(new(parameter.Name ?? string.Empty, Loader.LoadType(parameter.ParameterType)));
+                if (parameter.GetCustomAttribute<KeywordParameterAttribute>() is not null)
+                    result.Signature.KwArgs.Parameters.Add(new(parameter.Name ?? throw new(), Loader.LoadType(parameter.ParameterType)));
+                else
+                    result.Signature.Args.Parameters.Add(new(parameter.Name ?? string.Empty, Loader.LoadType(parameter.ParameterType)));
 
             Output.Methods.Add(result);
 

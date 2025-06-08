@@ -6,7 +6,7 @@ namespace ZSharp.Objects
     public sealed class Int32Type(IR.OOPTypeReference<IR.Class> ir, IType type)
         : CompilerObject
         , ICompileIRType
-        , ICTGetMember<MemberName>
+        , ICTGetMember_Old<MemberName>
         , IType
     {
         public IR.OOPTypeReference<IR.Class> IR { get; } = ir;

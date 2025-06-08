@@ -16,10 +16,10 @@ namespace ZSharp.Runtime.NET
 
         private Interpreter.Interpreter Interpreter => runtime.Interpreter;
 
-        public override CompilerObject Evaluate(CompilerObject @object)
+        public override Result<CompilerObject, string> Evaluate(CompilerObject @object)
         {
             if (@object is not RawCode rawCode)
-                return @object;
+                return Result<CompilerObject, string>.Ok(@object);
 
             var code = rawCode.Code;
 
@@ -50,10 +50,10 @@ namespace ZSharp.Runtime.NET
             var value = functionIL.Invoke(null, null);
 
             if (value is CompilerObject co)
-                return co;
+                return Result<CompilerObject, string>.Ok(co);
 
             if (value is ICompileTime coObject)
-                return coObject.GetCO();
+                return Result<CompilerObject, string>.Ok(coObject.GetCO());
 
             //if (value is Type type)
             //    return new RawType(interpreter.IRInterop.ImportILType(type), interpreter.Compiler.TypeSystem.Type);
@@ -76,22 +76,34 @@ namespace ZSharp.Runtime.NET
 
         public CompilerObject? EvaluateCT(IRCode code)
         {
-            throw new NotImplementedException();
-
-            var function = new IR.Function(Interpreter.Compiler.CompileIRType(code.RequireValueType()))
-            {
-                Name = "evaluate"
-            };
-
-            IL.Emit.DynamicMethod method = new(string.Empty, runtime.Import(function.ReturnType), null);
-
-            CodeLoader codeLoader = new(
-                runtime.irLoader, 
-                function, 
-                method.GetILGenerator()
+            IL.Emit.DynamicMethod method = new(
+                string.Empty, 
+                runtime.irLoader.LoadType(
+                    runtime.Interpreter.Compiler.IR.CompileType(
+                        code.RequireValueType(runtime.Interpreter.Compiler.TypeSystem.Void)
+                    ).Unwrap()
+                ), 
+                null
             );
 
-            codeLoader.Load();
+            var context = new IR2IL.Code.UnboundCodeContext(runtime.irLoader, method.GetILGenerator());
+
+            new IR2IL.Code.CodeCompiler(context).CompileCode([
+                .. code.Instructions,
+                new IR.VM.Return()
+            ]);
+
+            var result = method.Invoke(null, null);
+
+            if (method.ReturnType == typeof(void)) return null;
+
+            if (result is CompilerObject co)
+                return co;
+
+            if (result is ICompileTime coObject)
+                return coObject.GetCO();
+
+            throw new NotImplementedException();
         }
     }
 }

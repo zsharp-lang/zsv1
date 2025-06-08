@@ -2,20 +2,17 @@
 
 namespace Standard.FileSystem
 {
-    public sealed class File
+    public sealed class File(Path path) : ItemSpec(path)
     {
-        internal Path path;
-
-        internal File(Path path)
-        {
-            this.path = path;
-        }
-
         internal File(string path)
             : this(new Path(path)) { }
 
         [Alias(Name = "toString")]
         public override string ToString()
             => $"File<{path}>";
+
+        [Alias(Name = "getContent")]
+        public string GetContent()
+            => System.IO.File.ReadAllText(path.pathString);
     }
 }

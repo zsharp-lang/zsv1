@@ -24,7 +24,12 @@ namespace ZSharp.Runtime.NET
             ilLoader = new(Context, interpreter.RuntimeModule);
             irLoader = new(Context, interpreter.RuntimeModule);
 
-            interpreter.Compiler.Evaluators.Add(new IRCodeEvaluator(this));
+            var irCompiler = new Compiler.IRCompiler(interpreter.Compiler);
+            var irEvaluator = new IRCodeEvaluator(this);
+
+            irCompiler.Evaluator = irEvaluator;
+
+            interpreter.Compiler.Evaluators.Add(irEvaluator);
 
             irLoader.GetObjectFunction = (loader, get) =>
             {

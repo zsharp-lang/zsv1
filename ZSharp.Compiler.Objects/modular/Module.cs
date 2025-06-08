@@ -6,7 +6,7 @@ namespace ZSharp.Objects
     public sealed class Module(string name)
         : CompilerObject
         , ICompileIRObject<IR.Module, IR.Module>
-        , ICTGetMember<MemberName>
+        , ICTGetMember_Old<MemberName>
         , ICTReadable
     {
         IType ITyped.Type => throw new NotImplementedException();

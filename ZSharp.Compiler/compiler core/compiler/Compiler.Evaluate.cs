@@ -9,7 +9,7 @@
             CompilerObject result = @object;
 
             foreach (var evaluator in Evaluators)
-                if ((result = evaluator.Evaluate(result)) != @object) break;
+                if ((result = evaluator.Evaluate(result).Unwrap()) != @object) break;
 
             //while (@object == result)
             //{

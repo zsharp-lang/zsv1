@@ -9,8 +9,8 @@ namespace ZSharp.Objects
         , ICompileIRObject<IR.Interface, IR.Module>
         , ICompileIRReference<IR.OOPTypeReference<IR.Interface>>
         , ICompileIRType<IR.OOPTypeReference<IR.Interface>>
-        , ICTGetMember<MemberName>
-        , IRTGetMember<MemberName>
+        , ICTGetMember_Old<MemberName>
+        , IRTGetMember_Old<MemberName>
         , IType
     {
         #region Build State
@@ -52,10 +52,10 @@ namespace ZSharp.Objects
 
         Collection<CompilerObject> IAbstraction.Specifications => Content;
 
-        CompilerObject ICTGetMember<string>.Member(Compiler.Compiler compiler, string member)
+        CompilerObject ICTGetMember_Old<string>.Member(Compiler.Compiler compiler, string member)
             => Members[member];
 
-        CompilerObject IRTGetMember<string>.Member(Compiler.Compiler compiler, CompilerObject value, string member)
+        CompilerObject IRTGetMember_Old<string>.Member(Compiler.Compiler compiler, CompilerObject value, string member)
             => compiler.Map(Members[member], @object => @object is IRTBoundMember bindable ? bindable.Bind(compiler, value) : @object);
 
         IR.Interface ICompileIRObject<IR.Interface, IR.Module>.CompileIRObject(Compiler.Compiler compiler, IR.Module? owner)

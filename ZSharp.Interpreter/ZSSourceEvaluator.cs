@@ -1,4 +1,5 @@
-﻿using ZSharp.Objects;
+﻿using ZSharp.Compiler;
+using ZSharp.Objects;
 
 namespace ZSharp.Interpreter
 {
@@ -6,16 +7,21 @@ namespace ZSharp.Interpreter
     {
         private readonly ZSSourceCompiler.ZSSourceCompiler sourceCompiler = sourceCompiler;
 
-        public override CompilerObject Evaluate(CompilerObject @object)
+        public override Result<CompilerObject, string> Evaluate(CompilerObject @object)
         {
-            if (@object is not ZSSourceCompiler.NodeObject nodeObject) return @object;
+            if (@object is not ZSSourceCompiler.NodeObject nodeObject)
+                return Result<CompilerObject, string>.Ok(@object);
 
             if (nodeObject.Node is AST.Expression expression)
-                return sourceCompiler.CompileNode(expression);
+                return Result<CompilerObject, string>.Ok(
+                    sourceCompiler.CompileNode(expression).Unwrap()
+                );
             if (nodeObject.Node is AST.Statement statement)
-                return sourceCompiler.CompileNode(statement);
+                return Result<CompilerObject, string>.Ok(
+                    sourceCompiler.CompileNode(statement).Unwrap()
+                );
 
-            return @object;
+            return Result<CompilerObject, string>.Ok(@object);
         }
     }
 }

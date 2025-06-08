@@ -6,8 +6,8 @@ namespace ZSharp.Objects
     public class GenericClass
         : CompilerObject
         , ICTGetIndex
-        , ICTGetMember<MemberName>
-        , IRTGetMember<MemberName>
+        , ICTGetMember_Old<MemberName>
+        , IRTGetMember_Old<MemberName>
         , IReferencable<GenericClassInstance>
         , ICompileIRObject<IR.Class, IR.Module>
         , IEvaluable
@@ -134,7 +134,7 @@ namespace ZSharp.Objects
             });
         }
 
-        CompilerObject IRTGetMember<string>.Member(Compiler.Compiler compiler, CompilerObject value, string member)
+        CompilerObject IRTGetMember_Old<string>.Member(Compiler.Compiler compiler, CompilerObject value, string member)
         {
             if (GenericParameters.Count > 0)
                 throw new InvalidOperationException();

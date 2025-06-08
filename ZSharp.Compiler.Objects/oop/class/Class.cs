@@ -11,8 +11,8 @@ namespace ZSharp.Objects
         , ICompileIRType<IR.OOPTypeReference<IR.Class>>
         , ICTCallable
         , IRTCastTo
-        , ICTGetMember<MemberName>
-        , IRTGetMember<MemberName>
+        , ICTGetMember_Old<MemberName>
+        , IRTGetMember_Old<MemberName>
         , IRTTypeMatch
         , IImplementsAbstraction
         , IType
@@ -111,10 +111,10 @@ namespace ZSharp.Objects
             return IR;
         }
 
-        CompilerObject ICTGetMember<string>.Member(Compiler.Compiler compiler, string member)
+        CompilerObject ICTGetMember_Old<string>.Member(Compiler.Compiler compiler, string member)
             => Members[member];
 
-        CompilerObject IRTGetMember<string>.Member(Compiler.Compiler compiler, CompilerObject instance, string member)
+        CompilerObject IRTGetMember_Old<string>.Member(Compiler.Compiler compiler, CompilerObject instance, string member)
         {
             return compiler.Map(Members[member], @object => @object is IRTBoundMember bindable ? bindable.Bind(compiler, instance) : @object);
         }

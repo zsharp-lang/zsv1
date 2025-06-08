@@ -32,6 +32,9 @@ namespace ZSharp.Compiler
         public IType RequireValueType()
             => IsValue ? Types[0] : throw new InvalidOperationException();
 
+        public IType RequireValueType(IType? @default)
+            => IsValue ? Types[0] : (@default ?? throw new InvalidOperationException());
+
         public void Append(IRCode other)
         {
             Instructions.AddRange(other.Instructions);

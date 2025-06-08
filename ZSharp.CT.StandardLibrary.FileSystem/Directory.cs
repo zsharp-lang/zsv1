@@ -2,21 +2,26 @@
 
 namespace Standard.FileSystem
 {
-    public sealed class Directory
+    public sealed class Directory(Path path) : ItemSpec(path)
     {
-        public Path path;
-
-        internal Directory(Path path)
-        {
-            this.path = path;
-        }
-
-        internal Directory(string path)
+        public Directory(string path)
             : this(new Path(path)) { }
 
         [Alias(Name = "sub")]
-        public Path SubPath(string name)
+        public ItemSpec SubPath(string name)
             => Global_Operators.SubPath(this, name);
+
+        [Alias(Name = "createDirectory")]
+        public Directory CreateDirectory(string name, [KeywordParameter] bool existsOk = false)
+        {
+            var path = this.path.SubPath(name).path;
+
+            if (!System.IO.Directory.Exists(path.pathString))
+                System.IO.Directory.CreateDirectory(path.pathString);
+            else if (!existsOk) throw new InvalidOperationException();
+
+            return new(path);
+        }
 
         [Alias(Name = "cwd")]
         public static Directory CurrentWorkingDirectory()

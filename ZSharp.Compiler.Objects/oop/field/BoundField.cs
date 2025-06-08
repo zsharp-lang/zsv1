@@ -19,11 +19,13 @@ namespace ZSharp.Objects
             var valueCode = compiler.CompileIRCode(value);
 
             return new RawCode(new([
-                ..valueCode.Instructions,
-                new IR.VM.Dup(),
                 ..instanceCode.Instructions,
-                new IR.VM.Swap(),
+                new IR.VM.Dup(),
+                ..valueCode.Instructions,
                 new IR.VM.SetField(new IR.FieldReference(Field.IR!) {
+                    OwningType = new IR.ClassReference(Field.IR!.Owner ?? throw new())
+                }),
+                new IR.VM.GetField(new IR.FieldReference(Field.IR!) {
                     OwningType = new IR.ClassReference(Field.IR!.Owner ?? throw new())
                 }),
                 ])

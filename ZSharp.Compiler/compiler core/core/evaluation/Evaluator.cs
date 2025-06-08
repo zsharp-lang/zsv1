@@ -2,6 +2,6 @@
 {
     public abstract class Evaluator
     {
-        public abstract CompilerObject Evaluate(CompilerObject @object);
+        public abstract CompilerObjectResult Evaluate(CompilerObject @object);
     }
 }

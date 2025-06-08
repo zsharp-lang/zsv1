@@ -6,8 +6,8 @@ namespace ZSharp.Objects
     public sealed class GenericClassInstance
         : CompilerObject
         , IClass
-        , ICTGetMember<MemberName>
-        , IRTGetMember<MemberName>
+        , ICTGetMember_Old<MemberName>
+        , IRTGetMember_Old<MemberName>
         , ICTCallable
         , IReference
         , ICompileIRType<IR.ConstructedClass>

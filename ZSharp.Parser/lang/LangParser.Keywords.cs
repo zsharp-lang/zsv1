@@ -20,6 +20,7 @@
             public const string Module      = "module";
             public const string New         = "new";
             public const string Of          = "of";
+            public const string Or          = "or";
             public const string Return      = "return";
             public const string Var         = "var";
             public const string When        = "when";

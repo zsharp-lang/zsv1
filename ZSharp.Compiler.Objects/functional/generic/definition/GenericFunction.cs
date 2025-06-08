@@ -3,7 +3,7 @@ using ZSharp.Compiler;
 
 namespace ZSharp.Objects
 {
-    public sealed class GenericFunction(string? name = null)
+    public sealed partial class GenericFunction(string? name = null)
         : CompilerObject
         , ICompileIRObject<IR.Function, IR.Module>
         , ICTCallable

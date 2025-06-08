@@ -17,5 +17,8 @@ namespace ZSharp.Objects
 
         IType IReferencable<IType>.CreateReference(Referencing @ref, ReferenceContext context)
             => context.CompileTimeValues.Cache<IType>(this, out var result) ? result : this;
+
+        public bool Match(IType type)
+            => true;
     }
 }
