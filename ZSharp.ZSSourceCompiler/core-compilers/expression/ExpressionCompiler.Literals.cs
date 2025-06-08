@@ -2,10 +2,22 @@
 {
     public sealed partial class ExpressionCompiler
     {
-        public Objects.ArrayLiteral Compile(ArrayLiteral array)
-            => new(array.Items.Select(Compiler.CompileNode));
+        public ObjectResult Compile(ArrayLiteral array)
+        {
+            Objects.ArrayLiteral result = new();
 
-        public CompilerObject Compile(LiteralExpression literal)
+            ObjectResult objectResult;
+            foreach (var item in array.Items)
+                if (
+                    (objectResult = Compiler.CompileNode(item)).IsError
+                )
+                    return objectResult;
+                else result.Items.Add(objectResult.Unwrap());
+
+            return ObjectResult.Ok(result);
+        }
+
+        public ObjectResult Compile(LiteralExpression literal)
             => literal.Type switch
             {
                 LiteralType.String => Compiler.Compiler.CreateString(literal.Value),
@@ -13,7 +25,10 @@
                 LiteralType.True => Compiler.Compiler.CreateTrue(),
                 LiteralType.Null => Compiler.Compiler.CreateNull(),
                 LiteralType.Number => Compiler.Compiler.CreateInteger(int.Parse(literal.Value)),
-                _ => throw new($"Could not find suitable compiler for node of type {typeof(LiteralExpression).Name}"), // TODO: proper exception: unknown literal type
-            };
+                _ => null
+            } is CompilerObject result
+                ? ObjectResult.Ok(result)
+                : Compiler.CompilationError($"Could not compile literal of type {literal.Type}", literal)
+            ;
     }
 }

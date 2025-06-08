@@ -18,7 +18,7 @@ namespace ZSharp.ZSSourceCompiler
         {
             if (Node.Bases is not null)
             {
-                var bases = Node.Bases.Select(Compiler.CompileType).ToArray();
+                var bases = Node.Bases.Select(Compiler.CompileType).Select(result => result.Unwrap()).ToArray();
 
                 if (bases.Length > 0)
                 {

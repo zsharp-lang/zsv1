@@ -11,7 +11,7 @@
             GlobalScope = globalScope ?? new();
             compiler.Compiler.UseContext(CurrentScope = GlobalScope);
 
-            compilerStack.Push(new DefaultContextCompiler(compiler));
+            currentCompiler = DefaultCompiler = new DefaultContextCompiler(compiler);
         }
     }
 }

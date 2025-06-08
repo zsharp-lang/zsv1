@@ -3,46 +3,43 @@
     public sealed class WhileExpressionCompiler(ZSSourceCompiler compiler, WhileExpression<Expression> node, Compiler.IType type)
         : WhileLoopCompiler<Expression>(compiler, node, type)
     {
-        protected override CompilerObject CompileBreak(BreakStatement @break)
+        protected override ObjectResult CompileBreak(BreakStatement @break)
         {
             if (@break.Value is null)
-            {
-                Compiler.LogError("Break statement in a while expression must have a value", @break);
-                return new Objects.RawCode(new([new IR.VM.Jump(Object.EndLabel)]));
-            }
+                return Compiler.CompilationError("Break statement in a while expression must have a value", @break);
 
-            var value = Compiler.CompileNode(@break.Value);
-            if (!Compiler.Compiler.TypeSystem.IsTyped(value, out var type))
-            {
-                Compiler.LogError("Value must be a valid RT value!", @break.Value);
-                return new Objects.RawCode(new([new IR.VM.Jump(Object.EndLabel)]));
-            }
+            var valueResult = Compiler.CompileNode(@break.Value);
+            if (
+                valueResult
+                .When(out var value)
+                .Error(out var error)
+            )
+                return ObjectResult.Error(error);
+            if (!Compiler.Compiler.TypeSystem.IsTyped(value!, out var type))
+                return Compiler.CompilationError("Value must be a valid RT value!", @break.Value);
 
             Object.Type ??= type;
 
             if (!Compiler.Compiler.TypeSystem.ImplicitCast(value, Object.Type).Ok(out var breakValue))
-                throw new Compiler.InvalidCastException(value, Object.Type);
+                return Compiler.CompilationError("Could not cast break value to while expression type", @break.Value);
 
-            var code = Compiler.Compiler.CompileIRCode(breakValue);
+            var code = Compiler.Compiler.IR.CompileCode(breakValue).Unwrap();
 
-            return new Objects.RawCode(
+            return ObjectResult.Ok(new Objects.RawCode(
                 new([
                     .. code.Instructions,
 
                     new IR.VM.Jump(Object.EndLabel)
                 ])
-            );
+            ));
         }
 
-        protected override CompilerObject CompileElse()
+        protected override ObjectResult CompileElse()
         {
             if (Object.Type is null)
-            {
-                Compiler.LogError("While expression must have a type", Node);
-                return new Objects.RawCode(new([new IR.VM.Jump(Object.EndLabel)]));
-            }
+                return Compiler.CompilationError("While expression must have a type", Node);
 
-            return Compiler.Compiler.TypeSystem.ImplicitCast(Compiler.CompileNode(Node.Else!), Object.Type).Unwrap();
+            return ObjectResult.Ok(Compiler.Compiler.TypeSystem.ImplicitCast(Compiler.CompileNode(Node.Else!).Unwrap(), Object.Type).Unwrap());
         }
     }
 }

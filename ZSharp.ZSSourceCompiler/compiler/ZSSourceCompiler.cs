@@ -23,23 +23,63 @@ namespace ZSharp.ZSSourceCompiler
             Initialize();
         }
 
-        public CompilerObject CompileNode(Expression expression)
+        public ObjectResult CompileNode(Expression expression)
             => CompileNode<Expression>(expression);
 
-        public CompilerObject CompileNode(Statement statement)
+        public ObjectResult CompileNode(Statement statement)
             => CompileNode<Statement>(statement);
 
-        private CompilerObject CompileNode<T>(T node)
+        private ObjectResult CompileNode<T>(T node)
             where T : Node
         {
-            foreach (var compiler in Context.Compilers<IOverrideCompileNode<T>>())
-                if (compiler.CompileNode(this, node) is CompilerObject result)
-                    return result;
+            foreach (var compiler in (IEnumerable<CompilerBase>)[
+                Context.CurrentCompiler,
+                Context.DefaultCompiler,
+                ])
+            {
+                if (compiler is not IOverrideCompileNode<T> compileNode)
+                    continue;
 
-            throw new($"Could not find suitable compiler for node of type {node.GetType().Name}"); // TODO: proper exception: could not find suitable compiler for T
+                var result = compileNode.CompileNode(this, node);
+
+                if (result is null) continue;
+
+                return result;
+            }
+
+            return CompilationError(
+                "Could not compile node", node
+            );
         }
 
-        public Compiler.IType CompileType(Expression expression)
-            => Compiler.TypeSystem.EvaluateType(CompileNode(expression));
+        public TypeResult CompileType(Expression expression)
+        {
+            if (
+                CompileNode(expression)
+                .When(out var typeObject)
+                .Error(out var error)
+            )
+                return TypeResult.Error(error);
+
+            if (typeObject is IType type)
+                return TypeResult.Ok(type);
+
+            return CompilationError<IType>(
+                "Dynamic type evaluation is not implemented yet", expression
+            );
+        }
+
+        public Result<T, Error> CompilationError<T>(
+            string error,
+            Node node
+        )
+            where T : class
+            => Result<T, Error>.Error(new CompilationError(node, error));
+
+        public ObjectResult CompilationError(
+            string error,
+            Node node
+        )
+            => CompilationError<CompilerObject>(error, node);
     }
 }

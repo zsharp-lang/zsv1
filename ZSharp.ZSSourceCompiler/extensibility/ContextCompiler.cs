@@ -3,8 +3,6 @@
     public abstract class ContextCompiler(ZSSourceCompiler compiler)
         : CompilerBase(compiler)
     {
-        public abstract Node ContextNode { get; }
-
         public abstract CompilerObject ContextObject { get; }
 
         public abstract CompilerObject CompileNode();
@@ -15,8 +13,6 @@
         where TNode : Node
         where TObject : CompilerObject
     {
-        public override Node ContextNode => Node;
-
         public override CompilerObject ContextObject => Object;
 
         public TNode Node { get; }

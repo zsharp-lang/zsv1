@@ -6,8 +6,6 @@ namespace ZSharp.ZSSourceCompiler
     {
         private readonly Mapping<CompilerObject, Node> nodes = [];
 
-        public Node CurrentNode => Compiler<ContextCompiler>()?.ContextNode ?? throw new InvalidOperationException();
-
         public Node? Node(CompilerObject @object)
             => nodes.GetValueOrDefault(@object);
 

@@ -18,7 +18,7 @@ namespace ZSharp.Objects
 
         public required CompilerObject Of { get; set; }
 
-        public List<When> Clauses { get; } = [];
+        public List<When> Clauses { get; init; } = [];
 
         public CompilerObject? Else { get; set; }
 

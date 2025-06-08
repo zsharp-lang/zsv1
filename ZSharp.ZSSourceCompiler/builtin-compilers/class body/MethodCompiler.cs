@@ -1,7 +1,7 @@
 ﻿namespace ZSharp.ZSSourceCompiler
 {
-    public sealed class MethodCompiler(ZSSourceCompiler compiler, Function node, CompilerObject owner, Compiler.IType self)
-        : ContextCompiler<Function, Objects.Method>(compiler, node, new(node.Name)
+    public sealed class MethodCompiler(ClassBodyCompiler compiler, Function node, CompilerObject owner, Compiler.IType self)
+        : ContextCompiler<Function, Objects.Method>(compiler.Compiler, node, new(node.Name)
         {
             Owner = owner
         })
@@ -37,23 +37,31 @@
                 throw new NotImplementedException();
 
             if (Node.ReturnType is not null)
-                Object.ReturnType = Compiler.CompileType(Node.ReturnType);
-            else throw new(); // TODO: Implement Infer type
+            if (
+                Compiler.CompileType(Node.ReturnType)
+                .When(out var returnType)
+                .Error(out var error)
+            )
+            {
+                return;
+            }
+            else Object.ReturnType = returnType;
+            else
+            {
+                return;
+            }
 
-            (This = Object.Signature.Args[0]).Type ??= self;
+                (This = Object.Signature.Args[0]).Type ??= self;
 
             //Object.IR = Compiler.Compiler.CompileIRObject<IR.Method, IR.Class>(Object, null);
 
-            if (Context.ParentCompiler<IMultipassCompiler>(out var multipassCompiler))
-                multipassCompiler.AddToNextPass(() =>
-                {
-                    using (Context.Compiler(this))
-                    using (Context.Scope(Object))
-                    using (Context.Scope())
-                        CompileMethodBody();
-                });
-            else using (Context.Scope())
+            compiler.AddToNextPass(() =>
+            {
+                using (Context.Compiler(this))
+                using (Context.Scope(Object))
+                using (Context.Scope())
                     CompileMethodBody();
+            });
         }
 
         private Objects.Parameter Compile(Parameter parameter)
@@ -62,8 +70,11 @@
 
             Context.CurrentScope.Set(parameter.Alias ?? parameter.Name, result);
 
-            if (parameter.Type is not null)
-                result.Type = Compiler.CompileType(parameter.Type);
+            if (
+                parameter.Type is not null &&
+                Compiler.CompileType(parameter.Type).Ok(out var type)
+            )
+                result.Type = type;
 
             if (parameter.Initializer is not null)
                 Compiler.LogError("Parameter initializers are not supported yet.", parameter);
@@ -73,35 +84,46 @@
 
         private void CompileMethodBody()
         {
-            if (Node.Body is not null)
-                Object.Body = Compiler.CompileNode(Node.Body);
+            if (
+                Node.Body is not null &&
+                Compiler.CompileNode(Node.Body).Ok(out var body)
+            )
+                Object.Body = body;
 
             Object.IR = Compiler.Compiler.CompileIRObject<IR.Method, IR.Class>(Object, null);
         }
 
-        public CompilerObject? CompileNode(ZSSourceCompiler compiler, Statement node)
+        public ObjectResult? CompileNode(ZSSourceCompiler compiler, Statement node)
         {
             if (node is not Return @return)
                 return null;
 
             if (@return.Value is null)
-                return new Objects.RawCode(new([
+                return ObjectResult.Ok(new Objects.RawCode(new([
                     new IR.VM.Return()
-                ]));
+                ])));
 
-            var valueObject = Compiler.CompileNode(@return.Value);
-            var valueCode = Compiler.Compiler.CompileIRCode(valueObject);
+            var valueResult = Compiler.CompileNode(@return.Value);
 
-            if (valueCode is null)
-            {
-                Compiler.LogError("Return expression could not be compiled.", node);
-                return null;
-            }
+            if (
+                valueResult
+                .When(out var returnValue)
+                .IsError
+            )
+                return valueResult;
 
-            valueCode.Instructions.Add(new IR.VM.Return());
+            if (
+                Compiler.Compiler.IR.CompileCode(returnValue!)
+                .When(out var valueCode)
+                .Error(out var error)
+                )
+                return Compiler.CompilationError(error, @return.Value);
+
+            valueCode!.Instructions.Add(new IR.VM.Return());
+            valueCode.RequireValueType();
             valueCode.Types.Clear();
 
-            return new Objects.RawCode(valueCode);
+            return ObjectResult.Ok(new Objects.RawCode(valueCode));
         }
 
         public CompilerObject? CompileNode(ZSSourceCompiler compiler, Expression node)
@@ -117,13 +139,13 @@
             var local = new Objects.Local
             {
                 Name = let.Name,
-                Initializer = Compiler.CompileNode(let.Value),
+                Initializer = Compiler.CompileNode(let.Value).Unwrap(),
             };
 
             Context.CurrentScope.Set(let.Name, local);
 
             local.Type = let.Type is not null
-                ? Compiler.CompileType(let.Type)
+                ? Compiler.CompileType(let.Type).Unwrap()
                 : Compiler.Compiler.TypeSystem.IsTyped(local.Initializer, out var type)
                 ? type
                 : null;
@@ -147,13 +169,13 @@
             var local = new Objects.Local
             {
                 Name = var.Name,
-                Initializer = var.Value is null ? null : Compiler.CompileNode(var.Value),
+                Initializer = var.Value is null ? null : Compiler.CompileNode(var.Value).Unwrap(),
             };
 
             Context.CurrentScope.Set(var.Name, local);
 
             local.Type = var.Type is not null
-                ? Compiler.CompileType(var.Type)
+                ? Compiler.CompileType(var.Type).Unwrap()
                 : local.Initializer is null
                 ? null
                 : Compiler.Compiler.TypeSystem.IsTyped(local.Initializer, out var type)

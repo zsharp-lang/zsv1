@@ -66,7 +66,7 @@ namespace ZSharp.ZSSourceCompiler
 
         private Action Compile(AST.Constructor constructor)
         {
-            var compiler = new ConstructorCompiler(Compiler, constructor);
+            var compiler = new ConstructorCompiler(this, constructor);
 
             compiler.Object.Owner = Class;
 
@@ -91,7 +91,7 @@ namespace ZSharp.ZSSourceCompiler
 
         private Action Compile(AST.Function function)
         {
-            var compiler = new MethodCompiler(Compiler, function, Class, Class);
+            var compiler = new MethodCompiler(this, function, Class, Class);
 
             Class.Content.Add(compiler.Object);
 
@@ -126,19 +126,45 @@ namespace ZSharp.ZSSourceCompiler
 
             return () =>
             {
-                field.Initializer = Compiler.CompileNode(let.Value);
+                if (Compiler.CompileNode(let.Value).Ok(out var initializer))
+                    field.Initializer = initializer;
 
-                if (let.Type is not null)
-                    field.Type = Compiler.CompileType(let.Type);
-                else if (Compiler.Compiler.TypeSystem.IsTyped(field.Initializer, out var type))
+                if (
+                    let.Type is not null && 
+                    Compiler.CompileType(let.Type).Ok(out var type)
+                )
+                    field.Type = type;
+                else if (
+                    field.Initializer is not null &&
+                    Compiler.Compiler.TypeSystem.IsTyped(field.Initializer, out type)
+                )
                     field.Type = type;
 
-                if (field.Type is null) throw new(); // TODO: Throw a proper exception of CouldNotInferType
+                if (field.Type is null)
+                {
+                    Compiler.LogError($"Field type could not be inferred", let);
+                    return;
+                }
 
-                field.IR = Compiler.Compiler.CompileIRObject<IR.Field, IR.Class>(field, null);
+                if (
+                    Compiler.Compiler.IR.CompileDefinition<IR.Field, IR.Class>(field, null)
+                    .When(ir => field.IR = ir)
+                    .Else(error => Compiler.LogError(
+                            $"Could not compile IR for field {let.Name}: {error}", let
+                        )
+                    ).IsError
+                )
+                    return;
 
-                if (field.Initializer is not null)
-                    field.Initializer = Compiler.Compiler.TypeSystem.ImplicitCast(field.Initializer, field.Type).Unwrap();
+                if (field.Initializer is not null &&
+                    Compiler.Compiler.CG.ImplicitCast(field.Initializer, field.Type)
+                    .When(init => field.Initializer = init)
+                    .Else(error => Compiler.LogError(
+                        $"Could not initialize field {let.Name}: {error}", let
+                        )
+                    ).IsError
+                )
+                    return;
             };
         }
 
@@ -156,21 +182,48 @@ namespace ZSharp.ZSSourceCompiler
 
             return () =>
             {
-                if (var.Value is not null)
-                    field.Initializer = Compiler.CompileNode(var.Value);
+                if (
+                    var.Value is not null &&
+                    Compiler.CompileNode(var.Value).Ok(out var initializer)
+                )
+                    field.Initializer = initializer;
 
-                if (var.Type is not null)
-                    field.Type = Compiler.CompileType(var.Type);
-                else if (field.Initializer is not null)
-                    if (Compiler.Compiler.TypeSystem.IsTyped(field.Initializer, out var type))
-                        field.Type = type;
+                if (
+                    var.Type is not null &&
+                    Compiler.CompileType(var.Type).Ok(out var type)
+                )
+                    field.Type = type;
+                else if (
+                    field.Initializer is not null &&
+                    Compiler.Compiler.TypeSystem.IsTyped(field.Initializer, out type)
+                )
+                    field.Type = type;
 
-                if (field.Type is null) throw new(); // TODO: Throw a proper exception of CouldNotInferType
+                if (field.Type is null)
+                {
+                    Compiler.LogError($"Field type could not be inferred", var);
+                    return;
+                }
 
-                field.IR = Compiler.Compiler.CompileIRObject<IR.Field, IR.Class>(field, null);
+                if (
+                    Compiler.Compiler.IR.CompileDefinition<IR.Field, IR.Class>(field, null)
+                    .When(ir => field.IR = ir)
+                    .Else(error => Compiler.LogError(
+                            $"Could not compile IR for field {var.Name}: {error}", var
+                        )
+                    ).IsError
+                )
+                    return;
 
-                if (field.Initializer is not null)
-                    field.Initializer = Compiler.Compiler.TypeSystem.ImplicitCast(field.Initializer, field.Type).Unwrap();
+                if (field.Initializer is not null &&
+                    Compiler.Compiler.CG.ImplicitCast(field.Initializer, field.Type)
+                    .When(init => field.Initializer = init)
+                    .Else(error => Compiler.LogError(
+                        $"Could not initialize field {var.Name}: {error}", var
+                        )
+                    ).IsError
+                )
+                    return;
             };
         }
     }

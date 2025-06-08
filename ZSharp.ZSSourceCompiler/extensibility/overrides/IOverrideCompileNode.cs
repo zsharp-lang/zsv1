@@ -3,6 +3,6 @@
     public interface IOverrideCompileNode<T>
         where T : Node
     {
-        public CompilerObject? CompileNode(ZSSourceCompiler compiler, T node);
+        public ObjectResult? CompileNode(ZSSourceCompiler compiler, T node);
     }
 }

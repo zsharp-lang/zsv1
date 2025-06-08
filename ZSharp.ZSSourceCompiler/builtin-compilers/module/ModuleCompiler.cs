@@ -18,6 +18,7 @@ namespace ZSharp.ZSSourceCompiler
         public override Objects.Module Compile()
         {
             using (Context.Compiler(this))
+            using (Compiler.Compiler.ContextScope(new ObjectContext<Objects.Module>(Object)))
             using (Context.Scope(Object))
                 CompileModule();
 
@@ -60,7 +61,7 @@ namespace ZSharp.ZSSourceCompiler
 
         private Action Compile(Function function)
         {
-            var compiler = new FunctionCompiler(Compiler, function);
+            var compiler = new FunctionCompiler(this, function);
 
             Object.Content.Add(compiler.Object);
 
@@ -84,10 +85,10 @@ namespace ZSharp.ZSSourceCompiler
 
             return () =>
             {
-                global.Initializer = Compiler.CompileNode(let.Value);
+                global.Initializer = Compiler.CompileNode(let.Value).Unwrap();
 
                 if (let.Type is not null)
-                    global.Type = Compiler.CompileType(let.Type);
+                    global.Type = Compiler.CompileType(let.Type).Unwrap();
                 else if (Compiler.Compiler.TypeSystem.IsTyped(global.Initializer, out var type))
                     global.Type = type;
                 
@@ -148,10 +149,10 @@ namespace ZSharp.ZSSourceCompiler
             return () =>
             {
                 if (var.Value is not null)
-                    global.Initializer = Compiler.CompileNode(var.Value);
+                    global.Initializer = Compiler.CompileNode(var.Value).Unwrap();
 
                 if (var.Type is not null)
-                    global.Type = Compiler.CompileType(var.Type);
+                    global.Type = Compiler.CompileType(var.Type).Unwrap();
                 else if (global.Initializer is not null)
                     if (Compiler.Compiler.TypeSystem.IsTyped(global.Initializer, out var type))
                         global.Type = type;

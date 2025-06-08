@@ -1,9 +1,9 @@
 ﻿namespace ZSharp.ZSSourceCompiler
 {
-    public sealed class FunctionCompiler(ZSSourceCompiler compiler, Function node)
-        : ContextCompiler<Function, Objects.RTFunction>(compiler, node, new(node.Name))
+    public sealed class FunctionCompiler(ModuleCompiler moduleCompiler, Function node)
+        : ContextCompiler<Function, Objects.RTFunction>(moduleCompiler.Compiler, node, new(node.Name))
         , IOverrideCompileStatement
-        ,IOverrideCompileExpression
+        , IOverrideCompileExpression
     {
         public override Objects.RTFunction Compile()
         {
@@ -34,22 +34,19 @@
                 throw new NotImplementedException();
 
             if (Node.ReturnType is not null)
-                Object.ReturnType = Compiler.CompileType(Node.ReturnType);
+                Object.ReturnType = Compiler.CompileType(Node.ReturnType).Unwrap();
             else throw new(); // TODO: Implement Infer type
 
             Object.IR = Compiler.Compiler.CompileIRObject<IR.Function, IR.Module>(Object, null);
 
-            if (Context.ParentCompiler<IMultipassCompiler>(out var multipassCompiler))
-                multipassCompiler.AddToNextPass(() =>
-                {
-                    using (Context.Compiler(this))
-                    using (Compiler.Compiler.ContextScope(new FunctionContext(Compiler.Compiler, Object)))
-                    using (Context.Scope(Object))
-                    using (Context.Scope())
-                        CompileFunctionBody();
-                });
-            else using (Context.Scope())
-                CompileFunctionBody();
+            moduleCompiler.AddToNextPass(() =>
+            {
+                using (Context.Compiler(this))
+                using (Compiler.Compiler.ContextScope(new FunctionContext(Compiler.Compiler, Object)))
+                using (Context.Scope(Object))
+                using (Context.Scope())
+                    CompileFunctionBody();
+            });
         }
 
         private Objects.Parameter Compile(Parameter parameter)
@@ -59,7 +56,7 @@
             Context.CurrentScope.Set(parameter.Alias ?? parameter.Name, result);
 
             if (parameter.Type is not null)
-                result.Type = Compiler.CompileType(parameter.Type);
+                result.Type = Compiler.CompileType(parameter.Type).Unwrap();
 
             if (parameter.Initializer is not null)
                 Compiler.LogError("Parameter initializers are not supported yet.", parameter);
@@ -70,54 +67,55 @@
         private void CompileFunctionBody()
         {
             if (Node.Body is not null)
-                Object.Body = Compiler.CompileNode(Node.Body);
+                Object.Body = Compiler.CompileNode(Node.Body).Unwrap();
         }
 
-        public CompilerObject? CompileNode(ZSSourceCompiler compiler, Statement node)
+        public ObjectResult? CompileNode(ZSSourceCompiler compiler, Statement node)
         {
             if (node is not Return @return)
                 return null;
 
             if (@return.Value is null)
-                return new Objects.RawCode(new([
+                return ObjectResult.Ok(new Objects.RawCode(new([
                     new IR.VM.Return()
-                ]));
+                ])));
 
-            var valueObject = Compiler.CompileNode(@return.Value);
-            var valueCode = Compiler.Compiler.CompileIRCode(valueObject);
+            var valueObject = Compiler.CompileNode(@return.Value).Unwrap();
+            var valueCodeResult = Compiler.Compiler.IR.CompileCode(valueObject);
 
-            if (valueCode is null)
-            {
-                Compiler.LogError("Return expression could not be compiled.", node);
-                return null;
-            }
+            if (
+                valueCodeResult
+                .When(out var valueCode)
+                .Error(out var error)
+            )
+                return Compiler.CompilationError(error, @return.Value);
 
-            valueCode.Instructions.Add(new IR.VM.Return());
+            valueCode!.Instructions.Add(new IR.VM.Return());
             valueCode.Types.Clear();
 
-            return new Objects.RawCode(valueCode);
+            return ObjectResult.Ok(new Objects.RawCode(valueCode));
         }
 
-        public CompilerObject? CompileNode(ZSSourceCompiler compiler, Expression node)
+        public ObjectResult? CompileNode(ZSSourceCompiler compiler, Expression node)
             => node switch
             {
                 LetExpression let => CompileNode(let),
                 VarExpression var => CompileNode(var),
-                _ => null
+                _ => null,
             };
 
-        private CompilerObject CompileNode(LetExpression let)
+        private ObjectResult CompileNode(LetExpression let)
         {
             var local = new Objects.Local
             {
                 Name = let.Name,
-                Initializer = Compiler.CompileNode(let.Value),
+                Initializer = Compiler.CompileNode(let.Value).Unwrap(),
             };
 
             Context.CurrentScope.Set(let.Name, local);
 
             local.Type = let.Type is not null
-                ? Compiler.CompileType(let.Type)
+                ? Compiler.CompileType(let.Type).Unwrap()
                 : Compiler.Compiler.TypeSystem.IsTyped(local.Initializer, out var type)
                 ? type
                 : null;
@@ -128,26 +126,26 @@
             local.IR = Compiler.Compiler.CompileIRObject<IR.VM.Local, IR.VM.FunctionBody>(local, Object.IR!.Body);
 
             if (local.IR.Initializer is not null)
-                return new Objects.RawCode(new(local.IR.Initializer)
+                return ObjectResult.Ok(new Objects.RawCode(new(local.IR.Initializer)
                 {
                     Types = [local.Type]
-                });
+                }));
 
-            return new Objects.RawCode(new());
+            return ObjectResult.Ok(new Objects.RawCode(new()));
         }
 
-        private CompilerObject CompileNode(VarExpression var)
+        private ObjectResult CompileNode(VarExpression var)
         {
             var local = new Objects.Local
             {
                 Name = var.Name,
-                Initializer = var.Value is null ? null : Compiler.CompileNode(var.Value),
+                Initializer = var.Value is null ? null : Compiler.CompileNode(var.Value).Unwrap(),
             };
 
             Context.CurrentScope.Set(var.Name, local);
 
             local.Type = var.Type is not null
-                ? Compiler.CompileType(var.Type)
+                ? Compiler.CompileType(var.Type).Unwrap()
                 : local.Initializer is null
                 ? null
                 : Compiler.Compiler.TypeSystem.IsTyped(local.Initializer, out var type)
@@ -160,12 +158,12 @@
             local.IR = Compiler.Compiler.CompileIRObject<IR.VM.Local, IR.VM.FunctionBody>(local, Object.IR!.Body);
 
             if (local.IR.Initializer is not null)
-                return new Objects.RawCode(new(local.IR.Initializer)
+                return ObjectResult.Ok(new Objects.RawCode(new(local.IR.Initializer)
                 {
                     Types = [local.Type]
-                });
+                }));
 
-            return new Objects.RawCode(new());
+            return ObjectResult.Ok(new Objects.RawCode(new()));
         }
     }
 }

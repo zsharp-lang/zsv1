@@ -11,24 +11,24 @@ namespace ZSharp.ZSSourceCompiler
     {
         public override WhileLoop Compile()
         {
-            Object.Condition = Compiler.CompileNode(Node.Condition);
+            Object.Condition = Compiler.CompileNode(Node.Condition).Unwrap();
 
             using (Context.Compiler(this))
             using (Context.Scope())
-                Object.While = Compiler.CompileNode(Node.Body);
+                Object.While = Compiler.CompileNode(Node.Body).Unwrap();
 
             if (Node.Else is not null)
                 using (Context.Scope())
-                    Object.Else = CompileElse();
+                    Object.Else = CompileElse().Unwrap();
 
             return base.Compile();
         }
 
-        protected abstract CompilerObject CompileBreak(BreakStatement @break);
+        protected abstract ObjectResult CompileBreak(BreakStatement @break);
 
-        protected abstract CompilerObject CompileElse();
+        protected abstract ObjectResult CompileElse();
 
-        public CompilerObject? CompileNode(ZSSourceCompiler compiler, Statement node)
+        public ObjectResult? CompileNode(ZSSourceCompiler compiler, Statement node)
             => node switch
             {
                 BreakStatement @break => CompileBreak(@break),

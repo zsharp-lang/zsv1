@@ -2,8 +2,8 @@
 
 namespace ZSharp.ZSSourceCompiler
 {
-    public sealed class ConstructorCompiler(ZSSourceCompiler compiler, Constructor node)
-        : ContextCompiler<Constructor, Objects.Constructor>(compiler, node, new(node.Name))
+    public sealed class ConstructorCompiler(ClassBodyCompiler compiler, Constructor node)
+        : ContextCompiler<Constructor, Objects.Constructor>(compiler.Compiler, node, new(node.Name))
         , IOverrideCompileExpression
     {
         public Objects.Parameter This { get; private set; } = null!;
@@ -40,22 +40,19 @@ namespace ZSharp.ZSSourceCompiler
 
             (This = Object.Signature.Args[0]).Type ??= Object.Owner;
 
-            if (Context.ParentCompiler<IMultipassCompiler>(out var multipassCompiler))
-                multipassCompiler.AddToNextPass(() =>
-                {
-                    using (Context.Compiler(this))
-                    using (Context.Scope(Object))
-                    using (Context.Scope())
-                        CompileConstructorBody();
-                });
-            else using (Context.Scope())
-                    CompileConstructorBody();
+            compiler.AddToNextPass(() =>
+             {
+                 using (Context.Compiler(this))
+                 using (Context.Scope(Object))
+                 using (Context.Scope())
+                     CompileConstructorBody();
+             });
         }
 
         private void CompileConstructorBody()
         {
             if (Node.Body is not null)
-                Object.Body = Compiler.CompileNode(Node.Body);
+                Object.Body = Compiler.CompileNode(Node.Body).Unwrap();
 
             Object.IR = Compiler.Compiler.CompileIRObject<IR.Constructor, IR.Class>(Object, null!);
 
@@ -69,7 +66,7 @@ namespace ZSharp.ZSSourceCompiler
             Context.CurrentScope.Set(parameter.Alias ?? parameter.Name, result);
 
             if (parameter.Type is not null)
-                result.Type = Compiler.CompileType(parameter.Type);
+                result.Type = Compiler.CompileType(parameter.Type).Unwrap();
 
             if (parameter.Initializer is not null)
                 Compiler.LogError("Parameter initializers are not supported yet.", parameter);
@@ -77,7 +74,7 @@ namespace ZSharp.ZSSourceCompiler
             return result;
         }
 
-        private CompilerObject? Compile(IdentifierExpression identifier)
+        private ObjectResult? Compile(IdentifierExpression identifier)
         {
             CompilerObject? member = null;
 
@@ -91,22 +88,25 @@ namespace ZSharp.ZSSourceCompiler
                 )
             );
 
+            if (member is null)
+                return null;
+
             if (member is Objects.IRTBoundMember boundMember)
-                return boundMember.Bind(Compiler.Compiler, This);
+                return ObjectResult.Ok(boundMember.Bind(Compiler.Compiler, This));
 
             if (member is Objects.OverloadGroup group)
-                return new Objects.OverloadGroup(group.Name)
+                return ObjectResult.Ok(new Objects.OverloadGroup(group.Name)
                 {
                     Overloads = [.. group.Overloads.Select(
                         overload => overload is Objects.IRTBoundMember boundMember ?
                         boundMember.Bind(Compiler.Compiler, This) : overload
                     )],
-                };
+                });
 
-            return member;
+            return ObjectResult.Ok(member);
         }
 
-        CompilerObject? IOverrideCompileNode<Expression>.CompileNode(ZSSourceCompiler compiler, Expression node)
+        ObjectResult? IOverrideCompileNode<Expression>.CompileNode(ZSSourceCompiler compiler, Expression node)
             => node switch
             {
                 IdentifierExpression identifier => Compile(identifier),

@@ -1,4 +1,6 @@
 ﻿
+using ZSharp.AST;
+
 namespace ZSharp.ZSSourceCompiler
 {
     public sealed partial class DocumentCompiler(ZSSourceCompiler compiler, AST.Document node, Document document)
@@ -9,6 +11,7 @@ namespace ZSharp.ZSSourceCompiler
         public override Document Compile()
         {
             using (Context.Compiler(this))
+            using (Compiler.Compiler.ContextScope(new ObjectContext<Document>(Object)))
             using (Context.Scope(Object))
                 CompileDocument();
 
@@ -21,20 +24,32 @@ namespace ZSharp.ZSSourceCompiler
                 Compiler.CompileNode(item);
         }
 
-        public CompilerObject? CompileNode(ZSSourceCompiler compiler, Statement statement)
+        public ObjectResult? CompileNode(ZSSourceCompiler compiler, Statement statement)
         {
-            //if (statement is ExpressionStatement expressionStatement)
-            //    return Compiler.Compiler.Evaluate(Compiler.CompileNode(expressionStatement.Expression));
+            if (statement is ExpressionStatement expressionStatement)
+                return expressionStatement.Expression switch
+                {
+                    Module => null,
+                    Expression expression => ObjectResult.Ok(
+                        Compiler.Compiler.Feature<Compiler.IRCompiler>().EvaluateCO(
+                            Compiler.Compiler.IR.CompileCode(
+                                Compiler.CompileNode(expression).Unwrap()
+                            ).Unwrap()
+                        ) ?? throw new()
+                    ),
+                };
 
             return null;
             // if the statement is a definition, compile it
         }
 
-        public CompilerObject? CompileNode(ZSSourceCompiler compiler, Expression node)
+        public ObjectResult? CompileNode(ZSSourceCompiler compiler, Expression node)
             => node switch
             {
                 Module module => Compile(module),
-                _ => null
-            };
+                _ => null,
+            } is CompilerObject result
+            ? ObjectResult.Ok(result)
+            : null;
     }
 }

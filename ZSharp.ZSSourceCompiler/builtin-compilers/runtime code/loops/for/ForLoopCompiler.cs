@@ -13,7 +13,7 @@ namespace ZSharp.ZSSourceCompiler
 
         public override ForLoop Compile()
         {
-            var source = Object.Source = Compiler.CompileNode(Node.Source);
+            var source = Object.Source = Compiler.CompileNode(Node.Source).Unwrap();
 
             Iterator = Compiler.Compiler.Member(source, "getIterator");
             Iterator = Compiler.Compiler.Call(Iterator, []);
@@ -48,7 +48,7 @@ namespace ZSharp.ZSSourceCompiler
             using (Context.Scope())
             {
                 CompileForValue();
-                Object.For = Compiler.CompileNode(Node.Body);
+                Object.For = Compiler.CompileNode(Node.Body).Unwrap();
             }
 
             if (Node.Else is not null)
@@ -58,24 +58,24 @@ namespace ZSharp.ZSSourceCompiler
             return base.Compile();
         }
 
-        protected CompilerObject CompileBreak(BreakStatement @break)
+        protected ObjectResult CompileBreak(BreakStatement @break)
         {
             // TODO: add support for 'break from' statement
 
             if (@break.Value is not null)
                 Compiler.LogError("Break statement in a for statement must not have a value", @break);
 
-            return new Objects.RawCode(
+            return ObjectResult.Ok(new Objects.RawCode(
                 new([
                     new IR.VM.Jump(Object.EndLabel)
                 ])
-            );
+            ));
         }
 
         protected CompilerObject CompileElse()
-            => Compiler.CompileNode(Node.Else!);
+            => Compiler.CompileNode(Node.Else!).Unwrap();
 
-        public CompilerObject? CompileNode(ZSSourceCompiler compiler, Statement node)
+        public ObjectResult? CompileNode(ZSSourceCompiler compiler, Statement node)
             => node switch
             {
                 BreakStatement @break => CompileBreak(@break),
@@ -84,26 +84,22 @@ namespace ZSharp.ZSSourceCompiler
 
         private void CompileForValue()
         {
-            Object.Value = Node.Value switch {
+            Object.Value = (Node.Value switch {
                 LetForValue let => CompileLetForValue(let),
                 _ => throw new()
-            };
+            }).Unwrap();
         }
 
-        private CompilerObject CompileLetForValue(LetForValue let)
+        private ObjectResult CompileLetForValue(LetForValue let)
         {
             var allocator = Compiler.Compiler.CurrentContext.FindContext<IMemoryAllocator>();
             if (allocator is null)
-            {
-                Compiler.LogError($"Could not find memory allocator in context chain", Node);
-
-                throw new();
-            }
+                return Compiler.CompilationError($"Could not find memory allocator in context chain", Node);
 
             var local = allocator.Allocate(
                 let.Name,
                 let.Type is not null
-                    ? Compiler.CompileType(let.Type)
+                    ? Compiler.CompileType(let.Type).Unwrap()
                     : Compiler.Compiler.TypeSystem.IsTyped(Current, out var type)
                     ? type
                     : throw new(),
@@ -115,10 +111,10 @@ namespace ZSharp.ZSSourceCompiler
 
             Compiler.Context.CurrentScope.Set(let.Name, local);
 
-            return new Objects.RawCode(new(local1.IR?.Initializer!)
+            return ObjectResult.Ok(new Objects.RawCode(new(local1.IR?.Initializer!)
             {
                 Types = [local1.Type]
-            });
+            }));
         }
     }
 }
