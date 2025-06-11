@@ -3,7 +3,7 @@ using ZSharp.Compiler;
 
 namespace ZSharp.ZSSourceCompiler
 {
-    public sealed class StringImporter
+    public sealed class StringImporter(Interpreter.Interpreter interpreter)
         : CompilerObject
         , ICTCallable
     {
@@ -15,7 +15,7 @@ namespace ZSharp.ZSSourceCompiler
         {
             Argument sourceArgument = arguments.FirstOrDefault(arg => arg.Name is null) ?? throw new();
 
-            if (!compiler.IsString(compiler.Evaluate(sourceArgument.Object), out var source))
+            if (!compiler.IsString(interpreter.Evaluate(sourceArgument.Object).Unwrap(), out var source))
                 throw new(); // TODO: proper exception: first parameter must be a string
 
             string[] parts = source.Split(':', 2);

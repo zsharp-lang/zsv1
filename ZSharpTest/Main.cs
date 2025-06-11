@@ -138,13 +138,7 @@ interpreter.SourceCompiler.StringImporter.Importers.Add(
 new Referencing(interpreter.Compiler);
 new OOP(interpreter.Compiler);
 
-ZSharp.Runtime.NET.Runtime runtime = new(interpreter);
-
-interpreter.Runtime = runtime;
-interpreter.HostLoader = runtime;
-
-ZS.RuntimeAPI.Fields_Globals.runtime = runtime;
-runtime.Hooks.GetObject = ZSharp.Runtime.NET.Utils.GetMethod(ZS.RuntimeAPI.Impl_Globals.GetObject);
+var runtime = interpreter.Runtime;
 
 var moduleIL_standardIO = typeof(Standard.IO.Impl_Globals).Module;
 var moduleIR_standardIO = interpreter.HostLoader.Import(moduleIL_standardIO);

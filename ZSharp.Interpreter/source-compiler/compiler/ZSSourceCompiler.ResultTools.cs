@@ -2,7 +2,7 @@
 
 namespace ZSharp.ZSSourceCompiler
 {
-    public sealed partial class ZSSourceCompiler : Compiler.Feature
+    public sealed partial class ZSSourceCompiler
     {
         public bool UnpackResult<T>(
             Compiler.Result<T, string> result,

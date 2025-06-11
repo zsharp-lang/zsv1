@@ -11,7 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CommonZ\CommonZ.csproj" />
     <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />
-    <ProjectReference Include="..\ZSharp.Text\ZSharp.Text.csproj" />
+    <ProjectReference Include="..\ZSharp.Tokenizer\ZSharp.Tokenizer.csproj" />
   </ItemGroup>
 
 </Project>

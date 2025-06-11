@@ -19,7 +19,7 @@ namespace ZSharp
             if (
                 arguments.Length > 1 ||
                 arguments[0].Name is not null ||
-                !compiler.IsString(compiler.Evaluate(arguments[0].Object), out var libraryName)
+                !compiler.IsString(interpreter.Evaluate(arguments[0].Object).Unwrap(), out var libraryName)
             )
             {
                 compiler.Log.Error("`net` importer must have exactly 1 argument of type `string`", this);

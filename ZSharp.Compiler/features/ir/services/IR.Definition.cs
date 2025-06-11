@@ -1,5 +1,4 @@
-﻿using CommonZ;
-using IRDefinitionResult = ZSharp.Compiler.Result<ZSharp.IR.IRObject, string>;
+﻿using IRDefinitionResult = ZSharp.Compiler.Result<ZSharp.IR.IRObject, string>;
 
 namespace ZSharp.Compiler
 {

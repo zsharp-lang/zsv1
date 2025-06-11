@@ -2,23 +2,32 @@
 
 namespace ZSharp.ZSSourceCompiler
 {
-    public sealed partial class ZSSourceCompiler : Compiler.Feature
+    public sealed partial class ZSSourceCompiler
     {
+        public Interpreter.Interpreter Interpreter { get; }
+
+        public Compiler.Compiler Compiler => Interpreter.Compiler;
+
         public ExpressionCompiler ExpressionCompiler { get; }
 
         public StatementCompiler StatementCompiler { get; }
 
         public Context Context { get; }
 
-        public ZSSourceCompiler(Compiler.Compiler compiler)
-            : base(compiler)
+        public ZSSourceCompiler(Interpreter.Interpreter interpreter)
         {
+            Interpreter = interpreter;
+
             Context = new(this);
 
             ExpressionCompiler = new(this);
             StatementCompiler = new(this);
 
-            Operators = compiler.Feature<Ops>();
+            Operators = Compiler.Feature<Ops>();
+
+            StringImporter = new(interpreter);
+            StandardLibraryImporter = new(interpreter);
+            ZSImporter = new(interpreter);
 
             Initialize();
         }

@@ -5,6 +5,6 @@ namespace ZS.RuntimeAPI
     [HideInIR]
     public static class Fields_Globals
     {
-        public static ZSharp.Runtime.NET.Runtime runtime;
+        //public static ZSharp.Runtime.NET.Runtime runtime;
     }
 }

@@ -113,7 +113,7 @@ namespace ZSharp.Objects
             ReferenceContext context = new();
 
             foreach (var (arg, param) in index.Zip(GenericParameters))
-                context[param] = compiler.Evaluate(arg.Object);
+                context[param] = arg.Object;
 
             return compiler.Feature<Referencing>().CreateReference(this, context);
         }

@@ -49,11 +49,6 @@
             if ((irType = @object as ICompileIRType) is not null)
                 return irType.CompileIRType(this);
 
-            @object = Evaluate(@object);
-
-            if ((irType = @object as ICompileIRType) is not null)
-                return irType.CompileIRType(this);
-
             throw new NotImplementedException(); // TODO: return null
         }
 
@@ -61,11 +56,6 @@
             where T : IRType
         {
             ICompileIRType<T>? irType;
-
-            if ((irType = @object as ICompileIRType<T>) is not null)
-                return irType.CompileIRType(this);
-
-            @object = Evaluate(@object);
 
             if ((irType = @object as ICompileIRType<T>) is not null)
                 return irType.CompileIRType(this);

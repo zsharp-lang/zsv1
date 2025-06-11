@@ -1,7 +1,10 @@
 ﻿namespace ZSharp.Compiler
 {
-    public interface ICompileIRCode
+    public interface ICompileIRCode : ICTCompileIRCode
     {
-        public IRCode CompileIRCode(Compiler compiler);
+        Result<IRCode, Error> ICTCompileIRCode.CompileIRCode(Compiler compiler)
+            => Result<IRCode, Error>.Ok(CompileIRCode(compiler));
+
+        public new IRCode CompileIRCode(Compiler compiler);
     }
 }

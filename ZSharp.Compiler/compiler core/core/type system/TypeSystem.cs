@@ -36,9 +36,6 @@ namespace ZSharp.Compiler
             Object = new ObjectType(compiler.RuntimeModule.TypeSystem.Object, Type);
         }
 
-        public IType EvaluateType(CompilerObject @object)
-            => (IType)Compiler.Evaluate(@object);
-
         public IType Array(CompilerObject type)
             => throw new NotImplementedException();
 

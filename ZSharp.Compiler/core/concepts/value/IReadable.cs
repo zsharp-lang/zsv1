@@ -2,6 +2,7 @@
 {
     public interface ICTReadable
         : ITyped
+        , ICTCompileIRCode
     {
         public IRCode Cast(Compiler compiler, IType type)
             => this is ICTTypeCast typeCast 
@@ -17,5 +18,8 @@
         }
 
         public IRCode Read(Compiler compiler);
+
+        Result<IRCode, Error> ICTCompileIRCode.CompileIRCode(Compiler compiler)
+            => Result<IRCode, Error>.Ok(Read(compiler));
     }
 }

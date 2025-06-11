@@ -30,13 +30,12 @@ namespace ZSharp.ZSSourceCompiler
                 return expressionStatement.Expression switch
                 {
                     Module => null,
-                    Expression expression => ObjectResult.Ok(
-                        Compiler.Compiler.Feature<Compiler.IRCompiler>().EvaluateCO(
-                            Compiler.Compiler.IR.CompileCode(
-                                Compiler.CompileNode(expression).Unwrap()
-                            ).Unwrap()
-                        ) ?? new Objects.RawCode(new())
-                    ),
+                    Expression expression => 
+                        Compiler.Interpreter.Evaluate(
+                            expression
+                        ).When(out var result).Error(out var error)
+                        ? Compiler.CompilationError(error, expression)
+                        : ObjectResult.Ok(result!)
                 };
 
             return null;

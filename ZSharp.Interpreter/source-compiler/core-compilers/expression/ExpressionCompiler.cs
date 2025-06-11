@@ -61,7 +61,7 @@ namespace ZSharp.ZSSourceCompiler
 
         private ObjectResult Compile(CallExpression call)
         {
-            var callable = Compiler.Compiler.Evaluate(Compiler.CompileNode(call.Callee).Unwrap());
+            var callable = Compiler.CompileNode(call.Callee).Unwrap();
 
             var args = call.Arguments.Select(arg => new Argument_NEW<CompilerObject>(arg.Name, Compiler.CompileNode(arg.Value).Unwrap()));
 
@@ -123,7 +123,7 @@ namespace ZSharp.ZSSourceCompiler
 
         private ObjectResult Compile(IndexExpression index)
         {
-            var indexable = Compiler.Compiler.Evaluate(Compiler.CompileNode(index.Target).Unwrap());
+            var indexable = Compiler.CompileNode(index.Target).Unwrap();
 
             var args = index.Arguments.Select(arg => new Argument_NEW<CompilerObject>(arg.Name, Compiler.CompileNode(arg.Value).Unwrap()));
 

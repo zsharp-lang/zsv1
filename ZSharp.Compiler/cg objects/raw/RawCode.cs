@@ -6,6 +6,7 @@ namespace ZSharp.Objects
         : CompilerObject
         , ICTReadable
         ,ICTTypeCast
+        , ICTCompileIRCode
     {
         private readonly IRCode code = code;
 
@@ -34,6 +35,9 @@ namespace ZSharp.Objects
 
             throw new NotImplementedException();
         }
+
+        Result<IRCode, Error> ICTCompileIRCode.CompileIRCode(Compiler.Compiler compiler)
+            => Result<IRCode, Error>.Ok(code);
 
         IType IDynamicallyTyped.GetType(Compiler.Compiler compiler)
             => code.IsVoid ? compiler.TypeSystem.Void : code.RequireValueType();

@@ -21,7 +21,6 @@
             InitializeTypeSystem();
             InitializeLiterals();
             InitializeFeatures();
-            InitializeEvaluators();
         }
     }
 }
