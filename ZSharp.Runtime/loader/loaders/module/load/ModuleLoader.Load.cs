@@ -13,6 +13,8 @@
 
         private void LoadAll()
         {
+            LoadSubmodules();
+
             LoadTypes();
 
             LoadGlobals();
@@ -20,6 +22,19 @@
             LoadFunctions();
 
             LoadInitializer();
+        }
+
+        private void LoadSubmodules()
+        {
+            if (IRModule.HasSubmodules)
+                foreach (var module in IRModule.Submodules)
+                    Loader.Runtime.AddModule(
+                        module,
+                        new ModuleLoader(Loader, module)
+                        {
+                            AssemblyBuilder = AssemblyBuilder
+                        }.Load()
+                    );
         }
 
         private void LoadTypes()

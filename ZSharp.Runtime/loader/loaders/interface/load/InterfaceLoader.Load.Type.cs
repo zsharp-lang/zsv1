@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Runtime.Loaders
 {
-    partial class ClassLoader
+    partial class InterfaceLoader
     {
         private void LoadNestedType(IR.OOPType type)
         {

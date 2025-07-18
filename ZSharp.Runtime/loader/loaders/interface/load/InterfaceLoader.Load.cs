@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Runtime.Loaders
 {
-    partial class ClassLoader
+    partial class InterfaceLoader
     {
         public Type Load()
         {
@@ -24,32 +24,23 @@
 
             LoadNestedTypes();
 
-            AddTask(LoadBase);
-
-            AddTask(LoadFields);
-
-            AddTask(LoadConstructors);
+            AddTask(LoadBases);
 
             AddTask(LoadMethods);
         }
 
-        private void LoadBase()
+        private void LoadBases()
         {
-            if (IRType.Base is not null)
-                ILType.SetParent(Loader.Runtime.ImportType(IRType.Base));
+            if (IRType.HasBases)
+                foreach (var @base in IRType.Bases)
+                    ILType.AddInterfaceImplementation(Loader.Runtime.ImportType(@base));
         }
 
         private void LoadNestedTypes()
         {
-            foreach (var type in IRType.NestedTypes)
-                LoadNestedType(type);
-        }
-
-        private void LoadFields()
-        {
-            if (IRType.HasFields)
-                foreach (var field in IRType.Fields)
-                    LoadField(field);
+            throw new NotSupportedException();
+            //foreach (var type in IRType.NestedTypes)
+            //    LoadNestedType(type);
         }
 
         private void LoadMethods()
@@ -57,13 +48,6 @@
             if (IRType.HasMethods)
                 foreach (var method in IRType.Methods)
                     LoadMethod(method);
-        }
-
-        private void LoadConstructors()
-        {
-            if (IRType.HasConstructors)
-                foreach (var constructor in IRType.Constructors)
-                    LoadConstructor(constructor);
         }
     }
 }

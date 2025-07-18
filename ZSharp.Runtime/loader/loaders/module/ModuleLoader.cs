@@ -3,7 +3,7 @@
     internal sealed partial class ModuleLoader
         : LoaderBase
     {
-        public Emit.AssemblyBuilder AssemblyBuilder { get; }
+        public Emit.AssemblyBuilder AssemblyBuilder { get; private init; }
 
         public Emit.ModuleBuilder ILModule { get; }
 
@@ -15,11 +15,11 @@
             : base(loader)
         {
             IRModule = module;
-            AssemblyBuilder = Emit.AssemblyBuilder.DefineDynamicAssembly(
+            AssemblyBuilder ??= Emit.AssemblyBuilder.DefineDynamicAssembly(
                 new IL.AssemblyName(IRModule.Name ?? throw new()),
                 Emit.AssemblyBuilderAccess.RunAndCollect
             );
-            ILModule = AssemblyBuilder.DefineDynamicModule(IRModule.Name);
+            ILModule = AssemblyBuilder.DefineDynamicModule(IRModule.Name ?? throw new());
             Globals = ILModule.DefineType("<Globals>");
 
             tasks = new(LoadAll);
