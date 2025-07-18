@@ -23,10 +23,16 @@ namespace ZSharp.Objects
                 genericArguments[parameter] = argument;
             }
 
+            ReferenceContext context = new();
+            foreach (var (p, a) in genericArguments)
+                context.CompileTimeValues.Cache(p, a);
+
             return Result<GenericFunctionInstance, Error>.Ok(
-                new(this)
+                new()
                 {
-                    Context = new()
+                    GenericArguments = genericArguments,
+                    GenericFunction = this,
+                    Signature = compiler.Feature<Referencing>().CreateReference<Signature>(Signature, context)
                 }
             );
         }

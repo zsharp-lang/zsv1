@@ -5,7 +5,7 @@ namespace ZSharp.Objects
     public sealed class StringType(IR.OOPTypeReference<IR.Class> stringType, IType type)
         : CompilerObject
         , ICompileIRType
-        , ICTCallable
+        , ICTCallable_Old
         , IType
     {
         public IR.OOPTypeReference<IR.Class> IR { get; } = stringType;

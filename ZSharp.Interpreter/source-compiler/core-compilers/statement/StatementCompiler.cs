@@ -62,7 +62,10 @@ namespace ZSharp.ZSSourceCompiler
             if (expressionStatement.Expression is null)
                 return ObjectResult.Ok(new Objects.RawCode(new()));
 
-            var coResult = Compiler.CompileNode(expressionStatement.Expression);
+            var coResult = expressionStatement.Expression switch {
+                WhileExpression<Statement> @while => Compile(@while),
+                _ => Compiler.CompileNode(expressionStatement.Expression)
+            };
 
             if (
                 coResult

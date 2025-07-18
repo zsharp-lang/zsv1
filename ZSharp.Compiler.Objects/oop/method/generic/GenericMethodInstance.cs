@@ -3,7 +3,7 @@ namespace ZSharp.Objects
 {
     public sealed class GenericMethodInstance(GenericMethod origin)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
         , ICompileIRReference<IR.ConstructedMethod>
         , IRTBoundMember
     {
@@ -18,7 +18,7 @@ namespace ZSharp.Objects
         CompilerObject IRTBoundMember.Bind(Compiler.Compiler compiler, CompilerObject value)
             => new BoundGenericMethodInstance(this, value);
 
-        CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        CompilerObject ICTCallable_Old.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             if (Origin.ReturnType is null)
                 throw new NotImplementedException();

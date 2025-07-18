@@ -19,6 +19,9 @@
                 Compiler.TypeSystem.Object,
             })
                 Context.Types.Cache(Compiler.CompileIRType(type), type);
+
+            Context.Objects.Cache(Compiler.TypeSystem.ArrayType.IR, Compiler.TypeSystem.ArrayType);
+            Context.Objects.Cache(Compiler.TypeSystem.ReferenceType.IR, Compiler.TypeSystem.ReferenceType);
         }
     }
 }

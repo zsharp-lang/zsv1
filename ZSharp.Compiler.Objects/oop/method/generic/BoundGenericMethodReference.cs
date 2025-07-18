@@ -4,7 +4,7 @@ namespace ZSharp.Objects
 {
     public sealed class BoundGenericMethodReference(GenericMethodReference method, CompilerObject instance)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
     {
         public GenericMethodReference Method { get; } = method;
 

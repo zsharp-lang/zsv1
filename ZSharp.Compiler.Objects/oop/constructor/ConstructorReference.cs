@@ -4,13 +4,13 @@ namespace ZSharp.Objects
 {
     public sealed class ConstructorReference(Constructor origin, ReferenceContext context)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
     {
         public Constructor Origin { get; } = origin;
 
         public ReferenceContext Context { get; } = context;
 
-        CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        CompilerObject ICTCallable_Old.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             var result = compiler.Call(Origin, arguments);
 

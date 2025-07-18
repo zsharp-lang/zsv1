@@ -8,7 +8,7 @@ namespace ZSharp.Objects
         , IClass
         , ICTGetMember_Old<MemberName>
         , IRTGetMember_Old<MemberName>
-        , ICTCallable
+        , ICTCallable_Old
         , IReference
         , ICompileIRType<IR.ConstructedClass>
         , ICompileIRReference<IR.OOPTypeReference<IR.Class>>
@@ -91,7 +91,7 @@ namespace ZSharp.Objects
             return result;
         }
 
-        CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        CompilerObject ICTCallable_Old.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             CompilerObject? constructor = null;
 

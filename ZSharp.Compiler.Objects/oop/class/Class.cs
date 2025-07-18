@@ -9,7 +9,7 @@ namespace ZSharp.Objects
         , ICompileIRObject<IR.Class, IR.Module>
         , ICompileIRReference<IR.ClassReference>
         , ICompileIRType<IR.OOPTypeReference<IR.Class>>
-        , ICTCallable
+        , ICTCallable_Old
         , IRTCastTo
         , ICTGetMember_Old<MemberName>
         , IRTGetMember_Old<MemberName>
@@ -130,7 +130,7 @@ namespace ZSharp.Objects
         }
 
 
-        CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        CompilerObject ICTCallable_Old.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             if (Constructor is null)
                 throw new InvalidOperationException($"Class {Name} is not constructible");

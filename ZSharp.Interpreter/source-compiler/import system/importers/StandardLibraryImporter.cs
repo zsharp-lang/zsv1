@@ -5,7 +5,7 @@ namespace ZSharp.ZSSourceCompiler
 {
     public sealed class StandardLibraryImporter(Interpreter.Interpreter interpreter)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
     {
         public Mapping<string, CompilerObject> Libraries { get; } = [];
 

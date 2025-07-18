@@ -6,7 +6,7 @@ namespace ZSharp.Objects
     public sealed class MethodOverloadGroup(string name)
         : OverloadGroup<IMethod>(name)
         , CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
         , IImplementation
         , IRTBoundMember
     {

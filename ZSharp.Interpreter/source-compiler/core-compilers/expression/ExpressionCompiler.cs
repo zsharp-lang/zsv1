@@ -61,13 +61,44 @@ namespace ZSharp.ZSSourceCompiler
 
         private ObjectResult Compile(CallExpression call)
         {
-            var callable = Compiler.CompileNode(call.Callee).Unwrap();
+            if (
+                Compiler.CompileNode(call.Callee)
+                .When(out var callable)
+                .Error(out var error)
+            )
+                return ObjectResult.Error(error);
 
-            var args = call.Arguments.Select(arg => new Argument_NEW<CompilerObject>(arg.Name, Compiler.CompileNode(arg.Value).Unwrap()));
+            var argsResults = call.Arguments
+                .Select(
+                    arg =>
+                    {
+                        if (
+                            Compiler.CompileNode(arg.Value)
+                            .When(out var value)
+                            .Error(out var error)
+                        )
+                            return Result<Argument_NEW<CompilerObject>, Error>.Error(error);
+                        return Result<Argument_NEW<CompilerObject>, Error>.Ok(
+                            new Argument_NEW<CompilerObject>(arg.Name, value!)
+                        );
+                    }
+                )
+                .ToArray();
 
-            return ObjectResult.Ok(
-                Compiler.Compiler.CG.Call(callable, args.ToArray()).Unwrap()
-            );
+            if (CombineErrorResults(argsResults, out var argsError))
+                return ObjectResult.Error(argsError);
+
+            if (
+                Compiler.Compiler.CG.Call(
+                    callable!,
+                    [.. argsResults.Select(arg => arg.Unwrap())]
+                )
+                .When(out var result)
+                .Error(out var callError)
+            )
+                return Compiler.CompilationError(callError, call);
+
+            return ObjectResult.Ok(result!);
         }
 
         private ObjectResult Compile(CastExpression cast)

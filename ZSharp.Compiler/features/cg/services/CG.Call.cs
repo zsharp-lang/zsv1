@@ -6,7 +6,7 @@
         {
             var result = CompilerObjectResult.Error("Object does not support calling");
 
-            if (@object is ICTCallable_NEW ctCallable)
+            if (@object is ICTCallable ctCallable)
                 result = ctCallable.Call(compiler, arguments);
 
             if (result.IsOk) return result;

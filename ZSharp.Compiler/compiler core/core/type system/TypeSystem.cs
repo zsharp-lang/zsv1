@@ -22,6 +22,12 @@ namespace ZSharp.Compiler
 
         public ObjectType Object { get; }
 
+        public ArrayTypeObject ArrayType { get; }
+
+        public ReferenceTypeObject ReferenceType { get; }
+
+        public PointerTypeObject PointerType { get; }
+
         internal TypeSystem(Compiler compiler)
             : base(compiler)
         {
@@ -34,10 +40,14 @@ namespace ZSharp.Compiler
             Int32 = new(compiler.RuntimeModule.TypeSystem.Int32, Type);
             Float32 = new RawType(compiler.RuntimeModule.TypeSystem.Float32, Type);
             Object = new ObjectType(compiler.RuntimeModule.TypeSystem.Object, Type);
+
+            ArrayType = new ArrayTypeObject(compiler.RuntimeModule.TypeSystem.Array);
+            ReferenceType = new ReferenceTypeObject(compiler.RuntimeModule.TypeSystem.Reference);
+            PointerType = new(compiler.RuntimeModule.TypeSystem.Pointer);
         }
 
-        public IType Array(CompilerObject type)
-            => throw new NotImplementedException();
+        public IType Array(IType type)
+            => ArrayType.Instantiate(type);
 
         public IType Pointer(CompilerObject type)
             => throw new NotImplementedException();

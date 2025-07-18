@@ -106,8 +106,8 @@
         {
             var type = LoadType(@ref.OwningType);
 
-            if (!Context.Cache(@ref.Member, out var def))
-                throw new InvalidOperationException($"Field {@ref.Member.Name} was not loaded");
+            if (!Context.Cache(@ref.Field, out var def))
+                throw new InvalidOperationException($"Field {@ref.Field.Name} was not loaded");
 
             if (!type.IsGenericType)
                 return def;

@@ -4,7 +4,7 @@ namespace ZSharp.Objects
 {
     internal sealed class BoundMethod(Method method, CompilerObject instance)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
     {
         public Method Method { get; } = method;
 

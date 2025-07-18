@@ -103,9 +103,7 @@ namespace ZSharp.Runtime.NET.IL2IR
             => Output.Types.Add(new InterfaceLoader(Loader, type).Load());
 
         private void LoadEnum(Type type)
-        {
-            throw new NotImplementedException();
-        }
+            => Output.Types.Add(new EnumerationLoader(Loader, type).Load());
 
         private void LoadStruct(Type type)
         {

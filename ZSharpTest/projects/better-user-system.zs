@@ -16,7 +16,6 @@
 import { input, print } from "std:io";
 import { List } from "net:ZLoad.Test.dll";
 
-
 module Program;
 
 

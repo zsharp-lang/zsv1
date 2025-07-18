@@ -34,7 +34,7 @@ namespace ZSharp.Compiler
             => (error = this.error) is not null;
 
         public TResult Unwrap()
-            => result ?? throw new InvalidOperationException();
+            => result ?? throw new InvalidOperationException(error!.ToString());
 
         public Result<TResult, TError> When(Action<TResult> action)
         {

@@ -27,6 +27,10 @@
 
             ClassReference float32;
 
+            Class array;
+            Class reference;
+            Class pointer;
+
             {
                 module.Types.Add((type = new(new("Type"))).Definition);
                 module.Types.Add((@object = new(new("Object"))).Definition);
@@ -39,6 +43,10 @@
                 module.Types.Add((int32 = new(new("Int32"))).Definition);
 
                 module.Types.Add((float32 = new(new("Float32"))).Definition);
+
+                module.Types.Add(array = new("Array"));
+                module.Types.Add(reference = new("Reference"));
+                module.Types.Add(pointer = new("Pointer"));
             }
 
             return new(module, new()
@@ -54,6 +62,10 @@
                 Int32 = int32,
 
                 Float32 = float32,
+
+                Array = array,
+                Reference = reference,
+                Pointer = pointer,
             });
         }
     }

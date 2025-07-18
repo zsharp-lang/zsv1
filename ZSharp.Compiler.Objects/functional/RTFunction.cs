@@ -1,12 +1,11 @@
-﻿using CommonZ.Utils;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using ZSharp.Compiler;
 
 namespace ZSharp.Objects
 {
     public class RTFunction(string? name)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
         , ICTReadable
         , ICompileIRObject<IR.Function, IR.Module>
     {
@@ -47,7 +46,7 @@ namespace ZSharp.Objects
             set => Signature.ReturnType = value;
         }
 
-        CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        CompilerObject ICTCallable_Old.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             return Call(compiler, arguments);
         }

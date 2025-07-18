@@ -16,7 +16,7 @@
 
         public CompilerObject Call(CompilerObject target, Argument[] arguments)
         {
-            if (target is ICTCallable ctCallable)
+            if (target is ICTCallable_Old ctCallable)
                 return ctCallable.Call(this, arguments);
 
             // implements typeclass Callable?

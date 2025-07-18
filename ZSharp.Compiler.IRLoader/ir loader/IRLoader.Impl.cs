@@ -123,7 +123,8 @@ namespace ZSharp.Compiler.IRLoader
             {
                 ZSharp.IR.Class @class => Load(@class, owner),
                 ZSharp.IR.Interface @interface => Load(@interface, owner),
-                //ZSharp.IR.Struct @struct => Load(@struct),
+                ZSharp.IR.EnumClass @enum => Load(@enum, owner),
+                ZSharp.IR.ValueType valueType => Load(valueType, owner),
                 _ => throw new NotImplementedException(),
             };
 
@@ -311,6 +312,61 @@ namespace ZSharp.Compiler.IRLoader
             };
         }
 
+        private Action Load(ZSharp.IR.EnumClass @enum, Module owner)
+        {
+            EnumClass result = new(@enum.Name ?? string.Empty)
+            {
+                IR = @enum,
+                IsDefined = true,
+            };
+
+            Context.Objects.Cache(@enum, result);
+
+            owner.Content.Add(result);
+
+            if (result.Name is not null && result.Name != string.Empty)
+                owner.Members.Add(result.Name, result);
+
+            return () =>
+            {
+                result.MemberType = Load(@enum.Type);
+
+                foreach (var value in @enum.Values)
+                {
+                    var valueResult = new EnumValue(value.Name)
+                    {
+                        Value = new RawCode(new(value.Value)
+                        {
+                            Types = [result]
+                        }),
+                        Owner = result
+                    };
+                    result.Values[value.Name] = valueResult;
+                }
+            };
+        }
+
+        private Action Load(ZSharp.IR.ValueType valueType, Module owner)
+        {
+            Objects.ValueType result = new(valueType.Name ?? string.Empty)
+            {
+                IR = valueType,
+                IsDefined = true,
+            };
+
+            Context.Objects.Cache(valueType, result);
+
+            owner.Content.Add(result);
+
+            if (result.Name is not null && result.Name != string.Empty)
+                owner.Members.Add(result.Name, result);
+
+            return () =>
+            {
+                
+            };
+        }
+
         private IType Load(ZSharp.IR.IType type)
         {
             if (Context.Types.Cache(type, out var result))
@@ -331,21 +387,21 @@ namespace ZSharp.Compiler.IRLoader
         private IType Load(ZSharp.IR.ConstructedClass constructed)
         {
 
-            if (Context.Objects.Cache<GenericClass>(constructed.Class, out var genericClass))
+            if (Context.Objects.Cache<IGenericInstantiable>(constructed.Class, out var genericInstantiable))
             {
-                var args = new CommonZ.Utils.Cache<CompilerObject, CompilerObject>();
+                var instance = genericInstantiable.Instantiate(
+                    Compiler,
+                    [.. constructed.Arguments.Select(
+                        arg => new Argument(
+                            Load(arg)
+                        )
+                    )]
+                ).Unwrap();
 
-                if (genericClass.GenericParameters.Count != constructed.Arguments.Count)
-                    throw new();
+                if (instance is not IType type)
+                    throw new("Generic instaitation returned a non-type object");
 
-                for (var i = 0; i < constructed.Arguments.Count; i++)
-                    args.Cache(genericClass.GenericParameters[i], Import(constructed.Arguments[i]));
-
-                return new GenericClassInstance(genericClass, new()
-                {
-                    Scope = genericClass,
-                    CompileTimeValues = args
-                });
+                return type;
             }
 
             return Context.Types.Cache(constructed) ?? throw new();

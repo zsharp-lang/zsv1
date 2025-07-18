@@ -5,7 +5,7 @@ namespace ZSharp.Objects
 {
     public abstract class OverloadGroup<T>(string name)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
         , IMappable
 
         where T : CompilerObject
@@ -45,7 +45,7 @@ namespace ZSharp.Objects
     public sealed class OverloadGroup(string name)
         : OverloadGroup<CompilerObject>(name)
         , CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
         , IMappable
     {
 

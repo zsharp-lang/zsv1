@@ -17,5 +17,11 @@
         public ClassReference Int32 { get; init; } = null!;
 
         public ClassReference Float32 { get; init; } = null!;
+
+        public Class Array { get; init; } = null!;
+
+        public Class Reference { get; init; } = null!;
+
+        public Class Pointer { get; init; } = null!;
     }
 }

@@ -73,6 +73,8 @@ using (StreamReader stream = File.OpenText(filePath))
     expressionParser.InfixL("==", 30);
     expressionParser.InfixL("!=", 30);
 
+    expressionParser.InfixL(LangParser.Keywords.Or, 15);
+
     expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
     expressionParser.Led(TokenType.LBracket, LangParser.ParseIndexExpression, 100);
     expressionParser.Nud(TokenType.LBracket, LangParser.ParseArrayLiteral);
@@ -135,6 +137,7 @@ interpreter.SourceCompiler.StringImporter.Importers.Add(
     new ZSharp.DotNETImporter(interpreter)
 );
 
+
 new Referencing(interpreter.Compiler);
 new OOP(interpreter.Compiler);
 
@@ -190,11 +193,11 @@ if (mainModule is not null)
     var mainModuleIL = runtime.Import(mainModuleIR);
     var mainModuleGlobals = mainModuleIL.GetType("<Globals>") ?? throw new();
 
-    //foreach (var type in mainModuleIL.GetTypes())
-    //    DecompileType(type);
+    foreach (var type in mainModuleIL.GetTypes())
+        DecompileType(type);
 
-    //foreach (var method in mainModuleIL.GetMethods())
-    //    Decompile(method);
+    foreach (var method in mainModuleIL.GetMethods())
+        Decompile(method);
 
     var mainMethod = mainModuleGlobals.GetMethod("main", []);
 

@@ -5,7 +5,7 @@ namespace ZSharp
 {
     public sealed class DotNETImporter(Interpreter.Interpreter interpreter)
         : Objects.CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
     {
         private readonly Interpreter.Interpreter interpreter = interpreter;
 

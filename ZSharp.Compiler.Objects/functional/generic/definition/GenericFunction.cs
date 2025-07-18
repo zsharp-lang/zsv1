@@ -6,9 +6,9 @@ namespace ZSharp.Objects
     public sealed partial class GenericFunction(string? name = null)
         : CompilerObject
         , ICompileIRObject<IR.Function, IR.Module>
-        , ICTCallable
+        , ICTCallable_Old
         , ICTGetIndex
-        , IReferencable<GenericFunctionInstance>
+        , IReferencable<GenericFunctionInstance_Old>
     {
         [Flags]
         enum BuildState
@@ -118,7 +118,7 @@ namespace ZSharp.Objects
             return compiler.Feature<Referencing>().CreateReference(this, context);
         }
 
-        GenericFunctionInstance IReferencable<GenericFunctionInstance>.CreateReference(Referencing @ref, ReferenceContext context)
+        GenericFunctionInstance_Old IReferencable<GenericFunctionInstance_Old>.CreateReference(Referencing @ref, ReferenceContext context)
         {
             foreach (var genericParameter in GenericParameters)
                 if (!context.CompileTimeValues.Contains(genericParameter))
@@ -131,7 +131,7 @@ namespace ZSharp.Objects
             };
         }
 
-        CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        CompilerObject ICTCallable_Old.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             ITypeInferenceContext infer;
 
@@ -147,7 +147,7 @@ namespace ZSharp.Objects
                 context.CompileTimeValues.Cache(genericParameter, inferredType);
             }
 
-            var reference = compiler.Feature<Referencing>().CreateReference<GenericFunctionInstance>(this, context);
+            var reference = compiler.Feature<Referencing>().CreateReference<GenericFunctionInstance_Old>(this, context);
 
             var args = (reference.Signature as ISignature)!.MatchArguments(compiler, arguments);
 

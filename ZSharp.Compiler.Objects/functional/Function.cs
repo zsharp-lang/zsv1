@@ -13,7 +13,7 @@ namespace ZSharp.Objects
     /// </summary>
     public abstract class Function(string? name) 
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
     {
 
 

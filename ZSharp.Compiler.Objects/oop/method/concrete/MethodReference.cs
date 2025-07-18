@@ -8,7 +8,7 @@ namespace ZSharp.Objects
 {
     public sealed class MethodReference(Method origin, ReferenceContext context)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
         , ICompileIRReference<IR.MethodReference>
         , IRTBoundMember
     {
@@ -22,7 +22,7 @@ namespace ZSharp.Objects
 
         public IR.Signature? SignatureIR { get; private set; }
 
-        CompilerObject ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        CompilerObject ICTCallable_Old.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             if (Origin.ReturnType is null)
                 throw new NotImplementedException();

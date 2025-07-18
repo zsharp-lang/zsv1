@@ -42,10 +42,11 @@ module Program {
 
 	fun do(): bool {
 		print("Welcome to The ToDo List App! Please choose what to do:");
-		print("1. Add an item.");
-		print("2. List all items.");
-		print("3. Remove an item.");
-		print("4. Exit program.");
+		print("-------------------------------------------------------");
+		print("\t1. Add an item.");
+		print("\t2. List all items.");
+		print("\t3. Remove an item.");
+		print("\t4. Exit program.");
 		
 
 		let cmd = input("> ");

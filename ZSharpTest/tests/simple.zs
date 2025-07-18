@@ -4,11 +4,14 @@ import {
 	Console, 
 	List, 
 	TestClass, 
+	TestEnum,
 	TestInterface, 
 	greet, 
 	id 
 } from "net:ZLoad.Test.dll";
-import { Directory } from "net:ZSharp.CT.StandardLibrary.FileSystem.dll";
+import { Directory, File } from "net:ZSharp.CT.StandardLibrary.FileSystem.dll";
+
+import { Expression, LiteralType } from "net:ZSharp.AST.dll";
 
 print("Hello, Document!");
 
@@ -78,7 +81,7 @@ fun testBaseClass(test: BaseClass): void {
 }
 
 fun main(): void {
-/*
+	
 	let c1 = MyClass();
 	let c2 = OtherClass(5);
 
@@ -93,16 +96,34 @@ fun main(): void {
 
 	let cwd = Directory.cwd();
 	print(cwd.toString());
-	let filePath = cwd / "tests" / "simple.zs";
+	let testsDirectory = cwd / "tests" as Directory;
+	let filePath = testsDirectory / "simple.zs";
 	print(filePath.toString());
-	print(filePath.asFile().toString());
-	*/
+	//print(filePath.asFile().toString());
+	print(id("Id<T> [T: string]"));
+	
+	
 	let base: Base = Derived();
 	base.baseMethod();
 
-	if (base is derived of Derived)
-		derived.derivedMethod();
+	//if (base is derived of Derived)
+	//	derived.derivedMethod();
 
+	let derived = base as Derived;
+	derived.derivedMethod();
+
+	if (filePath is simpleFilePath of File)
+		print(simpleFilePath.getContent());
+
+	let testDirectory = testsDirectory.createDirectory("test", existsOk: true);
+
+	//testsDirectory.createDirectory("test", existsOk: false);
+
+	let testEnum = TestEnum.C;
+	print(string(testEnum));
+
+	print(string(LiteralType.False));
+	
 	return;
 }
 

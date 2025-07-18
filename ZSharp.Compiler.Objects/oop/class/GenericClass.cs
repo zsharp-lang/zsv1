@@ -1,4 +1,5 @@
 ﻿using CommonZ.Utils;
+using System;
 using ZSharp.Compiler;
 
 namespace ZSharp.Objects
@@ -11,6 +12,7 @@ namespace ZSharp.Objects
         , IReferencable<GenericClassInstance>
         , ICompileIRObject<IR.Class, IR.Module>
         , IEvaluable
+        , IGenericInstantiable
     {
         [Flags]
         enum BuildState
@@ -71,6 +73,19 @@ namespace ZSharp.Objects
             {
                 Scope = this
             });
+        }
+
+        CompilerObjectResult IGenericInstantiable.Instantiate(Compiler.Compiler compiler, Argument[] arguments)
+        {
+            var context = new ReferenceContext();
+
+            foreach (var (genericParameter, genericArgument) in GenericParameters.Zip(arguments))
+                context[genericParameter] = genericArgument.Object;
+
+            return CompilerObjectResult.Ok(new GenericClassInstance(this, new(context)
+            {
+                Scope = this
+            }));
         }
 
         CompilerObject ICTGetIndex.Index(Compiler.Compiler compiler, Argument[] index)

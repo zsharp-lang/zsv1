@@ -1,10 +1,12 @@
 ﻿using CommonZ.Utils;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ZSharp.IR
 {
     public sealed class Module(string? name) : ModuleMember
     {
         private Function? _initializer;
+        private Function? _entryPoint;
         private ModuleCollection<ImportedModule>? _importedModules;
         private ModuleCollection<Function>? _functions;
         private GlobalCollection? _globals;
@@ -44,6 +46,24 @@ namespace ZSharp.IR
         }
 
         public bool HasImportedModules => !_importedModules.IsNullOrEmpty();
+
+        public Function? EntryPoint
+        {
+            get => _entryPoint;
+            set
+            {
+                if (value is not null && value.Module != this)
+                    throw new InvalidOperationException(
+                        "Module entry point must be a strict member of the" +
+                        "module."
+                    );
+
+                _entryPoint = value;
+            }
+        }
+
+        [MemberNotNullWhen(true, nameof(EntryPoint))]
+        public bool HasEntryPoint => _entryPoint is not null;
 
         public Collection<Function> Functions
         {

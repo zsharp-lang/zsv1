@@ -15,29 +15,33 @@ namespace ZSharp.Runtime.NET.IL2IR
 
             if (type.IsTypeDefinition)
             {
-                var genericArguments = type.GenericTypeArguments.Select(LoadType).ToList();
+                if (type.GenericTypeArguments.Length != 0)
+                    throw new InvalidOperationException();
 
-                var @class = new ClassLoader(this, type).Load();
+                OOPType def;
 
-                if (genericArguments.Count == 0) result = new ClassReference(@class);
-                else if (type.IsClass) result = new ConstructedClass(@class)
-                {
-                    Arguments = [.. genericArguments],
-                };
-                //else if (type.IsInterface) result = new ILInterfaceLoader(this, type).Load();
-                //else if (type.IsEnum) result = new ILEnumLoader(this, type).Load();
-                //else if (type.IsValueType) result = new ILStructLoader(this, type).Load();
+                if (type.IsClass) def = new ClassLoader(this, type).Load();
+                else if (type.IsInterface) def = new InterfaceLoader(this, type).Load();
+                else if (type.IsEnum) def = new EnumerationLoader(this, type).Load();
+                else if (type.IsValueType) def = new ValueTypeLoader(this, type).Load();
                 else throw new ArgumentException("Type must be a type definition.", nameof(type));
 
-                return result;
+                return def switch
+                {
+                    Class @class => new ClassReference(@class),
+                    Interface @interface => new InterfaceReference(@interface),
+                    EnumClass @enum => @enum,
+                    IR.ValueType valueType => new ValueTypeReference(valueType),
+                    _ => throw new NotSupportedException()
+                };
             }
 
             if (type.IsArray)
-                throw new NotImplementedException();
+                return LoadArrayType(type);
             if (type.IsPointer)
-                throw new NotImplementedException();
+                return LoadPointerType(type);
             if (type.IsByRef)
-                throw new NotImplementedException();
+                return LoadReferenceType(type);
 
             if (type.IsConstructedGenericType)
             {
@@ -56,6 +60,14 @@ namespace ZSharp.Runtime.NET.IL2IR
                     {
                         Arguments = [.. genericArguments],
                     },
+                    Interface @interface => new ConstructedInterface(@interface)
+                    {
+                        Arguments = [.. genericArguments],
+                    },
+                    IR.ValueType valueType => new ConstructedValueType(valueType)
+                    {
+                        Arguments = [.. genericArguments],
+                    },
                     _ => throw new NotImplementedException()
                 };
             }
@@ -67,9 +79,50 @@ namespace ZSharp.Runtime.NET.IL2IR
             where T : IType
             => (T)LoadType(type);
 
-        public IR.Module LoadModule(IL.Module module)
+        public Module LoadModule(IL.Module module)
         {
             return new ModuleLoader(this, module).Load();
+        }
+
+        private IType LoadArrayType(Type type)
+        {
+            var elementType = LoadType(type.GetElementType()!);
+
+            return new ConstructedClass(
+                RuntimeModule.TypeSystem.Array
+            ) {
+                Arguments = [
+                    elementType
+                ]
+            };
+        }
+
+        private IType LoadPointerType(Type type)
+        {
+            var elementType = LoadType(type.GetElementType()!);
+
+            return new ConstructedClass(
+                RuntimeModule.TypeSystem.Pointer
+            )
+            {
+                Arguments = [
+                    elementType
+                ]
+            };
+        }
+
+        private IType LoadReferenceType(Type type)
+        {
+            var elementType = LoadType(type.GetElementType()!);
+
+            return new ConstructedClass(
+                RuntimeModule.TypeSystem.Reference
+            )
+            {
+                Arguments = [
+                    elementType
+                ]
+            };
         }
     }
 }

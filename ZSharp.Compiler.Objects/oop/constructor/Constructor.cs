@@ -8,7 +8,7 @@ namespace ZSharp.Objects
 {
     public sealed class Constructor(string? name)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
         , ICompileIRObject<IR.Constructor, IR.Class>
         , IReferencable<ConstructorReference>
     {

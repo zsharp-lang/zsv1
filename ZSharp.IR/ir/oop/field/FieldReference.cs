@@ -2,7 +2,7 @@
 {
     public sealed class FieldReference(Field field)
     {
-        public Field Member { get; set; } = field;
+        public Field Field { get; set; } = field;
 
         public required OOPTypeReference OwningType { get; set; }
     }

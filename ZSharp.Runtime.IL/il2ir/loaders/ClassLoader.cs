@@ -220,16 +220,10 @@ namespace ZSharp.Runtime.NET.IL2IR
         private Interface LoadInterface(Type type)
             => new InterfaceLoader(Loader, type).Load();
 
-        private Enumclass LoadEnum(Type type)
-        {
-            return new();
-            throw new NotImplementedException();
-        }
+        private EnumClass LoadEnum(Type type)
+            => new EnumerationLoader(Loader, type).Load();
 
         private IR.ValueType LoadStruct(Type type)
-        {
-            return new();
-            throw new NotImplementedException();
-        }
+            => new ValueTypeLoader(Loader, type).Load();
     }
 }

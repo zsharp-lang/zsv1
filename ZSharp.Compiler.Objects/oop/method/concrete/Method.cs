@@ -12,7 +12,7 @@ namespace ZSharp.Objects
         : CompilerObject
         , IRTBoundMember
         , IMethod
-        , ICTCallable
+        , ICTCallable_Old
         , ICompileIRObject<IR.Method, IR.Class>
         , ICompileIRObject<IR.Method, IR.OOPType>
         , ICompileIRReference<IR.MethodReference>

@@ -3,10 +3,10 @@
     /// <summary>
     /// Should be implemented by any binding that is callable.
     /// </summary>
-    public interface ICTCallable
-        : ICTCallable_NEW
+    public interface ICTCallable_Old
+        : ICTCallable
     {
-        CompilerObjectResult ICTCallable_NEW.Call(Compiler compiler, Argument_NEW<CompilerObject>[] arguments)
+        CompilerObjectResult ICTCallable.Call(Compiler compiler, Argument_NEW<CompilerObject>[] arguments)
             => CompilerObjectResult.Ok(
                 Call(compiler, arguments.Select(arg => new Argument(arg.Name, arg.Value)).ToArray())
             );

@@ -10,6 +10,7 @@ namespace ZSharp.Objects
         public IR.OOPTypeReference<IR.Class> IR { get; } = stringType;
 
         public IType Type { get; } = type;
+
         public string Name
         {
             get => IR.Definition.Name!;
