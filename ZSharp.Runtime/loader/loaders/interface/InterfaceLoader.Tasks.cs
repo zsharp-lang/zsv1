@@ -2,9 +2,7 @@
 {
     partial class InterfaceLoader
     {
-        public required TaskManager Tasks { get; init; }
-
-        private void AddTask(Action task)
+        protected override void AddTask(Action task)
         {
             if (genericTypeContext is not null)
             {
@@ -16,7 +14,7 @@
                 };
             }
 
-            Tasks.AddTask(task);
+            base.AddTask(task);
         }
     }
 }

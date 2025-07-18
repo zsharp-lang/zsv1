@@ -2,7 +2,7 @@
 {
     partial class InterfaceLoader
     {
-        public Type Load()
+        protected override void DoLoad()
         {
             if (IRType.HasGenericParameters)
                 genericTypeContext = Loader.Runtime.NewTypeContext();
@@ -12,10 +12,6 @@
                     LoadAll();
             else
                 LoadAll();
-
-            ILType.CreateType();
-
-            return ILType;
         }
 
         private void LoadAll()

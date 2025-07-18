@@ -1,16 +1,8 @@
 ﻿namespace ZSharp.Runtime.Loaders
 {
-    internal sealed partial class InterfaceLoader
-        : LoaderBase
+    internal sealed partial class InterfaceLoader(EmitLoader loader)
+        : TypeLoaderBase<IR.Interface>(loader)
     {
-        public required Emit.TypeBuilder ILType { get; init; }
-
-        public required IR.Interface IRType { get; init; }
-
-        public InterfaceLoader(EmitLoader loader)
-            : base(loader)
-        {
-            
-        }
+        
     }
 }

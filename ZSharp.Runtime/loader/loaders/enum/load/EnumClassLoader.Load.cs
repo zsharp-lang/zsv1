@@ -2,13 +2,9 @@
 {
     partial class EnumClassLoader
     {
-        public Type Load()
+        protected override void DoLoad()
         {
             LoadAll();
-
-            ILType.CreateType();
-
-            return ILType;
         }
 
         private void LoadAll()

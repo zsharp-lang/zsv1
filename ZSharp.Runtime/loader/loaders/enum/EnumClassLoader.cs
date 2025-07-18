@@ -1,16 +1,8 @@
 ﻿namespace ZSharp.Runtime.Loaders
 {
-    internal sealed partial class EnumClassLoader
-        : LoaderBase
+    internal sealed partial class EnumClassLoader(EmitLoader loader)
+        : TypeLoaderBase<IR.EnumClass>(loader)
     {
-        public required Emit.TypeBuilder ILType { get; init; }
-
-        public required IR.EnumClass IRType { get; init; }
-
-        public EnumClassLoader(EmitLoader loader)
-            : base(loader)
-        {
-            
-        }
+        
     }
 }
