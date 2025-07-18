@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="objects\modular\function\" />
+    <Folder Include="objects\oop\class\" />
+    <Folder Include="objects\oop\field\" />
+    <Folder Include="objects\oop\method\" />
+    <Folder Include="objects\oop\interface\" />
+    <Folder Include="objects\oop\constructor\" />
+    <Folder Include="objects\oop\struct\" />
+    <Folder Include="objects\oop\property\" />
+    <Folder Include="objects\types\array\" />
+    <Folder Include="objects\types\in\" />
+    <Folder Include="objects\types\out\" />
+    <Folder Include="objects\types\reference\" />
+    <Folder Include="objects\types\pointer\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
+  </ItemGroup>
+
+</Project>
