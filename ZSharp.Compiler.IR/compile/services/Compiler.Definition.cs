@@ -2,13 +2,13 @@
 {
     partial class Compiler
     {
-        public ZSharp.Compiler.Result<T, Error> Definition<T>(CompilerObject @object, TargetPlatform? target)
+        public ZSharp.Compiler.Result<T, Error> CompileDefinition<T>(CompilerObject @object, TargetPlatform? target)
             where T : IR.IRObject
         {
             throw new NotImplementedException();
         }
 
-        public void Definition<Owner>(CompilerObject @object, Owner owner, TargetPlatform? target)
+        public void CompileDefinition<Owner>(CompilerObject @object, Owner owner, TargetPlatform? target)
             where Owner : IR.IRObject
         {
             throw new NotImplementedException();
