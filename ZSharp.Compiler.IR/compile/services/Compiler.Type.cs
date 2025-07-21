@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.IRCompiler
 {
-    partial class Compile
+    partial class Compiler
     {
         
     }
