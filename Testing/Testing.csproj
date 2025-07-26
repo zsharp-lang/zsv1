@@ -7,4 +7,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ZLoad.Test\ZLoad.Test.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.ILLoader\ZSharp.Compiler.ILLoader.csproj" />
+  </ItemGroup>
+
 </Project>

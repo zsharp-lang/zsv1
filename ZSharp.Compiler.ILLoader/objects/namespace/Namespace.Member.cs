@@ -19,7 +19,13 @@ namespace ZSharp.Compiler.ILLoader.Objects
 
         CompilerObjectResult ICTGetMember<MemberName>.Member(Compiler compiler, MemberName member)
         {
-            if (Members.TryGetValue(member, out var result))
+            if (
+                !Members.TryGetValue(member, out var result)
+                && lazyLoadedMembers.Remove(member, out var lazyLoad)
+            )
+                AddMember(member, result = lazyLoad());
+
+            if (result is not null)
                 return CompilerObjectResult.Ok(result);
 
             return CompilerObjectResult.Error(

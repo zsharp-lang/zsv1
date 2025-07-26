@@ -19,6 +19,7 @@
 
             if (type.IsClass) return LoadClass(type);
             if (type.IsInterface) return LoadInterface(type);
+            if (type.IsEnum) return LoadEnum(type);
             if (type.IsValueType) return LoadStruct(type);
 
             if (type.HasElementType)

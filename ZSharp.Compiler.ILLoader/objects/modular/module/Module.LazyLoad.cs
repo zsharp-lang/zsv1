@@ -4,7 +4,7 @@
     {
         private ModuleLoader? _moduleLoader;
 
-        public required ILLoader Loader { get; init; }
+        public ILLoader Loader { get; }
 
         internal ModuleLoader GlobalsLoader
         {
