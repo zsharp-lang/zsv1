@@ -141,29 +141,17 @@ interpreter.SourceCompiler.StringImporter.Importers.Add(
 new Referencing(interpreter.Compiler);
 new OOP(interpreter.Compiler);
 
-var runtime = interpreter.Runtime;
-
 var moduleIL_standardIO = typeof(Standard.IO.Impl_Globals).Module;
-var moduleIR_standardIO = interpreter.HostLoader.Import(moduleIL_standardIO);
-var moduleCO_standardIO = interpreter.CompilerIRLoader.Import(moduleIR_standardIO);
+var moduleCO_standardIO = interpreter.ImportILModule(moduleIL_standardIO);
 
-interpreter.Compiler.TypeSystem.String.ToString = interpreter.CompilerIRLoader.Import(
-    runtime.Import(
-        ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ToString)
-    )
-);
+interpreter.Compiler.TypeSystem.String.ToString = interpreter.ILLoader.LoadMethod(ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ToString));
 
-interpreter.Compiler.TypeSystem.Int32.Members["parse"] = interpreter.CompilerIRLoader.Import(
-    runtime.Import(
-        ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ParseInt32)
-    )
-);
+interpreter.Compiler.TypeSystem.Int32.Members["parse"] = interpreter.ILLoader.LoadMethod(ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ParseInt32));
 
 interpreter.SourceCompiler.StandardLibraryImporter.Libraries.Add("io", moduleCO_standardIO);
 
 var moduleIL_standardMath = typeof(Standard.Math.Impl_Globals).Module;
-var moduleIR_standardMath = interpreter.HostLoader.Import(moduleIL_standardMath);
-var moduleCO_standardMath = interpreter.CompilerIRLoader.Import(moduleIR_standardMath);
+var moduleCO_standardMath = interpreter.ImportILModule(moduleIL_standardMath);
 
 interpreter.SourceCompiler.StandardLibraryImporter.Libraries.Add("math", moduleCO_standardMath);
 
@@ -190,7 +178,7 @@ if (mainModule is not null)
     var mainModuleIR = 
         interpreter.Compiler.CompileIRObject<ZSharp.IR.Module, ZSharp.IR.Module>(mainModule, null) ?? throw new();
 
-    var mainModuleIL = runtime.Import(mainModuleIR);
+    var mainModuleIL = interpreter.Runtime.ImportModule(mainModuleIR);
     var mainModuleGlobals = mainModuleIL.GetType("<Globals>") ?? throw new();
 
     foreach (var type in mainModuleIL.GetTypes())
