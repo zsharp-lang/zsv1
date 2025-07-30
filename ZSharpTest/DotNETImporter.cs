@@ -19,7 +19,7 @@ namespace ZSharp
             if (
                 arguments.Length > 1 ||
                 arguments[0].Name is not null ||
-                !compiler.IsString(interpreter.Evaluate(arguments[0].Object).Unwrap(), out var libraryName)
+                interpreter.Evaluate(arguments[0].Object).Unwrap() is not string libraryName
             )
             {
                 compiler.Log.Error("`net` importer must have exactly 1 argument of type `string`", this);
@@ -45,9 +45,7 @@ namespace ZSharp
 
             var module = modules[0];
 
-            var ir = interpreter.HostLoader.Import(module);
-
-            return interpreter.CompilerIRLoader.Import(ir);
+            return interpreter.ImportILModule(module);
         }
     }
 }
