@@ -29,7 +29,7 @@ namespace ZSharp.Compiler.ILLoader.Objects
                 return CompilerObjectResult.Ok(result);
 
             return CompilerObjectResult.Error(
-                $"Can't find member {member} in namespace {Name}"
+                $"Can't find member {member} in namespace {FullName}"
             );
         }
     }

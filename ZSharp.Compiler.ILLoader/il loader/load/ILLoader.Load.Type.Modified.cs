@@ -2,7 +2,7 @@
 {
     partial class ILLoader
     {
-        public CompilerObject LoadModifiedType(Type type)
+        public IType LoadModifiedType(Type type)
         {
             if (type.IsArray) return LoadArrayType(type);
             if (type.IsPointer) return LoadPointerType(type);
@@ -11,17 +11,17 @@
             throw new NotSupportedException();
         }
 
-        public CompilerObject LoadArrayType(Type array)
+        public IType LoadArrayType(Type array)
         {
             throw new NotImplementedException();
         }
 
-        public CompilerObject LoadPointerType(Type pointer)
+        public IType LoadPointerType(Type pointer)
         {
             throw new NotImplementedException();
         }
 
-        public CompilerObject LoadReferenceType(Type reference)
+        public IType LoadReferenceType(Type reference)
         {
             throw new NotImplementedException();
         }

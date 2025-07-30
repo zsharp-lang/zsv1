@@ -2,9 +2,11 @@
 {
     partial class ModuleLoader
     {
-        public CompilerObject LoadField(IL.FieldInfo field)
+        private CompilerObject LoadField(IL.FieldInfo field)
         {
-            throw new NotImplementedException();
+            if (!field.IsStatic) throw new ArgumentException("Only static fields are supported.", nameof(field));
+
+            return new Objects.Global(field, Loader);
         }
     }
 }

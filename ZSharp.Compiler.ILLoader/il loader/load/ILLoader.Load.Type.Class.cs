@@ -2,7 +2,7 @@
 {
     partial class ILLoader
     {
-        public CompilerObject LoadClass(Type @class)
+        public IType LoadClass(Type @class)
         {
             if (@class.IsGenericTypeDefinition)
                 return LoadGenericClass(@class);

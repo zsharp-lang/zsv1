@@ -2,9 +2,9 @@
 {
     partial class ILLoader
     {
-        private readonly Dictionary<Type, CompilerObject> typeCache = [];
+        private readonly Dictionary<Type, IType> typeCache = [];
 
-        public CompilerObject LoadType(Type type)
+        public IType LoadType(Type type)
         {
             if (!typeCache.TryGetValue(type, out var @object))
                 @object = typeCache[type] = DispatchLoadType(type);
@@ -12,7 +12,7 @@
             return @object;
         }
 
-        private CompilerObject DispatchLoadType(Type type)
+        private IType DispatchLoadType(Type type)
         {
             if (type.IsConstructedGenericType)
                 return LoadConstructedGenericType(type);

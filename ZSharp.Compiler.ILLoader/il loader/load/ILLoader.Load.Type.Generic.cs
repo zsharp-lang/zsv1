@@ -2,7 +2,7 @@
 {
     partial class ILLoader
     {
-        public CompilerObject LoadConstructedGenericType(Type type)
+        public IType LoadConstructedGenericType(Type type)
         {
             throw new NotImplementedException();
         }

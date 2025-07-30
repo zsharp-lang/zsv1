@@ -2,12 +2,14 @@
 {
     partial class ModuleLoader
     {
-        public CompilerObject LoadMethod(IL.MethodInfo method)
+        private CompilerObject LoadMethod(IL.MethodInfo method)
         {
+            if (!method.IsStatic) throw new ArgumentException("Only static methods are supported.", nameof(method));
+
             if (method.IsGenericMethodDefinition)
                 return LoadGenericMethod(method);
 
-            throw new NotImplementedException();
+            return new Objects.Function();
         }
     }
 }

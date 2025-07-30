@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="objects\modular\function\" />
     <Folder Include="objects\oop\class\" />
     <Folder Include="objects\oop\field\" />
     <Folder Include="objects\oop\method\" />

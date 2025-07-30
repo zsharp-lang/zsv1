@@ -2,9 +2,9 @@
 {
     partial class ModuleLoader
     {
-        public CompilerObject LoadGenericMethod(IL.MethodInfo method)
+        private CompilerObject LoadGenericMethod(IL.MethodInfo method)
         {
-            throw new NotImplementedException();
+            return new Objects.GenericFunction();
         }
     }
 }
