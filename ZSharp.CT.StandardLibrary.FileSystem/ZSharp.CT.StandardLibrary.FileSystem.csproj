@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZSharp.Runtime.IL\ZSharp.Runtime.IL.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.ILLoader.Attributes\ZSharp.Compiler.ILLoader.Attributes.csproj" />
   </ItemGroup>
 
 </Project>
