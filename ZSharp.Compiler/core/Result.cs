@@ -3,7 +3,7 @@
 namespace ZSharp.Compiler
 {
     public sealed class Result<TResult, TError>
-        where TResult : class
+        where TResult : class?
         where TError : class
     {
         private readonly TResult? result;
