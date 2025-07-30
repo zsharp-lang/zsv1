@@ -2,6 +2,6 @@
 {
     partial class Runtime
     {
-        public required IR.RuntimeModule RuntimeModule { get; init; }
+        public IR.RuntimeModule RuntimeModule { get; }
     }
 }

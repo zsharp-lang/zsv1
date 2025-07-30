@@ -2,17 +2,15 @@
 
 namespace ZSharp.Interpreter
 {
-    public class Interpreter
+    public sealed partial class Interpreter
     {
-        public Runtime.NET.Runtime HostLoader => Runtime;
-
-        public Runtime.NET.Runtime Runtime { get; }
+        //public Runtime.NET.Runtime Runtime { get; }
 
         public IR.RuntimeModule RuntimeModule { get; }
 
-        public Compiler.Compiler Compiler { get; init; }
+        public Compiler.Compiler Compiler { get; }
 
-        public Compiler.IRLoader.IRLoader CompilerIRLoader { get; }
+        public IRCompiler.Compiler IRCompiler { get; }
 
         public ZSSourceCompiler.ZSSourceCompiler SourceCompiler { get; init; }
 
@@ -24,10 +22,11 @@ namespace ZSharp.Interpreter
 
             Compiler = new(RuntimeModule);
             Runtime = new(RuntimeModule);
+            IRCompiler = new(RuntimeModule);
+            ILLoader = new(Compiler);
 
             new Ops(Compiler);
 
-            CompilerIRLoader = new(Compiler);
             SourceCompiler = new(this);
 
             Parser = new();
@@ -48,40 +47,42 @@ namespace ZSharp.Interpreter
             return SourceCompiler.CreateDocumentCompiler(document, path).Compile();
         }
 
-        public Result<CompilerObject, string> Evaluate(Expression expression)
+        public Result<object?, string> Evaluate(Expression expression)
         {
             if (
                 SourceCompiler.CompileNode(expression)
                 .When(out var result)
                 .IsError
-            ) return Result<CompilerObject, string>.Error(string.Empty);
+            ) return Result<object?, string>.Error(string.Empty);
 
             return Evaluate(result!);
         }
 
-        public Result<CompilerObject, string> Evaluate(CompilerObject @object)
+        public Result<object?, string> Evaluate(CompilerObject @object)
         {
             if (
                 Compiler.IR.CompileCode(@object)
                 .When(out var irCode)
                 .Error(out var error)
             )
-                return Result<CompilerObject, string>.Ok(@object);
+                return Result<object?, string>.Ok(@object);
 
-            var result = Runtime.Evaluator.EvaluateCT(irCode ?? throw new(), Compiler);
+            var type = irCode!.IsVoid ? RuntimeModule.TypeSystem.Void : IRCompiler.CompileType(irCode.RequireValueType()).Unwrap();
+
+            var result = Runtime.Evaluate(irCode.Instructions, type);
 
             if (irCode.IsVoid)
-                return Result<CompilerObject, string>
+                return Result<object?, string>
                     .Ok(new Objects.RawCode(new()));
 
             if (result is null)
-                return Result<CompilerObject, string>
+                return Result<object?, string>
                     .Ok(@object);
                 // TODO: should actually be an error!
                 //return Result<CompilerObject, string> 
                 //    .Error("Non-void expression evaluated to nothing");
 
-            return Result<CompilerObject, string>.Ok(result);
+            return Result<object?, string>.Ok(result);
         }
     }
 }

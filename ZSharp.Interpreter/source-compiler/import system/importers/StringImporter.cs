@@ -15,7 +15,7 @@ namespace ZSharp.ZSSourceCompiler
         {
             Argument sourceArgument = arguments.FirstOrDefault(arg => arg.Name is null) ?? throw new();
 
-            if (!compiler.IsString(interpreter.Evaluate(sourceArgument.Object).Unwrap(), out var source))
+            if (interpreter.Evaluate(sourceArgument.Object).Unwrap() is not string source)
                 throw new(); // TODO: proper exception: first parameter must be a string
 
             string[] parts = source.Split(':', 2);

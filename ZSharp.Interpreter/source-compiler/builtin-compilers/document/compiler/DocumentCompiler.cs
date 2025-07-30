@@ -35,7 +35,7 @@ namespace ZSharp.ZSSourceCompiler
                             expression
                         ).When(out var result).Error(out var error)
                         ? Compiler.CompilationError(error, expression)
-                        : ObjectResult.Ok(result!)
+                        : ObjectResult.Ok(Interpreter.CTServices.InfoOf(result!))
                 };
 
             return null;
