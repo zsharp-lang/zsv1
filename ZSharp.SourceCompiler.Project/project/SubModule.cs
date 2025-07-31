@@ -2,17 +2,9 @@
 
 namespace ZSharp.SourceCompiler.Project
 {
-    public class SubModule(
-        string name,
-        Directory rootDirectory,
-        Directory? sourceDirectory = null
-    )
+    public class SubModule(Directory directory)
     {
-        public string Name { get; } = name;
-
-        public Directory RootDirectory { get; } = rootDirectory;
-
-        public Directory SourceDirectory { get; } = sourceDirectory ?? rootDirectory;
+        public Directory Directory { get; } = directory;
 
         public List<File> SourceFiles { get; } = [];
 

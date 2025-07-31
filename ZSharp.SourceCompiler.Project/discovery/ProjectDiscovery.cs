@@ -1,16 +1,10 @@
-﻿using Standard.FileSystem;
-
-namespace ZSharp.SourceCompiler.Project
+﻿namespace ZSharp.SourceCompiler.Project
 {
-    public sealed class ProjectDiscovery(Project project)
+    public static class ProjectDiscovery
     {
-        private readonly Dictionary<Directory, SubModule> _subModules = [];
-
-        public Project Project { get; } = project;
-
-        public void Discover()
+        public static void Discover(Project project)
         {
-            
+            new SubModuleDiscovery(project.RootModule).Discover();
         }
     }
 }
