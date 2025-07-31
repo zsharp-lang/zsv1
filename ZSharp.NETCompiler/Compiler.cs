@@ -6,9 +6,6 @@ namespace ZSharp.NETCompiler
     {
         public ModuleDefinition Compile(IR.Module module)
         {
-            if (module.HasSubmodules)
-                throw new NotSupportedException();
-
             var result = ModuleDefinition.CreateModule(
                 module.Name ?? "<UnnamedModule>",
                 new ModuleParameters()

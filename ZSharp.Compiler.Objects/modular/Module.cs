@@ -41,8 +41,6 @@ namespace ZSharp.Objects
 
             IR = new(Name);
 
-            owner?.Submodules.Add(IR);
-
             foreach (var item in Content)
                 compiler.CompileIRObject(item, IR);
 

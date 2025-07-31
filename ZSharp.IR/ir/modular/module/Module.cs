@@ -10,7 +10,6 @@ namespace ZSharp.IR
         private ModuleCollection<ImportedModule>? _importedModules;
         private ModuleCollection<Function>? _functions;
         private GlobalCollection? _globals;
-        private ModuleCollection<Module>? _submodules;
         private ModuleCollection<OOPType>? _types;
 
         public string? Name { get; set; } = name;
@@ -92,20 +91,6 @@ namespace ZSharp.IR
         }
 
         public bool HasGlobals => !_globals.IsNullOrEmpty();
-
-        public Collection<Module> Submodules
-        {
-            get
-            {
-                if (_submodules is not null)
-                    return _submodules;
-
-                Interlocked.CompareExchange(ref _submodules, new(this), null);
-                return _submodules;
-            }
-        }
-
-        public bool HasSubmodules => !_submodules.IsNullOrEmpty();
 
         public Collection<OOPType> Types
         {

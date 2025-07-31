@@ -27,10 +27,6 @@ namespace ZSharp.Compiler.IRLoader
 
             List<Action> actions = [];
 
-            if (module.HasSubmodules)
-                foreach (var submodule in module.Submodules)
-                    actions.Add(Load(submodule, result));
-
             if (module.HasFunctions)
                 foreach (var function in module.Functions)
                     actions.Add(Load(function, result));
