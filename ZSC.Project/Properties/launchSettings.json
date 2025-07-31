@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "ZSC.Project": {
+      "commandName": "Project"
+    },
+    "SafeSQL": {
+      "commandName": "Project",
+      "commandLineArgs": "D:/zsharp/zsv1-design/packages/safe-sql"
+    }
+  }
+}
