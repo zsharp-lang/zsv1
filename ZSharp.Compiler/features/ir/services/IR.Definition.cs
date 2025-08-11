@@ -6,7 +6,7 @@ namespace ZSharp.Compiler
     {
         public IRDefinitionResult CompileDefinition(CompilerObject @object)
         {
-            ZSharp.IR.IRObject? result = null;
+            ZSharp.IR.IRDefinition? result = null;
 
             if (@object is ICompileIRObject irObject)
                 result = irObject.CompileIRObject(compiler);
@@ -19,9 +19,9 @@ namespace ZSharp.Compiler
         }
 
         public IRDefinitionResult CompileDefinition<Owner>(CompilerObject @object, Owner? owner)
-            where Owner : ZSharp.IR.IRObject
+            where Owner : ZSharp.IR.IRDefinition
         {
-            ZSharp.IR.IRObject? result = null;
+            ZSharp.IR.IRDefinition? result = null;
 
             if (@object is ICompileIRObject<Owner> irObject)
                 result = irObject.CompileIRObject(compiler, owner);
@@ -34,7 +34,7 @@ namespace ZSharp.Compiler
         }
 
         public Result<T, Error> CompileDefinition<T, Owner>(CompilerObject @object, Owner? owner)
-            where T : ZSharp.IR.IRObject
+            where T : ZSharp.IR.IRDefinition
             where Owner : class
         {
             T? result = null;

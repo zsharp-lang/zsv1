@@ -1,11 +1,11 @@
 ﻿namespace ZSharp.IR.VM
 {
-    public sealed class GetObject(IRObject ir) 
+    public sealed class GetObject(IRDefinition ir) 
         : Instruction
-        , IHasOperand<IRObject>
+        , IHasOperand<IRDefinition>
     {
-        public IRObject IR { get; set; } = ir;
+        public IRDefinition IR { get; set; } = ir;
 
-        IRObject IHasOperand<IRObject>.Operand => IR;
+        IRDefinition IHasOperand<IRDefinition>.Operand => IR;
     }
 }

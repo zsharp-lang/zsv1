@@ -3,7 +3,7 @@
 namespace ZSharp.IR
 {
     public sealed class Method 
-        : IRObject
+        : IRDefinition
         , ICallable
     {
         public Function UnderlyingFunction { get; set; }

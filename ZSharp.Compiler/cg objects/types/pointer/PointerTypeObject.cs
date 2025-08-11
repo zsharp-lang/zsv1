@@ -35,7 +35,7 @@ namespace ZSharp.Objects
         public PointerType Instantiate(IType elementType)
             => new(elementType);
 
-        IR.IRObject ICompileIRObject.CompileIRObject(Compiler.Compiler compiler)
+        IR.IRDefinition ICompileIRObject.CompileIRObject(Compiler.Compiler compiler)
             => IR;
     }
 }

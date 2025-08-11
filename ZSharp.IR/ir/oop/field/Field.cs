@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.IR
 {
-    public sealed class Field(string name, IType type) : IRObject
+    public sealed class Field(string name, IType type) : IRDefinition
     {
         internal FieldAttributes _attributes = FieldAttributes.None;
 

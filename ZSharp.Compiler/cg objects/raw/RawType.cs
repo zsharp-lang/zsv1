@@ -16,7 +16,7 @@ namespace ZSharp.Objects
             => type;
 
         public IRCode Read(Compiler.Compiler compiler)
-            => type is IR.IRObject ir ? new([
+            => type is IR.IRDefinition ir ? new([
                 new IR.VM.GetObject(ir)
             ])
             {

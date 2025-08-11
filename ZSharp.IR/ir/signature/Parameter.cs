@@ -2,7 +2,7 @@
 
 namespace ZSharp.IR
 {
-    public class Parameter(string name, IType type) : IRObject
+    public class Parameter(string name, IType type) : IRDefinition
     {
         private Signature? _signature;
 

@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.IR
 {
-    public abstract class ModuleMember : IRObject
+    public abstract class ModuleMember : IRDefinition
     {
         private Module? _module;
 

@@ -9,19 +9,19 @@ namespace ZSharp.Compiler
                 Compiler.CompileIRCode(@object)
             );
 
-        public Result<ZSharp.IR.IRObject, Error> CompileIRObject(CompilerObject @object)
-            => Result<ZSharp.IR.IRObject, Error>.Ok(
+        public Result<ZSharp.IR.IRDefinition, Error> CompileIRObject(CompilerObject @object)
+            => Result<ZSharp.IR.IRDefinition, Error>.Ok(
                 Compiler.CompileIRObject(@object)
             );
 
-        public Result<ZSharp.IR.IRObject, Error> CompileIRObject<Owner>(CompilerObject @object, Owner? owner)
-            where Owner : ZSharp.IR.IRObject
-            => Result<ZSharp.IR.IRObject, Error>.Ok(
+        public Result<ZSharp.IR.IRDefinition, Error> CompileIRObject<Owner>(CompilerObject @object, Owner? owner)
+            where Owner : ZSharp.IR.IRDefinition
+            => Result<ZSharp.IR.IRDefinition, Error>.Ok(
                 Compiler.CompileIRObject<Owner>(@object, owner)
             );
 
         public Result<T, Error> CompileIRObject<T, Owner>(CompilerObject @object, Owner? owner)
-            where T : ZSharp.IR.IRObject
+            where T : ZSharp.IR.IRDefinition
             where Owner : class
             => Result<T, Error>.Ok(
                 Compiler.CompileIRObject<T, Owner>(@object, owner)

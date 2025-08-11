@@ -1,7 +1,7 @@
 ﻿namespace ZSharp.IR
 {
     public sealed class Constructor(string? name)
-        : IRObject
+        : IRDefinition
     {
         public override Module? Module => Method.Module;
 

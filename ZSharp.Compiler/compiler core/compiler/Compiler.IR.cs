@@ -15,16 +15,16 @@
             throw new NotImplementedException(); // TODO: return null
         }
 
-        public ZSharp.IR.IRObject CompileIRObject(CompilerObject @object)
+        public ZSharp.IR.IRDefinition CompileIRObject(CompilerObject @object)
         {
             if (@object is ICompileIRObject irObject)
                 return irObject.CompileIRObject(this);
 
-            return CompileIRObject<ZSharp.IR.IRObject>(@object, null);
+            return CompileIRObject<ZSharp.IR.IRDefinition>(@object, null);
         }
 
-        public ZSharp.IR.IRObject CompileIRObject<Owner>(CompilerObject @object, Owner? owner)
-            where Owner : ZSharp.IR.IRObject
+        public ZSharp.IR.IRDefinition CompileIRObject<Owner>(CompilerObject @object, Owner? owner)
+            where Owner : ZSharp.IR.IRDefinition
         {
             if (@object is ICompileIRObject<Owner> irObject)
                 return irObject.CompileIRObject(this, owner);
@@ -33,7 +33,7 @@
         }
 
         public T CompileIRObject<T, Owner>(CompilerObject @object, Owner? owner)
-            where T : ZSharp.IR.IRObject
+            where T : ZSharp.IR.IRDefinition
             where Owner : class
         {
             if (@object is ICompileIRObject<T, Owner> irObject)

@@ -63,7 +63,7 @@ namespace ZSharp.Objects
 
         public IR.Method? IR { get; set; }
 
-        IR.IRObject ICompileIRObject.CompileIRObject(Compiler.Compiler compiler)
+        IR.IRDefinition ICompileIRObject.CompileIRObject(Compiler.Compiler compiler)
             => CompileIR(compiler);
 
         IR.Method ICompileIRObject<IR.Method, IR.Class>.CompileIRObject(Compiler.Compiler compiler, IR.Class? owner)

@@ -153,7 +153,7 @@ namespace ZSharp.Objects
             return IR;
         }
 
-        IR.IRObject ICompileIRObject.CompileIRObject(Compiler.Compiler compiler)
+        IR.IRDefinition ICompileIRObject.CompileIRObject(Compiler.Compiler compiler)
         {
             throw new NotImplementedException();
         }

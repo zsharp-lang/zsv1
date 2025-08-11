@@ -2,9 +2,9 @@
 
 namespace ZSharp.IR.VM
 {
-    internal sealed class LocalCollection(IRObject owner) : Collection<Local>
+    internal sealed class LocalCollection(IRDefinition owner) : Collection<Local>
     {
-        private readonly IRObject owner = owner;
+        private readonly IRDefinition owner = owner;
 
         public override void OnAdd(Local item)
         {

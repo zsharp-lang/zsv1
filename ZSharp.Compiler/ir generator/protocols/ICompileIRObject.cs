@@ -2,25 +2,25 @@
 {
     public interface ICompileIRObject
     {
-        public ZSharp.IR.IRObject CompileIRObject(Compiler compiler);
+        public ZSharp.IR.IRDefinition CompileIRObject(Compiler compiler);
     }
 
     public interface ICompileIRObject<in Owner> : ICompileIRObject
         where Owner : class
     {
-        public ZSharp.IR.IRObject CompileIRObject(Compiler compiler, Owner? owner);
+        public ZSharp.IR.IRDefinition CompileIRObject(Compiler compiler, Owner? owner);
 
-        ZSharp.IR.IRObject ICompileIRObject.CompileIRObject(Compiler compiler)
+        ZSharp.IR.IRDefinition ICompileIRObject.CompileIRObject(Compiler compiler)
             => CompileIRObject(compiler, null);
     }
 
     public interface ICompileIRObject<T, in Owner> : ICompileIRObject<Owner>
-        where T : ZSharp.IR.IRObject
+        where T : ZSharp.IR.IRDefinition
         where Owner : class
     {
         public new T CompileIRObject(Compiler compiler, Owner? owner);
 
-        ZSharp.IR.IRObject ICompileIRObject<Owner>.CompileIRObject(Compiler compiler, Owner? owner)
+        ZSharp.IR.IRDefinition ICompileIRObject<Owner>.CompileIRObject(Compiler compiler, Owner? owner)
             => CompileIRObject(compiler, owner);
     }
 }
