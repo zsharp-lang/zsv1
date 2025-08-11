@@ -2,18 +2,16 @@
 
 namespace ZSharp.SourceCompiler.Project
 {
-    public class SubModuleDiscovery(SubModule subModule)
+    public static class SubModuleDiscovery
     {
         public const string SubModuleFileName = ".zs";
 
-        public SubModule SubModule { get; } = subModule;
-
-        public void Discover()
+        public static void Discover(SubModule subModule)
         {
-            Discover(SubModule.Directory, SubModule);
+            Discover(subModule.Directory, subModule);
         }
 
-        private void Discover(Directory directory, SubModule subModule)
+        private static void Discover(Directory directory, SubModule subModule)
         {
             foreach (var item in directory)
                 if (item is Directory subDirectory)

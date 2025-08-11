@@ -4,7 +4,7 @@
     {
         public static void Discover(Project project)
         {
-            new SubModuleDiscovery(project.RootModule).Discover();
+            SubModuleDiscovery.Discover(project.RootModule);
         }
     }
 }
