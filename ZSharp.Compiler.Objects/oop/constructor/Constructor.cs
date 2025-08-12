@@ -46,7 +46,7 @@ namespace ZSharp.Objects
 
             IR.VM.Instruction invocationInstruction;
 
-            bool hasReturn = false;
+            bool isNewInstance = false;
             if (kwArgs.TryGetValue(Signature.Args[0].Name, out var thisArgument))
             {
                 invocationInstruction = new IR.VM.Call(IR!.Method);
@@ -57,7 +57,7 @@ namespace ZSharp.Objects
             {
                 var type = Owner ?? Signature.Args[0].Type;
 
-                hasReturn = true;
+                isNewInstance = true;
 
                 invocationInstruction = new IR.VM.CreateInstance(new IR.ConstructorReference(IR!)
                 {
@@ -107,7 +107,7 @@ namespace ZSharp.Objects
             result.Instructions.Add(invocationInstruction);
 
             result.Types.Clear();
-            if (hasReturn)
+            if (isNewInstance)
                 result.Types.Add(Owner ?? Signature.Args[0].Type);
 
             result.MaxStackSize = Math.Max(result.MaxStackSize, result.Types.Count);
