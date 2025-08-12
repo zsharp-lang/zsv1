@@ -2,11 +2,13 @@
 
 namespace ZSharp.IR
 {
-    public class Parameter(string name, IType type) : IRDefinition
+    public class Parameter(string name, IType type) 
+        : IRDefinition
+        , IModuleMember
     {
         private Signature? _signature;
 
-        public override Module? Module => _signature?.Module;
+        public Module? Module => _signature?.Module;
 
         public string Name { get; } = name;
 

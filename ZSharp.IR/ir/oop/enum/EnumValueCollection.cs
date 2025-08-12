@@ -42,13 +42,13 @@ namespace ZSharp.IR
 
         private void AssertUnonwed(EnumValue item)
         {
-            if (item.Owner is not null)
+            if (item.Module is not null)
                 throw new InvalidOperationException();
         }
 
         private void AssertOwned(EnumValue item)
         {
-            if (item.Owner is null)
+            if (item.Module is null)
                 throw new InvalidOperationException();
         }
     }

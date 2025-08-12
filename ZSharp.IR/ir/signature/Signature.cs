@@ -1,13 +1,15 @@
 ﻿namespace ZSharp.IR
 {
-    public sealed class Signature(IType returnType) : IRDefinition
+    public sealed class Signature(IType returnType) 
+        : IRDefinition
+        , IModuleMember
     {
-        private IRDefinition? _owner;
+        private Function? _owner;
 
         private Args? _args;
         private KwArgs? _kwArgs;
 
-        public override Module? Module => _owner?.Module;
+        public Module? Module => _owner?.Module;
 
         public Args Args
         {
@@ -53,7 +55,7 @@
 
         public IType ReturnType { get; set; } = returnType;
 
-        public IRDefinition? Owner
+        public Function? Owner
         {
             get => _owner;
             set => _owner = value;

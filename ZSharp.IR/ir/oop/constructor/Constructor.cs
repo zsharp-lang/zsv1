@@ -2,8 +2,9 @@
 {
     public sealed class Constructor(string? name)
         : IRDefinition
+        , IModuleMember
     {
-        public override Module? Module => Method.Module;
+        public Module? Module => Method.Module;
 
         public string? Name { get; set; } = name;
 

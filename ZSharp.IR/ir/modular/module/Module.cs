@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ZSharp.IR
 {
-    public sealed class Module(string? name) : ModuleMember
+    public sealed class Module(string? name) : IRDefinition
     {
         private Function? _initializer;
         private Function? _entryPoint;
@@ -23,9 +23,9 @@ namespace ZSharp.IR
             {
                 if (value is not null)
                 {
-                    if (value.Owner is null)
+                    if (value.Module is null)
                         Functions.Add(value);
-                    else if (value.Owner != this)
+                    else if (value.Module != this)
                         throw new InvalidOperationException("Module initializer cannot reside in a different module.");
                     _initializer = value;
                 }

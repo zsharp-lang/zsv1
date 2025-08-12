@@ -5,6 +5,7 @@ namespace ZSharp.IR
     public sealed class Method 
         : IRDefinition
         , ICallable
+        , IModuleMember
     {
         public Function UnderlyingFunction { get; set; }
 
@@ -39,7 +40,7 @@ namespace ZSharp.IR
 
         public OOPType? Owner { get; set; }
 
-        public override Module? Module => Owner?.Module;
+        public Module? Module => Owner?.Module;
 
         public bool IsClass
         {
