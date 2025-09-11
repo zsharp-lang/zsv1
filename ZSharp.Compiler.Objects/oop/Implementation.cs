@@ -3,13 +3,13 @@
 namespace ZSharp.Objects
 {
     public sealed class Implementation(
-        CompilerObject @abstract,
+        IAbstraction @abstract,
         CompilerObject concrete
     )
     {
-        public Mapping<CompilerObject, CompilerObject> Mapping { get; } = [];
+        public Mapping<CompilerObject, IImplementsSpecification> Mapping { get; } = [];
 
-        public CompilerObject Abstract { get; } = @abstract;
+        public IAbstraction Abstract { get; } = @abstract;
 
         public CompilerObject Concrete { get; } = concrete;
     }

@@ -1,14 +1,15 @@
 ﻿using CommonZ.Utils;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ZSharp.IR
 {
-    public sealed class Module(string? name) : ModuleMember
+    public sealed class Module(string? name) : IRDefinition
     {
         private Function? _initializer;
+        private Function? _entryPoint;
         private ModuleCollection<ImportedModule>? _importedModules;
         private ModuleCollection<Function>? _functions;
         private GlobalCollection? _globals;
-        private ModuleCollection<Module>? _submodules;
         private ModuleCollection<OOPType>? _types;
 
         public string? Name { get; set; } = name;
@@ -22,9 +23,9 @@ namespace ZSharp.IR
             {
                 if (value is not null)
                 {
-                    if (value.Owner is null)
+                    if (value.Module is null)
                         Functions.Add(value);
-                    else if (value.Owner != this)
+                    else if (value.Module != this)
                         throw new InvalidOperationException("Module initializer cannot reside in a different module.");
                     _initializer = value;
                 }
@@ -44,6 +45,24 @@ namespace ZSharp.IR
         }
 
         public bool HasImportedModules => !_importedModules.IsNullOrEmpty();
+
+        public Function? EntryPoint
+        {
+            get => _entryPoint;
+            set
+            {
+                if (value is not null && value.Module != this)
+                    throw new InvalidOperationException(
+                        "Module entry point must be a strict member of the" +
+                        "module."
+                    );
+
+                _entryPoint = value;
+            }
+        }
+
+        [MemberNotNullWhen(true, nameof(EntryPoint))]
+        public bool HasEntryPoint => _entryPoint is not null;
 
         public Collection<Function> Functions
         {
@@ -72,20 +91,6 @@ namespace ZSharp.IR
         }
 
         public bool HasGlobals => !_globals.IsNullOrEmpty();
-
-        public Collection<Module> Submodules
-        {
-            get
-            {
-                if (_submodules is not null)
-                    return _submodules;
-
-                Interlocked.CompareExchange(ref _submodules, new(this), null);
-                return _submodules;
-            }
-        }
-
-        public bool HasSubmodules => !_submodules.IsNullOrEmpty();
 
         public Collection<OOPType> Types
         {

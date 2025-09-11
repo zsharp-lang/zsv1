@@ -1,4 +1,4 @@
-﻿/* Required Features:
+/* Required Features:
  * [-] Primary constructor
  * [-] Auto-fields from primary constructor parameters
  * [x] Fields
@@ -6,8 +6,8 @@
  * [x] Named constructor
  * [x] Methods
  * [x] Case-Of
- * [ ] Automatic type inference for first parameter in methods
- * [ ] Automatic instance binding when accessing instance method/field from instance method
+ * [x] Automatic type inference for first parameter in methods
+ * [x] Automatic instance binding when accessing instance method/field from instance method
  * [x] Instance method as function with `this` first parameter
  * [x] Module globals initializers
  */

@@ -14,7 +14,7 @@ namespace ZSharp.Objects
 
         public CompilerObject? Initializer { get; set; }
 
-        public CompilerObject? Type { get; set; }
+        public IType? Type { get; set; }
 
         public bool IsReadOnly { get; set; }
 

@@ -39,6 +39,18 @@ namespace ZSharp.Runtime.NET
             return ir;
         }
 
+        public T Cache<T>(Type il, T ir)
+            where T : IR.IType
+        {
+            if (!toIR.Types.Contains(il))
+                toIR.Types.Cache(il, ir);
+
+            if (!toIL.Types.Contains(ir))
+                toIL.Types.Cache(ir, il);
+
+            return ir;
+        }
+
         public bool Cache<T>(Type il, [NotNullWhen(true)] out T? ir)
             where T : IR.OOPType
             => toIR.OOPTypes.Cache(il, out ir);

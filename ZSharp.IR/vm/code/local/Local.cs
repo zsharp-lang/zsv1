@@ -1,10 +1,12 @@
 ﻿namespace ZSharp.IR.VM
 {
-    public sealed class Local(string name, IType type) : IRObject
+    public sealed class Local(string name, IType type) 
+        : IRDefinition
+        , IModuleMember
     {
-        public override Module? Module => Owner?.Module;
+        public Module? Module => Owner?.Module;
 
-        public IRObject? Owner { get; internal set; }
+        public Function? Owner { get; internal set; }
 
         public LocalAttributes Attributes { get; set; }
 

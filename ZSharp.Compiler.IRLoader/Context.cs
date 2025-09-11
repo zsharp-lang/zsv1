@@ -4,8 +4,8 @@ namespace ZSharp.Compiler.IRLoader
 {
     public sealed class Context
     {
-        public Cache<IR.IRObject, CompilerObject> Objects { get; } = [];
+        public Cache<ZSharp.IR.IRDefinition, CompilerObject> Objects { get; } = [];
 
-        public Cache<IR.IType, CompilerObject> Types { get; } = [];
+        public Cache<ZSharp.IR.IType, CompilerObject> Types { get; } = [];
     }
 }

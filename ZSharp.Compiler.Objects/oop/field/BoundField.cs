@@ -11,7 +11,7 @@ namespace ZSharp.Objects
 
         public CompilerObject Instance { get; } = instance;
 
-        public CompilerObject? Type => Field.Type;
+        public IType? Type => Field.Type;
 
         public CompilerObject Assign(Compiler.Compiler compiler, CompilerObject value)
         {
@@ -19,11 +19,15 @@ namespace ZSharp.Objects
             var valueCode = compiler.CompileIRCode(value);
 
             return new RawCode(new([
-                ..valueCode.Instructions,
-                new IR.VM.Dup(),
                 ..instanceCode.Instructions,
-                new IR.VM.Swap(),
-                new IR.VM.SetField(Field.IR!),
+                new IR.VM.Dup(),
+                ..valueCode.Instructions,
+                new IR.VM.SetField(new IR.FieldReference(Field.IR!) {
+                    OwningType = new IR.ClassReference(Field.IR!.Owner ?? throw new())
+                }),
+                new IR.VM.GetField(new IR.FieldReference(Field.IR!) {
+                    OwningType = new IR.ClassReference(Field.IR!.Owner ?? throw new())
+                }),
                 ])
             {
                 MaxStackSize = Math.Max(Math.Max(instanceCode.MaxStackSize, valueCode.MaxStackSize), 2),
@@ -37,7 +41,9 @@ namespace ZSharp.Objects
 
             return new([
                 ..code.Instructions,
-                new IR.VM.GetField(Field.IR!)
+                new IR.VM.GetField(new IR.FieldReference(Field.IR!) {
+                    OwningType = new IR.ClassReference(Field.IR!.Owner ?? throw new())
+                })
                 ])
             {
                 MaxStackSize = Math.Max(code.MaxStackSize, 1),

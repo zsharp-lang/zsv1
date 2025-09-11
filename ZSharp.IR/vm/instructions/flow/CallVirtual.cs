@@ -1,11 +1,11 @@
 ﻿namespace ZSharp.IR.VM
 {
-    public sealed class CallVirtual(Method method) 
+    public sealed class CallVirtual(MethodReference method) 
         : Instruction
-        , IHasOperand<Method>
+        , IHasOperand<MethodReference>
     {
-        public Method Method { get; set; } = method;
+        public MethodReference Method { get; set; } = method;
 
-        Method IHasOperand<Method>.Operand => Method;
+        MethodReference IHasOperand<MethodReference>.Operand => Method;
     }
 }

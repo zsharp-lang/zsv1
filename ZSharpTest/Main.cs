@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
 using ZSharp.Compiler;
 using ZSharp.Interpreter;
 using ZSharp.Parser;
@@ -42,6 +42,18 @@ using (StreamReader stream = File.OpenText(filePath))
         }
     );
     expressionParser.Nud(
+        TokenType.LParen,
+        parser =>
+        {
+            parser.Eat(TokenType.LParen);
+            var expression = parser.Parse<ZSharp.AST.Expression>();
+            parser.Eat(TokenType.RParen);
+
+            return expression;
+        },
+        10000
+    );
+    expressionParser.Nud(
         LangParser.Keywords.Let,
         LangParser.ParseLetExpression
     );
@@ -55,15 +67,20 @@ using (StreamReader stream = File.OpenText(filePath))
     expressionParser.InfixL("+", 50);
     expressionParser.InfixL("-", 50);
     expressionParser.InfixL("*", 70);
+    expressionParser.InfixL("/", 70);
     expressionParser.InfixL("**", 80);
 
     expressionParser.InfixL("==", 30);
     expressionParser.InfixL("!=", 30);
 
+    expressionParser.InfixL(LangParser.Keywords.Or, 15);
+
     expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
     expressionParser.Led(TokenType.LBracket, LangParser.ParseIndexExpression, 100);
     expressionParser.Nud(TokenType.LBracket, LangParser.ParseArrayLiteral);
     expressionParser.Led(".", LangParser.ParseMemberAccess, 150);
+    expressionParser.Led(LangParser.Keywords.As, LangParser.ParseCastExpression, 20);
+    expressionParser.Led(LangParser.Keywords.Is, LangParser.ParseIsOfExpression, 20);
 
     expressionParser.Separator(TokenType.Comma);
     expressionParser.Separator(TokenType.RParen);
@@ -114,58 +131,30 @@ using (StreamReader stream = File.OpenText(filePath))
 #region Compilation
 
 var interpreter = new Interpreter();
-ZSharp.Runtime.NET.Runtime runtime = new(interpreter);
 
-interpreter.Runtime = runtime;
-interpreter.HostLoader = runtime;
+interpreter.SourceCompiler.StringImporter.Importers.Add(
+    "net",
+    new ZSharp.DotNETImporter(interpreter)
+);
 
-ZS.RuntimeAPI.Fields_Globals.runtime = runtime;
-runtime.Hooks.GetObject = ZSharp.Runtime.NET.Utils.GetMethod(ZS.RuntimeAPI.Impl_Globals.GetObject);
+
+new Referencing(interpreter.Compiler);
+new OOP(interpreter.Compiler);
 
 var moduleIL_standardIO = typeof(Standard.IO.Impl_Globals).Module;
-var moduleIR_standardIO = interpreter.HostLoader.Import(moduleIL_standardIO);
-var moduleCO_standardIO = interpreter.CompilerIRLoader.Import(moduleIR_standardIO);
+var moduleCO_standardIO = interpreter.ImportILModule(moduleIL_standardIO);
 
-interpreter.Compiler.TypeSystem.String.ToString = interpreter.CompilerIRLoader.Import(
-    runtime.Import(
-        ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ToString)
-    )
-);
+interpreter.Compiler.TypeSystem.String.ToString = interpreter.ILLoader.LoadMethod(ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ToString));
 
-interpreter.Compiler.TypeSystem.Int32.Members["parse"] = interpreter.CompilerIRLoader.Import(
-    runtime.Import(
-        ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ParseInt32)
-    )
-);
+interpreter.Compiler.TypeSystem.Int32.Members["parse"] = interpreter.ILLoader.LoadMethod(ZSharp.Runtime.NET.Utils.GetMethod(Standard.IO.Impl_Globals.ParseInt32));
 
 interpreter.SourceCompiler.StandardLibraryImporter.Libraries.Add("io", moduleCO_standardIO);
 
 var moduleIL_standardMath = typeof(Standard.Math.Impl_Globals).Module;
-var moduleIR_standardMath = interpreter.HostLoader.Import(moduleIL_standardMath);
-var moduleCO_standardMath = interpreter.CompilerIRLoader.Import(moduleIR_standardMath);
+var moduleCO_standardMath = interpreter.ImportILModule(moduleIL_standardMath);
 
 interpreter.SourceCompiler.StandardLibraryImporter.Libraries.Add("math", moduleCO_standardMath);
 
-foreach (var moduleIR in new[] { moduleIR_standardIO, moduleIR_standardMath })
-    if (moduleIR.HasFunctions)
-        foreach (var function in moduleIR.Functions)
-        {
-            if (function.Name is null || function.Name == string.Empty)
-                continue;
-
-            var match = Regex.Match(function.Name, @"^_?(?<OP>[+\-*=?&^%$#@!<>|~]+)_?$");
-            if (match.Success)
-            {
-                var op = match.Groups["OP"].Value;
-                if (!interpreter.SourceCompiler.Operators.Cache(op, out var group))
-                    group = interpreter.SourceCompiler.Operators.Cache(op, new ZSharp.Objects.OverloadGroup(op));
-
-                if (group is not ZSharp.Objects.OverloadGroup overloadGroup)
-                    throw new Exception("Invalid overload group!");
-
-                overloadGroup.Overloads.Add(interpreter.CompilerIRLoader.Import(function));
-            }
-        }
 
 //var moduleIL_compilerAPI = typeof(ZS.CompilerAPI.Impl_Globals).Module;
 //var moduleIR_compilerAPI = interpreter.HostLoader.Import(moduleIL_compilerAPI);
@@ -189,13 +178,16 @@ if (mainModule is not null)
     var mainModuleIR = 
         interpreter.Compiler.CompileIRObject<ZSharp.IR.Module, ZSharp.IR.Module>(mainModule, null) ?? throw new();
 
-    var mainModuleIL = runtime.Import(mainModuleIR);
+    var mainModuleIL = interpreter.Runtime.ImportModule(mainModuleIR);
     var mainModuleGlobals = mainModuleIL.GetType("<Globals>") ?? throw new();
 
-    var mainMethod = mainModuleGlobals.GetMethod("main", []);
+    foreach (var type in mainModuleIL.GetTypes())
+        DecompileType(type);
 
-    if (mainMethod is not null)
-        Decompile(mainMethod);
+    foreach (var method in mainModuleIL.GetMethods())
+        Decompile(method);
+
+    var mainMethod = mainModuleGlobals.GetMethod("main", []);
 
     mainMethod?.Invoke(null, null);
 }
@@ -209,9 +201,42 @@ Console.WriteLine("Press any key to exit...");
 Console.ReadKey();
 
 
+static void DecompileType(Type type)
+{
+    Console.WriteLine("========== Type: " + type.Name + " ==========");
+
+    foreach (var method in type.GetMethods())
+    {
+        if (method.DeclaringType != type)
+            continue;
+
+        Decompile(method);
+    }
+
+    Console.WriteLine("========== Type ==========");
+}
+
+
 static void Decompile(System.Reflection.MethodBase method)
 {
-    Console.WriteLine("========== Disassmebly: " + method.Name + " ==========");
+    StringBuilder signatureBuilder = new();
+    foreach (var parameter in method.GetParameters())
+    {
+        if (signatureBuilder.Length > 0)
+            signatureBuilder.Append(", ");
+        signatureBuilder.Append(parameter.ParameterType.Name);
+    }
+
+    string modifier = string.Empty;
+    if (method.IsStatic)
+        modifier = "static ";
+    else if (method.IsVirtual)
+        modifier = "virtual ";
+    else if (method.IsAbstract)
+        modifier = "abstract ";
+    else modifier = "instance ";
+
+    Console.WriteLine($"========== Disassmebly: {modifier}{method.Name}({signatureBuilder}) ==========");
 
     foreach (var instruction in Mono.Reflection.Disassembler.GetInstructions(method))
     {

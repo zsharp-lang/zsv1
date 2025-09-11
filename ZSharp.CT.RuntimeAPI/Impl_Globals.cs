@@ -12,8 +12,5 @@ namespace ZS.RuntimeAPI
 
             throw new();
         }
-
-        public static object GetObject(Type type)
-            => Fields_Globals.runtime.GetObject(type);
     }
 }

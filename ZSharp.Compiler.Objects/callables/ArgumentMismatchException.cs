@@ -2,8 +2,8 @@
 
 namespace ZSharp.Objects
 {
-    public class ArgumentMismatchException(CompilerObject callable, Argument[] arguments)
-        : CompilerObjectException(callable)
+    public class ArgumentMismatchException(CompilerObject callable, Argument[] arguments, Exception? innerException = null)
+        : CompilerObjectException(callable, innerException: innerException)
     {
         public CompilerObject Callable => Object;
 

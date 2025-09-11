@@ -1,4 +1,6 @@
-﻿namespace ZSharp.IR
+﻿using CommonZ.Utils;
+
+namespace ZSharp.IR
 {
     public class Function 
         : ModuleMember
@@ -6,6 +8,8 @@
     {
         private Signature _signature;
         private VM.FunctionBody? _body;
+
+        private Collection<GenericParameter>? _genericParameters;
 
         public string? Name { get; set; }
 
@@ -44,6 +48,20 @@
         }
 
         public bool HasBody => _body is not null;
+
+        public Collection<GenericParameter> GenericParameters
+        {
+            get
+            {
+                if (_genericParameters is not null)
+                    return _genericParameters;
+
+                Interlocked.CompareExchange(ref _genericParameters, [], null);
+                return _genericParameters;
+            }
+        }
+
+        public bool HasGenericParameters => !_genericParameters.IsNullOrEmpty();
 
         //public Collection<Clause> Clauses { get; }
 

@@ -12,8 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ZLoad.Test\ZLoad.Test.csproj" />
     <ProjectReference Include="..\ZSharp.CT.CompilerAPI\ZSharp.CT.CompilerAPI.csproj" />
     <ProjectReference Include="..\ZSharp.CT.RuntimeAPI\ZSharp.CT.RuntimeAPI.csproj" />
+    <ProjectReference Include="..\ZSharp.CT.StandardLibrary.FileSystem\ZSharp.CT.StandardLibrary.FileSystem.csproj" />
     <ProjectReference Include="..\ZSharp.CT.StandardLibrary.Math\ZSharp.CT.StandardLibrary.Math.csproj" />
     <ProjectReference Include="..\ZSharp.CT.StandardLibrary\ZSharp.CT.StandardLibrary.csproj" />
     <ProjectReference Include="..\ZSharp.Interpreter\ZSharp.Interpreter.csproj" />
@@ -22,6 +24,9 @@
 
   <ItemGroup>
     <None Update="projects\guessing-game.zs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="projects\better-user-system.zs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="projects\simple-user-system.zs">
@@ -34,6 +39,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="test2.zs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="tests\simple.zs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="tests\test-class-fields.zs">

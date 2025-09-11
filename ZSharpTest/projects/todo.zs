@@ -1,10 +1,9 @@
-﻿//import { list } from "std:list";
+﻿import { List } from "net:ZLoad.Test.dll";
 import { print, input } from "std:io";
 
 
 module Program {
-/*
-	let todo: list[string] = [
+	let todo: List[string] = [
 		"Add list[T] type",
 		"Add support for generic types in CO",
 		"Add compiler for `for` statements",
@@ -12,43 +11,51 @@ module Program {
 		"Add compiler for `case` statements",
 	];
 
-	fun addTodo() {
+	fun addTodo(): void {
 		let item = input("Enter item to add: ");
 
-		todo.add(item);
+		todo.append(item);
+
+		return;
 	}
 
-	fun getTodos(): list[string] {
+	fun getTodos(): void {
 		var i = 1;
-
-		for (let item = 0 in todo)
+		for (let item in todo)
 		{
 			print(string(i) + ". " + item);
 			i = i + 1;
 		}
+
+		return;
 	}
 
 	fun delTodo(): void {
 		let index = i32.parse(input("Enter item number to remove: "));
 
 		todo.removeAt(index - 1);
+
+		getTodos();
+
+		return;
 	}
-	*/
+
 	fun do(): bool {
 		print("Welcome to The ToDo List App! Please choose what to do:");
-		print("1. Add an item.");
-		print("2. List all items.");
-		print("3. Remove an item.");
-		print("4. Exit program.");
+		print("-------------------------------------------------------");
+		print("\t1. Add an item.");
+		print("\t2. List all items.");
+		print("\t3. Remove an item.");
+		print("\t4. Exit program.");
 		
 
 		let cmd = input("> ");
 
 
 		case (cmd) {
-		when ("1") print("ADD"); // addTodo();
-		when ("2") print("GET"); // getTodos();
-		when ("3") print("DEL"); // delTodo();
+		when ("1") addTodo();
+		when ("2") getTodos();
+		when ("3") delTodo();
 		when ("4") return false;
 		} else print("Unknown command: " + cmd);
 

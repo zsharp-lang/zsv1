@@ -3,15 +3,18 @@ using ZSharp.Compiler;
 
 namespace ZSharp.Objects
 {
-    public sealed class OverloadGroup(string name)
+    public abstract class OverloadGroup<T>(string name)
         : CompilerObject
-        , ICTCallable
+        , ICTCallable_Old
+        , IMappable
+
+        where T : CompilerObject
     {
         public string Name { get; set; } = name;
 
-        public Collection<CompilerObject> Overloads { get; init; } = [];
+        public Collection<T> Overloads { get; init; } = [];
 
-        public CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments)
+        public virtual CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             var matchingOverloads = Overloads
                 .Select(overload => {
@@ -29,5 +32,23 @@ namespace ZSharp.Objects
 
             return matchingOverloads[0];
         }
+
+        CompilerObject IMappable.Map(Func<CompilerObject, CompilerObject> func)
+        {
+            return new OverloadGroup(Name)
+            {
+                Overloads = [.. Overloads.Select(item => func(item)).Where(item => item is not null)]
+            };
+        }
+    }
+
+    public sealed class OverloadGroup(string name)
+        : OverloadGroup<CompilerObject>(name)
+        , CompilerObject
+        , ICTCallable_Old
+        , IMappable
+    {
+
+
     }
 }

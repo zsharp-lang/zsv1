@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZSharp.Interpreter\ZSharp.Interpreter.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
     <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
   </ItemGroup>
 
