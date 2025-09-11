@@ -1,4 +1,4 @@
-﻿/* Required Features:
+/* Required Features:
  * [-] Primary constructor
  * [-] Auto-fields from primary constructor parameters
  * [x] Fields
