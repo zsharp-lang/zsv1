@@ -2,7 +2,7 @@
 
 
 > This README file is out-of-date. I will update this once I have enough time and an acceptable working version.
-> If you have any questions regarding this project, you can join the discord server [discord server](https://discord.gg/Uc3GN2bfG9).
+> If you have any questions regarding this project, you can join the discord server ~~[discord server](https://discord.gg/Uc3GN2bfG9)~~ [discord channel on PLTD](https://discord.gg/Zfbzdaks2D).
 
 
 Welcome to the Z# language repository! This repository holds the first released version of Z#.
