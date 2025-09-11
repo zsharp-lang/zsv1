@@ -8,6 +8,6 @@
 
         public string? Name { get; set; } = name;
 
-        public Method Method { get; set; }
+        public required Method Method { get; set; }
     }
 }

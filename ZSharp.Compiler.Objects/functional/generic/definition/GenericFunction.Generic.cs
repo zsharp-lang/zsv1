@@ -5,10 +5,10 @@ namespace ZSharp.Objects
 {
     public partial class GenericFunction
     {
-        public Result<GenericFunctionInstance, Error> CreateGenericInstance(Compiler.Compiler compiler, IType[] arguments)
+        public Result<GenericFunctionInstance> CreateGenericInstance(Compiler.Compiler compiler, IType[] arguments)
         {
             if (arguments.Length != GenericParameters.Count)
-                return Result<GenericFunctionInstance, Error>.Error(
+                return Result<GenericFunctionInstance>.Error(
                     $"Invalid generic argument count: Expected {GenericParameters.Count}, got {arguments.Length}"
                 );
 
@@ -16,7 +16,7 @@ namespace ZSharp.Objects
             foreach (var (parameter, argument) in GenericParameters.Zip(arguments))
             {
                 if (!parameter.Match(argument))
-                    return Result<GenericFunctionInstance, Error>.Error(
+                    return Result<GenericFunctionInstance>.Error(
                         $"Type {argument} cannot be assigned to generic parameter {parameter.Name}"
                     );
 
@@ -27,7 +27,7 @@ namespace ZSharp.Objects
             foreach (var (p, a) in genericArguments)
                 context.CompileTimeValues.Cache(p, a);
 
-            return Result<GenericFunctionInstance, Error>.Ok(
+            return Result<GenericFunctionInstance>.Ok(
                 new()
                 {
                     GenericArguments = genericArguments,

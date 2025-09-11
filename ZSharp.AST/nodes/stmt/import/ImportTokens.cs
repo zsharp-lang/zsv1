@@ -7,5 +7,8 @@ namespace ZSharp.AST
         public required Token ImportKeyword { get; init; }
 
         public required Token Semicolon { get; init; }
+
+        public override string ToString()
+            => $"{ImportKeyword.Span}";
     }
 }

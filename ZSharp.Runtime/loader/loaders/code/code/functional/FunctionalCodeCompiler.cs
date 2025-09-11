@@ -6,7 +6,7 @@
         {
             var callable = ctx.Runtime.ImportCallable(call.Callable);
 
-            foreach (var parameter in call.Callable.Signature.GetParameters())
+            foreach (var parameter in call.Callable.Signature.GetParameters().Reverse())
                 ctx.Stack.Pop(ctx.Runtime.ImportType(parameter.Type));
 
             if (callable is IL.MethodInfo method)

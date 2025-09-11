@@ -6,6 +6,6 @@ namespace ZSharp.Compiler.IRLoader
     {
         public Cache<ZSharp.IR.IRDefinition, CompilerObject> Objects { get; } = [];
 
-        public Cache<ZSharp.IR.IType, IType> Types { get; } = [];
+        public Cache<ZSharp.IR.IType, CompilerObject> Types { get; } = [];
     }
 }

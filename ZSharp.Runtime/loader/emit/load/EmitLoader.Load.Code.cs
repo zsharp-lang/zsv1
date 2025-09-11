@@ -9,6 +9,11 @@ namespace ZSharp.Runtime.Loaders
 
         public Delegate LoadCode(Collection<IR.VM.Instruction> code, IR.IType irReturnType)
         {
+            if (code.Count == 0) return () => { };
+
+            if (code.Last() is not IR.VM.Return)
+                code.Add(new IR.VM.Return());
+
             var ilReturnType = Runtime.ImportType(irReturnType);
             var method = new Emit.DynamicMethod(string.Empty, ilReturnType, null, StandaloneModule);
 
@@ -16,7 +21,7 @@ namespace ZSharp.Runtime.Loaders
             codeLoader.CompileCode(code);
 
             return
-                ilReturnType == typeof(void)
+                ilReturnType != typeof(void)
                 ? method.CreateDelegate(
                     typeof(CodeFunctionType<>)
                     .MakeGenericType(ilReturnType)

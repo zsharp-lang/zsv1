@@ -3,9 +3,9 @@
     partial class Directory
     {
         public static Item operator /(Directory directory, RawPath path)
-            => Operators.Join(directory, path);
+            => ModuleScope.Join(directory, path);
 
         public static Item operator/(Directory directory, RelativePath path)
-            => Operators.Join(directory, path.raw);
+            => ModuleScope.Join(directory, path.raw);
     }
 }

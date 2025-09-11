@@ -9,7 +9,7 @@
             if (method.IsGenericMethodDefinition)
                 return LoadGenericMethod(method);
 
-            return new Objects.Function();
+            return new Objects.Function(method, Loader);
         }
     }
 }

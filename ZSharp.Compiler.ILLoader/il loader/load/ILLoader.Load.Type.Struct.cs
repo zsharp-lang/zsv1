@@ -2,7 +2,7 @@
 {
     partial class ILLoader
     {
-        public IType LoadStruct(Type @struct)
+        public CompilerObject LoadStruct(Type @struct)
         {
             if (@struct.IsGenericTypeDefinition)
                 return LoadGenericStruct(@struct);

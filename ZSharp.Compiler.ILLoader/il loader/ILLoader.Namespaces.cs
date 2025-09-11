@@ -18,11 +18,11 @@ namespace ZSharp.Compiler.ILLoader
                 );
 
             if (!Namespaces.TryGetValue(parts[0], out var @namespace))
-                @namespace = Namespaces[parts[0]] = new(parts[0]);
+                @namespace = Namespaces[parts[0]] = new(parts[0], this);
 
             foreach (var part in parts.Skip(1))
                 if (!@namespace.Members.TryGetValue(part, out var member))
-                    @namespace.AddMember(part, member = new Namespace(part));
+                    @namespace.AddMember(part, member = new Namespace(part, this));
                 else if (member is not Namespace ns)
                     throw new ArgumentException(
                         $"{part} in {@namespace.FullName} is not a namespace"

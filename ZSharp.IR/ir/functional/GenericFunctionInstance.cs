@@ -7,7 +7,7 @@ namespace ZSharp.IR
     {
         public Function Function { get; set; } = function;
 
-        public Collection<IType> Arguments { get; set; } = false ? [] : Collection<IType>.Empty;
+        public Collection<IType> Arguments { get; set; } = function.HasGenericParameters ? [] : Collection<IType>.Empty;
 
         public Signature Signature { get; init; } = function.Signature;
 

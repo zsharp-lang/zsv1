@@ -16,14 +16,14 @@ namespace ZSharp.Objects
             return compiler.TypeSystem.AreEqual(UnderlyingType, nullable.UnderlyingType);
         }
 
-        Result<TypeCast, Error> IRTCastFrom.Cast(Compiler.Compiler compiler, CompilerObject value)
+        Result<TypeCast> IRTCastFrom.Cast(Compiler.Compiler compiler, CompilerObject value)
         {
             var innerCastResult = compiler.CG.Cast(value, UnderlyingType);
 
             TypeCast innerCast;
 
             if (innerCastResult.Error(out var error))
-                return Result<TypeCast, Error>.Error(error);
+                return Result<TypeCast>.Error(error);
             else innerCast = innerCastResult.Unwrap();
 
             var innerCastCodeResult = compiler.IR.CompileCode(innerCast.Cast);
@@ -31,12 +31,12 @@ namespace ZSharp.Objects
             IRCode innerCastCode;
 
             if (innerCastCodeResult.Error(out error))
-                return Result<TypeCast, Error>.Error(error);
+                return Result<TypeCast>.Error(error);
             else innerCastCode = innerCastCodeResult.Unwrap();
 
             IR.VM.Nop onCast = new();
 
-            return Result<TypeCast, Error>.Ok(
+            return Result<TypeCast>.Ok(
                 new()
                 {
                     Cast = new RawCode(new([
@@ -56,10 +56,10 @@ namespace ZSharp.Objects
             );
         }
 
-        Result<TypeCast, Error> IRTCastTo.Cast(Compiler.Compiler compiler, CompilerObject value, IType targetType)
+        Result<TypeCast> IRTCastTo.Cast(Compiler.Compiler compiler, CompilerObject value, IType targetType)
         {
             if (targetType is not Nullable nullable)
-                return Result<TypeCast, Error>.Error(
+                return Result<TypeCast>.Error(
                     "Nullable types can only be cast to other nullable types"
                 );
 
@@ -68,7 +68,7 @@ namespace ZSharp.Objects
             TypeCast innerCast;
 
             if (innerCastResult.Error(out var error))
-                return Result<TypeCast, Error>.Error(error);
+                return Result<TypeCast>.Error(error);
             else innerCast = innerCastResult.Unwrap();
 
             var innerCastCodeResult = compiler.IR.CompileCode(innerCast.Cast);
@@ -76,12 +76,12 @@ namespace ZSharp.Objects
             IRCode innerCastCode;
 
             if (innerCastCodeResult.Error(out error))
-                return Result<TypeCast, Error>.Error(error);
+                return Result<TypeCast>.Error(error);
             else innerCastCode = innerCastCodeResult.Unwrap();
 
             IR.VM.Nop onCast = new();
 
-            return Result<TypeCast, Error>.Ok(
+            return Result<TypeCast>.Ok(
                 new()
                 {
                     Cast = new RawCode(new([

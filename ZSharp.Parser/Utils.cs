@@ -10,13 +10,13 @@ namespace ZSharp.Parser
         public static Parser<Statement> DefinitionStatement<T>(Parser<T> defParser)
             where T : Expression
             => new FunctionalParser<Statement>(
-                parser => new ExpressionStatement() { Expression = defParser.Parse(parser) }
+                parser => new DefinitionStatement() { Definition = defParser.Parse(parser) }
             );
 
         public static Parser<Statement> DefinitionStatement<T>(ParserFunction<T> defParser)
             where T : Expression
             => new FunctionalParser<Statement>(
-                parser => new ExpressionStatement() { Expression = defParser(parser) }
+                parser => new DefinitionStatement() { Definition = defParser(parser) }
             );
 
         public static ParserFunction<Statement> ExpressionStatement(Func<Parser, Expression> fn, bool semicolon = true)

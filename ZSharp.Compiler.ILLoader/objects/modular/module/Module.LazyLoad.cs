@@ -2,38 +2,16 @@
 {
     partial class Module
     {
-        private ModuleLoader? _moduleLoader;
-
         public ILLoader Loader { get; }
 
-        internal ModuleLoader GlobalsLoader
-        {
-            get
-            {
-                if (_moduleLoader is not null)
-                    return _moduleLoader;
-
-                Interlocked.CompareExchange(ref _moduleLoader, new(Loader), null);
-                return _moduleLoader;
-            }
-        }
+        internal ModuleBodyLoader BodyLoader { get; }
 
         public CompilerObject? LoadMember(string name)
         {
-            var members = Globals?.GetMember(name);
+            if (!BodyLoader.LoadMember(name))
+                return null;
 
-            if (members is not null && members.Length > 0)
-            {
-                foreach (var member in members)
-                    AddMember(name, GlobalsLoader.LoadMember(member));
-
-                return Members[name];
-            }
-
-            var type = IL.GetType(name);
-            if (type is null) return null;
-            if (!type.IsPublic) return null;
-            return Loader.LoadType(type);
+            return Members[name];
         }
     }
 }

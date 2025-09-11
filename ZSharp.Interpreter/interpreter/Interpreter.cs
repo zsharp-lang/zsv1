@@ -1,4 +1,5 @@
-﻿using ZSharp.Compiler;
+﻿using System.Runtime.Intrinsics.Arm;
+using ZSharp.Compiler;
 
 namespace ZSharp.Interpreter
 {
@@ -10,79 +11,69 @@ namespace ZSharp.Interpreter
 
         public Compiler.Compiler Compiler { get; }
 
-        public IRCompiler.Compiler IRCompiler { get; }
-
-        public ZSSourceCompiler.ZSSourceCompiler SourceCompiler { get; init; }
-
-        public Parser.ZSharpParser Parser { get; init; }
+        public Compiler.IR IRCompiler { get; }
 
         public Interpreter(IR.RuntimeModule? runtimeModule = null)
         {
             RuntimeModule = runtimeModule ?? IR.RuntimeModule.Standard;
 
             Compiler = new(RuntimeModule);
-            Runtime = new(RuntimeModule);
+            Runtime = new(new()
+            {
+                Array = RuntimeModule.TypeSystem.Array,
+                Boolean = RuntimeModule.TypeSystem.Boolean,
+                Char = null!,
+                Float16 = null!,
+                Float32 = RuntimeModule.TypeSystem.Float32,
+                Float64 = null!,
+                Float128 = null!,
+                Object = RuntimeModule.TypeSystem.Object,
+                Pointer = RuntimeModule.TypeSystem.Pointer,
+                Reference = RuntimeModule.TypeSystem.Reference,
+                SInt8 = null!,
+                SInt16 = null!,
+                SInt32 = RuntimeModule.TypeSystem.Int32,
+                SInt64 = null!,
+                SIntNative = null!,
+                String = RuntimeModule.TypeSystem.String,
+                UInt8 = null!,
+                UInt16 = null!,
+                UInt32 = null!,
+                UInt64 = null!,
+                UIntNative = null!,
+                Void = RuntimeModule.TypeSystem.Void
+            });
             IRCompiler = new(RuntimeModule);
-            ILLoader = new(Compiler);
+            ILLoader = new(Compiler.IR, Runtime);
 
-            new Ops(Compiler);
-
-            SourceCompiler = new(this);
-
-            Parser = new();
+            //new Ops(Compiler);
         }
 
-        public ZSSourceCompiler.Document CompileFile(string path)
-        {
-            AST.Document document;
-
-            using (var reader = new StreamReader(path))
-                document = Parser.Parse(new(Tokenizer.Tokenizer.Tokenize(new(reader))));
-
-            return CompileDocument(document, path);
-        }
-
-        public ZSSourceCompiler.Document CompileDocument(AST.Document document, string path)
-        {
-            return SourceCompiler.CreateDocumentCompiler(document, path).Compile();
-        }
-
-        public Result<object?, string> Evaluate(Expression expression)
+        public Result<object?> Evaluate(CompilerObject @object)
         {
             if (
-                SourceCompiler.CompileNode(expression)
-                .When(out var result)
-                .IsError
-            ) return Result<object?, string>.Error(string.Empty);
-
-            return Evaluate(result!);
-        }
-
-        public Result<object?, string> Evaluate(CompilerObject @object)
-        {
-            if (
-                Compiler.IR.CompileCode(@object)
+                Compiler.IR.CompileCode(@object, Runtime)
                 .When(out var irCode)
                 .Error(out var error)
             )
-                return Result<object?, string>.Ok(@object);
+                return Result<object?>.Ok(@object);
 
-            var type = irCode!.IsVoid ? RuntimeModule.TypeSystem.Void : IRCompiler.CompileType(irCode.RequireValueType()).Unwrap();
+            var type = irCode!.IsVoid ? RuntimeModule.TypeSystem.Void : irCode.RequireValueType();
 
             var result = Runtime.Evaluate(irCode.Instructions, type);
 
             if (irCode.IsVoid)
-                return Result<object?, string>
-                    .Ok(new Objects.RawCode(new()));
+                return Result<object?>
+                    .Ok(new Objects.RawIRCode(new()));
 
             if (result is null)
-                return Result<object?, string>
+                return Result<object?>
                     .Ok(@object);
                 // TODO: should actually be an error!
                 //return Result<CompilerObject, string> 
                 //    .Error("Non-void expression evaluated to nothing");
 
-            return Result<object?, string>.Ok(result);
+            return Result<object?>.Ok(result);
         }
     }
 }

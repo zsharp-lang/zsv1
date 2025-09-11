@@ -4,6 +4,9 @@
     {
         public static CompilerObject InfoOf(object @object)
         {
+            if (@object is CompilerObject co)
+                return co;
+
             throw new NotImplementedException();
         }
 

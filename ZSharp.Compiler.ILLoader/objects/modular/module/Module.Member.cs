@@ -3,7 +3,8 @@
 namespace ZSharp.Compiler.ILLoader.Objects
 {
     partial class Module
-        : ICTGetMember<MemberName>
+        : IAddMember
+        , ICTGetMember<MemberName>
     {
         public Mapping<MemberName, CompilerObject> Members { get; } = [];
 
@@ -19,10 +20,8 @@ namespace ZSharp.Compiler.ILLoader.Objects
 
         CompilerObjectResult ICTGetMember<MemberName>.Member(Compiler compiler, MemberName member)
         {
-            if (!Members.TryGetValue(member, out var result))
-                if ((result = LoadMember(member)) is not null)
-                    Members.Add(member, result);
-                else return CompilerObjectResult.Error(
+            if (!Members.TryGetValue(member, out var result) && (result = LoadMember(member)) is null)
+                return CompilerObjectResult.Error(
                     $"Could not find member {member} in module {IL.Name}"
                 );
 

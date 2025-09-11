@@ -7,7 +7,9 @@
             if (method.IsGenericMethodDefinition)
                 return LoadGenericMethod(method);
 
-            throw new NotImplementedException();
+            var result = new Objects.Method(method, this);
+
+            return result;
         }
     }
 }

@@ -26,13 +26,13 @@ namespace ZSharp.Runtime
         public Type ImportTypeReference(IR.OOPTypeReference @ref)
         {
             if (
-                @ref.Definition == RuntimeModule.TypeSystem.Array
+                @ref.Definition == TypeSystem.Array
             ) return ImportArrayType(@ref);
             if (
-                @ref.Definition == RuntimeModule.TypeSystem.Pointer
+                @ref.Definition == TypeSystem.Pointer
             ) return ImportPointerType(@ref);
             if (
-                @ref.Definition == RuntimeModule.TypeSystem.Reference
+                @ref.Definition == TypeSystem.Reference
             ) return ImportReferenceType(@ref);
 
             var type = ImportTypeDefinition(@ref.Definition);

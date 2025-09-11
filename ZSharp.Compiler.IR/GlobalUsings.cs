@@ -1,4 +1,3 @@
-﻿global using CompilerObject = ZSharp.Objects.CompilerObject;
-global using Error = string;
+﻿global using ZSharp.IR;
 
 global using TargetPlatform = object;

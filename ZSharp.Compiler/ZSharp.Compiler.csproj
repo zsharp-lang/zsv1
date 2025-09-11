@@ -7,11 +7,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="core\type system\**" />
+    <EmbeddedResource Remove="core\type system\**" />
+    <None Remove="core\type system\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.Context\ZSharp.Compiler.Context.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CO\ZSharp.Compiler.CO.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.IR\ZSharp.Compiler.IR.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.TS\ZSharp.Compiler.TS.csproj" />
     <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
+    <ProjectReference Include="..\ZSharp.Logging\ZSharp.Logging.csproj" />
   </ItemGroup>
 
 </Project>

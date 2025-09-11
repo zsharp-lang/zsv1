@@ -7,22 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="objects\oop\class\" />
-    <Folder Include="objects\oop\field\" />
-    <Folder Include="objects\oop\method\" />
-    <Folder Include="objects\oop\interface\" />
-    <Folder Include="objects\oop\constructor\" />
-    <Folder Include="objects\oop\struct\" />
-    <Folder Include="objects\oop\property\" />
-    <Folder Include="objects\types\array\" />
     <Folder Include="objects\types\in\" />
     <Folder Include="objects\types\out\" />
-    <Folder Include="objects\types\reference\" />
-    <Folder Include="objects\types\pointer\" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.CO.CT\ZSharp.Compiler.CO.CT.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CO.RT\ZSharp.Compiler.CO.RT.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.ILLoader.Attributes\ZSharp.Compiler.ILLoader.Attributes.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.TS.Static\ZSharp.Compiler.TS.Static.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
+    <ProjectReference Include="..\ZSharp.Runtime\ZSharp.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

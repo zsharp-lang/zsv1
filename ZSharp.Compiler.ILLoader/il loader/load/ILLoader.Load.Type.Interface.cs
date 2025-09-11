@@ -2,7 +2,7 @@
 {
     partial class ILLoader
     {
-        public IType LoadInterface(Type @interface)
+        public CompilerObject LoadInterface(Type @interface)
         {
             if (@interface.IsGenericTypeDefinition)
                 return LoadGenericInterface(@interface);

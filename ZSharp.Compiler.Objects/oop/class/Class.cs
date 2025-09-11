@@ -1,4 +1,5 @@
-﻿using CommonZ.Utils;
+﻿using CommonZ;
+using CommonZ.Utils;
 using ZSharp.Compiler;
 
 namespace ZSharp.Objects
@@ -152,7 +153,7 @@ namespace ZSharp.Objects
             return null;
         }
 
-        Result<TypeMatch, string> IRTTypeMatch.Match(Compiler.Compiler compiler, CompilerObject value, IType type)
+        Result<TypeMatch> IRTTypeMatch.Match(Compiler.Compiler compiler, CompilerObject value, IType type)
         {
             var nullableType = new Nullable(type);
             var castToTypeResult = compiler.CG.Cast(value, nullableType);
@@ -160,7 +161,7 @@ namespace ZSharp.Objects
             TypeCast castToType;
 
             if (castToTypeResult.Error(out var error))
-                return Result<TypeMatch, string>.Error(error);
+                return Result<TypeMatch>.Error(error);
             else castToType = castToTypeResult.Unwrap();
 
             var castToTypeCodeResult = compiler.IR.CompileCode(castToType.Cast);
@@ -168,12 +169,12 @@ namespace ZSharp.Objects
             IRCode castToTypeCode;
 
             if (castToTypeCodeResult.Error(out error))
-                return Result<TypeMatch, string>.Error(error);
+                return Result<TypeMatch>.Error(error);
             else castToTypeCode = castToTypeCodeResult.Unwrap();
 
             IR.VM.Nop onMatch = new();
 
-            return Result<TypeMatch, string>.Ok(new()
+            return Result<TypeMatch>.Ok(new()
             {
                 Match = new RawCode(new([
                     .. castToTypeCode.Instructions,
@@ -188,15 +189,15 @@ namespace ZSharp.Objects
             });
         }
 
-        Result<TypeCast, string> IRTCastTo.Cast(Compiler.Compiler compiler, CompilerObject value, IType targetType)
+        Result<TypeCast> IRTCastTo.Cast(Compiler.Compiler compiler, CompilerObject value, IType targetType)
         {
             if (targetType is not Class targetClass)
-                return Result<TypeCast, string>.Error(
+                return Result<TypeCast>.Error(
                     "Casting class to non-class object is not supported yet"
                 );
 
             if (IsSubclassOf(targetClass))
-                return Result<TypeCast, string>.Ok(
+                return Result<TypeCast>.Ok(
                     new()
                     {
                         Cast = value,
@@ -208,7 +209,7 @@ namespace ZSharp.Objects
             IRCode valueCode;
 
             if (valueCodeResult.Error(out var error))
-                return Result<TypeCast, string>.Error(error);
+                return Result<TypeCast>.Error(error);
             else valueCode = valueCodeResult.Unwrap();
 
             if (targetClass.IsSubclassOf(this))
@@ -219,13 +220,13 @@ namespace ZSharp.Objects
                 IR.OOPTypeReference<IR.Class> targetClassIR;
 
                 if (targetClassIRResult.Error(out error))
-                    return Result<TypeCast, string>.Error(error);
+                    return Result<TypeCast>.Error(error);
                 else targetClassIR = targetClassIRResult.Unwrap();
 
                 IR.VM.Nop onCast = new();
                 IR.VM.Nop onFail = new();
 
-                return Result<TypeCast, string>.Ok(
+                return Result<TypeCast>.Ok(
                     new()
                     {
                         Cast = new RawCode(new([
@@ -246,7 +247,7 @@ namespace ZSharp.Objects
                 );
             }
 
-            return Result<TypeCast, Error>.Error(
+            return Result<TypeCast>.Error(
                 "Object does not support type cast to the specified type"
             );
         }

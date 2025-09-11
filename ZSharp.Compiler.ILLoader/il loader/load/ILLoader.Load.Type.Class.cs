@@ -2,12 +2,12 @@
 {
     partial class ILLoader
     {
-        public IType LoadClass(Type @class)
+        public CompilerObject LoadClass(Type @class)
         {
             if (@class.IsGenericTypeDefinition)
                 return LoadGenericClass(@class);
 
-            throw new NotImplementedException();
+            return new Objects.Class(@class, this);
         }
     }
 }

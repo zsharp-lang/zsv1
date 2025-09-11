@@ -3,6 +3,6 @@
     partial class Global
         : ITyped
     {
-        public IType Type { get; }
+        public CompilerObject Type { get; }
     }
 }

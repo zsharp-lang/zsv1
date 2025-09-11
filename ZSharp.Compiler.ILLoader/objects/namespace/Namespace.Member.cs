@@ -19,18 +19,14 @@ namespace ZSharp.Compiler.ILLoader.Objects
 
         CompilerObjectResult ICTGetMember<MemberName>.Member(Compiler compiler, MemberName member)
         {
-            if (
-                !Members.TryGetValue(member, out var result)
-                && lazyLoadedMembers.Remove(member, out var lazyLoad)
-            )
-                AddMember(member, result = lazyLoad());
+            if (!Members.TryGetValue(member, out var result))
+                if ((result = LoadMember(member)) is not null)
+                    AddMember(member, result);
+                else return CompilerObjectResult.Error(
+                    $"Could not find member {member} in namespace {FullName}"
+                );
 
-            if (result is not null)
-                return CompilerObjectResult.Ok(result);
-
-            return CompilerObjectResult.Error(
-                $"Can't find member {member} in namespace {FullName}"
-            );
+            return CompilerObjectResult.Ok(result);
         }
     }
 }
