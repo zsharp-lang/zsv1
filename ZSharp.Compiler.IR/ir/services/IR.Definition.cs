@@ -1,27 +1,17 @@
 ﻿namespace ZSharp.Compiler
 {
-    partial class IR
+    partial struct IR
     {
+        public IIRDefinitionAsCompiler DefinitionAsCompiler { get; set; } = Dispatcher.Instance;
+
+        public IIRDefinitionInCompiler DefinitionInCompiler { get; set; } = Dispatcher.Instance;
+
         public Result<T> CompileDefinition<T>(CompilerObject @object, TargetPlatform? target)
             where T : IRDefinition
-        {
-            if (@object.Is<ICompileIRDefinitionAs<T>>(out var compile))
-                return compile.CompileIRDefinition(this, target);
-
-            return Result<T>.Error(
-                $"Cannot compile definition for object of type {@object}"
-            );
-        }
+            => DefinitionAsCompiler.CompileDefinition<T>(@object, target);
 
         public bool CompileDefinition<Owner>(CompilerObject @object, Owner owner, TargetPlatform? target)
             where Owner : IRDefinition
-        {
-            if (!@object.Is<ICompileIRDefinitionIn<Owner>>(out var compile))
-                return false;
-
-
-            compile.CompileIRDefinition(this, owner, target);
-            return true;
-        }
+            => DefinitionInCompiler.CompileDefinition(@object, owner, target);
     }
 }

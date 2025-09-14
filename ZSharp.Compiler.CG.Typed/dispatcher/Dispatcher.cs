@@ -1,4 +1,4 @@
-﻿namespace ZSharp.Compiler.Dispatchers.Typed
+﻿namespace ZSharp.Compiler.CGDispatchers.Typed
 {
     public partial class Dispatcher(Compiler compiler)
     {

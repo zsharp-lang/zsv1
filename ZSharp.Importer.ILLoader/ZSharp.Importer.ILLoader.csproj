@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.CG.Typed\ZSharp.Compiler.CG.Typed.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.TS.Static\ZSharp.Compiler.TS.Static.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
     <ProjectReference Include="..\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />

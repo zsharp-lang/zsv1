@@ -20,6 +20,7 @@
     <ProjectReference Include="..\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.CG.Proxy\ZSharp.Compiler.CG.Proxy.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.CG.Typed\ZSharp.Compiler.CG.Typed.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj" />
     <ProjectReference Include="..\ZSharp.Interpreter\ZSharp.Interpreter.csproj" />
     <ProjectReference Include="..\ZSharp.Library.Standard.FileSystem\ZSharp.Library.Standard.FileSystem.csproj" />
     <ProjectReference Include="..\ZSharp.Library.Standard.IO\ZSharp.Library.Standard.IO.csproj" />

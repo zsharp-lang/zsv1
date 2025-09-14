@@ -2,9 +2,9 @@
 {
     public sealed partial class ILLoader
     {
-        public ILLoader(Compiler.IR ir, Platform.Runtime.Runtime runtime)
+        public ILLoader(Compiler.Compiler compiler, Platform.Runtime.Runtime runtime)
         {
-            IR = ir;
+            Compiler = compiler;
             Runtime = runtime;
 
             TypeSystem = new()

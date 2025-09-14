@@ -1,4 +1,4 @@
-﻿namespace ZSharp.Compiler.Dispatchers.Proxy
+﻿namespace ZSharp.Compiler.CGDispatchers.Proxy
 {
     partial class Dispatcher
     {

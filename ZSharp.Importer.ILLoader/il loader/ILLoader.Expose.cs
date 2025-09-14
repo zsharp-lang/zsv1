@@ -6,30 +6,29 @@ namespace ZSharp.Importer.ILLoader
     public sealed partial class ILLoader
     {
         [MaybeNull]
-        private ZSharp.IR.Function castFunction;
+        private IR.Function castFunction;
 
-        public Collection<ZSharp.IR.VM.Instruction> ExposeAsIR<T>(T? obj)
+        public Collection<IR.VM.Instruction> ExposeAsIR<T>(T? obj)
             => ExposeAsIR(obj, typeof(T));
 
-        public Collection<ZSharp.IR.VM.Instruction> ExposeAsIR(object? obj)
+        public Collection<IR.VM.Instruction> ExposeAsIR(object? obj)
             => ExposeAsIR(obj, obj?.GetType() ?? typeof(object));
 
-        public Collection<ZSharp.IR.VM.Instruction> ExposeAsIR(object? obj, Type type)
+        public Collection<IR.VM.Instruction> ExposeAsIR(object? obj, Type type)
         {
             var rt = RequireRuntime();
-            var ir = RequireIR();
 
             if (obj is null) return rt.Expose(null);
 
             var coType = LoadType(type);
-            var irType = ir.CompileType(coType).Unwrap();
+            var irType = IR.CompileType(coType).Unwrap();
 
             var code = rt.Expose(obj);
 
-            var function = new ZSharp.IR.GenericFunctionInstance(castFunction!);
+            var function = new IR.GenericFunctionInstance(castFunction!);
             function.Arguments.Add(irType);
 
-            code.Add(new ZSharp.IR.VM.Call(function));
+            code.Add(new IR.VM.Call(function));
             return code;
         }
 
@@ -42,7 +41,7 @@ namespace ZSharp.Importer.ILLoader
         public CompilerObject Expose(object? obj, Type type)
             => new RawIRCode(new([.. ExposeAsIR(obj, type)])
             {
-                Types = [RequireIR().CompileType(LoadType(type)).Unwrap()]
+                Types = [IR.CompileType(LoadType(type)).Unwrap()]
             });
 
         public CompilerObject Expose(Delegate @delegate)
@@ -63,7 +62,7 @@ namespace ZSharp.Importer.ILLoader
         {
             var rt = RequireRuntime();
 
-            var castFunctionReturnType = new ZSharp.IR.GenericParameter("T");
+            var castFunctionReturnType = new IR.GenericParameter("T");
             castFunction = new(castFunctionReturnType);
             castFunction.GenericParameters.Add(castFunctionReturnType);
             castFunction.Signature.Args.Parameters.Add(new("obj", rt.TypeSystem.Object));

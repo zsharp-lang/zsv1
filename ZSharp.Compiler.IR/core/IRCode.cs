@@ -1,5 +1,4 @@
 ﻿using CommonZ.Utils;
-using ZSharp.IR;
 
 namespace ZSharp.Compiler
 {

@@ -3,13 +3,13 @@
     partial class StringLiteral
         : ICompileIRCode
     {
-        Result<IRCode> ICompileIRCode.CompileIRCode(Compiler.IR ir, object? target)
+        Result<IRCode> ICompileIRCode.CompileIRCode(Compiler.Compiler compiler, object? target)
             => Result<IRCode>.Ok(
                 new([
                     new IR.VM.PutString(value)
                 ])
                 {
-                    Types = [ir.RuntimeModule.TypeSystem.String]
+                    Types = [compiler.IR.RuntimeModule.TypeSystem.String]
                 }
             );
     }

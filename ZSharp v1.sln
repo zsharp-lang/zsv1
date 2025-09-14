@@ -75,6 +75,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.CG.Proxy", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.CG.Typed", "ZSharp.Compiler.CG.Typed\ZSharp.Compiler.CG.Typed.csproj", "{62E6B22B-2057-8EFC-30D4-B6F497FEF9D8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.Reflection", "ZSharp.Compiler.Reflection\ZSharp.Compiler.Reflection.csproj", "{0B9B763F-D6DA-4D29-B810-7A4CADF152DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.IR.Static", "ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj", "{D4B62927-75B2-4147-8B63-1154BA1AB9CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -225,6 +229,14 @@ Global
 		{62E6B22B-2057-8EFC-30D4-B6F497FEF9D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62E6B22B-2057-8EFC-30D4-B6F497FEF9D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62E6B22B-2057-8EFC-30D4-B6F497FEF9D8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B9B763F-D6DA-4D29-B810-7A4CADF152DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B9B763F-D6DA-4D29-B810-7A4CADF152DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B9B763F-D6DA-4D29-B810-7A4CADF152DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B9B763F-D6DA-4D29-B810-7A4CADF152DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4B62927-75B2-4147-8B63-1154BA1AB9CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4B62927-75B2-4147-8B63-1154BA1AB9CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4B62927-75B2-4147-8B63-1154BA1AB9CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4B62927-75B2-4147-8B63-1154BA1AB9CE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

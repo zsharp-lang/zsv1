@@ -142,9 +142,11 @@ else
 
     #region Setup Interpreter
 
-    new ZSharp.Compiler.Dispatchers.Direct.Dispatcher(interpreter.Compiler).Apply();
-    new ZSharp.Compiler.Dispatchers.Typed.Dispatcher(interpreter.Compiler).Apply();
-    new ZSharp.Compiler.Dispatchers.Proxy.Dispatcher(interpreter.Compiler).Apply();
+    new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(interpreter.Compiler).Apply();
+    new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(interpreter.Compiler).Apply();
+    new ZSharp.Compiler.CGDispatchers.Proxy.Dispatcher(interpreter.Compiler).Apply();
+
+    new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(interpreter.Compiler).Apply();
 
     var scriptCompiler = new ScriptCompiler(interpreter, documentNode);
 

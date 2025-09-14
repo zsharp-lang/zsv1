@@ -1,21 +1,15 @@
 ﻿namespace ZSharp.Compiler
 {
-    partial class IR
+    public delegate Result<IType> CompileType(CompilerObject @object);
+
+    partial struct IR
     {
-        public Result<IType> CompileType(CompilerObject @object)
-        {
-            if (@object.Is<ICompileIRType>(out var compile))
-                return compile.CompileIRType(this);
+        public CompileType CompileType { get; set; } = Dispatcher.Instance.CompileType;
 
-            return Result<IType>.Error(
-                $"Cannot compile type for object of type {@object}"
-            );
-        }
+        public IIRTypeCompiler TypeCompiler { get; set; } = Dispatcher.Instance;
 
-        public Result<T> CompileType<T>(CompilerObject @object)
+        public Result<T> CompileTypeAs<T>(CompilerObject @object)
             where T : class, IType
-        {
-            throw new NotImplementedException();
-        }
+            => TypeCompiler.CompileType<T>(@object);
     }
 }

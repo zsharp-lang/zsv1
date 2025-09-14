@@ -1,7 +1,7 @@
 ﻿namespace ZSharp.Compiler
 {
-    public sealed partial class IR(ZSharp.IR.RuntimeModule runtimeModule)
+    public partial struct IR(RuntimeModule runtimeModule)
     {
-        public ZSharp.IR.RuntimeModule RuntimeModule { get; } = runtimeModule;
+        public RuntimeModule RuntimeModule { get; } = runtimeModule;
     }
 }

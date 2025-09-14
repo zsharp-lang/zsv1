@@ -3,13 +3,13 @@
     partial class BooleanLiteral
         : ICompileIRCode
     {
-        Result<IRCode> ICompileIRCode.CompileIRCode(Compiler.IR ir, object? target)
+        Result<IRCode> ICompileIRCode.CompileIRCode(Compiler.Compiler compiler, object? target)
             => Result<IRCode>.Ok(
                 new([
                     new IR.VM.PutBoolean(value)
                 ])
                 {
-                    Types = [ir.RuntimeModule.TypeSystem.Boolean]
+                    Types = [compiler.IR.RuntimeModule.TypeSystem.Boolean]
                 }
             );
     }

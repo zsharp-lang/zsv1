@@ -9,11 +9,11 @@ namespace ZSharp.SourceCompiler.Module.Objects
     {
         public IR.Global? IR { get; private set; }
 
-        Result<IR.Global> ICompileIRDefinitionAs<IR.Global>.CompileIRDefinition(Compiler.IR ir, object? target)
+        Result<IR.Global> ICompileIRDefinitionAs<IR.Global>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
         {
             if (IR is null)
             {
-                var typeResult = ir.CompileType(Type);
+                var typeResult = compiler.IR.CompileType(Type);
 
                 if (
                     typeResult
@@ -29,9 +29,9 @@ namespace ZSharp.SourceCompiler.Module.Objects
             return Result<IR.Global>.Ok(IR);
         }
 
-        void ICompileIRDefinitionIn<IR.Module>.CompileIRDefinition(Compiler.IR ir, IR.Module owner, object? target)
+        void ICompileIRDefinitionIn<IR.Module>.CompileIRDefinition(Compiler.Compiler compiler, IR.Module owner, object? target)
         {
-            var result = ir.CompileDefinition<IR.Global>(this, target);
+            var result = compiler.IR.CompileDefinition<IR.Global>(this, target);
 
             if (result.IsError) return;
 

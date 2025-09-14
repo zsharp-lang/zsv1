@@ -5,13 +5,9 @@ namespace ZSharp.Interpreter
 {
     public sealed partial class Interpreter
     {
-        //public Runtime.NET.Runtime Runtime { get; }
-
         public IR.RuntimeModule RuntimeModule { get; }
 
         public Compiler.Compiler Compiler { get; }
-
-        public Compiler.IR IRCompiler { get; }
 
         public Interpreter(IR.RuntimeModule? runtimeModule = null)
         {
@@ -43,10 +39,7 @@ namespace ZSharp.Interpreter
                 UIntNative = null!,
                 Void = RuntimeModule.TypeSystem.Void
             });
-            IRCompiler = new(RuntimeModule);
-            ILLoader = new(Compiler.IR, Runtime);
-
-            //new Ops(Compiler);
+            ILLoader = new(Compiler, Runtime);
         }
 
         public Result<object?> Evaluate(CompilerObject @object)

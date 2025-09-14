@@ -9,7 +9,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         private readonly IType type = type;
 
-        Result<IType> ICompileIRType.CompileIRType(Compiler.IR ir)
+        Result<IType> ICompileIRType.CompileIRType(Compiler.Compiler compiler)
             => Result<IType>.Ok(type);
     }
 }
