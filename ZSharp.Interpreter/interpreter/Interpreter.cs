@@ -42,7 +42,11 @@ namespace ZSharp.Interpreter
             ILLoader = new(Compiler, Runtime);
         }
 
-        public Result<object?> Evaluate(CompilerObject @object)
+        public Result<object?> Evaluate(
+            CompilerObject @object, 
+            Platform.Runtime.IEvaluationContext? evaluationContext = null,
+            Platform.Runtime.Loaders.IContext? codeContext = null    
+        )
         {
             if (
                 Compiler.IR.CompileCode(@object, Runtime)
@@ -53,7 +57,7 @@ namespace ZSharp.Interpreter
 
             var type = irCode!.IsVoid ? RuntimeModule.TypeSystem.Void : irCode.RequireValueType();
 
-            var result = Runtime.Evaluate(irCode.Instructions, type);
+            var result = Runtime.Evaluate(irCode.Instructions, type, evaluationContext, codeContext);
 
             if (irCode.IsVoid)
                 return Result<object?>

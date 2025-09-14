@@ -16,6 +16,6 @@
 
         public ref TS TS => ref ts;
 
-        public TS TypeSystem { init => ts = value; }
+        //public TS TypeSystem { init => ts = value; }
     }
 }

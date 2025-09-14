@@ -2,11 +2,22 @@
 {
     public sealed partial class Runtime
     {
-        public Runtime(TypeSystem typeSystem)
+        public bool DebugEnabled { get; }
+
+        public Runtime(TypeSystem typeSystem, bool debugging = true)
         {
             if (_instance is not null)
                 throw new InvalidOperationException("Runtime instance already exists.");
             _instance = this;
+
+            EvaluationContextFactory =
+                (DebugEnabled = debugging)
+                ? new DebuggableEvaluationContextFactory()
+                {
+                    OutputPath = Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "generated")).FullName
+                }
+                : new ExecutionEvaluationContextFactory()
+                ;
 
             TypeSystem = typeSystem;
 

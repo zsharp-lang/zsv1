@@ -11,8 +11,11 @@
         {
             RuntimeModule = runtimeModule;
 
-            CG = new();
-            IR = new(runtimeModule);
+            cg = new();
+            ir = new(runtimeModule);
+            ts = new();
+            overloading = new();
+            reflection = new();
         }
     }
 }

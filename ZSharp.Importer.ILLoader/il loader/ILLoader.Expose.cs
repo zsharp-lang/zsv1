@@ -46,8 +46,11 @@ namespace ZSharp.Importer.ILLoader
 
         public CompilerObject Expose(Delegate @delegate)
         {
-            var methodCO = LoadMethod(@delegate.Method);
-            var @object = ExposeAsIR(@delegate.Target);
+            var wrapped = new ExposedObjectWrapper(@delegate.Target, @delegate.Method);
+            // TODO: Cache this method info
+            // TODO: Add support for array. Currently not supported because there's no make-array instruction in IR
+            var methodCO = LoadMethod(typeof(ExposedObjectWrapper).GetMethod("Invoke", [typeof(object)]) ?? throw new());
+            var @object = ExposeAsIR(wrapped);
             var objectCode = new RawIRCode(new(@object));
 
             return new Objects.BoundMethod()

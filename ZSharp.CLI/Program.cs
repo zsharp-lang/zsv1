@@ -13,200 +13,201 @@ var filePath = args.Length == 0 ? null : args[0];
 if (filePath is null)
 {
     interpreter.Log.Error("Missing input file path argument.", new CLIArgumentLogOrigin("<filePath:0>"));
+
+    return;
 }
-else
+
+#region Parsing
+
+ZSharp.AST.Document documentNode;
+using (StreamReader stream = File.OpenText(filePath))
 {
-    #region Parsing
+    var zsharpParser = new ZSharpParser();
+    var parser = new Parser(Tokenizer.Tokenize(new(stream)));
 
-    ZSharp.AST.Document documentNode;
-    using (StreamReader stream = File.OpenText(filePath))
-    {
-        var zsharpParser = new ZSharpParser();
-        var parser = new Parser(Tokenizer.Tokenize(new(stream)));
+    var expressionParser = zsharpParser.Expression;
+    var statementParser = zsharpParser.Statement;
 
-        var expressionParser = zsharpParser.Expression;
-        var statementParser = zsharpParser.Statement;
+    expressionParser.Terminal(
+        TokenType.String,
+        token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.String)
+    );
+    expressionParser.Terminal(
+        TokenType.Number,
+        token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.Number)
+    );
+    expressionParser.Terminal(
+        TokenType.Decimal,
+        token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.Decimal)
+    );
+    expressionParser.Terminal(
+        TokenType.Identifier,
+        token => token.Value switch
+        {
+            "null" => ZSharp.AST.LiteralExpression.Null(),
+            "true" => ZSharp.AST.LiteralExpression.True(),
+            "false" => ZSharp.AST.LiteralExpression.False(),
+            _ => new ZSharp.AST.IdentifierExpression(new(token)),
+        }
+    );
+    expressionParser.Nud(
+        TokenType.LParen,
+        parser =>
+        {
+            parser.Eat(TokenType.LParen);
+            var expression = parser.Parse<ZSharp.AST.Expression>();
+            parser.Eat(TokenType.RParen);
 
-        expressionParser.Terminal(
-            TokenType.String,
-            token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.String)
-        );
-        expressionParser.Terminal(
-            TokenType.Number,
-            token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.Number)
-        );
-        expressionParser.Terminal(
-            TokenType.Decimal,
-            token => new ZSharp.AST.LiteralExpression(token.Value, ZSharp.AST.LiteralType.Decimal)
-        );
-        expressionParser.Terminal(
-            TokenType.Identifier,
-            token => token.Value switch
-            {
-                "null" => ZSharp.AST.LiteralExpression.Null(),
-                "true" => ZSharp.AST.LiteralExpression.True(),
-                "false" => ZSharp.AST.LiteralExpression.False(),
-                _ => new ZSharp.AST.IdentifierExpression(token.Value),
-            }
-        );
-        expressionParser.Nud(
-            TokenType.LParen,
-            parser =>
-            {
-                parser.Eat(TokenType.LParen);
-                var expression = parser.Parse<ZSharp.AST.Expression>();
-                parser.Eat(TokenType.RParen);
-
-                return expression;
-            },
-            10000
-        );
-        expressionParser.Nud(
-            LangParser.Keywords.Let,
-            LangParser.ParseLetExpression
-        );
-        expressionParser.Nud(
-            LangParser.Keywords.Class,
-            zsharpParser.Class.Parse
-        );
-
-        expressionParser.InfixR("=", 10);
-        expressionParser.InfixL("<", 20);
-        expressionParser.InfixL("+", 50);
-        expressionParser.InfixL("-", 50);
-        expressionParser.InfixL("*", 70);
-        expressionParser.InfixL("/", 70);
-        expressionParser.InfixL("**", 80);
-
-        expressionParser.InfixL("==", 30);
-        expressionParser.InfixL("!=", 30);
-
-        expressionParser.InfixL(LangParser.Keywords.Or, 15);
-
-        expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
-        expressionParser.Led(TokenType.LBracket, LangParser.ParseIndexExpression, 100);
-        expressionParser.Nud(TokenType.LBracket, LangParser.ParseArrayLiteral);
-        expressionParser.Led(".", LangParser.ParseMemberAccess, 150);
-        expressionParser.Led(LangParser.Keywords.As, LangParser.ParseCastExpression, 20);
-        expressionParser.Led(LangParser.Keywords.Is, LangParser.ParseIsOfExpression, 20);
-
-        expressionParser.Separator(TokenType.Comma);
-        expressionParser.Separator(TokenType.RParen);
-        expressionParser.Separator(TokenType.RBracket);
-        expressionParser.Separator(TokenType.Semicolon);
-
-        expressionParser.Separator(LangParser.Keywords.In); // until it's an operator
-
-        expressionParser.AddKeywordParser(
-            LangParser.Keywords.While,
-            LangParser.ParseWhileExpression<ZSharp.AST.Expression>
-        );
-
-        statementParser.AddKeywordParser(
-            LangParser.Keywords.While,
-            Utils.ExpressionStatement(LangParser.ParseWhileExpression<ZSharp.AST.Statement>, semicolon: false)
-        );
-
-        statementParser.AddKeywordParser(
-            LangParser.Keywords.If,
-            LangParser.ParseIfStatement
-        );
-
-        statementParser.AddKeywordParser(
-            LangParser.Keywords.For,
-            LangParser.ParseForStatement
-        );
-
-        statementParser.AddKeywordParser(
-            LangParser.Keywords.Case,
-            LangParser.ParseCaseStatement
-        );
-
-        zsharpParser.Document.AddKeywordParser(
-            LangParser.Keywords.If,
-            LangParser.ParseIfStatement
-        );
-
-        //zsharpParser.Function.AddKeywordParser(
-        //    LangParser.Keywords.While,
-        //    Utils.ExpressionStatement(LangParser.ParseWhileExpression, semicolon: false)
-        //);
-
-        zsharpParser.RegisterParsers(parser);
-        documentNode = zsharpParser.Parse(parser);
-
-        Console.WriteLine($"Finished parsing document with {documentNode.Statements.Count} statements!");
-    }
-
-    #endregion
-
-    #region Setup Interpreter
-
-    new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(interpreter.Compiler).Apply();
-    new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(interpreter.Compiler).Apply();
-    new ZSharp.Compiler.CGDispatchers.Proxy.Dispatcher(interpreter.Compiler).Apply();
-
-    new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(interpreter.Compiler).Apply();
-
-    var scriptCompiler = new ScriptCompiler(interpreter, documentNode);
-
-    interpreter.ILLoader.OnLoadOperator = (@operator, method) =>
-    {
-        interpreter.Log.Warning(
-            $"Skip loading operator {@operator} ({method.GetParameters().Length} parameters)" +
-            $"because overloading is not implemented yet",
-            ZSCScriptLogOrigin.Instance
-        );
-        //scriptCompiler.Context.Operators.Op(@operator.Operator, interpreter.ILLoader.LoadMethod(method));
-    };
-
-    #region Import System
-
-    var stringImporter = new StringImporter();
-
-    scriptCompiler.Context.ImportSystem.ImportFunction = interpreter.ILLoader.Expose(
-        (Delegate)(
-            (string source) => stringImporter.Import(source).Unwrap() as object
-        )
+            return expression;
+        },
+        10000
+    );
+    expressionParser.Nud(
+        LangParser.Keywords.Let,
+        LangParser.ParseLetExpression
+    );
+    expressionParser.Nud(
+        LangParser.Keywords.Class,
+        zsharpParser.Class.Parse
     );
 
-    #endregion
+    expressionParser.InfixR("=", 10);
+    expressionParser.InfixL("<", 20);
+    expressionParser.InfixL("+", 50);
+    expressionParser.InfixL("-", 50);
+    expressionParser.InfixL("*", 70);
+    expressionParser.InfixL("/", 70);
+    expressionParser.InfixL("**", 80);
 
-    #region Importers
+    expressionParser.InfixL("==", 30);
+    expressionParser.InfixL("!=", 30);
 
-    #region Core Library
+    expressionParser.InfixL(LangParser.Keywords.Or, 15);
 
-    var coreImporter = new CoreLibraryImporter();
-    stringImporter.RegisterImporter("core", coreImporter);
+    expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);
+    expressionParser.Led(TokenType.LBracket, LangParser.ParseIndexExpression, 100);
+    expressionParser.Nud(TokenType.LBracket, LangParser.ParseArrayLiteral);
+    expressionParser.Led(".", LangParser.ParseMemberAccess, 150);
+    expressionParser.Led(LangParser.Keywords.As, LangParser.ParseCastExpression, 20);
+    expressionParser.Led(LangParser.Keywords.Is, LangParser.ParseIsOfExpression, 20);
 
-    #endregion
+    expressionParser.Separator(TokenType.Comma);
+    expressionParser.Separator(TokenType.RParen);
+    expressionParser.Separator(TokenType.RBracket);
+    expressionParser.Separator(TokenType.Semicolon);
 
-    #region Standard Library
+    expressionParser.Separator(LangParser.Keywords.In); // until it's an operator
 
-    var stdImporter = new StandardLibraryImporter();
-    stringImporter.RegisterImporter("std", stdImporter);
-
-    stdImporter.Add(
-        "io",
-        interpreter.ILLoader.LoadModule(typeof(Standard.IO.ModuleScope).Module)
+    expressionParser.AddKeywordParser(
+        LangParser.Keywords.While,
+        LangParser.ParseWhileExpression<ZSharp.AST.Expression>
     );
-    stdImporter.Add(
-        "fs",
-        interpreter.ILLoader.LoadModule(typeof(Standard.FileSystem.ModuleScope).Module)
+
+    statementParser.AddKeywordParser(
+        LangParser.Keywords.While,
+        Utils.ExpressionStatement(LangParser.ParseWhileExpression<ZSharp.AST.Statement>, semicolon: false)
     );
 
-    #endregion
+    statementParser.AddKeywordParser(
+        LangParser.Keywords.If,
+        LangParser.ParseIfStatement
+    );
 
-    #endregion
+    statementParser.AddKeywordParser(
+        LangParser.Keywords.For,
+        LangParser.ParseForStatement
+    );
 
-    #endregion
+    statementParser.AddKeywordParser(
+        LangParser.Keywords.Case,
+        LangParser.ParseCaseStatement
+    );
 
-    #region Compilation
+    zsharpParser.Document.AddKeywordParser(
+        LangParser.Keywords.If,
+        LangParser.ParseIfStatement
+    );
 
-    scriptCompiler.Compile();
+    //zsharpParser.Function.AddKeywordParser(
+    //    LangParser.Keywords.While,
+    //    Utils.ExpressionStatement(LangParser.ParseWhileExpression, semicolon: false)
+    //);
 
-    #endregion
+    zsharpParser.RegisterParsers(parser);
+    documentNode = zsharpParser.Parse(parser);
+
+    Console.WriteLine($"Finished parsing document with {documentNode.Statements.Count} statements!");
 }
+
+#endregion
+
+#region Setup Interpreter
+
+new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(interpreter.Compiler).Apply();
+new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(interpreter.Compiler).Apply();
+new ZSharp.Compiler.CGDispatchers.Proxy.Dispatcher(interpreter.Compiler).Apply();
+
+new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(interpreter.Compiler).Apply();
+
+var scriptCompiler = new ScriptCompiler(interpreter, documentNode, filePath);
+
+interpreter.ILLoader.OnLoadOperator = (@operator, method) =>
+{
+    interpreter.Log.Warning(
+        $"Skip loading operator {@operator} ({method.GetParameters().Length} parameters)" +
+        $"because overloading is not implemented yet",
+        ZSCScriptLogOrigin.Instance
+    );
+    //scriptCompiler.Context.Operators.Op(@operator.Operator, interpreter.ILLoader.LoadMethod(method));
+};
+
+#region Import System
+
+var stringImporter = new StringImporter();
+
+scriptCompiler.Context.ImportSystem.ImportFunction = interpreter.ILLoader.Expose(
+    (Delegate)(
+        (string source) => stringImporter.Import(source).Unwrap() as object
+    )
+);
+
+#endregion
+
+#region Importers
+
+#region Core Library
+
+var coreImporter = new CoreLibraryImporter();
+stringImporter.RegisterImporter("core", coreImporter);
+
+#endregion
+
+#region Standard Library
+
+var stdImporter = new StandardLibraryImporter();
+stringImporter.RegisterImporter("std", stdImporter);
+
+stdImporter.Add(
+    "io",
+    interpreter.ILLoader.LoadModule(typeof(Standard.IO.ModuleScope).Module)
+);
+stdImporter.Add(
+    "fs",
+    interpreter.ILLoader.LoadModule(typeof(Standard.FileSystem.ModuleScope).Module)
+);
+
+#endregion
+
+#endregion
+
+#endregion
+
+#region Compilation
+
+scriptCompiler.Compile();
+
+#endregion
+
 
 Console.WriteLine();
 

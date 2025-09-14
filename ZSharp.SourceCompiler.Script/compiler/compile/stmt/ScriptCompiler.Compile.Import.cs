@@ -54,8 +54,29 @@ namespace ZSharp.SourceCompiler.Script
                 return;
             }
 
+            Platform.Runtime.IEvaluationContext? evaluationContext = null;
+            var codeContext = DebugContext;
+            if (Interpreter.Runtime.DebugEnabled)
+            {
+                evaluationContext = Interpreter.Runtime.EvaluationContextFactory.CreateEvaluationContext();
+
+                result = new Objects.ExpressionWrapper(
+                    codeContext = new(
+                        evaluationContext.Module.DefineDocument(
+                            DocumentPath, 
+                            System.Diagnostics.SymbolStore.SymLanguageType.CSharp,
+                            System.Diagnostics.SymbolStore.SymLanguageVendor.Microsoft,
+                            System.Diagnostics.SymbolStore.SymDocumentType.Text
+                        )
+                    ),
+                    import.TokenInfo.ImportKeyword.Span, 
+                    result!
+                );
+            }
+
+
             if (
-                Interpreter.Evaluate(result!)
+                Interpreter.Evaluate(result!, evaluationContext, codeContext)
                 .When(out var importObject)
                 .Error(out error)
                 )

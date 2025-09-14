@@ -4,9 +4,18 @@ namespace ZSharp.Platform.Runtime
 {
     partial class Runtime
     {
-        public object? Evaluate(Collection<IR.VM.Instruction> code, IR.IType type)
+        public object? Evaluate(
+            Collection<IR.VM.Instruction> code, 
+            IR.IType type, 
+            IEvaluationContext? evaluationContext = null,
+            Loaders.IContext? innerContext = null
+        )
         {
-            return Loader.LoadCode(code, type).DynamicInvoke(null);
+            return Loader.LoadCode(
+                code, type, 
+                evaluationContext ?? EvaluationContextFactory.CreateEvaluationContext(), 
+                innerContext
+            ).DynamicInvoke(null);
         }
     }
 }

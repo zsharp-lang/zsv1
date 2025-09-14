@@ -2,6 +2,8 @@
 {
     partial class Runtime
     {
-        private Loaders.EmitLoader Loader { get; }
+        public IEvaluationContextFactory EvaluationContextFactory { get; }
+
+        public Loaders.EmitLoader Loader { get; }
     }
 }

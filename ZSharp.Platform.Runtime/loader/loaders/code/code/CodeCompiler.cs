@@ -8,7 +8,7 @@ namespace ZSharp.Platform.Runtime.Loaders
 
         public void CompileCode(Collection<IR.VM.Instruction> instructions)
         {
-            if (Context is IBranchingCodeContext branchingContext)
+            if (Context.Is<IBranchingCodeContext>(out var branchingContext))
             {
                 foreach (var instruction in instructions)
                     branchingContext.AddBranchTarget(instruction);
@@ -26,6 +26,18 @@ namespace ZSharp.Platform.Runtime.Loaders
 
         private void Compile(IR.VM.Instruction instruction)
         {
+            if (Context.Is<IDebuggableContext>(out var debuggable))
+            {
+                if (debuggable.TryGetSequencePoint(instruction, out var location))
+                    Context.IL.MarkSequencePoint(
+                        debuggable.Document,
+                        location.StartLine,
+                        location.StartColumn,
+                        location.EndLine,
+                        location.EndColumn
+                    );
+            }
+
             switch (instruction)
             {
                 case IR.VM.Call call: CodeCompiler_Impl.Compile(RequireContext<ICodeContext>(), call); break;
@@ -64,7 +76,7 @@ namespace ZSharp.Platform.Runtime.Loaders
         }
 
         private T RequireContext<T>()
-            where T : ICodeContext
-            => Context is T required ? required : throw new InvalidOperationException();
+            where T : class, ICodeContext
+            => Context.Is<T>(out var required) ? required : throw new InvalidOperationException();
     }
 }

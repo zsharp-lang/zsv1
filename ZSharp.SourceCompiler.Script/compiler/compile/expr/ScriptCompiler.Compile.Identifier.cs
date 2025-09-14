@@ -8,7 +8,7 @@ namespace ZSharp.SourceCompiler.Script
         {
             foreach (var scope in Interpreter.Compiler.CurrentContext.FindContext<IScopeContext>())
                 if (scope.Get(identifier.Name).Ok(out var result))
-                    return Result<CompilerObject>.Ok(result);
+                    return Result<CompilerObject>.Ok(new Objects.IdentifierBoundObject(this, identifier, result));
 
             return Result<CompilerObject>.Error(
                 $"Identifier '{identifier.Name}' not found."

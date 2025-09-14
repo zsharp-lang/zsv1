@@ -2,8 +2,8 @@
 {
     partial class EmitLoader
     {
-        private Emit.AssemblyBuilder StandaloneAssembly { get; }
+        public Emit.AssemblyBuilder StandaloneAssembly { get; }
 
-        private Emit.ModuleBuilder StandaloneModule { get; }
+        public Emit.ModuleBuilder StandaloneModule { get; }
     }
 }

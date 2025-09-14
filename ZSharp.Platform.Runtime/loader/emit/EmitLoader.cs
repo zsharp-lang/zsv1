@@ -1,17 +1,30 @@
-﻿namespace ZSharp.Platform.Runtime.Loaders
+﻿using Debuggable = System.Diagnostics.DebuggableAttribute;
+
+namespace ZSharp.Platform.Runtime.Loaders
 {
-    internal sealed partial class EmitLoader
+    public sealed partial class EmitLoader
     {
         public Runtime Runtime { get; }
 
-        public EmitLoader(Runtime runtime)
+        internal EmitLoader(Runtime runtime)
         {
             Runtime = runtime;
-
-            StandaloneAssembly = Emit.AssemblyBuilder.DefineDynamicAssembly(
-                new IL.AssemblyName("<StandaloneCodeAssembly>"),
-                Emit.AssemblyBuilderAccess.RunAndCollect
+            
+            StandaloneAssembly = new Emit.PersistedAssemblyBuilder(
+                new("<StandaloneCodeModule>"), 
+                typeof(void).Assembly,
+                [
+                    new(
+                        typeof(Debuggable).GetConstructor([
+                            typeof(Debuggable.DebuggingModes)
+                        ]) ?? throw new(),
+                        [
+                            Debuggable.DebuggingModes.Default
+                        ]
+                    )
+                ]
             );
+           
             StandaloneModule = StandaloneAssembly.DefineDynamicModule(
                 "<StandaloneCodeModule>"
             );
