@@ -1,4 +1,4 @@
-﻿namespace ZSharp.Compiler.Dispatchers.CT
+﻿namespace ZSharp.Compiler.Dispatchers.Direct
 {
     internal partial class Dispatcher(Compiler compiler)
     {

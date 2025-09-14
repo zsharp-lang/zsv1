@@ -13,9 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.CG\ZSharp.Compiler.CG.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Context\ZSharp.Compiler.Context.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj" />
-    <ProjectReference Include="..\ZSharp.Compiler.CO\ZSharp.Compiler.CO.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.IR\ZSharp.Compiler.IR.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.TS\ZSharp.Compiler.TS.csproj" />
     <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />

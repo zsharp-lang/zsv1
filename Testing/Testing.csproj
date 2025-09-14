@@ -8,8 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZLoad.Test\ZLoad.Test.csproj" />
-    <ProjectReference Include="..\ZSharp.Compiler.ILLoader\ZSharp.Compiler.ILLoader.csproj" />
+    <ProjectReference Include="..\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />
   </ItemGroup>
 
 </Project>

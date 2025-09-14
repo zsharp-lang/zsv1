@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>zs</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Proxy\ZSharp.Compiler.CG.Proxy.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Typed\ZSharp.Compiler.CG.Typed.csproj" />
+    <ProjectReference Include="..\ZSharp.Interpreter\ZSharp.Interpreter.csproj" />
+    <ProjectReference Include="..\ZSharp.Library.Standard.FileSystem\ZSharp.Library.Standard.FileSystem.csproj" />
+    <ProjectReference Include="..\ZSharp.Library.Standard.IO\ZSharp.Library.Standard.IO.csproj" />
+    <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />
+    <ProjectReference Include="..\ZSharp.SourceCompiler.Script\ZSharp.SourceCompiler.Script.csproj" />
+    <ProjectReference Include="..\ZSharp.Tokenizer\ZSharp.Tokenizer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="test.zs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+	<Target Name="RemovePdbsAfterPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+		<Message Importance="high" Text="&gt;&gt;&gt; Deleting PDB files from publish folder" />
+		<ItemGroup>
+			<PdbFiles Include="$(PublishDir)bin\*.pdb" />
+		</ItemGroup>
+		<Delete Files="@(PdbFiles)" />
+	</Target>
+
+</Project>

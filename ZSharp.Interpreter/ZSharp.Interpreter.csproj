@@ -8,11 +8,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj" />
-    <ProjectReference Include="..\ZSharp.Compiler.ILLoader\ZSharp.Compiler.ILLoader.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.IR\ZSharp.Compiler.IR.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
+    <ProjectReference Include="..\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />
     <ProjectReference Include="..\ZSharp.IR\ZSharp.IR.csproj" />
-    <ProjectReference Include="..\ZSharp.Runtime\ZSharp.Runtime.csproj" />
+    <ProjectReference Include="..\ZSharp.Platform.Runtime\ZSharp.Platform.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

@@ -11,9 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZSharp.Compiler.ILLoader.Attributes\ZSharp.Compiler.ILLoader.Attributes.csproj" />
-    <ProjectReference Include="..\ZSharp.CT.StandardLibrary.FileSystem\ZSharp.CT.StandardLibrary.FileSystem.csproj" />
+    <ProjectReference Include="..\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
     <ProjectReference Include="..\ZSharp.Interpreter\ZSharp.Interpreter.csproj" />
+    <ProjectReference Include="..\ZSharp.Library.Standard.FileSystem\ZSharp.Library.Standard.FileSystem.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,9 +1,9 @@
-﻿using ZSharp.Compiler.ILLoader;
-using Objects = ZSharp.Compiler.ILLoader.Objects;
+﻿using ZSharp.Importer.ILLoader;
+using Objects = ZSharp.Importer.ILLoader.Objects;
 
 var rtm = ZSharp.IR.RuntimeModule.Standard;
 var coc = new ZSharp.Compiler.Compiler(rtm);
-var rt = new ZSharp.Runtime.Runtime(new()
+var rt = new ZSharp.Platform.Runtime.Runtime(new()
 {
     Array = rtm.TypeSystem.Array,
     Boolean = rtm.TypeSystem.Boolean,

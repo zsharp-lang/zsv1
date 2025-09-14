@@ -2,6 +2,6 @@
 {
     partial class Interpreter
     {
-        public Runtime.Runtime Runtime { get; }
+        public Platform.Runtime.Runtime Runtime { get; }
     }
 }

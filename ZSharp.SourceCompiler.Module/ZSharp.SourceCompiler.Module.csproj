@@ -14,8 +14,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />
-    <ProjectReference Include="..\ZSharp.Compiler.CO.CT\ZSharp.Compiler.CO.CT.csproj" />
-    <ProjectReference Include="..\ZSharp.Compiler.CO.RT\ZSharp.Compiler.CO.RT.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Typed\ZSharp.Compiler.CG.Typed.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.TS.Static\ZSharp.Compiler.TS.Static.csproj" />
     <ProjectReference Include="..\ZSharp.SourceCompiler.Common\ZSharp.SourceCompiler.Common.csproj" />
