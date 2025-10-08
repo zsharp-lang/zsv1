@@ -14,8 +14,8 @@ namespace ZSharp.Objects
         , IMethod
         , ICTCallable_Old
         , ICompileIRObject<IR.Method, IR.Class>
-        , ICompileIRObject<IR.Method, IR.OOPType>
-        , ICompileIRReference<IR.MethodReference>
+        , ICompileIRObject<IR.Method, IR.TypeDefinition>
+        , IIRReferenceCompiler<IR.MethodReference>
         , IImplementation
         , IImplementsSpecification
         , IImplicitCastToType
@@ -144,7 +144,7 @@ namespace ZSharp.Objects
             };
         }
 
-        IR.Method ICompileIRObject<IR.Method, IR.OOPType>.CompileIRObject(Compiler.Compiler compiler, IR.OOPType? owner)
+        IR.Method ICompileIRObject<IR.Method, IR.TypeDefinition>.CompileIRObject(Compiler.Compiler compiler, IR.TypeDefinition? owner)
         {
             CompileIR(compiler);
 
@@ -169,12 +169,12 @@ namespace ZSharp.Objects
             throw new Compiler.InvalidCastException(this, type);
         }
 
-        IR.MethodReference ICompileIRReference<IR.MethodReference>.CompileIRReference(Compiler.Compiler compiler)
+        IR.MethodReference IIRReferenceCompiler<IR.MethodReference>.CompileIRReference(Compiler.Compiler compiler)
             => new(
-                compiler.CompileIRObject<IR.Method, IR.OOPType>(this, null)
+                compiler.CompileIRObject<IR.Method, IR.TypeDefinition>(this, null)
             )
             {
-                OwningType = compiler.CompileIRType<IR.OOPTypeReference>(Owner)
+                OwningType = compiler.CompileIRType<IR.TypeReference>(Owner)
             };
 
         void IImplementsSpecification.OnImplementSpecification(Compiler.Compiler compiler, IAbstraction abstraction, CompilerObject specification)

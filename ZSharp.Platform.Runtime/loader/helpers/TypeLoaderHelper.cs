@@ -2,7 +2,7 @@
 {
     internal static class TypeLoaderHelper
     {
-        public static Type LoadType(EmitLoader loader, Emit.TypeBuilder parentBuilder, IR.OOPType type)
+        public static Type LoadType(EmitLoader loader, Emit.TypeBuilder parentBuilder, IR.TypeDefinition type)
         {
             var tasks = new TaskManager(() => { });
             var result = type switch
@@ -42,7 +42,7 @@
             return result;
         }
 
-        public static Type LoadType(EmitLoader loader, Emit.ModuleBuilder parentBuilder, IR.OOPType type)
+        public static Type LoadType(EmitLoader loader, Emit.ModuleBuilder parentBuilder, IR.TypeDefinition type)
         {
             var tasks = new TaskManager(() => { });
             var result = type switch

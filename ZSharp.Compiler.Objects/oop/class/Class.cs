@@ -8,8 +8,8 @@ namespace ZSharp.Objects
         : CompilerObject
         , IClass
         , ICompileIRObject<IR.Class, IR.Module>
-        , ICompileIRReference<IR.ClassReference>
-        , ICompileIRType<IR.OOPTypeReference<IR.Class>>
+        , IIRReferenceCompiler<IR.ClassReference>
+        , ICompileIRType<IR.TypeReference<IR.Class>>
         , ICTCallable_Old
         , IRTCastTo
         , ICTGetMember_Old<MemberName>
@@ -77,7 +77,7 @@ namespace ZSharp.Objects
             {
                 state[BuildState.Base] = true;
 
-                IR.Base = compiler.CompileIRReference<IR.OOPTypeReference<IR.Class>>(Base);
+                IR.Base = compiler.CompileIRReference<IR.TypeReference<IR.Class>>(Base);
             }
 
             if (Content.Count > 0 && !state[BuildState.Body])
@@ -95,7 +95,7 @@ namespace ZSharp.Objects
                 foreach (var @interfaceImplementation in InterfaceImplementations)
                 {
                     IR.InterfaceImplementation implementation = new(
-                        compiler.CompileIRReference<IR.OOPTypeReference<IR.Interface>>(interfaceImplementation.Abstract)
+                        compiler.CompileIRReference<IR.TypeReference<IR.Interface>>(interfaceImplementation.Abstract)
                     );
 
                     IR.InterfacesImplementations.Add(implementation);
@@ -120,12 +120,12 @@ namespace ZSharp.Objects
             return compiler.Map(Members[member], @object => @object is IRTBoundMember bindable ? bindable.Bind(compiler, instance) : @object);
         }
 
-        IR.OOPTypeReference<IR.Class> ICompileIRType<IR.OOPTypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler)
+        IR.TypeReference<IR.Class> ICompileIRType<IR.TypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler)
         {
             return new IR.ClassReference(compiler.CompileIRObject<IR.Class, IR.Module>(this, null));
         }
 
-        IR.ClassReference ICompileIRReference<IR.ClassReference>.CompileIRReference(Compiler.Compiler compiler)
+        IR.ClassReference IIRReferenceCompiler<IR.ClassReference>.CompileIRReference(Compiler.Compiler compiler)
         {
             return new IR.ClassReference(compiler.CompileIRObject<IR.Class, IR.Module>(this, null));
         }
@@ -215,9 +215,9 @@ namespace ZSharp.Objects
             if (targetClass.IsSubclassOf(this))
             {
                 var targetClassIRResult = 
-                    compiler.IR.CompileReference<IR.OOPTypeReference<IR.Class>>(targetClass);
+                    compiler.IR.CompileReference<IR.TypeReference<IR.Class>>(targetClass);
 
-                IR.OOPTypeReference<IR.Class> targetClassIR;
+                IR.TypeReference<IR.Class> targetClassIR;
 
                 if (targetClassIRResult.Error(out error))
                     return Result<TypeCast>.Error(error);

@@ -2,7 +2,7 @@
 
 namespace ZSharp.IR
 {
-    public sealed class GenericFunctionInstance(Function function)
+    public sealed class ConstructedFunction(Function function)
         : ICallable
     {
         public Function Function { get; set; } = function;

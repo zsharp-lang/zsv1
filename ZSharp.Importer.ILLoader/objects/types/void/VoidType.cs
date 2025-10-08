@@ -3,11 +3,11 @@ using ZSharp.IR;
 
 namespace ZSharp.Importer.ILLoader.Objects
 {
-    public sealed class VoidType(OOPTypeReference type)
+    public sealed class VoidType(TypeReference type)
         : CompilerObject
         , ICompileIRType
     {
-        private readonly OOPTypeReference type = type;
+        private readonly TypeReference type = type;
 
         Result<IType> ICompileIRType.CompileIRType(Compiler.Compiler compiler)
             => Result<IType>.Ok(type);

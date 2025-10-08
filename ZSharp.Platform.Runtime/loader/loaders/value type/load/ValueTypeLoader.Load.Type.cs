@@ -2,7 +2,7 @@
 {
     partial class ValueTypeLoader
     {
-        private void LoadNestedType(IR.OOPType type)
+        private void LoadNestedType(IR.TypeDefinition type)
         {
             TypeLoaderHelper.LoadType(Loader, ILType, type);
         }

@@ -2,6 +2,6 @@
 {
     partial class TypeSystem
     {
-        public required IR.OOPTypeReference Char { get; init; }
+        public required IR.TypeReference Char { get; init; }
     }
 }

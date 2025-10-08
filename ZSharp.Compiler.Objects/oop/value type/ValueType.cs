@@ -5,8 +5,8 @@ namespace ZSharp.Objects
     public sealed class ValueType(string? name)
         : CompilerObject
         , IType
-        , ICompileIRReference<IR.ValueTypeReference>
-        , ICompileIRType<IR.OOPTypeReference<IR.ValueType>>
+        , IIRReferenceCompiler<IR.ValueTypeReference>
+        , ICompileIRType<IR.TypeReference<IR.ValueType>>
     {
         #region Build State
 
@@ -45,10 +45,10 @@ namespace ZSharp.Objects
             return new(CompileIR(compiler));
         }
 
-        IR.OOPTypeReference<IR.ValueType> ICompileIRType<IR.OOPTypeReference<IR.ValueType>>.CompileIRType(Compiler.Compiler compiler)
+        IR.TypeReference<IR.ValueType> ICompileIRType<IR.TypeReference<IR.ValueType>>.CompileIRType(Compiler.Compiler compiler)
             => CompileIRReference(compiler);
 
-        IR.ValueTypeReference ICompileIRReference<IR.ValueTypeReference>.CompileIRReference(Compiler.Compiler compiler)
+        IR.ValueTypeReference IIRReferenceCompiler<IR.ValueTypeReference>.CompileIRReference(Compiler.Compiler compiler)
             => CompileIRReference(compiler);
     }
 }

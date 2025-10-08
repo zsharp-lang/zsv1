@@ -8,7 +8,7 @@ namespace ZSharp.Objects
     )
         : CompilerObject
         , ICTCallable_Old
-        , ICompileIRReference<IR.MethodReference>
+        , IIRReferenceCompiler<IR.MethodReference>
         , IReferencable<GenericMethodInstance>
         , IRTBoundMember
     {
@@ -57,13 +57,13 @@ namespace ZSharp.Objects
             return new RawCode(code);
         }
 
-        IR.MethodReference ICompileIRReference<IR.MethodReference>.CompileIRReference(Compiler.Compiler compiler)
+        IR.MethodReference IIRReferenceCompiler<IR.MethodReference>.CompileIRReference(Compiler.Compiler compiler)
         {
             var type = compiler.Feature<Referencing>().CreateReference(Owner, Context);
 
-            return new IR.MethodReference(compiler.CompileIRObject<IR.Method, IR.OOPType>(Origin, null!))
+            return new IR.MethodReference(compiler.CompileIRObject<IR.Method, IR.TypeDefinition>(Origin, null!))
             {
-                OwningType = compiler.CompileIRReference<IR.OOPTypeReference>(type),
+                OwningType = compiler.CompileIRReference<IR.TypeReference>(type),
                 Signature = SignatureIR ?? CompileSignature(compiler)
             };
         }

@@ -7,7 +7,7 @@ namespace ZSharp.Objects
     public sealed class GenericMethod(string? name)
         : CompilerObject
         , ICompileIRObject<IR.Method, IR.Class>
-        , ICompileIRObject<IR.Method, IR.OOPType>
+        , ICompileIRObject<IR.Method, IR.TypeDefinition>
         , ICTGetIndex
         , INamedObject
         , IReferencable<GenericMethodInstance>
@@ -82,7 +82,7 @@ namespace ZSharp.Objects
             return IR;
         }
 
-        IR.Method ICompileIRObject<IR.Method, IR.OOPType>.CompileIRObject(Compiler.Compiler compiler, IR.OOPType? owner)
+        IR.Method ICompileIRObject<IR.Method, IR.TypeDefinition>.CompileIRObject(Compiler.Compiler compiler, IR.TypeDefinition? owner)
         {
             CompileIR(compiler);
 

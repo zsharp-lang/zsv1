@@ -6,7 +6,7 @@ namespace ZSharp.Objects
         : CompilerObject
         , ICTGet
         , IDynamicallyTyped
-        , ICompileIRCode
+        , IIRCodeCompiler
         , ICompileIRObject<IR.EnumValue, IR.EnumClass>
     {
         #region Build State
@@ -66,7 +66,7 @@ namespace ZSharp.Objects
             ? type
             : throw new();
 
-        IRCode ICompileIRCode.CompileIRCode(Compiler.Compiler compiler)
+        IRCode IIRCodeCompiler.CompileIRCode(Compiler.Compiler compiler)
             => compiler.CompileIRCode(Value);
     }
 }

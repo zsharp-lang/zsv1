@@ -3,7 +3,7 @@
 namespace ZSharp.IR
 {
     public sealed class Class(string? name) 
-        : OOPType
+        : TypeDefinition
         , ICustomMetadataProvider
     {
         private Collection<CustomMetadata>? _customMetadata;
@@ -17,9 +17,9 @@ namespace ZSharp.IR
 
         public ClassAttributes Attributes { get; set; } = ClassAttributes.None;
 
-        public OOPTypeReference<Class>? Base { get; set; }
+        public TypeReference<Class>? Base { get; set; }
 
-        public Class(string? name, OOPTypeReference<Class>? @base)
+        public Class(string? name, TypeReference<Class>? @base)
             : this(name)
         {
             Base = @base;
@@ -101,7 +101,7 @@ namespace ZSharp.IR
 
         public Collection<Property> Properties { get; } = [];
 
-        public Collection<OOPType> NestedTypes { get; } = [];
+        public Collection<TypeDefinition> NestedTypes { get; } = [];
 
         //public Collection<Event> Events { get; }
     }

@@ -1,10 +1,10 @@
 ﻿namespace ZSharp.IR
 {
     public sealed class InterfaceReference(Interface @interface)
-        : OOPTypeReference<Interface>
+        : TypeReference<Interface>
     {
         public Interface Definition { get; } = @interface;
 
-        public OOPTypeReference? OwningType { get; set; }
+        public TypeReference? OwningType { get; set; }
     }
 }

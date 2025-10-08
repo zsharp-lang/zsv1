@@ -3,15 +3,15 @@
 namespace ZSharp.IR
 {
     public interface ConstructedType
-        : OOPTypeReference
+        : TypeReference
     {
         public abstract Collection<IType> Arguments { get; }
     }
 
     public interface ConstructedType<T> 
         : ConstructedType
-        , OOPTypeReference<T>
-        where T : OOPType
+        , TypeReference<T>
+        where T : TypeDefinition
     {
         
     }

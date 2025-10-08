@@ -2,6 +2,6 @@
 {
     partial class TypeSystem
     {
-        public required IR.OOPTypeReference Boolean { get; init; }
+        public required IR.TypeReference Boolean { get; init; }
     }
 }

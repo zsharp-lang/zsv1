@@ -5,15 +5,15 @@ namespace ZSharp.Importer.ILLoader.Objects
 {
     partial class Class
         : ICompileIRDefinitionAs<IR.Class>
-        , ICompileIRType<OOPTypeReference<IR.Class>>
+        , ICompileIRType<TypeReference<IR.Class>>
     {
         private IR.Class? IR { get; set; }
 
         Result<IR.Class> ICompileIRDefinitionAs<IR.Class>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
             => Result<IR.Class>.Ok(GetIR());
 
-        Result<OOPTypeReference<IR.Class>> ICompileIRType<OOPTypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler)
-            => Result<OOPTypeReference<IR.Class>>.Ok(new ClassReference(GetIR()));
+        Result<TypeReference<IR.Class>> ICompileIRType<TypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler)
+            => Result<TypeReference<IR.Class>>.Ok(new ClassReference(GetIR()));
 
         private IR.Class GetIR()
         {

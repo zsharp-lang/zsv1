@@ -5,7 +5,7 @@
     {
         public Method Method { get; set; } = method;
 
-        public required OOPTypeReference OwningType { get; set; }
+        public required TypeReference OwningType { get; set; }
 
         public Signature Signature { get; init; } = method.Signature;
 

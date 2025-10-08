@@ -2,9 +2,9 @@
 
 namespace ZSharp.Importer.ILLoader.Objects
 {
-    public sealed class ArrayType(OOPType type)
+    public sealed class ArrayType(TypeDefinition type)
         : CompilerObject
     {
-        private readonly OOPType type = type;
+        private readonly TypeDefinition type = type;
     }
 }

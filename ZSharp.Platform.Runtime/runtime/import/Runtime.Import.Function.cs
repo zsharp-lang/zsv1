@@ -12,7 +12,7 @@
             return info;
         }
 
-        public IL.MethodInfo ImportConstructedFunction(IR.GenericFunctionInstance constructedFunction)
+        public IL.MethodInfo ImportConstructedFunction(IR.ConstructedFunction constructedFunction)
         {
             var def = ImportFunction(constructedFunction.Function);
 

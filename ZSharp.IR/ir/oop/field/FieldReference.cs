@@ -4,6 +4,6 @@
     {
         public Field Field { get; set; } = field;
 
-        public required OOPTypeReference OwningType { get; set; }
+        public required TypeReference OwningType { get; set; }
     }
 }

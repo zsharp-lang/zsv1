@@ -114,7 +114,7 @@ namespace ZSharp.Importer.IRLoader
             };
         }
 
-        private Action Load(ZSharp.IR.OOPType type, Module owner)
+        private Action Load(ZSharp.IR.TypeDefinition type, Module owner)
             => type switch
             {
                 ZSharp.IR.Class @class => Load(@class, owner),

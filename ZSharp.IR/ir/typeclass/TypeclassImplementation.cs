@@ -2,7 +2,7 @@
 
 namespace ZSharp.IR
 {
-    public sealed class TypeclassImplementation(Typeclass typeclass) : OOPType
+    public sealed class TypeclassImplementation(Typeclass typeclass) : TypeDefinition
     {
         public Typeclass Typeclass { get; } = typeclass;
 

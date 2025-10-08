@@ -25,7 +25,7 @@ namespace ZSharp.Importer.ILLoader
 
             var code = rt.Expose(obj);
 
-            var function = new IR.GenericFunctionInstance(castFunction!);
+            var function = new IR.ConstructedFunction(castFunction!);
             function.Arguments.Add(irType);
 
             code.Add(new IR.VM.Call(function));

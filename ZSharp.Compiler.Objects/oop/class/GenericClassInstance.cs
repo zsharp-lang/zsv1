@@ -11,8 +11,8 @@ namespace ZSharp.Objects
         , ICTCallable_Old
         , IReference
         , ICompileIRType<IR.ConstructedClass>
-        , ICompileIRReference<IR.OOPTypeReference<IR.Class>>
-        , ICompileIRReference<IR.OOPTypeReference>
+        , IIRReferenceCompiler<IR.TypeReference<IR.Class>>
+        , IIRReferenceCompiler<IR.TypeReference>
         , IReferencable<GenericClassInstance>
         , IType
     {
@@ -109,7 +109,7 @@ namespace ZSharp.Objects
             return compiler.Call(constructor, arguments);
         }
 
-        IR.OOPTypeReference<IR.Class> ICompileIRReference<IR.OOPTypeReference<IR.Class>>.CompileIRReference(Compiler.Compiler compiler)
+        IR.TypeReference<IR.Class> IIRReferenceCompiler<IR.TypeReference<IR.Class>>.CompileIRReference(Compiler.Compiler compiler)
             => compiler.CompileIRType<IR.ConstructedClass>(this);
 
         GenericClassInstance IReferencable<GenericClassInstance>.CreateReference(Referencing @ref, ReferenceContext context)
@@ -144,7 +144,7 @@ namespace ZSharp.Objects
             return true;
         }
 
-        IR.OOPTypeReference ICompileIRReference<IR.OOPTypeReference>.CompileIRReference(Compiler.Compiler compiler)
+        IR.TypeReference IIRReferenceCompiler<IR.TypeReference>.CompileIRReference(Compiler.Compiler compiler)
             => compiler.CompileIRType<IR.ConstructedClass>(this);
     }
 }

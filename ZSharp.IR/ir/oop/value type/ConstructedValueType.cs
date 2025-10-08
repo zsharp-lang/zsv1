@@ -7,9 +7,9 @@ namespace ZSharp.IR
     {
         public ValueType ValueType { get; set; } = @class;
 
-        ValueType OOPTypeReference<ValueType>.Definition => ValueType;
+        ValueType TypeReference<ValueType>.Definition => ValueType;
 
-        public OOPTypeReference? OwningType { get; set; }
+        public TypeReference? OwningType { get; set; }
 
         public Collection<IType> Arguments { get; set; } = false ? [] : Collection<IType>.Empty;
     }

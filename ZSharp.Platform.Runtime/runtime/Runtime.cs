@@ -25,7 +25,7 @@
 
             Loader = new(this);
 
-            foreach (var (ir, il) in (IEnumerable<(IR.OOPTypeReference, Type)>)[
+            foreach (var (ir, il) in (IEnumerable<(IR.TypeReference, Type)>)[
                 (TypeSystem.Void, typeof(void)),
                 (TypeSystem.Boolean, typeof(bool)),
                 (TypeSystem.Object, typeof(object)),

@@ -26,7 +26,7 @@ namespace ZSharp.Objects
             var invocationInstruction = rawCode.Code.Instructions.Last();
             if (invocationInstruction is IR.VM.CreateInstance createInstance)
             {
-                var type = compiler.CompileIRReference<IR.OOPTypeReference<IR.Class>>(ownerReference);
+                var type = compiler.CompileIRReference<IR.TypeReference<IR.Class>>(ownerReference);
 
                 createInstance.Constructor = new IR.ConstructorReference(createInstance.Constructor.Constructor)
                 {

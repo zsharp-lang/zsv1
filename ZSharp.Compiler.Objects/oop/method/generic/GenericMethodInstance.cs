@@ -4,7 +4,7 @@ namespace ZSharp.Objects
     public sealed class GenericMethodInstance(GenericMethod origin)
         : CompilerObject
         , ICTCallable_Old
-        , ICompileIRReference<IR.ConstructedMethod>
+        , IIRReferenceCompiler<IR.ConstructedMethod>
         , IRTBoundMember
     {
         public GenericMethod Origin { get; } = origin;
@@ -53,13 +53,13 @@ namespace ZSharp.Objects
             return new RawCode(code);
         }
 
-        IR.ConstructedMethod ICompileIRReference<IR.ConstructedMethod>.CompileIRReference(Compiler.Compiler compiler)
+        IR.ConstructedMethod IIRReferenceCompiler<IR.ConstructedMethod>.CompileIRReference(Compiler.Compiler compiler)
         {
             var result = new IR.ConstructedMethod(
                 compiler.CompileIRObject<IR.Method, IR.Class>(Origin, null)
             )
             {
-                OwningType = compiler.CompileIRReference<IR.OOPTypeReference>(Owner)
+                OwningType = compiler.CompileIRReference<IR.TypeReference>(Owner)
             };
 
             foreach (var genericParameter in Origin.GenericParameters)

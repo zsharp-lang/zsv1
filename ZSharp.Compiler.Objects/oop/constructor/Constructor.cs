@@ -62,7 +62,7 @@ namespace ZSharp.Objects
                 invocationInstruction = new IR.VM.CreateInstance(new IR.ConstructorReference(IR!)
                 {
                     OwningType = (IR?.Method.Owner is null 
-                        ? IR!.Method.Signature.Args.Parameters[0].Type as IR.OOPTypeReference
+                        ? IR!.Method.Signature.Args.Parameters[0].Type as IR.TypeReference
                         : new IR.ClassReference(IR!.Method.Owner as IR.Class ?? throw new()))
                         ?? throw new()
                 });

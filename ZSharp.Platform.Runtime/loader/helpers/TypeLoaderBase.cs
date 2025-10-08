@@ -2,7 +2,7 @@
 {
     internal abstract class TypeLoaderBase<T>(EmitLoader loader)
         : LoaderBase(loader)
-        where T: IR.OOPType
+        where T: IR.TypeDefinition
     {
         public required Emit.TypeBuilder ILType { get; init; }
 
