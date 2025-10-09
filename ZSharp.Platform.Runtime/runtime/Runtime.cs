@@ -4,14 +4,14 @@
     {
         public bool DebugEnabled { get; }
 
-        public Runtime(TypeSystem typeSystem, bool debugging = true)
+        public Runtime(TypeSystem typeSystem)
         {
             if (_instance is not null)
                 throw new InvalidOperationException("Runtime instance already exists.");
             _instance = this;
 
             EvaluationContextFactory =
-                (DebugEnabled = debugging)
+                (DebugEnabled = !true)
                 ? new DebuggableEvaluationContextFactory()
                 {
                     OutputPath = Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "generated")).FullName

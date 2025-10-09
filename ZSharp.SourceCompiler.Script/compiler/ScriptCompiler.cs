@@ -6,6 +6,8 @@
 
         public AST.Document Node { get; }
 
+        public string DocumentPath { get; }
+
         public ScriptCompiler(Interpreter.Interpreter interpreter, AST.Document document, string path)
         {
             Interpreter = interpreter;
@@ -27,13 +29,7 @@
             //using var _ = Interpreter.Compiler.ContextScope(new DocumentContext());
             using var _ = Interpreter.Compiler.ContextScope(new ScopeContext());
 
-            foreach (var statement in Node.Statements)
-            {
-                using (EvaluationContext())
-                {
-                    Compile(statement);
-                }
-            }
+            Node.Statements.ForEach(Compile);
         }
     }
 }

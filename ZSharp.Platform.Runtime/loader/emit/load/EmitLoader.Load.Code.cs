@@ -12,8 +12,7 @@ namespace ZSharp.Platform.Runtime.Loaders
         public Delegate LoadCode(
             Collection<IR.VM.Instruction> code, 
             IR.IType irReturnType, 
-            IEvaluationContext evaluationContext,
-            IContext? codeContext = null
+            IEvaluationContext evaluationContext
         )
         {
             if (code.Count == 0) return () => { };
@@ -24,7 +23,7 @@ namespace ZSharp.Platform.Runtime.Loaders
             var ilReturnType = Runtime.ImportType(irReturnType);
             var ilGenerator = evaluationContext.DefineCode(ilReturnType);
 
-            var codeLoader = new CodeCompiler(new UnboundCodeContext(Runtime, ilGenerator, codeContext));
+            var codeLoader = new CodeCompiler(new UnboundCodeContext(Runtime, ilGenerator));
             codeLoader.CompileCode(code);
 
             var method = evaluationContext.LoadMethod();

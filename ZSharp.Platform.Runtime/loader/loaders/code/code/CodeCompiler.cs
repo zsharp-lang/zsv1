@@ -26,18 +26,6 @@ namespace ZSharp.Platform.Runtime.Loaders
 
         private void Compile(IR.VM.Instruction instruction)
         {
-            if (Context.Is<IDebuggableContext>(out var debuggable))
-            {
-                if (debuggable.TryGetSequencePoint(instruction, out var location))
-                    Context.IL.MarkSequencePoint(
-                        debuggable.Document,
-                        location.StartLine,
-                        location.StartColumn,
-                        location.EndLine,
-                        location.EndColumn
-                    );
-            }
-
             switch (instruction)
             {
                 case IR.VM.Call call: CodeCompiler_Impl.Compile(RequireContext<ICodeContext>(), call); break;

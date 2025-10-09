@@ -20,7 +20,7 @@
                 return;
             }
 
-            Interpreter.Evaluate(valueObject!, CurrentEvaluationContext, DebugContext);
+            Interpreter.Evaluate(valueObject!);
         }
     }
 }

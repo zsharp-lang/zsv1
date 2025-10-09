@@ -54,29 +54,8 @@ namespace ZSharp.SourceCompiler.Script
                 return;
             }
 
-            Platform.Runtime.IEvaluationContext? evaluationContext = null;
-            var codeContext = DebugContext;
-            if (Interpreter.Runtime.DebugEnabled)
-            {
-                evaluationContext = Interpreter.Runtime.EvaluationContextFactory.CreateEvaluationContext();
-
-                result = new Objects.ExpressionWrapper(
-                    codeContext = new(
-                        evaluationContext.Module.DefineDocument(
-                            DocumentPath, 
-                            System.Diagnostics.SymbolStore.SymLanguageType.CSharp,
-                            System.Diagnostics.SymbolStore.SymLanguageVendor.Microsoft,
-                            System.Diagnostics.SymbolStore.SymDocumentType.Text
-                        )
-                    ),
-                    import.TokenInfo.ImportKeyword.Span, 
-                    result!
-                );
-            }
-
-
             if (
-                Interpreter.Evaluate(result!, evaluationContext, codeContext)
+                Interpreter.Evaluate(result!)
                 .When(out var importObject)
                 .Error(out error)
                 )
@@ -87,7 +66,20 @@ namespace ZSharp.SourceCompiler.Script
                 );
                 return;
             }
-            result = ZSharp.Interpreter.CTServices.InfoOf(importObject!);
+            importResult = Interpreter.RTLoader.Load(importObject!);
+
+            if (
+                importResult
+                .When(out result)
+                .Error(out error)
+                )
+            {
+                Interpreter.Log.Error(
+                    $"Failed to load import: {error}",
+                    new NodeLogOrigin(import)
+                );
+                return;
+            }
 
             if (import.Alias is not null)
             {
@@ -95,7 +87,7 @@ namespace ZSharp.SourceCompiler.Script
                     .Compiler
                     .CurrentContext
                     .PerformOperation<IScopeContext>(
-                        scope => !scope.Add(import.Alias, result).Error(out error)
+                        scope => !scope.Add(import.Alias, result!).Error(out error)
                     )
                 )
                 {

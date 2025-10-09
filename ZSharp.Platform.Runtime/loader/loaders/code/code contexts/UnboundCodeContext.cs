@@ -3,11 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ZSharp.Platform.Runtime.Loaders
 {
-    internal sealed class UnboundCodeContext(Runtime runtime, Emit.ILGenerator il, IContext? inner = null)
+    internal sealed class UnboundCodeContext(Runtime runtime, Emit.ILGenerator il)
         : ICodeContext
         , IBranchingCodeContext
     {
-        private readonly IContext? inner = inner;
         private readonly Mapping<IR.VM.Instruction, Emit.Label> labels = [];
 
         public Emit.ILGenerator IL { get; } = il;
@@ -23,6 +22,6 @@ namespace ZSharp.Platform.Runtime.Loaders
             => labels[target];
 
         bool IContext.Is<T>([NotNullWhen(true)] out T? context) where T : class
-            => (context = this as T) is not null || (inner?.Is(out context) ?? false);
+            => (context = this as T) is not null;
     }
 }
