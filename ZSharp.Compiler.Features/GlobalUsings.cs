@@ -1,1 +1,1 @@
-﻿global using Error = string;
+﻿global using Result = ZSharp.Compiler.Result<ZSharp.Compiler.CompilerObject>;

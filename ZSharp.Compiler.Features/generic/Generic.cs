@@ -1,9 +1,8 @@
 ﻿using CommonZ.Utils;
-using ZSharp.Objects;
 
-namespace ZSharp.Compiler
+namespace ZSharp.Compiler.Features.Generic
 {
-    public sealed class Generic(Compiler compiler) : Feature(compiler)
+    public sealed class Generic
     {
         public bool IsGenericDefinition(CompilerObject @object)
         {
