@@ -79,6 +79,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.Reflection"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.IR.Static", "ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj", "{D4B62927-75B2-4147-8B63-1154BA1AB9CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Importer.RT", "ZSharp.Importer.RT\ZSharp.Importer.RT.csproj", "{2C743056-A568-443E-B659-5B6731CD9B24}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -237,6 +239,10 @@ Global
 		{D4B62927-75B2-4147-8B63-1154BA1AB9CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4B62927-75B2-4147-8B63-1154BA1AB9CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4B62927-75B2-4147-8B63-1154BA1AB9CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C743056-A568-443E-B659-5B6731CD9B24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C743056-A568-443E-B659-5B6731CD9B24}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C743056-A568-443E-B659-5B6731CD9B24}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C743056-A568-443E-B659-5B6731CD9B24}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -6,8 +6,9 @@
             => statement switch
             {
                 AST.BlockStatement block => Compile(block),
-                AST.ExpressionStatement expression => Compile(expression),
                 AST.DefinitionStatement definition => Compile(definition),
+                AST.ExpressionStatement expression => Compile(expression),
+                AST.Return @return => Compile(@return),
                 _ => Result.Error($"Unknown statement type: {statement.GetType().Name}"),
             };
     }

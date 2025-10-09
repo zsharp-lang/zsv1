@@ -18,16 +18,16 @@ namespace ZSharp.Importer.ILLoader.Objects
                 Members.Add(name, member);
         }
 
-        CompilerObjectResult ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName member)
+        Result ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName member)
         {
             if (!Members.TryGetValue(member, out var result))
                 if ((result = LoadMember(member)) is not null)
                     AddMember(member, result);
-                else return CompilerObjectResult.Error(
+                else return Result.Error(
                     $"Could not find member {member} in namespace {FullName}"
                 );
 
-            return CompilerObjectResult.Ok(result);
+            return Result.Ok(result);
         }
     }
 }

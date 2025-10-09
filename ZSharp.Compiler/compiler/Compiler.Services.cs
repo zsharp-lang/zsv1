@@ -2,15 +2,21 @@
 {
     public sealed partial class Compiler
     {
-        private CG cg;
-        private IR ir;
-        private Overloading overloading;
-        private Reflection reflection;
-        private TS ts;
+        private CG cg = new();
+        private Evaluator evaluator = new();
+        private IR ir = new(runtimeModule);
+        private OOP oop = new();
+        private Overloading overloading = new();
+        private Reflection reflection = new();
+        private TS ts = new();
 
         public ref CG CG => ref cg;
 
+        public ref Evaluator Evaluator => ref evaluator;
+
         public ref IR IR => ref ir;
+
+        public ref OOP OOP => ref oop;
 
         public ref Reflection Reflection => ref reflection;
 

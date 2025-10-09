@@ -35,6 +35,12 @@ namespace ZSharp.Compiler
                 ? Result<R>.Ok(map(result))
                 : Result<R>.Error(error!);
 
+        public Result<R> When<R>(Func<TResult, Result<R>> map)
+            where R : class?
+            => IsOk
+                ? map(result)
+                : Result<R>.Error(error!);
+
         public new Result<TResult> When(out TResult? result)
         {
             result = this.result;

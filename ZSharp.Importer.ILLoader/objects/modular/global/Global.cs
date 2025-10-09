@@ -9,6 +9,7 @@
         {
             IL = il;
             Type = loader.LoadType(il.FieldType);
+            IR = loader.Compiler.IR.CompileDefinition<IR.Global>(this, loader.Runtime).Unwrap();
         }
     }
 }

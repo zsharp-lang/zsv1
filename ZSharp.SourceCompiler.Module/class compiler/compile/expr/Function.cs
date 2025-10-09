@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.SourceCompiler.Module
 {
-    partial class ModuleCompiler
+    partial class ClassCompiler
     {
         private Result Compile(AST.Function function)
         {

@@ -1,15 +1,16 @@
-﻿import { Directory } from "std:fs";
-import { print } from "std:io";
+﻿import { print } from "std:io";
+import { Void } from "std:types";
 
 print("[CT] Hello, World!");
 
-fun nodeTypeNotImplemented() {}
+import { Directory } from "std:fs";
 
 module A {
 	print("[CT] Inside module A");
 
-	fun main() {
+	fun main(): Void {
 		print("[RT] Hello, World!");
+		return;
 	}
 }
 

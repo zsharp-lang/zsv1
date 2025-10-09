@@ -6,7 +6,7 @@
 
         public Func<AST.Expression, Result> CompileExpression { get; init; } = new ExpressionCompiler(interpreter).Compile;
 
-        public Func<object?, Result> LoadCO { get; init; } = @object => Result.Ok(ZSharp.Interpreter.CTServices.InfoOf(@object!));
+        public Func<object?, Result> LoadCO { get; init; } = interpreter.RTLoader.Load;
 
         public Result Compile(AST.Expression expression)
         {

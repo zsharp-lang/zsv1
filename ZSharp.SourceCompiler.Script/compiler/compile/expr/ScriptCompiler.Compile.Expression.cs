@@ -23,7 +23,7 @@
 
             return Interpreter
                 .Evaluate(value)
-                .When(ZSharp.Interpreter.CTServices.InfoOf);
+                .When(Interpreter.RTLoader.Load);
         }
     }
 }

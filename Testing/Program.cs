@@ -29,7 +29,7 @@ var rt = new ZSharp.Platform.Runtime.Runtime(new()
     Void = rtm.TypeSystem.Void
 });
 
-var ilLoader = new ILLoader(coc.IR, rt);
+var ilLoader = new ILLoader(coc, rt);
 
 coc.TS.SInt32 = ilLoader.TypeSystem.SInt32;
 

@@ -1,4 +1,5 @@
 ﻿using ZSharp.CLI;
+using ZSharp.Importer.ILLoader;
 using ZSharp.Interpreter;
 using ZSharp.Parser;
 using ZSharp.SourceCompiler;
@@ -161,6 +162,28 @@ interpreter.ILLoader.OnLoadOperator = (@operator, method) =>
     //scriptCompiler.Context.Operators.Op(@operator.Operator, interpreter.ILLoader.LoadMethod(method));
 };
 
+StandardTypes.VoidType = interpreter.ILLoader.TypeSystem.Void;
+
+#region Standard Operators
+
+interpreter.Operators.Op(LangParser.Symbols.MemberAccess, interpreter.ILLoader.Expose(
+    (Delegate)(
+        (object obj, string memberName) =>
+        {
+            var type = obj.GetType();
+            var property = type.GetProperty(memberName);
+            if (property is not null)
+                return property.GetValue(obj);
+            var field = type.GetField(memberName);
+            if (field is not null)
+                return field.GetValue(obj);
+            throw new Exception($"Member '{memberName}' not found on type '{type.FullName}'");
+        }
+    )
+));
+
+#endregion
+
 #region Import System
 
 var stringImporter = new StringImporter();
@@ -195,7 +218,10 @@ stdImporter.Add(
     "fs",
     interpreter.ILLoader.LoadModule(typeof(Standard.FileSystem.ModuleScope).Module)
 );
-
+stdImporter.Add(
+    "types",
+    interpreter.ILLoader.LoadTypeAsModule(typeof(StandardTypes))
+);
 #endregion
 
 #endregion

@@ -7,7 +7,9 @@ namespace ZSharp.SourceCompiler.Module.Objects
         [Flags]
         private enum BuildState
         {
-
+            Content = 1 << 0,
+            EntryPoint = 1 << 1,
+            Initializer = 1 << 2,
         }
 
         private readonly ObjectBuildState<BuildState> state = new();

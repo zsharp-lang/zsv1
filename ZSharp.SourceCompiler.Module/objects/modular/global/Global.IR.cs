@@ -1,7 +1,4 @@
-﻿
-using System.Diagnostics.CodeAnalysis;
-
-namespace ZSharp.SourceCompiler.Module.Objects
+﻿namespace ZSharp.SourceCompiler.Module.Objects
 {
     partial class Global
         : ICompileIRDefinitionAs<IR.Global>
@@ -19,7 +16,7 @@ namespace ZSharp.SourceCompiler.Module.Objects
                     typeResult
                     .When(out var type)
                     .IsError
-                ) return typeResult.When<IR.Global>(_ => null!);
+                ) return typeResult.When(_ => (null as IR.Global)!);
 
                 IR = new(Name, type!);
             }

@@ -14,11 +14,16 @@
         {
             Interpreter = interpreter;
             Node = module;
-            Object = new();
+            Object = new()
+            {
+                Name = module.Name
+            };
 
             CompileExpression = new TopLevelExpressionCompiler(interpreter).Compile;
 
             tasks = new(InitCompile);
         }
+
+        public CompilerObject GetObject() => Object;
     }
 }
