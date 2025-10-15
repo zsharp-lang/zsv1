@@ -8,7 +8,7 @@
 
             if (
                 conditionResult
-                .When(out var confition)
+                .When(out var condition)
                 .Error(out var error)
             )
             {
@@ -21,16 +21,16 @@
 
             // TODO: cast to boolean
 
-            var conditionValueResult = Interpreter.Evaluate(confition!);
+            var conditionValueResult = Interpreter.Evaluate(condition!);
 
             if (
                 conditionValueResult
                 .When(out var conditionValue)
-                .Error(out var error2)
+                .Error(out error)
             )
             {
                 Interpreter.Log.Error(
-                    $"Failed to evaluate if condition: {error2}",
+                    $"Failed to evaluate if condition: {error}",
                     new NodeLogOrigin(@if.Condition)
                 );
                 return;
