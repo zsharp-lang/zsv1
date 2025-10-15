@@ -205,6 +205,11 @@ scriptCompiler.Context.ImportSystem.ImportFunction = interpreter.ILLoader.Expose
 var coreImporter = new CoreLibraryImporter();
 stringImporter.RegisterImporter("core", coreImporter);
 
+coreImporter.Add(
+    "compiler",
+    interpreter.ILLoader.LoadModule(typeof(Core.Compiler.ModuleScope).Module)
+);
+
 #endregion
 
 #region Standard Library

@@ -83,6 +83,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.Evaluation"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Importer.RT", "ZSharp.Importer.RT\ZSharp.Importer.RT.csproj", "{2C743056-A568-443E-B659-5B6731CD9B24}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Library.Core.Compiler", "ZSharp.Library.Core.Compiler\ZSharp.Library.Core.Compiler.csproj", "{820EF0D4-C0F7-468A-A2A5-70A7EF64FF8A}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.Evaluation.Direct", "ZSharp.Compiler.Evaluation.Direct\ZSharp.Compiler.Evaluation.Direct.csproj", "{12BA2B1B-FC9D-4C8C-8D0B-265248CE992D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.Evaluation.IR", "ZSharp.Compiler.Evaluation.IR\ZSharp.Compiler.Evaluation.IR.csproj", "{D409F69A-8459-7B08-E513-7235D92D8EA0}"
@@ -253,6 +255,10 @@ Global
 		{2C743056-A568-443E-B659-5B6731CD9B24}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C743056-A568-443E-B659-5B6731CD9B24}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2C743056-A568-443E-B659-5B6731CD9B24}.Release|Any CPU.Build.0 = Release|Any CPU
+		{820EF0D4-C0F7-468A-A2A5-70A7EF64FF8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{820EF0D4-C0F7-468A-A2A5-70A7EF64FF8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{820EF0D4-C0F7-468A-A2A5-70A7EF64FF8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{820EF0D4-C0F7-468A-A2A5-70A7EF64FF8A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{12BA2B1B-FC9D-4C8C-8D0B-265248CE992D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{12BA2B1B-FC9D-4C8C-8D0B-265248CE992D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12BA2B1B-FC9D-4C8C-8D0B-265248CE992D}.Release|Any CPU.ActiveCfg = Release|Any CPU
