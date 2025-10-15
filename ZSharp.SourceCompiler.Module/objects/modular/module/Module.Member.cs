@@ -8,7 +8,7 @@
         public Result AddMember(string name, CompilerObject member)
         {
             if (members.ContainsKey(name))
-                Result.Error($"Member '{name}' is already defined in module '{Name}'.");
+                return Result.Error($"Member '{name}' is already defined in module '{Name}'.");
             else
                 members[name] = member;
 
