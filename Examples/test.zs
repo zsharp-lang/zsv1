@@ -5,6 +5,8 @@ print("[CT] Hello, World!");
 
 import { Directory } from "std:fs";
 
+import { CompilerObject } from "core:compiler";
+
 module A {
 	print("[CT] Inside module A");
 
