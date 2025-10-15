@@ -55,27 +55,13 @@ namespace ZSharp.SourceCompiler.Script
             }
 
             if (
-                Interpreter.Evaluate(result!)
-                .When(out var importObject)
-                .Error(out error)
-                )
-            {
-                Interpreter.Log.Error(
-                    $"Failed to evaluate import: {error}",
-                    new NodeLogOrigin(import)
-                );
-                return;
-            }
-            importResult = Interpreter.RTLoader.Load(importObject!);
-
-            if (
-                importResult
+                Interpreter.Compiler.Evaluator.Evaluate(result!)
                 .When(out result)
                 .Error(out error)
                 )
             {
                 Interpreter.Log.Error(
-                    $"Failed to load import: {error}",
+                    $"Failed to evaluate import: {error}",
                     new NodeLogOrigin(import)
                 );
                 return;

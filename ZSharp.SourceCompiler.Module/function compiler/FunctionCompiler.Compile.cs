@@ -34,12 +34,7 @@
                 .Error(out error)
             ) Interpreter.Log.Error($"{error}", Node.ReturnType);
             else if (
-                Interpreter.Evaluate(returnType!)
-                .When(out var returnTypeObject)
-                .Error(out error)
-            ) Interpreter.Log.Error($"{error}", Node.ReturnType);
-            else if (
-                Interpreter.RTLoader.Load(returnTypeObject!)
+                Interpreter.Compiler.Evaluator.Evaluate(returnType!)
                 .When(out returnType)
                 .Error(out error)
             ) Interpreter.Log.Error($"{error}", Node.ReturnType);

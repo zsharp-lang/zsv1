@@ -150,6 +150,8 @@ new ZSharp.Compiler.CGDispatchers.Proxy.Dispatcher(interpreter.Compiler).Apply()
 
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(interpreter.Compiler).Apply();
 
+new ZSharp.Compiler.EvaluatorDispatchers.Direct.Dispatcher(interpreter.Compiler).Apply();
+new ZSharp.Compiler.EvaluatorDispatchers.IR.Dispatcher(interpreter.Compiler, interpreter.Runtime, interpreter.RTLoader).Apply();
 var scriptCompiler = new ScriptCompiler(interpreter, documentNode, filePath);
 
 interpreter.ILLoader.OnLoadOperator = (@operator, method) =>

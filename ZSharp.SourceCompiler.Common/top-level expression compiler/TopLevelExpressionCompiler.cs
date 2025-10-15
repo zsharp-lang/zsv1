@@ -10,23 +10,25 @@
 
         public Result Compile(AST.Expression expression)
         {
-            var compileResult = CompileExpression(expression);
+            return CompileExpression(expression);
 
-            if (
-                compileResult
-                .When(out var co)
-                .IsError
-            ) return compileResult;
+            //if (
+            //    compileResult
+            //    .When(out var co)
+            //    .IsError
+            //) return compileResult;
 
-            var evaluateResult = Interpreter.Evaluate(co!);
+            //return Interpreter.Compiler.Evaluator.Evaluate(co!);
 
-            if (
-                evaluateResult
-                .When(out var value)
-                .Error(out var error)
-            ) return Result.Error(error);
+            //var evaluateResult = Interpreter.Evaluate(co!);
 
-            return LoadCO(value);
+            //if (
+            //    evaluateResult
+            //    .When(out var value)
+            //    .Error(out var error)
+            //) return Result.Error(error);
+
+            //return LoadCO(value);
         }
     }
 }

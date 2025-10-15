@@ -21,7 +21,7 @@
             if (Options.EvaluationTarget == EvaluationTarget.Statement)
                 return result;
 
-            return Interpreter
+            return Interpreter // do we realy want to support expression-level evaluation?
                 .Evaluate(value)
                 .When(Interpreter.RTLoader.Load);
         }
