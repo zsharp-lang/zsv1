@@ -1,10 +1,10 @@
 ﻿namespace ZSharp.IR
 {
     public sealed class ClassReference(Class @class)
-        : OOPTypeReference<Class>
+        : TypeReference<Class>
     {
         public Class Definition { get; } = @class;
 
-        public OOPTypeReference? OwningType { get; set; }
+        public TypeReference? OwningType { get; set; }
     }
 }

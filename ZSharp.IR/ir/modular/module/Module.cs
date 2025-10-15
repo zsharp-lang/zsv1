@@ -10,7 +10,7 @@ namespace ZSharp.IR
         private ModuleCollection<ImportedModule>? _importedModules;
         private ModuleCollection<Function>? _functions;
         private GlobalCollection? _globals;
-        private ModuleCollection<OOPType>? _types;
+        private ModuleCollection<TypeDefinition>? _types;
 
         public string? Name { get; set; } = name;
 
@@ -92,7 +92,7 @@ namespace ZSharp.IR
 
         public bool HasGlobals => !_globals.IsNullOrEmpty();
 
-        public Collection<OOPType> Types
+        public Collection<TypeDefinition> Types
         {
             get
             {

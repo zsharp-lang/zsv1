@@ -55,8 +55,8 @@ namespace ZSharp.SourceCompiler.Script
             }
 
             if (
-                Interpreter.Evaluate(result!)
-                .When(out var importObject)
+                Interpreter.Compiler.Evaluator.Evaluate(result!)
+                .When(out result)
                 .Error(out error)
                 )
             {
@@ -66,7 +66,6 @@ namespace ZSharp.SourceCompiler.Script
                 );
                 return;
             }
-            result = ZSharp.Interpreter.CTServices.InfoOf(importObject!);
 
             if (import.Alias is not null)
             {
@@ -74,7 +73,7 @@ namespace ZSharp.SourceCompiler.Script
                     .Compiler
                     .CurrentContext
                     .PerformOperation<IScopeContext>(
-                        scope => !scope.Add(import.Alias, result).Error(out error)
+                        scope => !scope.Add(import.Alias, result!).Error(out error)
                     )
                 )
                 {

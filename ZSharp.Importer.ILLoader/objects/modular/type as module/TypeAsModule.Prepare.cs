@@ -4,6 +4,8 @@
     {
         private void Prepare()
         {
+            foreach (var importedType in IL.GetImportedTypes())
+                PrepareImportedType(importedType);
             foreach (var member in IL.GetMembers())
                 Prepare(member);
         }
@@ -28,6 +30,17 @@
                 : Loader.Namespace(@namespace);
 
             lazyLoader.AddLazyMember(member.AliasOrName(), member);
+        }
+
+        private void PrepareImportedType(ImportTypeAttribute importedType)
+        {
+            var type = importedType.Type;
+            if (!type.IsPublic) throw new($"Cannot use {nameof(ImportTypeAttribute)} on non-public type {type.Name}");
+            string ns = importedType.Namespace ?? type.Namespace ?? string.Empty;
+            ILazilyLoadMembers lazyLoader = ns == string.Empty
+                ? BodyLoader
+                : Loader.Namespace(ns);
+            lazyLoader.AddLazyMember(importedType.Alias ?? type.Name, type);
         }
     }
 }

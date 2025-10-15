@@ -10,12 +10,12 @@ namespace ZSharp.Platform.Runtime
 
             return type switch
             {
-                IR.OOPTypeReference reference => ImportTypeReference(reference),
+                IR.TypeReference reference => ImportTypeReference(reference),
                 _ => throw new NotImplementedException()
             };
         }
 
-        public Type ImportTypeDefinition(IR.OOPType def)
+        public Type ImportTypeDefinition(IR.TypeDefinition def)
         {
             if (!_typeDefCache.TryGetValue(def, out var result))
                 result = _typeDefCache[def] = LoadType(def);
@@ -23,7 +23,7 @@ namespace ZSharp.Platform.Runtime
             return result;
         }
 
-        public Type ImportTypeReference(IR.OOPTypeReference @ref)
+        public Type ImportTypeReference(IR.TypeReference @ref)
         {
             if (
                 @ref.Definition == TypeSystem.Array

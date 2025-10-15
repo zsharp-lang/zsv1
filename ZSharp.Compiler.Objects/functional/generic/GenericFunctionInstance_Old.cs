@@ -6,7 +6,7 @@ namespace ZSharp.Objects
     public sealed class GenericFunctionInstance_Old(GenericFunction origin)
         : CompilerObject
         , ICTCallable_Old
-        , ICompileIRReference<IR.GenericFunctionInstance>
+        , ICompileIRReference<IR.ConstructedFunction>
     {
         public GenericFunction Origin { get; } = origin;
 
@@ -43,7 +43,7 @@ namespace ZSharp.Objects
                 code.Append(compiler.CompileIRCode(args[param]));
 
             code.Append(new([
-                new IR.VM.Call(compiler.CompileIRReference<IR.GenericFunctionInstance>(this))
+                new IR.VM.Call(compiler.CompileIRReference<IR.ConstructedFunction>(this))
             ]));
 
             code.Types.Clear();
@@ -53,7 +53,7 @@ namespace ZSharp.Objects
             return new RawCode(code);
         }
 
-        IR.GenericFunctionInstance ICompileIRReference<IR.GenericFunctionInstance>.CompileIRReference(Compiler.Compiler compiler)
+        IR.ConstructedFunction ICompileIRReference<IR.ConstructedFunction>.CompileIRReference(Compiler.Compiler compiler)
         {
             var arguments = Origin.GenericParameters
                 .Select(genericParameter => Context[genericParameter])

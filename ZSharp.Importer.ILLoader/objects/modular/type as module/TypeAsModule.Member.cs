@@ -19,14 +19,14 @@ namespace ZSharp.Importer.ILLoader.Objects
                 Members.Add(name, member);
         }
 
-        CompilerObjectResult ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName member)
+        Result ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName member)
         {
             if (!Members.TryGetValue(member, out var result) && (result = LoadMember(member)) is null)
-                return CompilerObjectResult.Error(
+                return Result.Error(
                     $"Could not find member {member} in module {IL.Name}"
                 );
 
-            return CompilerObjectResult.Ok(result);
+            return Result.Ok(result);
         }
     }
 }

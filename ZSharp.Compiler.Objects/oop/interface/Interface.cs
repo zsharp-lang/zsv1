@@ -7,8 +7,8 @@ namespace ZSharp.Objects
         : CompilerObject
         , IAbstraction
         , ICompileIRObject<IR.Interface, IR.Module>
-        , ICompileIRReference<IR.OOPTypeReference<IR.Interface>>
-        , ICompileIRType<IR.OOPTypeReference<IR.Interface>>
+        , IIRReferenceCompiler<IR.TypeReference<IR.Interface>>
+        , ICompileIRType<IR.TypeReference<IR.Interface>>
         , ICTGetMember_Old<MemberName>
         , IRTGetMember_Old<MemberName>
         , IType
@@ -74,7 +74,7 @@ namespace ZSharp.Objects
                 state[BuildState.Bases] = true;
 
                 foreach (var @base in Bases)
-                    IR.Bases.Add(compiler.CompileIRReference<IR.OOPTypeReference<IR.Interface>>(@base));
+                    IR.Bases.Add(compiler.CompileIRReference<IR.TypeReference<IR.Interface>>(@base));
             }
 
             if (!state[BuildState.Body])
@@ -88,12 +88,12 @@ namespace ZSharp.Objects
             return IR;
         }
 
-        IR.OOPTypeReference<IR.Interface> ICompileIRReference<IR.OOPTypeReference<IR.Interface>>.CompileIRReference(Compiler.Compiler compiler)
+        IR.TypeReference<IR.Interface> IIRReferenceCompiler<IR.TypeReference<IR.Interface>>.CompileIRReference(Compiler.Compiler compiler)
             => new IR.InterfaceReference(
                 compiler.CompileIRObject<IR.Interface, IR.Module>(this, null)
             );
 
-        IR.OOPTypeReference<IR.Interface> ICompileIRType<IR.OOPTypeReference<IR.Interface>>.CompileIRType(Compiler.Compiler compiler)
+        IR.TypeReference<IR.Interface> ICompileIRType<IR.TypeReference<IR.Interface>>.CompileIRType(Compiler.Compiler compiler)
             => new IR.InterfaceReference(
                 compiler.CompileIRObject<IR.Interface, IR.Module>(this, null)
             );

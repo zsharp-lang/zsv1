@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Platform.Runtime.Loaders
 {
-    public interface ICodeContext
+    public interface ICodeContext : IContext
     {
         public Emit.ILGenerator IL { get; }
 

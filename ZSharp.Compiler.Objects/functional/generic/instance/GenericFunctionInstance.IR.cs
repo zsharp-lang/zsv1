@@ -3,9 +3,9 @@
 namespace ZSharp.Objects
 {
     partial class GenericFunctionInstance
-        : ICompileIRReference<IR.GenericFunctionInstance>
+        : ICompileIRReference<IR.ConstructedFunction>
     {
-        IR.GenericFunctionInstance ICompileIRReference<IR.GenericFunctionInstance>.CompileIRReference(Compiler.Compiler compiler)
+        IR.ConstructedFunction ICompileIRReference<IR.ConstructedFunction>.CompileIRReference(Compiler.Compiler compiler)
         {
             var argumentResults = GenericFunction.GenericParameters
                 .Select(p => GenericArguments[p])

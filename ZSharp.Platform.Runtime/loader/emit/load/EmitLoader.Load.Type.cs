@@ -2,7 +2,7 @@
 {
     partial class EmitLoader
     {
-        public Type LoadType(IR.OOPType type)
+        public Type LoadType(IR.TypeDefinition type)
             => TypeLoaderHelper.LoadType(this, StandaloneModule, type);
     }
 }

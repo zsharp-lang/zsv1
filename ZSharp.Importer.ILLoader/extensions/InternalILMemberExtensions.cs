@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using ZSharp.Importer.ILLoader.Objects;
 
 namespace ZSharp.Importer.ILLoader
 {
@@ -37,5 +36,11 @@ namespace ZSharp.Importer.ILLoader
 
         public static bool OverridesNamespace(this MemberInfo member, string rootNamespace, [NotNullWhen(true)] out string? @namespace)
             => (@namespace = member.GetNamespaceOverride(rootNamespace)) != rootNamespace;
+
+        public static ImportTypeAttribute[] GetImportedTypes(this Module module)
+            => [.. module.GetCustomAttributes<ImportTypeAttribute>()];
+
+        public static ImportTypeAttribute[] GetImportedTypes(this Type type)
+            => [.. type.GetCustomAttributes<ImportTypeAttribute>()];
     }
 }

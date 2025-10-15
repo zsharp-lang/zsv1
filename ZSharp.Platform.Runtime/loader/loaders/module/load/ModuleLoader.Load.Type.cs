@@ -2,7 +2,7 @@
 {
     partial class ModuleLoader
     {
-        public void LoadType(IR.OOPType type)
+        public void LoadType(IR.TypeDefinition type)
             => TypeLoaderHelper.LoadType(Loader, ILModule, type);
     }
 }

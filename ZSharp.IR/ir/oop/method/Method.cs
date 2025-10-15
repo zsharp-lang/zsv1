@@ -38,7 +38,7 @@ namespace ZSharp.IR
 
         public bool HasBody => UnderlyingFunction.HasBody;
 
-        public OOPType? Owner { get; set; }
+        public TypeDefinition? Owner { get; set; }
 
         public Module? Module => Owner?.Module;
 

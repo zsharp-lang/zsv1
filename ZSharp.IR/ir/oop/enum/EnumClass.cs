@@ -3,7 +3,7 @@
 namespace ZSharp.IR
 {
     public sealed class EnumClass
-        : OOPType
+        : TypeDefinition
         , IType
     {
         public string? Name { get; set; }

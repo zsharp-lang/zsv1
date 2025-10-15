@@ -7,7 +7,7 @@
             if (@interface.IsGenericTypeDefinition)
                 return LoadGenericInterface(@interface);
 
-            throw new NotImplementedException();
+            return new Objects.Interface(@interface, this);
         }
     }
 }

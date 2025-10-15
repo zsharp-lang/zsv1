@@ -2,10 +2,10 @@
 
 namespace ZSharp.IR
 {
-    public sealed class Interface(string? name) : OOPType
+    public sealed class Interface(string? name) : TypeDefinition
     {
         private Collection<GenericParameter>? _genericParameters;
-        private Collection<OOPTypeReference<Interface>>? _bases;
+        private Collection<TypeReference<Interface>>? _bases;
         private Collection<Method>? _methods;
 
         public string? Name { get; set; } = name;
@@ -26,7 +26,7 @@ namespace ZSharp.IR
 
         public bool HasGenericParameters => !_genericParameters.IsNullOrEmpty();
 
-        public Collection<OOPTypeReference<Interface>> Bases
+        public Collection<TypeReference<Interface>> Bases
         {
             get
             {

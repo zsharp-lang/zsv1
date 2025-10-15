@@ -6,7 +6,9 @@
 
         public AST.Document Node { get; }
 
-        public ScriptCompiler(Interpreter.Interpreter interpreter, AST.Document document)
+        public string DocumentPath { get; }
+
+        public ScriptCompiler(Interpreter.Interpreter interpreter, AST.Document document, string path)
         {
             Interpreter = interpreter;
             Node = document;
@@ -18,6 +20,8 @@
                     PostProcess = PostProcess
                 }.Compile
             }.Compile;
+
+            DocumentPath = path;
         }
 
         public void Compile()

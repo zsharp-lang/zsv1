@@ -8,7 +8,7 @@ namespace ZSharp.Platform.Runtime.Loaders
 
         public void CompileCode(Collection<IR.VM.Instruction> instructions)
         {
-            if (Context is IBranchingCodeContext branchingContext)
+            if (Context.Is<IBranchingCodeContext>(out var branchingContext))
             {
                 foreach (var instruction in instructions)
                     branchingContext.AddBranchTarget(instruction);
@@ -64,7 +64,7 @@ namespace ZSharp.Platform.Runtime.Loaders
         }
 
         private T RequireContext<T>()
-            where T : ICodeContext
-            => Context is T required ? required : throw new InvalidOperationException();
+            where T : class, ICodeContext
+            => Context.Is<T>(out var required) ? required : throw new InvalidOperationException();
     }
 }

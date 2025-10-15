@@ -37,7 +37,7 @@ namespace ZSharp.Objects
                 code.Append(compiler.CompileIRCode(args[param]));
 
             code.Append(new([
-                new IR.VM.Call(compiler.CompileIRReference<IR.GenericFunctionInstance>(this))
+                new IR.VM.Call(compiler.CompileIRReference<IR.ConstructedFunction>(this))
             ]));
 
             code.Types.Clear();

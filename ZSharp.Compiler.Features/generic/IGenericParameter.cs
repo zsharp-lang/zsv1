@@ -1,4 +1,4 @@
-﻿namespace ZSharp.Objects
+﻿namespace ZSharp.Compiler.Features.Generic
 {
     public interface IGenericParameter : CompilerObject
     {

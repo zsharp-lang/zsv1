@@ -1,5 +1,7 @@
 ﻿using CommonZ.Utils;
 
+using Debuggable = System.Diagnostics.DebuggableAttribute;
+
 namespace ZSharp.Platform.Runtime.Loaders
 {
     partial class EmitLoader
@@ -7,7 +9,11 @@ namespace ZSharp.Platform.Runtime.Loaders
         private delegate T CodeFunctionType<T>();
         private delegate void VoidCodeFunction();
 
-        public Delegate LoadCode(Collection<IR.VM.Instruction> code, IR.IType irReturnType)
+        public Delegate LoadCode(
+            Collection<IR.VM.Instruction> code, 
+            IR.IType irReturnType, 
+            IEvaluationContext evaluationContext
+        )
         {
             if (code.Count == 0) return () => { };
 
@@ -15,10 +21,12 @@ namespace ZSharp.Platform.Runtime.Loaders
                 code.Add(new IR.VM.Return());
 
             var ilReturnType = Runtime.ImportType(irReturnType);
-            var method = new Emit.DynamicMethod(string.Empty, ilReturnType, null, StandaloneModule);
+            var ilGenerator = evaluationContext.DefineCode(ilReturnType);
 
-            var codeLoader = new CodeCompiler(new UnboundCodeContext(Runtime, method.GetILGenerator()));
+            var codeLoader = new CodeCompiler(new UnboundCodeContext(Runtime, ilGenerator));
             codeLoader.CompileCode(code);
+
+            var method = evaluationContext.LoadMethod();
 
             return
                 ilReturnType != typeof(void)

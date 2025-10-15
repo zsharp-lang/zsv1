@@ -7,9 +7,9 @@ namespace ZSharp.IR
     {
         public Interface Interface { get; set; } = @interface;
 
-        Interface OOPTypeReference<Interface>.Definition => Interface;
+        Interface TypeReference<Interface>.Definition => Interface;
 
-        public OOPTypeReference? OwningType { get; set; }
+        public TypeReference? OwningType { get; set; }
 
         public Collection<IType> Arguments { get; set; } = @interface.HasGenericParameters ? [] : Collection<IType>.Empty;
     }

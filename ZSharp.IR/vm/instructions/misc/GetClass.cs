@@ -1,11 +1,11 @@
 ﻿namespace ZSharp.IR.VM
 {
-    public sealed class GetClass(OOPTypeReference<Class> @class)
+    public sealed class GetClass(TypeReference<Class> @class)
         : Instruction
-        , IHasOperand<OOPTypeReference<Class>>
+        , IHasOperand<TypeReference<Class>>
     {
-        public OOPTypeReference<Class> Class { get; set; } = @class;
+        public TypeReference<Class> Class { get; set; } = @class;
 
-        OOPTypeReference<Class> IHasOperand<OOPTypeReference<Class>>.Operand => Class;
+        TypeReference<Class> IHasOperand<TypeReference<Class>>.Operand => Class;
     }
 }

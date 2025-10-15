@@ -21,9 +21,9 @@
             if (Options.EvaluationTarget == EvaluationTarget.Statement)
                 return result;
 
-            return Interpreter
+            return Interpreter // do we realy want to support expression-level evaluation?
                 .Evaluate(value)
-                .When(ZSharp.Interpreter.CTServices.InfoOf);
+                .When(Interpreter.RTLoader.Load);
         }
     }
 }

@@ -16,6 +16,7 @@
     <ProjectReference Include="..\ZSharp.Compiler.CG\ZSharp.Compiler.CG.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Context\ZSharp.Compiler.Context.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.Evaluation\ZSharp.Compiler.Evaluation.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.IR\ZSharp.Compiler.IR.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Overloading\ZSharp.Compiler.Overloading.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Reflection\ZSharp.Compiler.Reflection.csproj" />

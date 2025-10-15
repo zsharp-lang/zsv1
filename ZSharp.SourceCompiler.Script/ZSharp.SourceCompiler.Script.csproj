@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Proxy\ZSharp.Compiler.CG.Proxy.csproj" />
     <ProjectReference Include="..\ZSharp.SourceCompiler.Common\ZSharp.SourceCompiler.Common.csproj" />
     <ProjectReference Include="..\ZSharp.SourceCompiler.Core\ZSharp.SourceCompiler.Core.csproj" />
     <ProjectReference Include="..\ZSharp.SourceCompiler.Module\ZSharp.SourceCompiler.Module.csproj" />

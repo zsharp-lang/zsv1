@@ -6,7 +6,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     partial class Method
         : ICTCallable
     {
-        CompilerObjectResult ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        Result ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             IRCode result = new();
 
@@ -17,7 +17,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                     .When(out var argumentCode)
                     .Error(out var error)
                     )
-                    return CompilerObjectResult.Error(error);
+                    return Result.Error(error);
 
                 result.Instructions.AddRange(argumentCode!.Instructions);
             }
@@ -25,7 +25,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             result.Instructions.Add(new IR.VM.Call(GetIR()));
             result.Types.Add(GetIR().ReturnType);
 
-            return CompilerObjectResult.Ok(new RawIRCode(result));
+            return Result.Ok(new RawIRCode(result));
         }
     }
 }

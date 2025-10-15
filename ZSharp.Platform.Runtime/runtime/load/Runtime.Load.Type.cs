@@ -2,7 +2,7 @@
 {
     partial class Runtime
     {
-        private Type LoadType(IR.OOPType type)
+        private Type LoadType(IR.TypeDefinition type)
         {
             if (type.Module is not null)
                 throw new InvalidOperationException(

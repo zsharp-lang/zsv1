@@ -7,9 +7,9 @@ namespace ZSharp.IR
     {
         public Class Class { get; set; } = @class;
 
-        Class OOPTypeReference<Class>.Definition => Class;
+        Class TypeReference<Class>.Definition => Class;
 
-        public OOPTypeReference? OwningType { get; set; }
+        public TypeReference? OwningType { get; set; }
 
         public Collection<IType> Arguments { get; set; } = @class.HasGenericParameters ? [] : Collection<IType>.Empty;
     }

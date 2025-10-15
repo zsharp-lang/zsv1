@@ -5,7 +5,7 @@
     {
         public Constructor Constructor { get; set; } = constructor;
 
-        public required OOPTypeReference OwningType { get; set; }
+        public required TypeReference OwningType { get; set; }
 
         public Signature Signature => Constructor.Method.Signature;
 

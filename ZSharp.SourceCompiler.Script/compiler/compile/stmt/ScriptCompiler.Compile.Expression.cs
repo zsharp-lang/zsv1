@@ -20,7 +20,8 @@
                 return;
             }
 
-            Interpreter.Evaluate(valueObject!);
+            Interpreter.Compiler.Evaluator.Evaluate(valueObject!);
+            // See comment in ZSharp.SourceCompiler.Module/module compiler/compile/stmt/ModuleCompiler.Compile.Expression.cs
         }
     }
 }

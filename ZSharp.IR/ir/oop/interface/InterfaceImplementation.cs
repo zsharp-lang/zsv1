@@ -2,9 +2,9 @@
 
 namespace ZSharp.IR
 {
-    public sealed class InterfaceImplementation(OOPTypeReference<Interface> @interface)
+    public sealed class InterfaceImplementation(TypeReference<Interface> @interface)
     {
-        public OOPTypeReference<Interface> Interface { get; set; } = @interface;
+        public TypeReference<Interface> Interface { get; set; } = @interface;
 
         /// <summary>
         /// Mapping from interface method to implementation method.

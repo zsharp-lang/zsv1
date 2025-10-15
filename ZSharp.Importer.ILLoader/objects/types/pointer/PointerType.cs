@@ -2,9 +2,9 @@
 
 namespace ZSharp.Importer.ILLoader.Objects
 {
-    public sealed class PointerType(OOPType type)
+    public sealed class PointerType(TypeDefinition type)
         : CompilerObject
     {
-        private readonly OOPType type = type;
+        private readonly TypeDefinition type = type;
     }
 }

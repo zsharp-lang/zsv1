@@ -115,7 +115,7 @@ namespace ZSharp.Objects
             {
                 state.Set(BuildState.Base);
 
-                @class.Base = compiler.CompileIRType<IR.OOPTypeReference<IR.Class>>(Base);
+                @class.Base = compiler.CompileIRType<IR.TypeReference<IR.Class>>(Base);
             }
 
             if (Content.Count > 0 && !state.Get(BuildState.Body))

@@ -2,6 +2,6 @@
 {
     partial class TypeSystem
     {
-        public required IR.OOPType Pointer { get; init; }
+        public required IR.TypeDefinition Pointer { get; init; }
     }
 }

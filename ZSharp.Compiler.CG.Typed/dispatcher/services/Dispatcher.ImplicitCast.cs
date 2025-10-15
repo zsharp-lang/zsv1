@@ -15,6 +15,9 @@
             //if (result.IsError && rtd.Is<IRTImplicitCastFrom>(out var castFrom))
             //    result = castFrom.ImplicitCast(compiler, @object);
 
+            if (result.IsError && compiler.Reflection.IsSameDefinition(type, rtd))
+                result = Result.Ok(@object);
+
             return result;
         }
     }
