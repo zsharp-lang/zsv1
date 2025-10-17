@@ -2,6 +2,6 @@
 {
     partial class ILLoader
     {
-        public Action<OperatorAttribute, IL.MethodInfo> OnLoadOperator;
+        public Action<OperatorAttribute, IL.MethodInfo>? OnLoadOperator;
     }
 }
