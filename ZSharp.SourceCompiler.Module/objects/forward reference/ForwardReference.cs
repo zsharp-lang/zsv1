@@ -11,7 +11,7 @@ namespace ZSharp.SourceCompiler.Module.Objects
         bool CompilerObject.Is<T>([NotNullWhen(true)] out T? result) where T : class
             => Inner.Is(out result);
 
-        R IProxy.Apply<R>(Func<CompilerObject, R> fn)
+        Result<R> IProxy.Apply<R>(Func<CompilerObject, Result<R>> fn)
             => fn(Inner);
     }
 }
