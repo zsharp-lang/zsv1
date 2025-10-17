@@ -1,6 +1,6 @@
-﻿namespace ZSharp.Compiler.CGDispatchers.Direct
+﻿namespace ZSharp.Compiler.TSDispatchers.Static
 {
-    internal partial class Dispatcher(Compiler compiler)
+    public sealed partial class Dispatcher(Compiler compiler)
     {
         private readonly Compiler compiler = compiler;
         private TS @base;

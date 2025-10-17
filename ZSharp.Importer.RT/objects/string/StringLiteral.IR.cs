@@ -10,7 +10,11 @@ namespace ZSharp.Importer.RT.Objects
                 new IR.VM.PutString(value)
             ])
             {
-                Types = [type],
+                Types = [
+                    compiler.IR.CompileType(type)
+                    .Else(e => new ErrorMessage($"WTF string can't compile to IR type?? {e}"))
+                    .Unwrap()
+                ],
                 MaxStackSize = 1
             });
     }

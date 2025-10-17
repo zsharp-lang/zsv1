@@ -1,4 +1,4 @@
-﻿namespace ZSharp.Compiler.CGDispatchers.Direct
+﻿namespace ZSharp.Compiler.TSDispatchers.Static
 {
     partial class Dispatcher
     {

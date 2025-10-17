@@ -7,6 +7,12 @@
         {
             IL = il;
             Loader = loader;
+
+            if (!IL.IsStatic)
+                signature.parameters.Add(new ThisParameter(IL, loader));
+
+            foreach (var parameter in IL.GetParameters())
+                signature.parameters.Add(new Parameter(parameter, loader));
         }
     }
 }

@@ -4,7 +4,7 @@
     {
         private Result CompileString(AST.LiteralExpression expression)
         {
-            return Result.Ok(new StringLiteral(expression.Value));
+            return Interpreter.RTLoader.Load(expression.Value);
         }
     }
 }

@@ -2,10 +2,10 @@
 
 namespace ZSharp.Importer.RT.Objects
 {
-    internal sealed partial class StringLiteral(Value value, IR.IType type)
+    internal sealed partial class StringLiteral(Value value, CompilerObject type)
         : CompilerObject
     {
         private readonly Value value = value;
-        private readonly IR.IType type = type;
+        private readonly CompilerObject type = type;
     }
 }

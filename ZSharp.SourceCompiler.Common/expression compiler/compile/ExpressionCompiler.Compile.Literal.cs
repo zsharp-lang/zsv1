@@ -7,7 +7,7 @@
             if (literal.UnitType is not null)
                 Interpreter.Log.Warning($"Literal has a unit type '{literal.UnitType}' which will be ignored.", new NodeLogOrigin(literal));
 
-            return new LiteralCompiler().Compile(literal);
+            return new LiteralCompiler(Interpreter).Compile(literal);
         }
     }
 }

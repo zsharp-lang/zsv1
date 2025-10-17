@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj" />
+    <ProjectReference Include="..\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />
     <ProjectReference Include="..\ZSharp.Platform.Runtime\ZSharp.Platform.Runtime.csproj" />
   </ItemGroup>
 

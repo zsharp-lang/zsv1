@@ -39,11 +39,11 @@ namespace ZSharp.Interpreter
                 UIntNative = null!,
                 Void = RuntimeModule.TypeSystem.Void
             });
-            RTLoader = new()
+            ILLoader = new(Compiler, Runtime);
+            RTLoader = new(ILLoader)
             {
                 TypeSystem = Runtime.TypeSystem
             };
-            ILLoader = new(Compiler, Runtime);
         }
     }
 }

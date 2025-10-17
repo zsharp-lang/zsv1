@@ -1,5 +1,6 @@
 ﻿
 using ZSharp.Compiler;
+using ZSharp.Compiler.Features.Callable;
 
 namespace ZSharp.Importer.ILLoader.Objects
 {
@@ -8,14 +9,20 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         Result ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
+            if (
+                BoundSignature.Create(compiler, signature, new ArgumentStream(arguments))
+                .When(out var boundSignature)
+                .Error(out var error)
+            ) return Result.Error(error);
+
             IRCode result = new();
 
-            foreach (var argument in arguments)
+            foreach (var boundParameter in boundSignature!.Parameters)
             {
                 if (
-                    compiler.IR.CompileCode(argument.Object, null)
+                    compiler.IR.CompileCode(boundParameter.ArgumentObject, null)
                     .When(out var argumentCode)
-                    .Error(out var error)
+                    .Error(out error)
                     )
                     return Result.Error(error);
 

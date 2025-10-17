@@ -3,7 +3,7 @@
     partial class ModuleScope
     {
         [Alias("print")]
-        public static void Print(string message)
-            => System.Console.WriteLine(message);
+        public static void Print(object value)
+            => System.Console.WriteLine(value);
     }
 }

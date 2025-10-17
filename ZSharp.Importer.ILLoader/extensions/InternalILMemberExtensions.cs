@@ -10,6 +10,11 @@ namespace ZSharp.Importer.ILLoader
                 ? alias.Name
                 : member.Name;
 
+        public static string AliasOrName(this ParameterInfo parameter)
+            => parameter.GetCustomAttribute<AliasAttribute>() is AliasAttribute alias
+                ? alias.Name
+                : parameter.Name ?? throw new InvalidOperationException("Parameter name cannot be null.");
+
         public static bool IsModuleScope(this Type type)
             => type.GetCustomAttribute<ModuleScopeAttribute>() is not null;
 

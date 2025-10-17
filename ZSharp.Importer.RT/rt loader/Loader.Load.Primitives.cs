@@ -3,6 +3,6 @@
     partial class Loader
     {
         private Objects.StringLiteral Load(string value)
-            => new(value, TypeSystem.String);
+            => new(value, ILLoader.LoadType(typeof(string)));
     }
 }
