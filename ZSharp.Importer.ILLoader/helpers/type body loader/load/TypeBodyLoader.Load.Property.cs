@@ -1,10 +1,10 @@
 ﻿namespace ZSharp.Importer.ILLoader
 {
-    partial class ModuleLoader
+    partial class TypeBodyLoader
     {
         private CompilerObject LoadProperty(IL.PropertyInfo property)
         {
-            throw new NotImplementedException();
+            return new Objects.Property();
         }
     }
 }

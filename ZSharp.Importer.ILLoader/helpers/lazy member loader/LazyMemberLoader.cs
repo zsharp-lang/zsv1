@@ -1,7 +1,8 @@
 ﻿namespace ZSharp.Importer.ILLoader.Objects
 {
-    public sealed partial class GlobalProperty
+    internal sealed partial class LazyMemberLoader
         : CompilerObject
     {
+
     }
 }

@@ -11,36 +11,14 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             IL = il;
             Loader = loader;
-            BodyLoader = new(this, loader);
 
-            Dictionary<string, string> mappedNamespaces = [];
-            foreach (var mapping in il.GetCustomAttributes<MapNamespaceAttribute>())
-                mappedNamespaces[mapping.OldName] = mapping.NewName;
+            LazyLoader = new LazyMemberLoader()
+            {
+                Container = this,
+                Loader = new ModuleBodyLoader(loader)
+            };
 
-            List<Type> moduleScopes = [];
-
-            foreach (var type in il.GetTypes())
-                if (!type.IsPublic) continue;
-                else
-                {
-                    if (type.Namespace is string ns)
-                        ns = mappedNamespaces.GetValueOrDefault(ns, ns);
-                    else ns = string.Empty;
-
-                    if (type.IsModuleScope())
-                    {
-                        moduleScopes.Add(type);
-                        continue;
-                    }
-
-                    ILazilyLoadMembers lazyLoader = ns == string.Empty
-                        ? BodyLoader
-                        : Loader.Namespace(ns);
-
-                    lazyLoader.AddLazyMember(type.AliasOrName(), type);
-                }
-
-            PrepareGlobals(moduleScopes);
+            Prepare.PrepareModule(this, loader);
         }
     }
 }

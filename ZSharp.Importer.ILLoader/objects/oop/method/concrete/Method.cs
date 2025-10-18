@@ -8,6 +8,8 @@
             IL = il;
             Loader = loader;
 
+            ReturnType = loader.LoadType(IL.ReturnType);
+
             if (!IL.IsStatic)
                 signature.parameters.Add(new ThisParameter(IL, loader));
 

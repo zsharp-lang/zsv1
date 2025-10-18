@@ -2,6 +2,6 @@
 {
     internal interface IAddMember
     {
-        public void AddMember(string name, CompilerObject member);
+        public CompilerObject AddMember(string name, CompilerObject member);
     }
 }

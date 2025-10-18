@@ -1,15 +1,13 @@
 ﻿namespace ZSharp.Importer.ILLoader
 {
-    partial class ModuleLoader
+    partial class TypeBodyLoader
     {
         private CompilerObject LoadMethod(IL.MethodInfo method)
         {
-            if (!method.IsStatic) throw new ArgumentException("Only static methods are supported.", nameof(method));
-
             if (method.IsGenericMethodDefinition)
                 return LoadGenericMethod(method);
 
-            return new Objects.Function(method, Loader);
+            return new Objects.Method(method, Loader);
         }
     }
 }

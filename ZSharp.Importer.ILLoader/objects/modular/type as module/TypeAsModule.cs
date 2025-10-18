@@ -11,13 +11,17 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             IL = il;
             Loader = loader;
-            BodyLoader = new(this, loader);
+            LazyLoader = new LazyMemberLoader()
+            {
+                Container = this,
+                Loader = new ModuleBodyLoader(loader)
+            };
 
             if (il.GetCustomAttribute<SetNamespaceAttribute>() is SetNamespaceAttribute setNamespace)
                 RootNamespace = setNamespace.Name;
             else RootNamespace = string.Empty;
 
-            Prepare();
+            Prepare.PrepareTypeAsModule(this, loader);
         }
     }
 }

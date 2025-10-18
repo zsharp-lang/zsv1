@@ -1,7 +1,7 @@
 ﻿namespace ZSharp.Importer.ILLoader.Objects
 {
     partial class Namespace
-        : ILazilyLoadMembers
+        : ILazyMemberLoader
     {
         private readonly Dictionary<MemberName, IL.MemberInfo> lazyLoadedMembers = [];
 
@@ -10,7 +10,7 @@
         public void AddLazyMember(MemberName member, IL.MemberInfo lazyLoadedMember)
             => lazyLoadedMembers.Add(member, lazyLoadedMember);
 
-        public CompilerObject? LoadMember(string name)
+        public CompilerObject? GetLazyMember(string name)
         {
             if (!lazyLoadedMembers.TryGetValue(name, out var member))
                 return null;

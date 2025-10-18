@@ -4,7 +4,7 @@
     {
         private CompilerObject LoadProperty(IL.PropertyInfo property)
         {
-            throw new NotImplementedException();
+            return new Objects.GlobalProperty();
         }
     }
 }

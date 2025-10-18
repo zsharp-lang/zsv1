@@ -9,7 +9,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         public Mapping<MemberName, CompilerObject> Members { get; } = [];
 
-        public void AddMember(string name, CompilerObject member)
+         CompilerObject IAddMember.AddMember(string name, CompilerObject member)
         {
             var result = OnAddResult.None;
             if (member is IOnAddTo<TypeAsModule> onAdd)
@@ -17,13 +17,15 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             if (result == OnAddResult.None)
                 Members.Add(name, member);
+
+            return member;
         }
 
-        Result ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName member)
+        Result ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName name)
         {
-            if (!Members.TryGetValue(member, out var result) && (result = LoadMember(member)) is null)
+            if (!Members.TryGetValue(name, out var result) && !LazyLoader.GetLazyMember(name, out result))
                 return Result.Error(
-                    $"Could not find member {member} in module {IL.Name}"
+                    $"Could not find member {name} in module {IL.Name}"
                 );
 
             return Result.Ok(result);

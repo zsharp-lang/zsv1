@@ -1,6 +1,7 @@
 ﻿namespace ZSharp.Importer.ILLoader
 {
-    partial class ModuleBodyLoader
+    partial class TypeBodyLoader
+        : ILoader<IL.MemberInfo>
     {
         public CompilerObject LoadMember(IL.MemberInfo member)
             => member switch

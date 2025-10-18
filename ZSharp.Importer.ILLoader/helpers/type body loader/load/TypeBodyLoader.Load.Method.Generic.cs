@@ -1,10 +1,10 @@
 ﻿namespace ZSharp.Importer.ILLoader
 {
-    partial class ModuleLoader
+    partial class TypeBodyLoader
     {
         private CompilerObject LoadGenericMethod(IL.MethodInfo method)
         {
-            return new Objects.GenericFunction();
+            return new Objects.GenericMethod();
         }
     }
 }
