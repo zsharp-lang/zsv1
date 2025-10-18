@@ -24,7 +24,7 @@
                 SInt32 = new Objects.SInt32Type(Runtime.TypeSystem.SInt32),
                 SInt64 = new Objects.SInt64Type(Runtime.TypeSystem.SInt64),
                 SIntNative = new Objects.SIntNativeType(Runtime.TypeSystem.SIntNative),
-                String = new Objects.StringType(Runtime.TypeSystem.String, this),
+                String = new Objects.StringType(Runtime.TypeSystem.String),
                 UInt8 = new Objects.UInt8Type(Runtime.TypeSystem.UInt8),
                 UInt16 = new Objects.UInt16Type(Runtime.TypeSystem.UInt16),
                 UInt32 = new Objects.UInt32Type(Runtime.TypeSystem.UInt32),

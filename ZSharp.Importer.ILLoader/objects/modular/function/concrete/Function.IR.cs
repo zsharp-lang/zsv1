@@ -8,11 +8,11 @@
         {
             if (IR is null)
             {
-                var returnTypeCO = loader.LoadType(IL.ReturnType);
-                if (loader.IR.CompileType(returnTypeCO).When(out var returnTypeIR).Error(out var error))
+                var returnTypeCO = Loader.LoadType(IL.ReturnType);
+                if (Loader.IR.CompileType(returnTypeCO).When(out var returnTypeIR).Error(out var error))
                     throw new InvalidOperationException($"Failed to load return type for method {IL.Name}: {error}");
                 IR = new(returnTypeIR!);
-                loader.RequireRuntime().AddFunction(IR, IL);
+                Loader.RequireRuntime().AddFunction(IR, IL);
             }
 
             return IR;

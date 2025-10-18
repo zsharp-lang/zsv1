@@ -2,8 +2,8 @@
 {
     partial class Function
     {
-        private readonly ILLoader loader = loader;
+        public ILLoader Loader { get; }
 
-        public IL.MethodInfo IL { get; } = il;
+        public IL.MethodInfo IL { get; }
     }
 }
