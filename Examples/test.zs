@@ -11,6 +11,8 @@ module A {
 	print("[CT] Inside module A");
 
 	fun main(): Void {
+		print(Directory.cwd().toString());
+
 		print("[RT] Hello, World!");
 		return;
 	}
