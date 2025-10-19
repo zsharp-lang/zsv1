@@ -2,6 +2,6 @@
 {
     partial class ThisParameter
     {
-        public IL.MethodInfo IL { get; }
+        public IL.MethodBase IL { get; }
     }
 }

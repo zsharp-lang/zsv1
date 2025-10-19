@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result Index(CompilerObject @object, Argument[] arguments)
+        public IResult Index(CompilerObject @object, Argument[] arguments)
         {
             var result = @base.GetIndex(@object, arguments);
 
@@ -12,7 +12,7 @@
             return result;
         }
 
-        public Result Index(CompilerObject @object, Argument[] arguments, CompilerObject value)
+        public IResult Index(CompilerObject @object, Argument[] arguments, CompilerObject value)
         {
             var result = @base.GetIndex(@object, arguments);
 

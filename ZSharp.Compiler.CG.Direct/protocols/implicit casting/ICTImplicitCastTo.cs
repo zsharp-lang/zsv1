@@ -2,6 +2,6 @@
 {
     public interface ICTImplicitCastTo
     {
-        public Result ImplicitCast(Compiler compiler, CompilerObject type);
+        public IResult ImplicitCast(Compiler compiler, CompilerObject type);
     }
 }

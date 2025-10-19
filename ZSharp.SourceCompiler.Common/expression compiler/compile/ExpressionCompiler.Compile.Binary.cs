@@ -2,7 +2,7 @@
 {
     partial class ExpressionCompiler
     {
-        private Result<CompilerObject> Compile(AST.BinaryExpression binary)
+        private IResult Compile(AST.BinaryExpression binary)
         {
             if (
                 Compile(binary.Left)

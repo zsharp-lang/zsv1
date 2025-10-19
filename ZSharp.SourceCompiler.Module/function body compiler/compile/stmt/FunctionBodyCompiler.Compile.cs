@@ -2,7 +2,7 @@
 {
     partial class FunctionBodyCompiler
     {
-        private Result Compile(AST.Statement statement)
+        private IResult Compile(AST.Statement statement)
             => statement switch
             {
                 AST.BlockStatement block => Compile(block),

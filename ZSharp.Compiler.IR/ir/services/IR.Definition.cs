@@ -6,7 +6,7 @@
 
         public IIRDefinitionInCompiler DefinitionInCompiler { get; set; } = Dispatcher.Instance;
 
-        public Result<T> CompileDefinition<T>(CompilerObject @object, TargetPlatform? target)
+        public IResult<T, Error> CompileDefinition<T>(CompilerObject @object, TargetPlatform? target)
             where T : IRDefinition
             => DefinitionAsCompiler.CompileDefinition<T>(@object, target);
 

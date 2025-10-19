@@ -4,7 +4,7 @@ namespace ZSharp.Compiler
 {
     public static class CompilerExtensions
     {
-        public static Result GetRuntimeDescriptor(this Compiler compiler, CompilerObject @object)
+        public static IResult GetRuntimeDescriptor(this Compiler compiler, CompilerObject @object)
         {
             if (@object.Is<IHasRuntimeDescriptor>(out var hasRuntimeDescriptor))
                 return hasRuntimeDescriptor.GetRuntimeDescriptor(compiler);

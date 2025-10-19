@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result Evaluate(CompilerObject @object)
+        public IResult Evaluate(CompilerObject @object)
         {
             var result = @base.Evaluate(@object);
 

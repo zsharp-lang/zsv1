@@ -2,6 +2,6 @@
 {
     public interface IRTCallable
     {
-        public Result Call(Compiler compiler, CompilerObject @object, Argument[] arguments);
+        public IResult Call(Compiler compiler, CompilerObject @object, Argument[] arguments);
     }
 }

@@ -18,7 +18,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 Members.Add(name, member);
         }
 
-        Result ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName member)
+        IResult ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName member)
         {
             if (!Members.TryGetValue(member, out var result))
                 if ((result = GetLazyMember(member)) is not null)

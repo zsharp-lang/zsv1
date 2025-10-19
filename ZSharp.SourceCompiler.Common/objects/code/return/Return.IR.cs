@@ -4,7 +4,7 @@ namespace ZSharp.SourceCompiler
     partial class Return
         : ICompileIRCode
     {
-        Result<IRCode> ICompileIRCode.CompileIRCode(Compiler.Compiler compiler, object? target)
+        IResult<IRCode, Error> ICompileIRCode.CompileIRCode(Compiler.Compiler compiler, object? target)
         {
             var code = new IRCode();
 

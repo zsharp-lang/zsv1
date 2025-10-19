@@ -2,7 +2,7 @@
 
 namespace ZSharp.Compiler
 {
-    public delegate Result TypeOf(CompilerObject @object);
+    public delegate IResult TypeOf(CompilerObject @object);
 
     partial struct TS
     {

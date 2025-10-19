@@ -111,6 +111,11 @@ namespace ZSharp.Importer.ILLoader
 
             foreach (var member in il.GetMembers())
             {
+                if (member is ConstructorInfo constructor)
+                {
+                    continue;
+                }
+
                 if (member is MethodInfo method && method.IsOperator(out var op))
                 {
                     loader.OnLoadOperator?.Invoke(op, method);

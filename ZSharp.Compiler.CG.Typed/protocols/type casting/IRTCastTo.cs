@@ -2,6 +2,6 @@
 {
     public interface IRTCastTo
     {
-        public Result<CastResult> Cast(Compiler compiler, CompilerObject value, CompilerObject targetType);
+        public IResult<CastResult, Error> Cast(Compiler compiler, CompilerObject value, CompilerObject targetType);
     }
 }

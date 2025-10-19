@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    public delegate Result Call(CompilerObject callee, Argument[] arguments);
+    public delegate IResult Call(CompilerObject callee, Argument[] arguments);
 
     partial struct CG
     {

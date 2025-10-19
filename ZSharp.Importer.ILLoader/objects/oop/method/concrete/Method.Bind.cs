@@ -3,7 +3,7 @@
     partial class Method
         : IBindable
     {
-        Result IBindable.Bind(Compiler.Compiler compiler, CompilerObject target)
+        IResult IBindable.Bind(Compiler.Compiler compiler, CompilerObject target)
         {
             if (IL.IsStatic) return Result.Ok(this);
 

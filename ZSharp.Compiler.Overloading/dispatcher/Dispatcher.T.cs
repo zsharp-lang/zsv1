@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public static Result F(CompilerObject @object)
+        public static IResult F(CompilerObject @object)
             => Result.Error($"Object '{@object}' does not implement F");
     }
 }

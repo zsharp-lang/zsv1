@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    public delegate Result F(CompilerObject callee);
+    public delegate IResult F(CompilerObject callee);
 
     partial struct Overloading
     {

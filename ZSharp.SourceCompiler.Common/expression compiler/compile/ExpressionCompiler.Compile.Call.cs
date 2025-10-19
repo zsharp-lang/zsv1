@@ -2,7 +2,7 @@
 {
     partial class ExpressionCompiler
     {
-        private Result<CompilerObject> Compile(AST.CallExpression call)
+        private IResult Compile(AST.CallExpression call)
         {
             var calleeResult = Compile(call.Callee);
 
@@ -15,14 +15,14 @@
             );
 
             var argumentResults = call.Arguments
-                .Select(arg =>
+                .Select<AST.CallArgument, IResult<Argument, Error>>(arg =>
                 {
                     if (
                         Compile(arg.Value)
                         .When(out var argValue)
                         .Error(out var error)
                     ) return Result<Argument>.Error(error);
-
+                    
                     return Result<Argument>.Ok(
                         new(
                             arg.Name,
@@ -35,7 +35,7 @@
             if (argumentResults.Any(r => r.IsError))
                 return Result<CompilerObject>.Error(
                     $"Failed to compile arguments: {
-                        (string.Join(", ", Enumerable.Where<Result<Argument>>(argumentResults, (Func<Result<Argument>, bool>)(r => r.IsError)).Select(r => r.Error(out var error) ? error : throw new())))
+                        (string.Join(", ", Enumerable.Where(argumentResults, (r => r.IsError)).Select(r => r.UnwrapError())))
                     }"
                 );
 

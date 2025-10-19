@@ -1,7 +1,7 @@
 ﻿namespace ZSharp.Objects
 {
-    public interface IOnAddTo<T>
-        where T : class, Compiler.CompilerObject
+    public interface IOnAddTo<in T>
+        where T : class, CompilerObject
     {
         public OnAddResult OnAddTo(T @object);
     }

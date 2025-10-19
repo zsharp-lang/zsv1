@@ -3,12 +3,12 @@
     partial class Dispatcher
         : IIRTypeCompiler
     {
-        public Result<IType> CompileType(CompilerObject @object)
+        public IResult<IType, Error> CompileType(CompilerObject @object)
             => Result<IType>.Error(
                 $"Object {@object} does not support compile IR type"
             );
 
-        Result<T> IIRTypeCompiler.CompileType<T>(CompilerObject @object)
+        IResult<T, Error> IIRTypeCompiler.CompileType<T>(CompilerObject @object)
             => Result<T>.Error(
                 $"Object {@object} does not support compile IR type"
             );

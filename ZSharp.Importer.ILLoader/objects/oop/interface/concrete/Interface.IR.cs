@@ -9,7 +9,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         public IR.Interface? IR { get; private set; }
 
-        Result<IR.Interface> ICompileIRDefinitionAs<IR.Interface>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
+        IResult<IR.Interface, Error> ICompileIRDefinitionAs<IR.Interface>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
         {
             if (IR is not null) return Result<IR.Interface>.Ok(IR);
 
@@ -23,7 +23,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             return Result<IR.Interface>.Ok(IR);
         }
 
-        Result<TypeReference<IR.Interface>> ICompileIRType<TypeReference<IR.Interface>>.CompileIRType(Compiler.Compiler compiler)
+        IResult<TypeReference<IR.Interface>, Error> ICompileIRType<TypeReference<IR.Interface>>.CompileIRType(Compiler.Compiler compiler)
         {
             if (
                 compiler.IR.CompileDefinition<IR.Interface>(this, null)

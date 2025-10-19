@@ -2,7 +2,7 @@
 {
     partial class FunctionBodyCompiler
     {
-        public Result Compile()
+        public IResult Compile()
             => Compile(Node);
     }
 }

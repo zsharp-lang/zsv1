@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result Call(CompilerObject callee, Argument[] arguments)
+        public IResult Call(CompilerObject callee, Argument[] arguments)
         {
             var result = @base.Call(callee, arguments);
 

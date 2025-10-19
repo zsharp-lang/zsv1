@@ -2,7 +2,7 @@
 {
     partial class FunctionBodyCompiler
     {
-        private Result Compile(AST.Function function)
+        private IResult Compile(AST.Function function)
         {
             var compiler = new FunctionCompiler(Interpreter, function);
 

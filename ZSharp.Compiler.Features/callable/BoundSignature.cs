@@ -8,7 +8,7 @@ namespace ZSharp.Compiler.Features.Callable
 
         public Collection<BoundParameter> Parameters { get; init; } = [];
 
-        public static Result<BoundSignature> Create(Compiler compiler, CompilerObject @object, IArgumentStream arguments)
+        public static IResult<BoundSignature, Error> Create(Compiler compiler, CompilerObject @object, IArgumentStream arguments)
         {
             if (!@object.Is<ISignature>(out var signature))
                 return Result<BoundSignature>.Error($"Object '{@object}' is not a signature.");

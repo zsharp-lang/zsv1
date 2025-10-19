@@ -2,7 +2,7 @@
 {
     partial class ModuleCompiler
     {
-        private Result Compile(AST.DefinitionStatement definitionStatement)
+        private IResult Compile(AST.DefinitionStatement definitionStatement)
             => definitionStatement.Definition switch
             {
                 AST.Function function => Compile(function),

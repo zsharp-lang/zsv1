@@ -2,6 +2,6 @@
 {
     public interface IRTCastFrom
     {
-        public Result<CastResult> Cast(Compiler compiler, CompilerObject value);
+        public IResult<CastResult, Error> Cast(Compiler compiler, CompilerObject value);
     }
 }

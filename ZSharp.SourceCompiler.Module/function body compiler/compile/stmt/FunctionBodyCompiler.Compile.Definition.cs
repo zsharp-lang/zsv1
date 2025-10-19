@@ -2,7 +2,7 @@
 {
     partial class FunctionBodyCompiler
     {
-        private Result Compile(AST.DefinitionStatement definitionStatement)
+        private IResult Compile(AST.DefinitionStatement definitionStatement)
             => Compile(definitionStatement.Definition);
     }
 }

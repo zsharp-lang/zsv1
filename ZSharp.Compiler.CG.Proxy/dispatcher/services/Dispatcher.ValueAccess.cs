@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result Get(CompilerObject @object)
+        public IResult Get(CompilerObject @object)
         {
             var result = @base.Get(@object);
 
@@ -12,7 +12,7 @@
             return result;
         }
 
-        public Result Set(CompilerObject @object, CompilerObject value)
+        public IResult Set(CompilerObject @object, CompilerObject value)
         {
             var result = @base.Set(@object, value);
 

@@ -3,7 +3,7 @@
     partial class Dispatcher
         : IIRReferenceCompiler
     {
-        Result<T> IIRReferenceCompiler.CompileReference<T>(CompilerObject @object) where T : class
+        IResult<T, Error> IIRReferenceCompiler.CompileReference<T>(CompilerObject @object) where T : class
         {
             var result = @base.CompileReference<T>(@object);
 

@@ -1,70 +1,50 @@
 ﻿using CommonZ;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ZSharp.Compiler
 {
     public class Result<TResult>
-        : Result<TResult, Error>
+        : IResult<TResult, Error>
         where TResult : class?
     {
-        protected Result(TResult? result, Error? error)
-            : base(result, error)
-        {
+        private readonly TResult? result;
+        private readonly Error? error;
 
+        [MemberNotNullWhen(true, nameof(result))]
+        public bool IsOk => result is not null;
+
+        [MemberNotNullWhen(true, nameof(error))]
+        public bool IsError => error is not null;
+
+        private Result(TResult? result, Error? error)
+        {
+            this.result = result;
+            this.error = error;
         }
 
-        public new static Result<TResult> Ok(TResult result)
+        public static Result<TResult> Ok(TResult result)
             => new(result, null);
 
-        public new static Result<TResult> Error(Error error)
+        public static Result<TResult> Error(Error error)
             => new(null, error);
 
         public static Result<TResult> Error(string message)
             => Error(new ErrorMessage(message));
 
-        public new Result<TResult> When(Action<TResult> action)
-        {
-            if (IsOk)
-                action(Unwrap());
+        TResult IResult<TResult, Error>.Unwrap()
+            => result ?? throw new InvalidOperationException(error!.ToString());
 
-            return this;
-        }
+        Error IResult<TResult, Error>.UnwrapError()
+            => error ?? throw new InvalidOperationException("Result is Ok.");
 
-        public new Result<R> When<R>(Func<TResult, R> map)
-            where R : class?
+        IResult<R, Error> IResult<TResult, Error>.When<R>(Func<TResult, R> map)
             => IsOk
                 ? Result<R>.Ok(map(result))
                 : Result<R>.Error(error!);
 
-        public Result<R> When<R>(Func<TResult, Result<R>> map)
-            where R : class?
-            => IsOk
-                ? map(result)
-                : Result<R>.Error(error!);
-
-        public new Result<TResult> When(out TResult? result)
-        {
-            result = this.result;
-            return this;
-        }
-
-        public new Result<TResult> Else(Action<Error> action)
-        {
-            if (IsError)
-                action(error);
-
-            return this;
-        }
-
-        public new Result<TResult, E> Else<E>(Func<Error, E> map)
-            where E : class
+        IResult<TResult, E> IResult<TResult, Error>.Else<E>(Func<Error, E> map)
             => IsOk
                 ? Result<TResult, E>.Ok(result)
                 : Result<TResult, E>.Error(map(error!));
-
-        public new Result<TResult> Else(out Error? error)
-        {
-            error = this.error;
-            return this;
-        }
     }
 }

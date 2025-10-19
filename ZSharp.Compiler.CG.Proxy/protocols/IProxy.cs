@@ -2,6 +2,6 @@
 {
     public interface IProxy
     {
-        public Result<R> Apply<R>(Func<CompilerObject, Result<R>> fn) where R : class;
+        public IResult<R, Error> Apply<R>(Func<CompilerObject, IResult<R, Error>> fn) where R : class;
     }
 }

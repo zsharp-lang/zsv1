@@ -2,6 +2,6 @@
 {
     public interface ICompileIRCode
     {
-        public Result<IRCode> CompileIRCode(Compiler compiler, TargetPlatform? target);
+        public IResult<IRCode, Error> CompileIRCode(Compiler compiler, TargetPlatform? target);
     }
 }

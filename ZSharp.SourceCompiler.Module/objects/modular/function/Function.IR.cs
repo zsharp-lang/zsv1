@@ -26,10 +26,10 @@ namespace ZSharp.SourceCompiler.Module.Objects
             }
         }
 
-        Result<IR.Function> ICompileIRDefinitionAs<IR.Function>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
+        IResult<IR.Function, Error> ICompileIRDefinitionAs<IR.Function>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
             => CompileIR(compiler, target);
 
-        private Result<IR.Function> CompileIR(Compiler.Compiler compiler, object? target)
+        private IResult<IR.Function, Error> CompileIR(Compiler.Compiler compiler, object? target)
         {
             if (ReturnType is null)
                 return Result<IR.Function>.Error(

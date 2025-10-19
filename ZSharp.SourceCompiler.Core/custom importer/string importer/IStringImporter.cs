@@ -1,10 +1,7 @@
-﻿using ZSharp.Compiler;
-using ZSharp.Objects;
-
-namespace ZSharp.SourceCompiler
+﻿namespace ZSharp.SourceCompiler
 {
     public interface IStringImporter
     {
-        public Result<CompilerObject> Import(string source);
+        public IResult Import(string source);
     }
 }

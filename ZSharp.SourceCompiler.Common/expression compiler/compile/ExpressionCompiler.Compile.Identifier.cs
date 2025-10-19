@@ -2,7 +2,7 @@
 {
     partial class ExpressionCompiler
     {
-        private Result<CompilerObject> Compile(AST.IdentifierExpression identifier)
+        private IResult Compile(AST.IdentifierExpression identifier)
         {
             foreach (var scope in Interpreter.Compiler.CurrentContext.FindContext<IScopeContext>())
                 if (scope.Get(identifier.Name).Ok(out var result))

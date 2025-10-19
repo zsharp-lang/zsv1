@@ -2,7 +2,7 @@
 {
     partial class FunctionBodyCompiler
     {
-        private Result Compile(AST.Return @return)
+        private IResult Compile(AST.Return @return)
         {
             CompilerObject? value = null;
 

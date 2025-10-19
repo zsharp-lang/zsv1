@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result TypeOf(CompilerObject @object)
+        public IResult TypeOf(CompilerObject @object)
         {
             var result = @base.TypeOf(@object);
 

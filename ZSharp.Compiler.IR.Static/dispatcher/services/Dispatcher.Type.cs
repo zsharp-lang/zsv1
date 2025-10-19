@@ -3,7 +3,7 @@
     partial class Dispatcher
         : IIRTypeCompiler
     {
-        public Result<ZSharp.IR.IType> CompileType(CompilerObject @object)
+        public IResult<ZSharp.IR.IType, Error> CompileType(CompilerObject @object)
         {
             var result = @base.CompileType(@object);
 
@@ -13,7 +13,7 @@
             return result;
         }
 
-        Result<T> IIRTypeCompiler.CompileType<T>(CompilerObject @object)
+        IResult<T, Error> IIRTypeCompiler.CompileType<T>(CompilerObject @object)
         {
             var result = @base.CompileTypeAs<T>(@object);
 

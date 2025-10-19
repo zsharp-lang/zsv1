@@ -4,7 +4,7 @@ namespace ZSharp.Interpreter
 {
     partial class Interpreter
     {
-        public Result<object?> Evaluate(
+        public IResult<object?, Error> Evaluate(
             CompilerObject @object,
             Platform.Runtime.IEvaluationContext? evaluationContext = null
         )

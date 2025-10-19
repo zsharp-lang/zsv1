@@ -2,7 +2,7 @@
 {
     partial class FunctionCompiler
     {
-        public Result Declare()
+        public IResult Declare()
         {
             Error? error = null;
 
@@ -71,7 +71,7 @@
                 Object.Body = body;
         }
 
-        private Result Compile(AST.Parameter parameter)
+        private IResult Compile(AST.Parameter parameter)
         {
             return Result.Error($"Parameter {parameter.Name} did not compile because parameter compilation is not implemented.");
         }

@@ -10,14 +10,14 @@ namespace ZSharp.Importer.ILLoader.Objects
 
         public CompilerObject Type { get; }
 
-        public ThisParameter(IL.MethodInfo il, ILLoader loader)
+        public ThisParameter(IL.MethodBase il, ILLoader loader)
         {
             IL = il;
 
             Type = loader.LoadType(IL.DeclaringType ?? throw new());
         }
 
-        Result IParameter.Match(Compiler.Compiler compiler, IArgumentStream arguments)
+        IResult IParameter.Match(Compiler.Compiler compiler, IArgumentStream arguments)
         {
             if (!arguments.PopArgument(Name, out var argument) &&
                 !arguments.PopArgument(out argument)

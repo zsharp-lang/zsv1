@@ -4,8 +4,8 @@
         : IContext
         , ILookupContext
     {
-        public Result Add(MemberName name, CompilerObject value);
+        public IResult Add(MemberName name, CompilerObject value);
 
-        public Result Set(MemberName name, CompilerObject value);
+        public IResult Set(MemberName name, CompilerObject value);
     }
 }

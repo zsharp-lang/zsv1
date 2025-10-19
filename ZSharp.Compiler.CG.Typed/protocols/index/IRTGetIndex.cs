@@ -2,6 +2,6 @@
 {
     public interface IRTGetIndex
     {
-        public Result Index(Compiler compiler, CompilerObject @object, Argument[] arguments);
+        public IResult Index(Compiler compiler, CompilerObject @object, Argument[] arguments);
     }
 }

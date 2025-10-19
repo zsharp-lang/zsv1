@@ -4,7 +4,7 @@ namespace ZSharp.SourceCompiler.Script
 {
     partial class ScriptCompiler
     {
-        private Result<CompilerObject> Compile(AST.Module module)
+        private IResult Compile(AST.Module module)
         {
             var moduleCompiler = new Module.ModuleCompiler(Interpreter, module);
 

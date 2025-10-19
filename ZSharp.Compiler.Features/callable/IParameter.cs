@@ -2,6 +2,6 @@
 {
     public interface IParameter
     {
-        public Result Match(Compiler compiler, IArgumentStream arguments);
+        public IResult Match(Compiler compiler, IArgumentStream arguments);
     }
 }

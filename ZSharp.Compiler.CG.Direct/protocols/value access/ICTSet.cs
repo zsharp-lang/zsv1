@@ -2,6 +2,6 @@
 {
     public interface ICTSet
     {
-        public Result Set(Compiler compiler, CompilerObject value);
+        public IResult Set(Compiler compiler, CompilerObject value);
     }
 }

@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result Member(CompilerObject @object, MemberIndex index)
+        public IResult Member(CompilerObject @object, MemberIndex index)
         {
             var result = @base.GetMemberByIndex(@object, index);
 
@@ -12,7 +12,7 @@
             return result;
         }
 
-        public Result Member(CompilerObject @object, MemberIndex index, CompilerObject value)
+        public IResult Member(CompilerObject @object, MemberIndex index, CompilerObject value)
         {
             var result = @base.SetMemberByIndex(@object, index, value);
 
@@ -22,7 +22,7 @@
             return result;
         }
 
-        public Result Member(CompilerObject @object, MemberName name)
+        public IResult Member(CompilerObject @object, MemberName name)
         {
             var result = @base.GetMemberByName(@object, name);
 
@@ -32,7 +32,7 @@
             return result;
         }
 
-        public Result Member(CompilerObject @object, MemberName name, CompilerObject value)
+        public IResult Member(CompilerObject @object, MemberName name, CompilerObject value)
         {
             var result = @base.SetMemberByName(@object, name, value);
 

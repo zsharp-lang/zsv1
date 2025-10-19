@@ -7,7 +7,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         public IR.Global? IR { get; private set; }
 
-        Result<IR.Global> ICompileIRDefinitionAs<IR.Global>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
+        IResult<IR.Global, Error> ICompileIRDefinitionAs<IR.Global>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
         {
             if (IR is not null) return Result<IR.Global>.Ok(IR);
 

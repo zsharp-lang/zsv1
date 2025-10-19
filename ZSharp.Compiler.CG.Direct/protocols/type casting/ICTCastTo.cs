@@ -2,6 +2,6 @@
 {
     public interface ICTCastTo
     {
-        public Result<CastResult> Cast(Compiler compiler, CompilerObject targetType);
+        public IResult<CastResult, Error> Cast(Compiler compiler, CompilerObject targetType);
     }
 }

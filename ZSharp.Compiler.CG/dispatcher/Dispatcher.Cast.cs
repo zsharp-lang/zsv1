@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public static Result<CastResult> Cast(CompilerObject @object, CompilerObject type)
+        public static IResult<CastResult, Error> Cast(CompilerObject @object, CompilerObject type)
             => Result<CastResult>.Error(
                 "Cast operation is not supported."
             );

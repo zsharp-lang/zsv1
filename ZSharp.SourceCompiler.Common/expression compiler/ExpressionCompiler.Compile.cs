@@ -1,12 +1,12 @@
 ﻿namespace ZSharp.SourceCompiler
 {
-    public delegate Result PostProcess(Result result);
+    public delegate IResult PostProcess(IResult result);
 
     partial class ExpressionCompiler
     {
         public PostProcess PostProcess { get; init; } = r => r;
 
-        public Result Compile(AST.Expression expression)
+        public IResult Compile(AST.Expression expression)
             => PostProcess(expression switch
             {
                 AST.BinaryExpression binary => Compile(binary),

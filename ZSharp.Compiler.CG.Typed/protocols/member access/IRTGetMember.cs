@@ -2,6 +2,6 @@
 {
     public interface IRTGetMember<M>
     {
-        public Result Member(Compiler compiler, CompilerObject @object, M member);
+        public IResult Member(Compiler compiler, CompilerObject @object, M member);
     }
 }

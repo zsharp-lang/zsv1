@@ -2,7 +2,7 @@
 {
     public interface IIRTypeCompiler
     {
-        public Result<T> CompileType<T>(CompilerObject @object)
+        public IResult<T, Error> CompileType<T>(CompilerObject @object)
             where T : class, IType;
     }
 }

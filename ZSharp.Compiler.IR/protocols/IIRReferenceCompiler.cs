@@ -2,7 +2,7 @@
 {
     public interface IIRReferenceCompiler
     {
-        public Result<T> CompileReference<T>(CompilerObject @object)
+        public IResult<T, Error> CompileReference<T>(CompilerObject @object)
             where T : class;
     }
 }

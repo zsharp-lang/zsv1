@@ -1,8 +1,8 @@
 ﻿namespace ZSharp.Compiler
 {
-    public interface ICompileIRReference<T>
+    public interface ICompileIRReference<out T>
         where T : class
     {
-        public Result<T> CompileIRReference(Compiler compiler);
+        public IResult<T, Error> CompileIRReference(Compiler compiler);
     }
 }

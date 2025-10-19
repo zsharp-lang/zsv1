@@ -9,7 +9,7 @@ namespace ZSharp.Objects
     {
         private readonly IRCode code = code;
 
-        Result<IRCode> ICompileIRCode.CompileIRCode(Compiler.Compiler compiler, object? target)
+        IResult<IRCode, Error> ICompileIRCode.CompileIRCode(Compiler.Compiler compiler, object? target)
             => Result<IRCode>.Ok(code);
 
         public static CompilerObject From(Collection<IR.VM.Instruction> code, CompilerObject type)

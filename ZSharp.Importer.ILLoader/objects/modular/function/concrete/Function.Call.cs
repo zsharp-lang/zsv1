@@ -6,7 +6,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     partial class Function
         : ICTCallable
     {
-        Result ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        IResult ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
         {
             if (
                 BoundSignature.Create(compiler, signature, new ArgumentStream(arguments))

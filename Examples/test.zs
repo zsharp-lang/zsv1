@@ -1,5 +1,5 @@
 ﻿import { print } from "std:io";
-import { Void } from "std:types";
+import { Void, Test } from "std:types";
 
 print("[CT] Hello, World!");
 
@@ -12,6 +12,7 @@ module A {
 
 	fun main(): Void {
 		print(Directory.cwd().toString());
+		print(Test(Directory.cwd().toString()));
 
 		print("[RT] Hello, World!");
 		return;

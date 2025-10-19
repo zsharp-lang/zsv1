@@ -2,6 +2,6 @@
 {
     public interface ICTGetIndex
     {
-        public Result Index(Compiler compiler, Argument[] arguments);
+        public IResult Index(Compiler compiler, Argument[] arguments);
     }
 }

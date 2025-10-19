@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    public delegate Result<MatchResult> Match(CompilerObject @object, CompilerObject pattern);
+    public delegate IResult<MatchResult, Error> Match(CompilerObject @object, CompilerObject pattern);
 
     partial struct CG
     {

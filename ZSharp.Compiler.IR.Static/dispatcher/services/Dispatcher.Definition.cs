@@ -17,7 +17,7 @@
             return result;
         }
 
-        Result<T> IIRDefinitionAsCompiler.CompileDefinition<T>(CompilerObject @object, object? target)
+        IResult<T, Error> IIRDefinitionAsCompiler.CompileDefinition<T>(CompilerObject @object, object? target)
         {
             var result = @base.CompileDefinition<T>(@object, target);
 

@@ -1,8 +1,8 @@
 ﻿namespace ZSharp.Compiler
 {
-    public delegate Result Get(CompilerObject @object);
+    public delegate IResult Get(CompilerObject @object);
 
-    public delegate Result Set(CompilerObject @object, CompilerObject value);
+    public delegate IResult Set(CompilerObject @object, CompilerObject value);
 
     public partial struct CG
     {

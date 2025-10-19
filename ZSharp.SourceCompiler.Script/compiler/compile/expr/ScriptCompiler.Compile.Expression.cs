@@ -1,8 +1,10 @@
-﻿namespace ZSharp.SourceCompiler.Script
+﻿using ZSharp.Compiler;
+
+namespace ZSharp.SourceCompiler.Script
 {
     partial class ScriptCompiler
     {
-        private Result Compile(AST.Expression expression)
+        private IResult Compile(AST.Expression expression)
             => PostProcess(
                 expression switch
                 {
@@ -14,16 +16,14 @@
                 }
             );
 
-        private Result PostProcess(Result result)
+        private IResult PostProcess(IResult result)
         {
             if (!result.Ok(out var value)) return result;
 
             if (Options.EvaluationTarget == EvaluationTarget.Statement)
                 return result;
 
-            return Interpreter // do we realy want to support expression-level evaluation?
-                .Evaluate(value)
-                .When(Interpreter.RTLoader.Load);
+            return Interpreter.Evaluate(value).When<object?, Error, CompilerObject>(Interpreter.RTLoader.Load);
         }
     }
 }

@@ -10,7 +10,7 @@ namespace ZSharp.Objects
     {
         CompilerObject ITyped.Type => type;
 
-        Result<IRCode> ICompileIRCode.CompileIRCode(Compiler.Compiler compiler, object? target)
+        IResult<IRCode, Error> ICompileIRCode.CompileIRCode(Compiler.Compiler compiler, object? target)
         {
             if (
                 compiler.IR.CompileType(type)

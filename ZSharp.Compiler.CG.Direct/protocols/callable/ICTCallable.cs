@@ -2,6 +2,6 @@
 {
     public interface ICTCallable
     {
-        public Result Call(Compiler compiler, Argument[] arguments);
+        public IResult Call(Compiler compiler, Argument[] arguments);
     }
 }

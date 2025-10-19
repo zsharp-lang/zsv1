@@ -20,7 +20,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             Type = loader.LoadType(IL.ParameterType);
         }
 
-        Result IParameter.Match(Compiler.Compiler compiler, IArgumentStream arguments)
+        IResult IParameter.Match(Compiler.Compiler compiler, IArgumentStream arguments)
         {
             if (!arguments.PopArgument(Name, out var argument) &&
                 !arguments.PopArgument(out argument)

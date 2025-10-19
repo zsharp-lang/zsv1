@@ -2,7 +2,7 @@
 {
     partial class ModuleCompiler
     {
-        private Result Compile(AST.ExpressionStatement expressionStatement)
+        private IResult Compile(AST.ExpressionStatement expressionStatement)
         {
             var valueObjectResult = Compile(expressionStatement.Expression);
 

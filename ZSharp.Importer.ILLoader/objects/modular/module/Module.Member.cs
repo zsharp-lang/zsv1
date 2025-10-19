@@ -21,7 +21,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             return member;
         }
 
-        Result ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName name)
+        IResult ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName name)
         {
             if (!Members.TryGetValue(name, out var member) && !LazyLoader.GetLazyMember(name, out member))
                 return Result.Error(

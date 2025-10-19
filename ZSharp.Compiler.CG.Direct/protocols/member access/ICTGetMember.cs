@@ -2,6 +2,6 @@
 {
     public interface ICTGetMember<M>
     {
-        public Result Member(Compiler compiler, M member);
+        public IResult Member(Compiler compiler, M member);
     }
 }

@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public static Result RuntimeDescriptor(CompilerObject @object)
+        public static IResult RuntimeDescriptor(CompilerObject @object)
             => Result.Error(
                 "Object does not support runtime descriptor protocol"
             );

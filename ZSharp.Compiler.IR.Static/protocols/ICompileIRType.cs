@@ -4,16 +4,16 @@ namespace ZSharp.Compiler
 {
     public interface ICompileIRType
     {
-        public Result<IType> CompileIRType(Compiler compiler);
+        public IResult<IType, Error> CompileIRType(Compiler compiler);
     }
 
-    public interface ICompileIRType<T>
+    public interface ICompileIRType<out T>
         : ICompileIRType
         where T : class, IType
     {
-        Result<IType> ICompileIRType.CompileIRType(Compiler compiler)
+        IResult<IType, Error> ICompileIRType.CompileIRType(Compiler compiler)
             => CompileIRType(compiler).When(type => type as IType);
 
-        public new Result<T> CompileIRType(Compiler compiler);
+        public new IResult<T, Error> CompileIRType(Compiler compiler);
     }
 }

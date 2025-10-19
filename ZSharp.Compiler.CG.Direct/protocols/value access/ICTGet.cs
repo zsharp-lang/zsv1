@@ -2,6 +2,6 @@
 {
     public interface ICTGet
     {
-        public Result Get(Compiler compiler);
+        public IResult Get(Compiler compiler);
     }
 }

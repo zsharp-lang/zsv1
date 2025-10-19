@@ -11,7 +11,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         private readonly TypeReference type = type;
 
-        Result<IType> ICompileIRType.CompileIRType(Compiler.Compiler compiler)
+        IResult<IType, Error> ICompileIRType.CompileIRType(Compiler.Compiler compiler)
             => Result<IType>.Ok(type);
 
         Type IILType.GetILType()

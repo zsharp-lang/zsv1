@@ -2,6 +2,6 @@
 {
     internal interface IBindable
     {
-        public Result Bind(Compiler.Compiler compiler, CompilerObject target);
+        public IResult Bind(Compiler.Compiler compiler, CompilerObject target);
     }
 }

@@ -2,7 +2,7 @@
 {
     partial class ClassCompiler
     {
-        public Result Compile()
+        public IResult Declare()
         {
             tasks.RunUntilComplete();
 
@@ -32,7 +32,7 @@
                     );
         }
 
-        private Result Compile(AST.Statement statement)
+        private IResult Compile(AST.Statement statement)
             => statement switch
             {
                 AST.DefinitionStatement definitionStatement => Compile(definitionStatement),

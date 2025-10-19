@@ -6,7 +6,7 @@ namespace ZSharp.Importer.ILLoader
         : IILType
         , IRTImplicitCastTo
     {
-        Result<CompilerObject> IRTImplicitCastTo.ImplicitCast(Compiler.Compiler compiler, CompilerObject @object, CompilerObject type)
+        IResult IRTImplicitCastTo.ImplicitCast(Compiler.Compiler compiler, CompilerObject @object, CompilerObject type)
         {
             var thisIL = GetILType();
 

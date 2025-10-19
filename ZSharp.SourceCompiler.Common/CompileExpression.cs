@@ -1,4 +1,4 @@
 ﻿namespace ZSharp.SourceCompiler
 {
-    public delegate Result CompileExpression(AST.Expression expression);
+    public delegate IResult CompileExpression(AST.Expression expression);
 }

@@ -1,15 +1,15 @@
 ﻿namespace ZSharp.Importer.RT
 {
-    public delegate Result LoadObject(RTObject? @object);
+    public delegate IResult LoadObject(RTObject? @object);
 
     partial class Loader
     {
         public LoadObject LoadObject;
 
-        public Result Load(RTObject? @object)
+        public IResult Load(RTObject? @object)
             => LoadObject(@object);
 
-        private Result DefaultLoader(RTObject? @object)
+        private IResult DefaultLoader(RTObject? @object)
             => @object switch
             {
                 CompilerObject co => Result.Ok(co),

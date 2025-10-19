@@ -8,7 +8,7 @@
         public void Add(string name, CompilerObject obj)
             => libraries.Add(name, obj);
 
-        Result<CompilerObject> IStringImporter.Import(string source)
+        IResult IStringImporter.Import(string source)
         {
             if (libraries.TryGetValue(source, out var result))
                 return Result<CompilerObject>.Ok(result);

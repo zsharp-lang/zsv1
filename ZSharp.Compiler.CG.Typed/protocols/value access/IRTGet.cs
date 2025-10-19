@@ -2,6 +2,6 @@
 {
     public interface IRTGet
     {
-        public Result Get(Compiler compiler, CompilerObject @object);
+        public IResult Get(Compiler compiler, CompilerObject @object);
     }
 }

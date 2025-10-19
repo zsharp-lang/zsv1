@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    public delegate Result Evaluate(CompilerObject @object);
+    public delegate IResult Evaluate(CompilerObject @object);
 
     partial struct Evaluator
     {

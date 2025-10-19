@@ -22,7 +22,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             return member;
         }
 
-        Result ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName name)
+        IResult ICTGetMember<MemberName>.Member(Compiler.Compiler compiler, MemberName name)
         {
             if (!Members.TryGetValue(name, out var member) && !LazyLoader.GetLazyMember(name, out member))
                 return Result.Error(
@@ -32,7 +32,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             return Result.Ok(member);
         }
 
-        Result<CompilerObject> IRTGetMember<string>.Member(Compiler.Compiler compiler, CompilerObject @object, MemberName name)
+        IResult IRTGetMember<string>.Member(Compiler.Compiler compiler, CompilerObject @object, MemberName name)
         {
             if (
                 compiler.CG.Member(this, name)

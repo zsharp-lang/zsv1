@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result<MatchResult> Match(CompilerObject @object, CompilerObject pattern)
+        public IResult<MatchResult, Error> Match(CompilerObject @object, CompilerObject pattern)
         {
             var result = @base.Match(@object, pattern);
 

@@ -2,7 +2,7 @@
 {
     partial class LiteralCompiler
     {
-        public Result Compile(AST.LiteralExpression expression)
+        public IResult Compile(AST.LiteralExpression expression)
             => expression.Type switch
             {
                 AST.LiteralType.String => CompileString(expression),
@@ -14,7 +14,7 @@
                 _ => Result.Error($"Invalid literal type: {expression.Type}"),
             };
 
-        private Result NotImplemented(AST.LiteralExpression expression)
+        private IResult NotImplemented(AST.LiteralExpression expression)
             => Result.Error($"Literal type not implemented: {expression.Type}");
     }
 }

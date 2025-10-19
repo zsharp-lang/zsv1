@@ -2,6 +2,6 @@
 {
     public interface ICTEvaluate
     {
-        public Result Evaluate(Compiler compiler);
+        public IResult Evaluate(Compiler compiler);
     }
 }

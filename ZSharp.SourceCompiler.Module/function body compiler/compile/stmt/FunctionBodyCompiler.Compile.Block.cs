@@ -2,7 +2,7 @@
 {
     partial class FunctionBodyCompiler
     {
-        private Result Compile(AST.BlockStatement block)
+        private IResult Compile(AST.BlockStatement block)
         {
             var result = new CodeBlock();
 

@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result<IRCode> CompileCode(CompilerObject @object, TargetPlatform? target)
+        public IResult<IRCode, Error> CompileCode(CompilerObject @object, TargetPlatform? target)
             => Result<IRCode>.Error(
                 $"Object {@object} does not support compile IR code"
             );

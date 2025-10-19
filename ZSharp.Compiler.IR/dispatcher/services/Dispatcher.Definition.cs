@@ -8,7 +8,7 @@
             where Owner : IRDefinition
             => false;
 
-        public Result<T> CompileDefinition<T>(CompilerObject @object, object? target) where T : IRDefinition
+        public IResult<T, Error> CompileDefinition<T>(CompilerObject @object, object? target) where T : IRDefinition
             => Result<T>.Error(
                 $"Object {@object} does not support compile IR definition of type {typeof(T)}"
             );

@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public static Result TypeOf(CompilerObject @object)
+        public static IResult TypeOf(CompilerObject @object)
             => Result.Error(
                 "Object does not support typeof"
             );

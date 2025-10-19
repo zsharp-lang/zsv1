@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result<CastResult> Cast(CompilerObject @object, CompilerObject type)
+        public IResult<CastResult, Error> Cast(CompilerObject @object, CompilerObject type)
         {
             var result = @base.Cast(@object, type);
 

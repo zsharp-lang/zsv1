@@ -16,7 +16,7 @@ namespace ZSharp.SourceCompiler.Script
             ];
 
             var argumentsResults = arguments
-                .Select((arg, i) =>
+                .Select<CallArgument, IResult<Argument, Error>>((arg, i) =>
                 {
                     if (
                         Compile(arg.Value)
@@ -110,14 +110,12 @@ namespace ZSharp.SourceCompiler.Script
                     })
                     .ToArray();
 
-                if (memberResults.Any(vs => vs.result.IsError))
-                    return;
-
                 foreach (var (name, memberResult) in memberResults)
-                    scope.Set(
-                        name.Alias ?? name.Name,
-                        memberResult.Unwrap()
-                    );
+                    if (memberResult.Ok(out var member))
+                        scope.Set(
+                            name.Alias ?? name.Name,
+                            member
+                        );
             }
         }
     }

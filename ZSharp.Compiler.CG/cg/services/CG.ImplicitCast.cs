@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    public delegate Result ImplicitCast(CompilerObject @object, CompilerObject type);
+    public delegate IResult ImplicitCast(CompilerObject @object, CompilerObject type);
 
     partial struct CG
     {

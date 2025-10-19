@@ -6,13 +6,17 @@ namespace ZSharp.Importer.ILLoader.Objects
     partial class Class
         : ICompileIRDefinitionAs<IR.Class>
         , ICompileIRType<TypeReference<IR.Class>>
+        , ICompileIRReference<TypeReference<IR.Class>>
     {
         private IR.Class? IR { get; set; }
 
-        Result<IR.Class> ICompileIRDefinitionAs<IR.Class>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
+        IResult<IR.Class, Error> ICompileIRDefinitionAs<IR.Class>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
             => Result<IR.Class>.Ok(GetIR());
 
-        Result<TypeReference<IR.Class>> ICompileIRType<TypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler)
+        IResult<TypeReference<IR.Class>, Error> ICompileIRReference<TypeReference<IR.Class>>.CompileIRReference(Compiler.Compiler compiler)
+            => Result<TypeReference<IR.Class>>.Ok(new ClassReference(GetIR()));
+
+        IResult<TypeReference<IR.Class>, Error> ICompileIRType<TypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler)
             => Result<TypeReference<IR.Class>>.Ok(new ClassReference(GetIR()));
 
         private IR.Class GetIR()

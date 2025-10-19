@@ -19,11 +19,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZSharp.Parser", "ZSharp.Par
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Interpreter", "ZSharp.Interpreter\ZSharp.Interpreter.csproj", "{F46A91F5-47BA-468A-81F0-FF6BCEB4112C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Importer.IRLoader", "ZSharp.Importer.IRLoader\ZSharp.Importer.IRLoader.csproj", "{8E9A7EF0-EE8E-4481-BF60-C6BDBD5C7BB8}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Library.Standard.Math", "ZSharp.Library.Standard.Math\ZSharp.Library.Standard.Math.csproj", "{AF9E7F68-2AB3-42F7-AE29-5D7A1CE89DBA}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.Objects", "ZSharp.Compiler.Objects\ZSharp.Compiler.Objects.csproj", "{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Compiler.Features", "ZSharp.Compiler.Features\ZSharp.Compiler.Features.csproj", "{E3DAA459-48D0-461E-A17E-453816D15090}"
 EndProject
@@ -127,18 +123,10 @@ Global
 		{F46A91F5-47BA-468A-81F0-FF6BCEB4112C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F46A91F5-47BA-468A-81F0-FF6BCEB4112C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F46A91F5-47BA-468A-81F0-FF6BCEB4112C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8E9A7EF0-EE8E-4481-BF60-C6BDBD5C7BB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8E9A7EF0-EE8E-4481-BF60-C6BDBD5C7BB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8E9A7EF0-EE8E-4481-BF60-C6BDBD5C7BB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8E9A7EF0-EE8E-4481-BF60-C6BDBD5C7BB8}.Release|Any CPU.Build.0 = Release|Any CPU
 		{AF9E7F68-2AB3-42F7-AE29-5D7A1CE89DBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AF9E7F68-2AB3-42F7-AE29-5D7A1CE89DBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AF9E7F68-2AB3-42F7-AE29-5D7A1CE89DBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AF9E7F68-2AB3-42F7-AE29-5D7A1CE89DBA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6B3BEDB2-F3CB-400E-A257-D79F73075AF9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E3DAA459-48D0-461E-A17E-453816D15090}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E3DAA459-48D0-461E-A17E-453816D15090}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E3DAA459-48D0-461E-A17E-453816D15090}.Release|Any CPU.ActiveCfg = Release|Any CPU

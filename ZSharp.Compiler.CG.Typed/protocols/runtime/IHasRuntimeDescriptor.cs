@@ -2,6 +2,6 @@
 {
     public interface IHasRuntimeDescriptor
     {
-        public Result GetRuntimeDescriptor(Compiler compiler);
+        public IResult GetRuntimeDescriptor(Compiler compiler);
     }
 }

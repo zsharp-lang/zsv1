@@ -2,7 +2,7 @@
 {
     partial class LiteralCompiler
     {
-        private Result CompileString(AST.LiteralExpression expression)
+        private IResult CompileString(AST.LiteralExpression expression)
         {
             return Interpreter.RTLoader.Load(expression.Value);
         }

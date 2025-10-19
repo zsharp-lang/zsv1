@@ -11,7 +11,7 @@ namespace ZSharp.SourceCompiler.Script
 
         public IContext? Parent { get; set; }
 
-        public Result<CompilerObject> Add(string name, CompilerObject value)
+        public IResult Add(string name, CompilerObject value)
         {
             if (scope.ContainsKey(name))
                 return Result<CompilerObject>.Error($"Name '{name}' is already defined in this scope.");
@@ -19,12 +19,12 @@ namespace ZSharp.SourceCompiler.Script
             return Set(name, value);
         }
 
-        public Result<CompilerObject> Get(string name)
+        public IResult Get(string name)
             => scope.TryGetValue(name, out var value)
                 ? Result<CompilerObject>.Ok(value)
                 : Result<CompilerObject>.Error($"Name '{name}' is not defined in this scope.");
 
-        public Result<CompilerObject> Set(string name, CompilerObject value)
+        public IResult Set(string name, CompilerObject value)
         {
             scope[name] = value;
 

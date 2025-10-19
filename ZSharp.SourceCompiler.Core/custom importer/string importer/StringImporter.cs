@@ -1,6 +1,5 @@
 ﻿using CommonZ.Utils;
 using ZSharp.Compiler;
-using ZSharp.Objects;
 
 namespace ZSharp.SourceCompiler
 {
@@ -11,7 +10,7 @@ namespace ZSharp.SourceCompiler
 
         public IStringImporter? DefaultImporter { get; set; }
 
-        public Result<CompilerObject> Import(string source)
+        public IResult Import(string source)
         {
             var parts = source.Split(':', count: 2, options: StringSplitOptions.TrimEntries);
             if (parts.Length > 1)

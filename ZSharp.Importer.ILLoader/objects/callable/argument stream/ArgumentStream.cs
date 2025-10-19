@@ -6,7 +6,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     internal sealed class ArgumentStream
         : IArgumentStream
     {
-        private readonly List<CompilerObject> args = [];
+        internal readonly List<CompilerObject> args = [];
         private readonly Dictionary<string, CompilerObject> kwArgs = [];
 
         public ArgumentStream(Argument[] arguments)
@@ -31,5 +31,8 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (!kwArgs.Remove(name, out var arg)) return null;
             return arg;
         }
+
+        public bool HasArgument(string name)
+            => kwArgs.ContainsKey(name);
     }
 }

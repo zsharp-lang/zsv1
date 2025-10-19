@@ -2,7 +2,7 @@
 {
     partial class ClassCompiler
     {
-        private Result Compile(AST.ExpressionStatement expressionStatement)
+        private IResult Compile(AST.ExpressionStatement expressionStatement)
             => CompileExpression(expressionStatement.Expression);
     }
 }

@@ -2,6 +2,6 @@
 {
     public interface ICTTypeMatch
     {
-        public Result<MatchResult> Match(Compiler compiler, CompilerObject type);
+        public IResult<MatchResult, Error> Match(Compiler compiler, CompilerObject type);
     }
 }

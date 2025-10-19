@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public static Result Do(CompilerObject @object)
+        public static IResult Do(CompilerObject @object)
             => Result.Error(
                 "Object does not support do"
             );

@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result<IRCode> CompileCode(CompilerObject @object, TargetPlatform? target)
+        public IResult<IRCode, Error> CompileCode(CompilerObject @object, TargetPlatform? target)
         {
             var result = @base.CompileCode(@object, target);
 

@@ -2,7 +2,7 @@
 {
     partial class Dispatcher
     {
-        public Result ImplicitCast(CompilerObject @object, CompilerObject type)
+        public IResult ImplicitCast(CompilerObject @object, CompilerObject type)
         {
             var result = @base.ImplicitCast(@object, type);
 

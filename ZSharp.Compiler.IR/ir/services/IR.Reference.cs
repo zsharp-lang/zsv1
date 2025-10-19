@@ -4,7 +4,7 @@
     {
         public IIRReferenceCompiler ReferenceCompiler { get; set; } = Dispatcher.Instance;
 
-        public Result<T> CompileReference<T>(CompilerObject @object)
+        public IResult<T, Error> CompileReference<T>(CompilerObject @object)
             where T : class
             => ReferenceCompiler.CompileReference<T>(@object);
     }
