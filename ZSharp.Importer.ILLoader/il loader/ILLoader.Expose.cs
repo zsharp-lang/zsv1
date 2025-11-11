@@ -21,7 +21,7 @@ namespace ZSharp.Importer.ILLoader
             if (obj is null) return rt.Expose(null);
 
             var coType = LoadType(type);
-            var irType = IR.CompileType(coType).Unwrap();
+            var irType = IR.CompileType(coType, rt).Unwrap();
 
             var code = rt.Expose(obj);
 

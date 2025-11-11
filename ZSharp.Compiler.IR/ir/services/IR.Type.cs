@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    public delegate IResult<IType, Error> CompileType(CompilerObject @object);
+    public delegate IResult<IType, Error> CompileType(CompilerObject @object, object? target);
 
     partial struct IR
     {
@@ -8,8 +8,8 @@
 
         public IIRTypeCompiler TypeCompiler { get; set; } = Dispatcher.Instance;
 
-        public IResult<T, Error> CompileTypeAs<T>(CompilerObject @object)
+        public IResult<T, Error> CompileTypeAs<T>(CompilerObject @object, object? target)
             where T : class, IType
-            => TypeCompiler.CompileType<T>(@object);
+            => TypeCompiler.CompileType<T>(@object, target);
     }
 }

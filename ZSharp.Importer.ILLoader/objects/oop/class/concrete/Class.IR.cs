@@ -13,10 +13,10 @@ namespace ZSharp.Importer.ILLoader.Objects
         IResult<IR.Class, Error> ICompileIRDefinitionAs<IR.Class>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
             => Result<IR.Class>.Ok(GetIR());
 
-        IResult<TypeReference<IR.Class>, Error> ICompileIRReference<TypeReference<IR.Class>>.CompileIRReference(Compiler.Compiler compiler)
+        IResult<TypeReference<IR.Class>, Error> ICompileIRReference<TypeReference<IR.Class>>.CompileIRReference(Compiler.Compiler compiler, object? target)
             => Result<TypeReference<IR.Class>>.Ok(new ClassReference(GetIR()));
 
-        IResult<TypeReference<IR.Class>, Error> ICompileIRType<TypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler)
+        IResult<TypeReference<IR.Class>, Error> ICompileIRType<TypeReference<IR.Class>>.CompileIRType(Compiler.Compiler compiler, object? target)
             => Result<TypeReference<IR.Class>>.Ok(new ClassReference(GetIR()));
 
         private IR.Class GetIR()

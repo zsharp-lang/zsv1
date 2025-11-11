@@ -15,7 +15,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 return Result<IR.Global>.Error("Invalid target platform");
 
             if (
-                compiler.IR.CompileType(Type)
+                compiler.IR.CompileType(Type, target)
                 .When(out var type)
                 .Error(out var error)
             ) return Result<IR.Global>.Error(error);

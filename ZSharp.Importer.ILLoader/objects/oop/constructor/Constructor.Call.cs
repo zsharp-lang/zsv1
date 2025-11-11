@@ -12,7 +12,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 return Result.Error("Constructor doesn't yet have an owner and cannot be used.");
 
             if (
-                compiler.IR.CompileReference<IR.TypeReference>(Owner)
+                compiler.IR.CompileReference<IR.TypeReference>(Owner, null)
                 .When(out var owner)
                 .Error(out var error)
             ) return Result.Error(error);
@@ -22,7 +22,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             IR.VM.Instruction callInstruction;
             CompilerObject returnType;
 
-            var constructor = new IR.ConstructorReference(GetIR())
+            var constructor = new IR.ConstructorReference(GetIR(null))
             {
                 OwningType = owner!
             };

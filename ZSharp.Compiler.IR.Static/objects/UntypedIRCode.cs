@@ -13,7 +13,7 @@ namespace ZSharp.Objects
         IResult<IRCode, Error> ICompileIRCode.CompileIRCode(Compiler.Compiler compiler, object? target)
         {
             if (
-                compiler.IR.CompileType(type)
+                compiler.IR.CompileType(type, target)
                 .When(out var irType)
                 .Error(out var error)
             )

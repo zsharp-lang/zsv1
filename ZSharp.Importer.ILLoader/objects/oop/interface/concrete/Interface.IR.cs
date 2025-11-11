@@ -23,7 +23,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             return Result<IR.Interface>.Ok(IR);
         }
 
-        IResult<TypeReference<IR.Interface>, Error> ICompileIRType<TypeReference<IR.Interface>>.CompileIRType(Compiler.Compiler compiler)
+        IResult<TypeReference<IR.Interface>, Error> ICompileIRType<TypeReference<IR.Interface>>.CompileIRType(Compiler.Compiler compiler, object? target)
         {
             if (
                 compiler.IR.CompileDefinition<IR.Interface>(this, null)

@@ -10,7 +10,7 @@
         {
             if (IR is null)
             {
-                var typeResult = compiler.IR.CompileType(Type);
+                var typeResult = compiler.IR.CompileType(Type, target);
 
                 if (
                     typeResult

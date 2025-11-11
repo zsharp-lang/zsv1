@@ -11,7 +11,7 @@ namespace ZSharp.Importer.RT.Objects
             ])
             {
                 Types = [
-                    compiler.IR.CompileType(type)
+                    compiler.IR.CompileType(type, target)
                     .Else(e => new ErrorMessage($"WTF string can't compile to IR type?? {e}"))
                     .Unwrap()
                 ],

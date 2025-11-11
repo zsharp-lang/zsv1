@@ -29,8 +29,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 result.Instructions.AddRange(argumentCode!.Instructions);
             }
 
-            result.Instructions.Add(new IR.VM.Call(GetIR()));
-            result.Types.Add(GetIR().ReturnType);
+            result.Instructions.Add(new IR.VM.Call(GetIR(null)));
 
             return Result.Ok(RawIRCode.From(result.Instructions, ReturnType));
         }
