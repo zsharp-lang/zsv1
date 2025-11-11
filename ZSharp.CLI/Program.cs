@@ -157,6 +157,9 @@ new ZSharp.Compiler.EvaluatorDispatchers.Direct.Dispatcher(interpreter.Compiler)
 new ZSharp.Compiler.EvaluatorDispatchers.IR.Dispatcher(interpreter.Compiler, interpreter.Runtime, interpreter.RTLoader).Apply();
 
 var scriptCompiler = new ScriptCompiler(interpreter, documentNode, filePath);
+interpreter.Compiler.OOP.DefaultMetaclass = interpreter.ILLoader.Expose(
+    (Delegate)DefaultMetaClass
+);
 
 interpreter.ILLoader.OnLoadOperator = (@operator, method) =>
 {
@@ -213,6 +216,14 @@ coreImporter.Add(
     "compiler",
     interpreter.ILLoader.LoadModule(typeof(Core.Compiler.ModuleScope).Module)
 );
+coreImporter.Add(
+    "runtime",
+    interpreter.ILLoader.LoadModule(typeof(Core.Runtime.ModuleScope).Module)
+);
+coreImporter.Add(
+    "language-extensions",
+    interpreter.ILLoader.LoadModule(typeof(Core.LanguageExtensions.ModuleScope).Module)
+);
 
 #endregion
 
@@ -257,3 +268,19 @@ Console.WriteLine();
 Console.WriteLine("Press any key to exit...");
 if (Console.ReadKey().Key == ConsoleKey.Z)
     Console.WriteLine("\bYou chose wisely :)");
+
+
+#region Functions
+
+
+static IResult<ZSharp.Compiler.CompilerObject, ZSharp.Compiler.Error> DefaultMetaClass(
+    ZSharp.Compiler.Compiler compiler,
+    ZSharp.SourceCompiler.Objects.ClassSpecification specification
+)
+{
+    return ZSharp.Compiler.Result<ZSharp.Compiler.CompilerObject>
+        .Error("Default metaclass construction is not implemented yet.");
+}
+
+
+#endregion

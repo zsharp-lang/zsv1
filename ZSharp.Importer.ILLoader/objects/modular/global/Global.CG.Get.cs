@@ -6,11 +6,10 @@ namespace ZSharp.Importer.ILLoader.Objects
         : ICTGet
     {
         IResult ICTGet.Get(Compiler.Compiler compiler)
-            => Result.Ok(new RawIRCode(new([
-                new IR.VM.GetGlobal(IR)
-            ])
-            {
-                Types = [ compiler.IR.CompileType(Type).Unwrap() ]
-            }));
+            => Result.Ok(
+                RawIRCode.From(
+                    [ new IR.VM.GetGlobal(IR) ], Type
+                )
+            );
     }
 }

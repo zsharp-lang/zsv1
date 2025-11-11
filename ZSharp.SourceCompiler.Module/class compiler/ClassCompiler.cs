@@ -6,14 +6,14 @@
 
         private Interpreter.Interpreter Interpreter { get; }
 
-        private AST.Module Node { get; }
+        private AST.OOPDefinition Node { get; }
 
         private CompileExpression CompileExpression { get; }
 
-        public ClassCompiler(Interpreter.Interpreter interpreter, AST.Module module)
+        public ClassCompiler(Interpreter.Interpreter interpreter, AST.OOPDefinition definition)
         {
             Interpreter = interpreter;
-            Node = module;
+            Node = definition;
             Object = new();
 
             CompileExpression = new TopLevelExpressionCompiler(interpreter).Compile;

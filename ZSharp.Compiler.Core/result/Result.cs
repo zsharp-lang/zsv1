@@ -31,6 +31,9 @@ namespace ZSharp.Compiler
         public static Result<TResult> Error(string message)
             => Error(new ErrorMessage(message));
 
+        public static Result<TResult> Error(params IEnumerable<Error> errors)
+            => new(null, new AggregateError(errors));
+
         TResult IResult<TResult, Error>.Unwrap()
             => result ?? throw new InvalidOperationException(error!.ToString());
 

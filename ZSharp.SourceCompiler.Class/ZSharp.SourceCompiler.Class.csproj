@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.OOP\ZSharp.Compiler.OOP.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
+    <ProjectReference Include="..\ZSharp.Interpreter\ZSharp.Interpreter.csproj" />
+    <ProjectReference Include="..\ZSharp.SourceCompiler.Common\ZSharp.SourceCompiler.Common.csproj" />
+    <ProjectReference Include="..\ZSharp.SourceCompiler.Core\ZSharp.SourceCompiler.Core.csproj" />
+  </ItemGroup>
+
+</Project>

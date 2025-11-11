@@ -13,6 +13,7 @@
             => @object switch
             {
                 CompilerObject co => Result.Ok(co),
+                IResult result => result,
                 string value => Result.Ok(Load(value)),
                 null => Result.Error("Cannot directly load null object because it is untyped."),
                 _ => Result.Error($"Cannot load {@object.GetType().Name} object: {@object}."),

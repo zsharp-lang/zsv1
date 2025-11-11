@@ -4,6 +4,23 @@
     {
         public IResult Declare()
         {
+            Error? error = null;
+
+            if (Object.Name != string.Empty)
+                if (!Interpreter
+                    .Compiler
+                    .CurrentContext
+                    .PerformOperation<IScopeContext>(
+                        scope => !scope.Add(Object.Name, Object).Error(out error)
+                    )
+                )
+                    return Result.Error($"Could not bind function {Node.Name}: {error}");
+
+            return Result.Ok(Object);
+        }
+
+        public void Compile()
+        {
             tasks.RunUntilComplete();
 
             if (logs.Count > 0)
@@ -15,16 +32,13 @@
                 foreach (var log in logs)
                     sb.AppendLine(log.ToString());
 
-                return Result.Error(sb.ToString());
+                Interpreter.Log.Error(sb.ToString(), Node);
             }
-                
-
-            return Result.Ok(Object);
         }
 
         private void InitCompile()
         {
-            foreach (var statement in Node.Body)
+            foreach (var statement in Node.Content?.Statements ?? [])
                 if (Compile(statement).Error(out var error))
                     Error(
                         $"Failed to compile statement: {error}",

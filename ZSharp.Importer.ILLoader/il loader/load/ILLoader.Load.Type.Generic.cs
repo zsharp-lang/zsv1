@@ -4,7 +4,7 @@
     {
         public CompilerObject LoadConstructedGenericType(Type type)
         {
-            throw new NotImplementedException();
+            return new Objects.GenericTypeInstance(type, this);
         }
     }
 }

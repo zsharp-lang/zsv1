@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Core.LanguageExtensions</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="objects\constructor\" />
+    <Folder Include="objects\field\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
+    <ProjectReference Include="..\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
+    <ProjectReference Include="..\ZSharp.SourceCompiler.Common\ZSharp.SourceCompiler.Common.csproj" />
+    <ProjectReference Include="..\ZSharp.SourceCompiler.Core\ZSharp.SourceCompiler.Core.csproj" />
+  </ItemGroup>
+
+</Project>

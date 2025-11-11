@@ -8,6 +8,15 @@ namespace ZSharp.SourceCompiler.Script
     {
         private void Compile(ImportStatement import)
         {
+            if (Context.ImportSystem.ImportFunction is null)
+            {
+                Interpreter.Log.Error(
+                    $"Import system is not configured.",
+                    new NodeLogOrigin(import)
+                );
+                return;
+            }
+
             IEnumerable<CallArgument> arguments = [
                 new CallArgument() {
                     Value = import.Source
@@ -98,7 +107,7 @@ namespace ZSharp.SourceCompiler.Script
                 }
 
                 var memberResults = import.ImportedNames
-                    .Select(name => (name, Interpreter.Compiler.CG.Member(result, name.Name)))
+                    .Select(name => (name, Interpreter.Compiler.CG.Member(result!, name.Name)))
                     .Select(vs =>
                     {
                         var (name, r) = vs;

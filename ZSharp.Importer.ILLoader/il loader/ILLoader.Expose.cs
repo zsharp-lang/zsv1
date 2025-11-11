@@ -39,10 +39,7 @@ namespace ZSharp.Importer.ILLoader
             => Expose(obj, obj?.GetType() ?? typeof(object));
 
         public CompilerObject Expose(object? obj, Type type)
-            => new RawIRCode(new([.. ExposeAsIR(obj, type)])
-            {
-                Types = [IR.CompileType(LoadType(type)).Unwrap()]
-            });
+            => RawIRCode.From([.. ExposeAsIR(obj, type)], LoadType(type));
 
         public CompilerObject Expose(Delegate @delegate)
         {

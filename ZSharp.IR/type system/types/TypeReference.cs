@@ -2,7 +2,7 @@
 {
     public interface TypeReference : IType
     {
-        public TypeReference? OwningType { get; set; }
+        public TypeReference? OwningType { get; }
 
         public TypeDefinition Definition { get; }
     }

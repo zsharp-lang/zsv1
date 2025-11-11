@@ -2,7 +2,7 @@
 {
     partial class Global
     {
-        private string _name;
+        private string _name = string.Empty;
 
         public string Name
         {

@@ -2,9 +2,9 @@
 {
     partial class ILLoader
     {
-        public CompilerObject LoadGenericInterface(Type @enum)
+        public CompilerObject LoadGenericInterface(Type type)
         {
-            throw new NotImplementedException();
+            return new Objects.GenericInterface(type, this);
         }
     }
 }

@@ -4,7 +4,7 @@
     {
         public CompilerObject LoadGenericClass(Type @class)
         {
-            throw new NotImplementedException();
+            return new Objects.GenericClass(@class, this);
         }
     }
 }
