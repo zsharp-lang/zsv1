@@ -12,10 +12,13 @@ namespace CommonZ.Utils
 
         public Cache<Key, Value>? Parent { get; set; }
 
-        public T Cache<T>(Key key, T value)
+        public T Cache<T>(Key key, T value, bool set = false)
             where T : Value
         {
-            _cache.Add(key, value);
+            if (set)
+                _cache[key] = value;
+            else
+                _cache.Add(key, value);
             return value;
         }
 

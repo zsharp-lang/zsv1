@@ -63,24 +63,30 @@ namespace ZSharp.Parser
 
         public static Parameter ParseParameter(Parser parser)
         {
-			var name = parser.Eat(TokenType.Identifier).Value;
+			var name = parser.Eat(TokenType.Identifier);
 
-            string? alias = null;
+            Token? alias = null;
             if (parser.Is(Keywords.As, eat: true))
-                alias = parser.Eat(TokenType.Identifier).Value;
+                alias = parser.Eat(TokenType.Identifier);
 
 			Expression? type = null;
-            if (parser.Is(TokenType.Colon, eat: true))
+            if (parser.Is(TokenType.Colon, out var typeSeparator, eat: true))
 				type = ParseType(parser);
 
             Expression? initializer = null;
-			if (parser.Is(Symbols.Assign, eat: true))
+			if (parser.Is(Symbols.Assign, out var valueSeparator, eat: true))
 				initializer = parser.Parse<Expression>();
 
-            return new()
+            return new(new()
             {
-                Alias = alias,
+                AsKeyword = alias,
                 Name = name,
+                TypeSeparator = typeSeparator,
+                ValueSeparator = valueSeparator,
+            })
+            {
+                Alias = alias?.Value,
+                Name = name.Value,
                 Type = type,
 				Initializer = initializer,
 			};

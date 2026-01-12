@@ -1,0 +1,51 @@
+﻿using ZSharp.Compiler;
+
+namespace ZSharp.ZSSourceCompiler
+{
+    public sealed class WhileLoop
+        : CompilerObject
+        , ICompileIRCode
+        , ITyped
+    {
+        public IR.VM.Instruction ConditionLabel { get; } = new IR.VM.Nop();
+
+        public CompilerObject Condition { get; set; }
+
+        public CompilerObject While { get; set; }
+
+        public IR.VM.Instruction ElseLabel { get; } = new IR.VM.Nop();
+
+        public CompilerObject? Else { get; set; }
+
+        public IR.VM.Instruction EndLabel { get; } = new IR.VM.Nop();
+
+        public required IType Type { get; set; }
+
+        public IRCode CompileIRCode(Compiler.Compiler compiler)
+        {
+            return new([
+                ConditionLabel,
+                .. compiler.CompileIRCode(
+                    compiler.TypeSystem.ImplicitCast(Condition, compiler.TypeSystem.Boolean).Unwrap()
+                ).Instructions,
+
+                new IR.VM.JumpIfFalse(ElseLabel),
+
+                .. compiler.CompileIRCode(While).Instructions,
+
+                new IR.VM.Jump(ConditionLabel),
+
+                ElseLabel,
+                .. Else is null ? [] : compiler.CompileIRCode(Else).Instructions,
+
+                EndLabel
+                ]
+            )
+            {
+                Types = Type == compiler.TypeSystem.Void
+                    ? []
+                    : [Type]
+            };
+        }
+    }
+}

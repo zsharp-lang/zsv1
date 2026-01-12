@@ -20,6 +20,7 @@ namespace ZSharp.Tokenizer
 
         private const char LF = '\n';
         private const char CR  = '\r';
+        private const char Tab = '\t';
 
         private const string Operators = "./|+-=<>!@#$%^&*~?";
 
@@ -58,6 +59,7 @@ namespace ZSharp.Tokenizer
                             {
                                 'n' => LF,
                                 'r' => CR,
+                                't' => Tab,
                                 StringQuotation => StringQuotation,
                                 CharQuotation => CharQuotation,
                                 BackSlash => stream.Read(),
@@ -84,6 +86,7 @@ namespace ZSharp.Tokenizer
                         {
                             'n' => LF,
                             'r' => CR,
+                            't' => Tab,
                             StringQuotation => StringQuotation,
                             CharQuotation => CharQuotation,
                             BackSlash => stream.Read(),
@@ -197,7 +200,7 @@ namespace ZSharp.Tokenizer
                     LF => SingleChar(TokenType.NewLine),
                     CR => SingleChar(TokenType.NewLine),
                     ' ' => SingleChar(TokenType.Space),
-                    '\t' => SingleChar(TokenType.Tab),
+                    Tab => SingleChar(TokenType.Tab),
                     '{' => SingleChar(TokenType.LCurly),
                     '}' => SingleChar(TokenType.RCurly),
                     '(' => SingleChar(TokenType.LParen),

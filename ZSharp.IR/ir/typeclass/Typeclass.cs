@@ -2,15 +2,15 @@
 
 namespace ZSharp.IR
 {
-    public sealed class Typeclass : OOPType
+    public sealed class Typeclass : TypeDefinition
     {
         public string? Name { get; set; }
 
         public TypeclassAttributes Attributes { get; set; } = TypeclassAttributes.None;
 
-        public Collection<Typeclass> Bases { get; }
+        public Collection<TypeReference<Typeclass>> Bases { get; }
 
-        public TemplateParameter Parameter { get; }
+        public GenericParameter Parameter { get; }
 
         public Collection<Method> Methods { get; }
 

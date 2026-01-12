@@ -1,6 +1,8 @@
 ﻿namespace ZSharp.IR
 {
-    public sealed class Field(string name, IType type) : IRObject
+    public sealed class Field(string name, IType type) 
+        : IRDefinition
+        , IModuleMember
     {
         internal FieldAttributes _attributes = FieldAttributes.None;
 
@@ -70,7 +72,7 @@
 
         public Class? Owner { get; internal set; }
 
-        public override Module? Module => Owner?.Module;
+        public Module? Module => Owner?.Module;
 
         public IType Type { get; set; } = type;
 

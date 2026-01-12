@@ -9,7 +9,7 @@ namespace ZSharp.Parser
 		public Token Token => HasTokens ? TokenStream.PeekToken() : throw new ParseError();
 
 		public Token Eat(TokenType type)
-			=> Is(type) ? TokenStream.Advance() : throw new ParseError();
+			=> Is(type) ? TokenStream.Advance() : throw new UnexpectedTokenError(type.ToString(), Token);
 
 		public bool Eat(TokenType type, out Token token)
 		{
@@ -19,7 +19,7 @@ namespace ZSharp.Parser
 		}
 
 		public Token Eat(string value)
-			=> Is(value) ? TokenStream.Advance() : throw new ParseError();
+			=> Is(value) ? TokenStream.Advance() : throw new UnexpectedTokenError(value, Token);
 
         public bool Eat(string value, out Token token)
         {

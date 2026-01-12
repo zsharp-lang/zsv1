@@ -5,7 +5,8 @@ namespace ZSharp.Parser
 {
     public static partial class LangParser
     {
-        public static WhileExpression ParseWhileExpression(Parser parser)
+        public static WhileExpression<TElse> ParseWhileExpression<TElse>(Parser parser)
+            where TElse : Node
         {
             parser.Eat(Keywords.While);
 
@@ -33,9 +34,9 @@ namespace ZSharp.Parser
             using (parser.Stack(LoopBody.Content))
                 @while = parser.Parse<Statement>();
 
-            Statement? @else = null;
+            TElse? @else = null;
             if (parser.Is(Keywords.Else, eat: true))
-                @else = parser.Parse<Statement>();
+                @else = parser.Parse<TElse>();
 
             return new()
             {

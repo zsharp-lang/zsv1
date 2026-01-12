@@ -11,24 +11,24 @@ namespace ZSharp.IR
         {
             AssertUnOwned(item);
 
-            item.Owner = Module;
+            item.Module = Module;
         }
 
         public override void OnInsert(int index, T item)
         {
             AssertUnOwned(item);
 
-            item.Owner = Module;
+            item.Module = Module;
         }
 
         public override void OnRemove(T item)
         {
-            item.Owner = null;
+            item.Module = null;
         }
 
         public override void OnRemoveAt(int index)
         {
-            this[index].Owner = null;
+            this[index].Module = null;
         }
 
         private void AssertUnOwned(T item)

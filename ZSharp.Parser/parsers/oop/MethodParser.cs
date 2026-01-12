@@ -58,20 +58,13 @@ namespace ZSharp.Parser
 
         private Statement ParseFunctionBody(Parser parser)
         {
-            if (parser.Is(LangParser.Symbols.ThenDo, eat: true))
-                return ParseContextItem(parser);
-
-            List<Statement> body = [];
-
-            parser.Eat(TokenType.LCurly);
-
-            while (!parser.Is(TokenType.RCurly, eat: true))
-                body.Add(ParseContextItem(parser));
-
-            return new BlockStatement()
+            using (parser.NewStack(MethodBody.Content, parser.GetParserFor<Statement>()))
             {
-                Statements = body
-            };
+                if (parser.Is(LangParser.Symbols.ThenDo, eat: true))
+                    return ParseContextItem(parser);
+
+                return LangParser.ParseBlockStatement(parser);
+            }
         }
     }
 }

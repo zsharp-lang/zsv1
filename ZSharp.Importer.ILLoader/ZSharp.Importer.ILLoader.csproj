@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="objects\types\in\" />
+    <Folder Include="objects\types\out\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Typed\ZSharp.Compiler.CG.Typed.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.Features\ZSharp.Compiler.Features.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.TS.Static\ZSharp.Compiler.TS.Static.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
+    <ProjectReference Include="..\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
+    <ProjectReference Include="..\ZSharp.Platform.Runtime\ZSharp.Platform.Runtime.csproj" />
+  </ItemGroup>
+
+</Project>

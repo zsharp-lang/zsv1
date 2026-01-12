@@ -1,0 +1,10 @@
+﻿namespace ZSharp.Compiler
+{
+    partial class Dispatcher
+    {
+        public static IResult TypeOf(CompilerObject @object)
+            => Result.Error(
+                "Object does not support typeof"
+            );
+    }
+}

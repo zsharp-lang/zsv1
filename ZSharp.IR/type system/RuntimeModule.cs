@@ -15,30 +15,38 @@
         {
             Module module = new("Runtime");
 
-            Class @object;
-            Class @string;
-            Class type;
-            Class @void;
-            Class @null;
+            ClassReference @object;
+            ClassReference @string;
+            ClassReference type;
+            ClassReference @void;
+            ClassReference @null;
 
-            Class boolean;
+            ClassReference boolean;
 
-            Class int32;
+            ClassReference int32;
 
-            Class float32;
+            ClassReference float32;
+
+            Class array;
+            Class reference;
+            Class pointer;
 
             {
-                module.Types.Add(type = new("Type"));
-                module.Types.Add(@object = new("Object"));
-                module.Types.Add(@string = new("String"));
-                module.Types.Add(@void = new("Void"));
-                module.Types.Add(@null = new("Null"));
+                module.Types.Add((type = new(new("Type"))).Definition);
+                module.Types.Add((@object = new(new("Object"))).Definition);
+                module.Types.Add((@string = new(new("String"))).Definition);
+                module.Types.Add((@void = new(new("Void"))).Definition);
+                module.Types.Add((@null = new(new("Null"))).Definition);
 
-                module.Types.Add(boolean = new("Boolean"));
+                module.Types.Add((boolean = new(new("Boolean"))).Definition);
 
-                module.Types.Add(int32 = new("Int32"));
+                module.Types.Add((int32 = new(new("Int32"))).Definition);
 
-                module.Types.Add(float32 = new("Float32"));
+                module.Types.Add((float32 = new(new("Float32"))).Definition);
+
+                module.Types.Add(array = new("Array"));
+                module.Types.Add(reference = new("Reference"));
+                module.Types.Add(pointer = new("Pointer"));
             }
 
             return new(module, new()
@@ -54,6 +62,10 @@
                 Int32 = int32,
 
                 Float32 = float32,
+
+                Array = array,
+                Reference = reference,
+                Pointer = pointer,
             });
         }
     }

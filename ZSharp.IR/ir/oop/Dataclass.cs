@@ -2,15 +2,15 @@
 
 namespace ZSharp.IR
 {
-    public sealed class Dataclass
+    public sealed class Dataclass : TypeDefinition
     {
         public string? Name { get; set; }
 
         public DataclassAttributes Attributes { get; set; } = DataclassAttributes.None;
 
-        public Dataclass? Base { get; set; }
+        public TypeReference<Dataclass>? Base { get; set; }
 
-        public Collection<Typeclass> TypeClasses { get; }
+        public Collection<TypeReference<Typeclass>> TypeClasses { get; }
 
         public Collection<Constructor> Constructors { get; }
     }

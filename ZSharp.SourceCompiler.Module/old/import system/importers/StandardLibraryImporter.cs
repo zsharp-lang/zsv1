@@ -1,0 +1,33 @@
+﻿using CommonZ.Utils;
+using ZSharp.Compiler;
+
+namespace ZSharp.ZSSourceCompiler
+{
+    public sealed class StandardLibraryImporter(Interpreter.Interpreter interpreter)
+        : CompilerObject
+        , ICTCallable_Old
+    {
+        public Mapping<string, CompilerObject> Libraries { get; } = [];
+
+        public CompilerObject Call(Compiler.Compiler compiler, Argument[] arguments)
+        {
+            if (arguments.Length == 0)
+                throw new(); // TODO: proper exception
+
+            if (
+                arguments.Length > 1 ||
+                arguments[0].Name is not null ||
+                interpreter.Evaluate(arguments[0].Object).Unwrap() is not string libraryName
+            )
+            {
+                compiler.Log.Error("`std` importer must have exactly 1 argument of type `string`", this);
+                throw new(); // TODO: proper exception
+            }
+
+            if (!Libraries.TryGetValue(libraryName, out var library))
+                throw new(); // TODO: proper exception
+
+            return library;
+        }
+    }
+}

@@ -1,7 +1,13 @@
 ﻿namespace ZSharp.AST
 {
-    public sealed class Constructor : Statement
+    public sealed class Constructor(ConstructorTokens tokens) : Expression(tokens)
     {
+        public new ConstructorTokens TokenInfo
+        {
+            get => As<ConstructorTokens>();
+            init => base.TokenInfo = value;
+        }
+
         public string? Name { get; set; }
 
         public required Signature Signature { get; set; }

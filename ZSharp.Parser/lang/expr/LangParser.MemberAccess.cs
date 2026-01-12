@@ -14,7 +14,7 @@ namespace ZSharp.Parser
                 {
                     Left = target,
                     Operator = @operator,
-                    Right = LiteralExpression.String(name.Value),
+                    Right = new IdentifierExpression(new(name))//LiteralExpression.String(name.Value),
                 };
             else if (parser.Is(TokenType.Number, out var index))
                 throw new NotImplementedException("Member access by index");

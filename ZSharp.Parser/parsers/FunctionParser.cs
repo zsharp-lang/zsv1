@@ -65,7 +65,15 @@ namespace ZSharp.Parser
             using (parser.NewStack(FunctionBody.Content, parser.GetParserFor<Statement>()))
             {
                 if (parser.Is(LangParser.Symbols.ThenDo, eat: true))
-                    return ParseContextItem(parser);
+                //return ParseContextItem(parser);
+                {
+                    var result = new Return()
+                    {
+                        Value = parser.Parse<Expression>()
+                    };
+                    parser.Eat(TokenType.Semicolon);
+                    return result;
+                }
 
                 return LangParser.ParseBlockStatement(parser);
             }
