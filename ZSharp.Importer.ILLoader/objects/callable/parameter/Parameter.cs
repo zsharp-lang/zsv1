@@ -1,6 +1,4 @@
-﻿using System.Net.WebSockets;
-using ZSharp.Compiler;
-using ZSharp.Compiler.Features.Callable;
+﻿using ZSharp.Compiler.Features.Callable;
 
 namespace ZSharp.Importer.ILLoader.Objects
 {

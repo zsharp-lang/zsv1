@@ -10,6 +10,8 @@
     <ProjectReference Include="..\ZSharp.Compiler.CG.Proxy\ZSharp.Compiler.CG.Proxy.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj" />
     <ProjectReference Include="..\ZSharp.SourceCompiler.Core\ZSharp.SourceCompiler.Core.csproj" />
+    <ProjectReference Include="..\ZSharp.SourceCompiler.HIR.BuiltIn\ZSharp.SourceCompiler.HIR.BuiltIn.csproj" />
+    <ProjectReference Include="..\ZSharp.SourceCompiler.HIR\ZSharp.SourceCompiler.HIR.csproj" />
   </ItemGroup>
 
 </Project>

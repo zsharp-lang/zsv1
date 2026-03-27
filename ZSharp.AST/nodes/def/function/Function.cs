@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.AST
 {
-    public class Function(FunctionTokens tokens) : Expression(tokens)
+    public class Function(FunctionTokens tokens) : Definition(tokens)
     {
         public new FunctionTokens TokenInfo
         {

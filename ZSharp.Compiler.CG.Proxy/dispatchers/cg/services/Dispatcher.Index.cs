@@ -6,7 +6,7 @@
         {
             var result = @base.GetIndex(@object, arguments);
 
-            if (result.IsError && @object.Is<IProxy>(out var proxy))
+            if (result.IsError && @object.Is<ICOProxy>(out var proxy))
                 result = proxy.Apply(proxied => CG.Index(proxied, arguments));
 
             return result;
@@ -16,7 +16,7 @@
         {
             var result = @base.GetIndex(@object, arguments);
 
-            if (result.IsError && @object.Is<IProxy>(out var proxy))
+            if (result.IsError && @object.Is<ICOProxy>(out var proxy))
                 result = proxy.Apply(proxied => CG.Index(proxied, arguments, value));
 
             return result;

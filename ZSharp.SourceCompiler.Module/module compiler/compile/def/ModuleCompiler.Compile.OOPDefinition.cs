@@ -7,6 +7,14 @@
             if (oop.Type != "class")
                 return Result.Error("Only class definitions are currently supported in this context.");
 
+            // Resolve metaclass
+
+            // Prepare the builder function
+
+            // Call the metaclass with the builder function to get the HIR node
+
+            // Set the HIR node
+
             var compiler = new Class.ClassCompiler(Interpreter, oop);
 
             var result = compiler.Declare();

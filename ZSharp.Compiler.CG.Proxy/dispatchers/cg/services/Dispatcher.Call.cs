@@ -6,7 +6,7 @@
         {
             var result = @base.Call(callee, arguments);
 
-            if (result.IsError && callee.Is<IProxy>(out var proxy))
+            if (result.IsError && callee.Is<ICOProxy>(out var proxy))
                 result = proxy.Apply(proxied => CG.Call(proxied, arguments));
 
             return result;

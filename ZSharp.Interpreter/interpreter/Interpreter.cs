@@ -44,6 +44,8 @@ namespace ZSharp.Interpreter
             {
                 TypeSystem = Runtime.TypeSystem
             };
+
+            Compiler.TS.Void = ILLoader.TypeSystem.Void;
         }
     }
 }

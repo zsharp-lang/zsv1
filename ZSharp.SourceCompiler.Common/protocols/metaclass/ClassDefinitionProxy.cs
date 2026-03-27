@@ -3,6 +3,7 @@
     public sealed class ClassDefinitionProxy
         : CompilerObject
         , IProxy
+        , IIsSameDefinition
     {
         public CompilerObject? Definition { get; set; }
 
@@ -13,5 +14,8 @@
 
             return fn(Definition);
         }
+
+        bool IIsSameDefinition.IsSameDefinition(CompilerObject other)
+            => ReferenceEquals(Definition, other);
     }
 }

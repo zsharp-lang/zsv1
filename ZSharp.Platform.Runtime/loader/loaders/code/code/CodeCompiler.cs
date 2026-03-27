@@ -59,6 +59,8 @@ namespace ZSharp.Platform.Runtime.Loaders
                 case IR.VM.SetLocal setLocal: CodeCompiler_Impl.Compile(RequireContext<IFrameCodeContext>(), setLocal); break;
                 case IR.VM.Swap swap: CodeCompiler_Impl.Compile(RequireContext<ICodeContext>(), swap); break;
 
+                case TransformCall transformCall: CodeCompiler_Impl.Compile(RequireContext<ITransformableCodeContext>(), transformCall); break;
+
                 default: throw new NotImplementedException();
             }
         }

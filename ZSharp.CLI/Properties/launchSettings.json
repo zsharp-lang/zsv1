@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ZSharp.CLI": {
+      "commandName": "Project",
+      "commandLineArgs": "D:\\zsharp\\zsv1\\Examples\\test.zs"
+    }
+  }
+}

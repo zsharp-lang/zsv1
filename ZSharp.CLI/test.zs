@@ -1,5 +1,7 @@
-import { Directory } from "std:fs";
 import { print } from "std:io";
+
+
+import { Directory } from "std:fs";
 
 print("[CT] Hello, World!");
 
@@ -10,6 +12,8 @@ module A {
 
         fun main() {
                 print("[RT] Hello, World!");
+
+                return;
         }
 }
 

@@ -10,6 +10,14 @@
 
             GenericArguments = [.. il.GetGenericArguments().Select(arg => loader.LoadType(arg))];
             Definition = loader.LoadType(il.GetGenericTypeDefinition());
+
+            //LazyLoader = new LazyMemberLoader()
+            //{
+            //    Container = this,
+            //    Loader = new TypeBodyLoader(loader)
+            //};
+
+            //Prepare.PrepareType(this, loader);
         }
     }
 }

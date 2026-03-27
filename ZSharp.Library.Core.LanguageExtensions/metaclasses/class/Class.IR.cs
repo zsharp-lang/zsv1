@@ -23,16 +23,17 @@ namespace Core.LanguageExtensions.Objects
 
             if (Base is not null)
                 if (
-                    compiler.IR.CompileReference<ClassReference>(Base, target)
+                    compiler.IR.CompileTypeAs<TypeReference<ZSharp.IR.Class>>(Base, target)
                     .When(out var @base)
                     .Error(out var error)
                 ) errors.Append(error);
+                else IR.Base = @base;
             //else if (target is IOOPRuntime runtime)
             //    IR.Base = new ClassReference(runtime.ObjectHierarchyRoot);
 
             foreach (var item in MembersByOrder)
             {
-                 if (
+                if (
                     !compiler.IR.CompileDefinition(item, IR, target)
                 ) errors.Append($"Could not compile member {item}");
             }

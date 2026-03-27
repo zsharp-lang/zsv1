@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.AST
 {
-    public class OOPDefinition(OOPDefinitionTokens tokens) : Expression(tokens)
+    public class OOPDefinition(OOPDefinitionTokens tokens) : Definition(tokens)
     {
         public new OOPDefinitionTokens TokenInfo
         {
@@ -11,6 +11,8 @@
         public required string Type { get; set; }
 
         public string Name { get; set; } = string.Empty;
+
+        public List<GenericParameter>? GenericParameters { get; set; }
 
         public Expression? Of { get; set; }
 

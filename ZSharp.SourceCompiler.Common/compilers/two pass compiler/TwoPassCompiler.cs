@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.SourceCompiler
 {
-    partial class LiteralCompiler
+    public sealed partial class TwoPassCompiler
     {
 
     }

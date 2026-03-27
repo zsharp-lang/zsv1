@@ -1,4 +1,5 @@
 ﻿using ZSharp.Compiler;
+using ZSharp.Compiler.Features;
 using ZSharp.SourceCompiler;
 
 namespace Core.LanguageExtensions.Objects
@@ -24,9 +25,12 @@ namespace Core.LanguageExtensions.Objects
                     @base =>
                     {
                         if (
+                            compiler.CG.Get(@base)
+                            .When(out @base!)
+                            .Error(out var error) ||
                             compiler.Evaluator.Evaluate(@base)
                             .When(out @base!)
-                            .Error(out var error)
+                            .Error(out error)
                         )
                         {
                             errors.Append(error);
@@ -39,7 +43,7 @@ namespace Core.LanguageExtensions.Objects
 
             if (bases.Length > 0)
             {
-                if (bases[0].Is<IClass>(out var _))
+                if (bases[0].Is<ISingleInheritance>(out var _))
                 {
                     result.Base = bases[0];
                     bases = bases[1..];
@@ -56,25 +60,76 @@ namespace Core.LanguageExtensions.Objects
                         );
             }
 
-            void AddField(MemberName? name, CompilerObject definition)
-            {
+            OverloadGroup constructors = new() { Name = string.Empty };
+            result.Constructor = constructors;
 
+            CompilerObject AddField(MemberName? name, CompilerObject definition)
+            {
+                var @object = new Field()
+                {
+                    Name = name ?? string.Empty,
+                    UnderlyingField = definition
+                };
+
+                if (@object.Name != string.Empty)
+                    if (result.MembersByName.ContainsKey(@object.Name))
+                        errors.Append(
+                            new ErrorMessage(
+                                $"Class {result.Name} already contains a member named '{@object.Name}'."
+                            )
+                        );
+                    else
+                        result.MembersByName.Add(@object.Name, @object);
+
+                return @object;
             }
 
-            CompilerObject AddFunction(MemberName? name, CompilerObject definition)
+            CompilerObject AddMethod(MemberName? name, CompilerObject definition)
             {
-                var result = new Method()
+                var @object = new Method()
                 {
                     Name = name ?? string.Empty,
                     UnderlyingFunction = definition
                 };
 
-                return result;
+                if (@object.Name != string.Empty)
+                {
+                    OverloadGroup? group = null;
+
+                    if (
+                        !result.MembersByName.TryGetValue(@object.Name, out var member)
+                    )
+                        result.MembersByName.Add(@object.Name, group = new() { Name = @object.Name });
+                    else if (member is not OverloadGroup existingGroup)
+                        errors.Append(
+                            new ErrorMessage(
+                                $"Class {result.Name} already contains a member named '{@object.Name}'."
+                            )
+                        );
+                    else group = existingGroup;
+
+                    group?.AddOverload(@object);
+                }
+
+                return @object;
             }
 
-            void AddConstructor(MemberName? name, CompilerObject definition)
+            CompilerObject AddConstructor(
+                MemberName? name, 
+                CompilerObject definition
+            )
             {
+                var @object = new Constructor()
+                {
+                    Name = name ?? string.Empty,
+                    Owner = result,
+                    UnderlyingObject = definition,
+                };
 
+                if (@object.Name == string.Empty)
+                    constructors.AddOverload(@object);
+
+                return @object;
             }
 
             foreach (var item in specification.Content)
@@ -83,12 +138,12 @@ namespace Core.LanguageExtensions.Objects
 
                 var name = compiler.Reflection.GetName(item);
 
-                if (item.Is<IField>(out var field))
-                    AddField(name, item);
-                else if (item.Is<IFunction>(out var function))
-                    member = AddFunction(name, item);
-                else if (item.Is<IConstructor>(out var constructor))
-                    AddConstructor(name, item);
+                if (item.Is<ILocal>(out var _))
+                    member = AddField(name, item);
+                else if (item.Is<IFunction>(out var _))
+                    member = AddMethod(name, item);
+                else if (item.Is<IConstructor>(out var _))
+                    member = AddConstructor(name, item);
                 else
                     errors.Append(
                         new ErrorMessage(

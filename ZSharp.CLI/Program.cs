@@ -149,6 +149,7 @@ new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(interpreter.Compiler).Apply()
 new ZSharp.Compiler.CGDispatchers.Proxy.Dispatcher(interpreter.Compiler).Apply();
 
 new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(interpreter.Compiler).Apply();
+new ZSharp.Compiler.TSDispatchers.Proxy.Dispatcher(interpreter.Compiler).Apply();
 
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(interpreter.Compiler).Apply();
 new ZSharp.Compiler.IRDispatchers.Proxy.Dispatcher(interpreter.Compiler).Apply();
@@ -172,6 +173,7 @@ interpreter.ILLoader.OnLoadOperator = (@operator, method) =>
 };
 
 StandardTypes.VoidType = interpreter.ILLoader.TypeSystem.Void;
+StandardTypes.ObjectType = interpreter.ILLoader.TypeSystem.Object;
 
 #region Standard Operators
 

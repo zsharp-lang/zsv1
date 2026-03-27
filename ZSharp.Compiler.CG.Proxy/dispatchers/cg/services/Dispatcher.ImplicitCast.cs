@@ -6,7 +6,7 @@
         {
             var result = @base.ImplicitCast(@object, type);
 
-            if (result.IsError && @object.Is<IProxy>(out var proxy))
+            if (result.IsError && @object.Is<ICOProxy>(out var proxy))
                 result = proxy.Apply(proxied => CG.ImplicitCast(proxied, type));
 
             return result;

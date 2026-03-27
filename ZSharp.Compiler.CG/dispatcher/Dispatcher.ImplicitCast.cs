@@ -4,7 +4,7 @@
     {
         public static IResult ImplicitCast(CompilerObject @object, CompilerObject type)
             => Result.Error(
-                "Implicit casting is not supported for the given object and type."
+                $"Implicit casting is not supported for the given object {@object} and type {type}."
             );
     }
 }

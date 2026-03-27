@@ -8,10 +8,10 @@ namespace ZSharp.Parser
     {
         public ConstructorParser()
         {
-            //AddKeywordParser(
-            //    LangParser.Keywords.Return,
-            //    LangParser.ParseReturnStatement
-            //); // NOT YET
+            AddKeywordParser(
+                LangParser.Keywords.Return,
+                LangParser.ParseReturnStatement
+            );
             AddKeywordParser(
                 LangParser.Keywords.Let,
                 Utils.ExpressionStatement(LangParser.ParseLetExpression)
@@ -59,6 +59,14 @@ namespace ZSharp.Parser
 
         private Statement ParseConstructorBody(Parser parser)
         {
+            using (parser.NewStack(ConstructorBody.Content, parser.GetParserFor<Statement>()))
+            {
+                if (parser.Is(LangParser.Symbols.ThenDo, eat: true))
+                    return ParseContextItem(parser);
+
+                return LangParser.ParseBlockStatement(parser);
+            }
+
             if (parser.Is(LangParser.Symbols.ThenDo, eat: true))
                 return ParseContextItem(parser);
 

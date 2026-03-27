@@ -7,6 +7,14 @@
         {
             IL = il;
             Loader = loader;
+
+            //LazyLoader = new LazyMemberLoader()
+            //{
+            //    Container = this,
+            //    Loader = new TypeBodyLoader(loader)
+            //};
+
+            //Prepare.PrepareType(this, loader);
         }
     }
 }

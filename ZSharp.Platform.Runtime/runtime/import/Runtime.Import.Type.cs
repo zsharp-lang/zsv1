@@ -26,7 +26,8 @@ namespace ZSharp.Platform.Runtime
         public Type ImportTypeReference(IR.TypeReference @ref)
         {
             if (
-                @ref.Definition == TypeSystem.Array
+                @ref.Definition == TypeSystem.Array ||
+                @ref.Definition == TypeSystem.CoreTypes.Array.Definition
             ) return ImportArrayType(@ref);
             if (
                 @ref.Definition == TypeSystem.Pointer

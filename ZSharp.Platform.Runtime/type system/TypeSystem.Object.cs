@@ -2,6 +2,6 @@
 {
     partial class TypeSystem
     {
-        public required IR.TypeReference Object { get; init; }
+        public required IR.TypeReference<IR.Class> Object { get; init; }
     }
 }

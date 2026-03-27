@@ -10,6 +10,8 @@ namespace ZSharp.CLI
         [Alias("Void")]
         public static CompilerObject VoidType = null!;
 
+        [Alias("Object")]
+        public static CompilerObject ObjectType = null!;
     }
 
     public class Test(string s)

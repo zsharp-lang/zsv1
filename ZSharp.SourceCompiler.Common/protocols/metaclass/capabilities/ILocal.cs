@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.SourceCompiler
 {
-    public interface IField
+    public interface ILocal
     {
 
     }

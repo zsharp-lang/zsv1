@@ -8,7 +8,7 @@
             init => base.TokenInfo = value;
         }
 
-        public string? Name { get; set; }
+        public required string Name { get; set; }
 
         public required Signature Signature { get; set; }
 

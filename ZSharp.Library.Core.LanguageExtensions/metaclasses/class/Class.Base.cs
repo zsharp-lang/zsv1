@@ -1,6 +1,9 @@
-﻿namespace Core.LanguageExtensions.Objects
+﻿using ZSharp.Compiler.Features;
+
+namespace Core.LanguageExtensions.Objects
 {
-    partial class Class
+    partial class Class 
+        : ISingleInheritance
     {
         public CompilerObject? Base { get; set; }
 
