@@ -1,13 +1,11 @@
 ﻿namespace ZSharp.SourceCompiler
 {
     public delegate IResult<object, Error> DefinitionBuilderFactory(
-        AST.Definition definition,
-        LateConstructor build
+        AST.Definition definition
     );
 
     public delegate IResult<object, Error> DefinitionBuilderFactory<T>(
-        T definition,
-        LateConstructor build
+        T definition
     ) where T : AST.Definition;
 
     partial class DefinitionCompiler
@@ -17,15 +15,15 @@
         public void RegisterHandler<T>(DefinitionBuilderFactory<T> handler)
             where T : AST.Definition
         {
-            handlers[typeof(T)] = (AST.Definition def, LateConstructor build) => handler((T)def, build);
+            handlers[typeof(T)] = def => handler((T)def);
         }
 
-        internal IResult<object, Error> CreateBuildFunction(AST.Definition definition, LateConstructor lateConstructor)
+        internal IResult<object, Error> CreateBuildFunction(AST.Definition definition)
         {
             if (!handlers.TryGetValue(definition.GetType(), out var factory))
                 return Result<Action>.Error($"No handler registered for definition type: {definition.GetType().Name}");
             
-            return factory(definition, lateConstructor);
+            return factory(definition);
         }
     }
 }
