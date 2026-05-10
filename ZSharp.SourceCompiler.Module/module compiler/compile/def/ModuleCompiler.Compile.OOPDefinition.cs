@@ -2,7 +2,7 @@
 {
     partial class ModuleCompiler
     {
-        private IResult Compile(AST.OOPDefinition oop)
+        private IResult Compile(AST.TypeDefinition oop)
         {
             if (oop.Type != "class")
                 return Result.Error("Only class definitions are currently supported in this context.");

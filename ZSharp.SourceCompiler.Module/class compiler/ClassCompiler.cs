@@ -6,11 +6,11 @@
 
         private Interpreter.Interpreter Interpreter { get; }
 
-        private AST.OOPDefinition Node { get; }
+        private AST.TypeDefinition Node { get; }
 
         private CompileExpression CompileExpression { get; }
 
-        public ClassCompiler(Interpreter.Interpreter interpreter, AST.OOPDefinition definition)
+        public ClassCompiler(Interpreter.Interpreter interpreter, AST.TypeDefinition definition)
         {
             Interpreter = interpreter;
             Node = definition;

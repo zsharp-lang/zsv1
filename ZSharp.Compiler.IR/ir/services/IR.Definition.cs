@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    partial struct IR
+    partial class IR
     {
         public IIRDefinitionAsCompiler DefinitionAsCompiler { get; set; } = Dispatcher.Instance;
 

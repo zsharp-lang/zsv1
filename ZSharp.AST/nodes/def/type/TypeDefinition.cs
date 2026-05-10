@@ -1,10 +1,10 @@
 ﻿namespace ZSharp.AST
 {
-    public class OOPDefinition(OOPDefinitionTokens tokens) : Definition(tokens)
+    public class TypeDefinition(TypeDefinitionTokens tokens) : Definition(tokens)
     {
-        public new OOPDefinitionTokens TokenInfo
+        public new TypeDefinitionTokens TokenInfo
         {
-            get => As<OOPDefinitionTokens>();
+            get => As<TypeDefinitionTokens>();
             init => base.TokenInfo = value;
         }
 

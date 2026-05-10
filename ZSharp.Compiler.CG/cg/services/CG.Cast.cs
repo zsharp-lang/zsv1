@@ -2,7 +2,7 @@
 {
     public delegate IResult<CastResult, Error> Cast(CompilerObject @object, CompilerObject type);
 
-    partial struct CG
+    partial class CG
     {
         public Cast Cast { get; set; } = Dispatcher.Cast;
     }

@@ -3,7 +3,7 @@
     public delegate IResult GetIndex(CompilerObject @object, Argument[] arguments);
     public delegate IResult SetIndex(CompilerObject @object, Argument[] arguments, CompilerObject value);
 
-    partial struct CG
+    partial class CG
     {
         public GetIndex GetIndex { get; set; } = Dispatcher.Index;
 

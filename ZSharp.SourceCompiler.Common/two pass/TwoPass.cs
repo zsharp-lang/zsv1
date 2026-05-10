@@ -34,7 +34,7 @@ namespace ZSharp.SourceCompiler
                         // Create and expose the build function
                         switch (def)
                         {
-                            case AST.OOPDefinition @oop:
+                            case AST.TypeDefinition @oop:
                             {
                                 mc = Compile(oop.Of ?? DefaultMetaclass);
                                 build = Expose(

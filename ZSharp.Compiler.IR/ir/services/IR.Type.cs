@@ -2,7 +2,7 @@
 {
     public delegate IResult<IType, Error> CompileType(CompilerObject @object, object? target);
 
-    partial struct IR
+    partial class IR
     {
         public CompileType CompileType { get; set; } = Dispatcher.Instance.CompileType;
 

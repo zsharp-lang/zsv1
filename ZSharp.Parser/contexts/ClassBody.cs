@@ -3,7 +3,7 @@
 namespace ZSharp.Parser
 {
     public sealed class ClassBody
-        : ParserContent<OOPDefinition, Statement>
+        : ParserContent<TypeDefinition, Statement>
     {
         public static ClassBody Content { get; } = new();
 

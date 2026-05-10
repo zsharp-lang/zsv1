@@ -9,6 +9,9 @@
         public IResult Load(RTObject? @object)
             => LoadObject(@object);
 
+        public CompilerObject LoadString(string value)
+            => Load(value);
+
         private IResult DefaultLoader(RTObject? @object)
             => @object switch
             {

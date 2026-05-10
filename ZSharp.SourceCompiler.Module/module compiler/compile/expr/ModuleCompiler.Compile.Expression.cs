@@ -6,7 +6,7 @@
             => expression switch
             {
                 AST.Function function => Compile(function),
-                AST.OOPDefinition oopDefinition => Compile(oopDefinition),
+                AST.TypeDefinition oopDefinition => Compile(oopDefinition),
                 _ => CompileExpression(expression)
             };
     }

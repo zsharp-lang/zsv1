@@ -4,7 +4,7 @@ namespace ZSharp.SourceCompiler
 {
     partial class DefaultMetaType
     {
-        public static HIR.IDefinition Class(MetaContext<AST.OOPDefinition> context)
+        public static HIR.IDefinition Class(MetaContext<AST.TypeDefinition> context)
         {
             if (context.Node.GenericParameters is not null)
                 return CreateGenericClass(context);
@@ -12,7 +12,7 @@ namespace ZSharp.SourceCompiler
             return CreateConcreteClass(context);
         }
 
-        private static HIR.BuiltIn.Class CreateConcreteClass(MetaContext<AST.OOPDefinition> context)
+        private static HIR.BuiltIn.Class CreateConcreteClass(MetaContext<AST.TypeDefinition> context)
         {
             context.AddBuildTask(
                 () =>
@@ -27,7 +27,7 @@ namespace ZSharp.SourceCompiler
             };
         }
 
-        private static GenericClass CreateGenericClass(MetaContext<AST.OOPDefinition> context)
+        private static GenericClass CreateGenericClass(MetaContext<AST.TypeDefinition> context)
         {
             context.AddBuildTask(
                 () =>

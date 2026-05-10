@@ -2,7 +2,7 @@
 {
     public delegate IResult ImplicitCast(CompilerObject @object, CompilerObject type);
 
-    partial struct CG
+    partial class CG
     {
         public ImplicitCast ImplicitCast { get; set; } = Dispatcher.ImplicitCast;
     }

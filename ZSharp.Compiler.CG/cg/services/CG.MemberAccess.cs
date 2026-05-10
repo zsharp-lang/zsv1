@@ -4,7 +4,7 @@
 
     public delegate IResult SetMember<T>(CompilerObject @object, T member, CompilerObject value);
 
-    partial struct CG
+    partial class CG
     {
         public GetMember<MemberIndex> GetMemberByIndex { get; set; } = Dispatcher.Member;
 

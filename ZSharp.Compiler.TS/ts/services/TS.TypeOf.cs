@@ -4,7 +4,7 @@ namespace ZSharp.Compiler
 {
     public delegate IResult TypeOf(CompilerObject @object);
 
-    partial struct TS
+    partial class TS
     {
         public TypeOf TypeOf { get; set; } = Dispatcher.TypeOf;
 

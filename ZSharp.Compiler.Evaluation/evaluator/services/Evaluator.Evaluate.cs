@@ -2,7 +2,7 @@
 {
     public delegate IResult Evaluate(CompilerObject @object);
 
-    partial struct Evaluator
+    partial class Evaluator
     {
         public Evaluate Evaluate { get; set; } = Dispatcher.Evaluate;
     }

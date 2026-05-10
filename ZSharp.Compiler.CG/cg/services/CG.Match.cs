@@ -2,7 +2,7 @@
 {
     public delegate IResult<MatchResult, Error> Match(CompilerObject @object, CompilerObject pattern);
 
-    partial struct CG
+    partial class CG
     {
         public Match Match { get; set; } = Dispatcher.Match;
     }

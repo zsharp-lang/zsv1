@@ -4,7 +4,7 @@ using ZSharp.Text;
 namespace ZSharp.Parser
 {
     public sealed class ClassParser
-        : ContextParser<OOPDefinition, Statement>
+        : ContextParser<TypeDefinition, Statement>
     {
         public MethodParser Method { get; } = new();
 
@@ -30,7 +30,7 @@ namespace ZSharp.Parser
             );
         }
 
-        public override OOPDefinition Parse(Parser parser)
+        public override TypeDefinition Parse(Parser parser)
         {
             var type = parser.Eat(LangParser.Keywords.Class);
 

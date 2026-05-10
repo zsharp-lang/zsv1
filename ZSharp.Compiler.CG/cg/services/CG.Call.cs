@@ -2,7 +2,7 @@
 {
     public delegate IResult Call(CompilerObject callee, Argument[] arguments);
 
-    partial struct CG
+    partial class CG
     {
         public Call Call { get; set; } = Dispatcher.Call;
     }

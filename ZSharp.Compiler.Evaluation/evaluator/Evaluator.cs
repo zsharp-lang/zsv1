@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    public partial struct Evaluator()
+    public partial class Evaluator()
     {
         
     }

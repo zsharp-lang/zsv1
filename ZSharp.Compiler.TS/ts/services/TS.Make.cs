@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.Compiler
 {
-    partial struct TS
+    partial class TS
     {
         public CompilerObject Array(CompilerObject type)
         {

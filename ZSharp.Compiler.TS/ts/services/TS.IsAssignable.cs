@@ -2,7 +2,7 @@
 {
     public delegate bool IsAssignableTo(CompilerObject target, CompilerObject source);
 
-    partial struct TS
+    partial class TS
     {
         public IsAssignableTo IsAssignableTo { get; set; } = Dispatcher.IsAssignableTo;
 

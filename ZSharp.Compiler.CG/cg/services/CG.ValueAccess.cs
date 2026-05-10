@@ -4,7 +4,7 @@
 
     public delegate IResult Set(CompilerObject @object, CompilerObject value);
 
-    public partial struct CG
+    public partial class CG
     {
         public Get Get { get; set; } = Dispatcher.Get;
 

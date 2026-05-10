@@ -7,6 +7,36 @@ using ZSharp.SourceCompiler.Script;
 using ZSharp.Text;
 using ZSharp.Tokenizer;
 
+// This file is the entry point of the Z# CLI.
+// The Z# CLI is a simple command-line application that
+// executes a single Z# script file.
+
+// The CLI is the bootstrapper of the entire Z# system and
+// the rest of the compilation and execution pipeline should
+// be setup in the script file.
+// Z# is not really designed for small scripts. Instead, it's
+// designed for large projects with multiple files and modules
+// with a complex compilation pipeline. 
+
+// In order to compile a script, we need to:
+// 0. Setup all systems (parser, script compiler, runtime+illoader+rtloader, default semantic providers, default semantic APIs)
+// 1. Parse the script file into an AST.
+// 2. Pass the AST to the script compiler, producing a CompilerObject.
+// 3. Compile the CO to IR.
+// 4. Load the IR into the runtime.
+// 4.5 (optional) Compile the IR to .NET DLL so it's faster to load next run.
+// 5. Execute the loaded code, which results with a Document object.
+// 6. Load a CO from that Document object.
+// 7. Compile the CO to IR.
+// 8. Load the IR into the runtime and execute it.
+
+// Standard language extension:
+// [Parser] Standard language constructs.
+// [Semantic API] CG, TS and IR.
+// [Semtic Providers] Static, Typed and Proxy. Each for CG, TS and IR, of which is relevant.
+// [Import System] Standatd import function.
+// [Importer] Core importer, STL importer, source importer, extension importer and .NET importer.
+
 var interpreter = new Interpreter();
 
 var filePath = args.Length == 0 ? null : args[0];
@@ -143,6 +173,12 @@ using (StreamReader stream = File.OpenText(filePath))
 #endregion
 
 #region Setup Interpreter
+
+// We'll need to create each one individually maybe, if we get rid of the interpreter
+Core.Compiler.ModuleScope.compiler = interpreter.Compiler;
+Core.Runtime.ModuleScope.Runtime = interpreter.Runtime;
+Core.Runtime.ModuleScope.RTLoader = interpreter.RTLoader;
+Core.Runtime.ModuleScope.ILLoader = interpreter.ILLoader;
 
 new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(interpreter.Compiler).Apply();
 new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(interpreter.Compiler).Apply();

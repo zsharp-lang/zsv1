@@ -2,7 +2,7 @@
 
 namespace ZSharp.AST
 {
-    public sealed class OOPDefinitionTokens : TokenInfo
+    public sealed class TypeDefinitionTokens : TokenInfo
     {
         public Token Type { get; init; }
 

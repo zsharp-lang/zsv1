@@ -1,4 +1,4 @@
-﻿namespace ZSharp.SourceCompiler.HIR.code
+﻿namespace ZSharp.SourceCompiler.HIR.Code
 {
     public sealed class Return
         : Statement
