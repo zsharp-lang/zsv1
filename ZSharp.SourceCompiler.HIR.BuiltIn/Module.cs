@@ -4,6 +4,6 @@
     {
         public required string Name { get; init; }
 
-        public List<Node> Items { get; init; } = [];
+        public List<IDefinition> Items { get; init; } = [];
     }
 }

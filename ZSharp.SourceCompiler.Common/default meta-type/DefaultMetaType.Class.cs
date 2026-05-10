@@ -17,7 +17,18 @@ namespace ZSharp.SourceCompiler
             context.AddBuildTask(
                 () =>
                 {
+                    context.DefinitionCompiler.RegisterHandler<AST.LetExpression>(
+                        node =>
+                        {
 
+                        }
+                    );
+
+                    using var _ = context.Scope();
+
+
+
+                    return;
                 }
             );
 
@@ -32,7 +43,7 @@ namespace ZSharp.SourceCompiler
             context.AddBuildTask(
                 () =>
                 {
-
+                    return;
                 }
             );
 

@@ -23,10 +23,8 @@
                     return Result<Tuple<HIR.Node, Action>>.Error(e);
             }
 
-            LateConstructor lateConstructor = new();
-
             if (
-                CreateBuildFunction(node, lateConstructor)
+                CreateBuildFunction(node)
                 .When(interpreter.ILLoader.Expose)
                 .When(out var buildFunctionCO)
                 .Error(out var error)
