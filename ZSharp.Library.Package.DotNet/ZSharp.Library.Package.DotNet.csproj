@@ -11,4 +11,8 @@
     <Folder Include="definitions\modifiers\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.HIR\ZSharp.HIR.csproj" />
+  </ItemGroup>
+
 </Project>

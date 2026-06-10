@@ -2,6 +2,6 @@
 {
     partial class GenericClass
     {
-        public CompilerObject? Constructor { get; set; }
+        public List<Constructor> Constructors { get; } = [];
     }
 }
