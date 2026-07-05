@@ -4,7 +4,7 @@ using ZSharp.AST;
 namespace ZSharp.SourceCompiler
 {
     internal sealed class ModuleContext
-        : IContext
+        : ZSharp.Compiler.IContext
     {
         private Scope currentScope = null!;
 
@@ -15,6 +15,7 @@ namespace ZSharp.SourceCompiler
         }
 
         public required Cache<Type, Func<IContext, Node, IResult>> Overrides { get; init; }
+        public ZSharp.Compiler.IContext? Parent { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         public ContextManager Scope(out Scope scope)
             => Scope(scope = CurrentScope.CreateChildScope());

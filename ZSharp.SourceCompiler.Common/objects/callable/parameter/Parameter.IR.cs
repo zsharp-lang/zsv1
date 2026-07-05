@@ -7,7 +7,7 @@ namespace ZSharp.SourceCompiler.Objects
     {
         private IR.Parameter? IR { get; set; }
 
-        IResult<IR.Parameter, Error> ICompileIRDefinitionAs<IR.Parameter>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
+        IResult<IR.Parameter, Error> ICompileIRDefinitionAs<IR.Parameter>.CompileIRDefinition(ZSharp.Compiler.Compiler compiler, object? target)
         {
             if (IR is not null)
                 return IRParameterResult.Ok(IR);

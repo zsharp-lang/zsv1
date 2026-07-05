@@ -103,6 +103,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.HIR", "ZSharp.HIR\ZS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.HIR.Code", "ZSharp.HIR.Code\ZSharp.HIR.Code.csproj", "{9712E6AC-0074-4E08-BB66-8E0FAF03A7B4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Library.Package.ZSharp", "ZSharp.Library.Package.ZSharp\ZSharp.Library.Package.ZSharp.csproj", "{4605FD6D-7EEA-4ED8-9127-4BA6C9499C05}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZSharp.Library.Core.SourceCompiler", "ZSharp.Library.Core.SourceCompiler\ZSharp.Library.Core.SourceCompiler.csproj", "{13B17691-C421-4934-B9C2-519EDFB2AF60}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -309,6 +313,14 @@ Global
 		{9712E6AC-0074-4E08-BB66-8E0FAF03A7B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9712E6AC-0074-4E08-BB66-8E0FAF03A7B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9712E6AC-0074-4E08-BB66-8E0FAF03A7B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4605FD6D-7EEA-4ED8-9127-4BA6C9499C05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4605FD6D-7EEA-4ED8-9127-4BA6C9499C05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4605FD6D-7EEA-4ED8-9127-4BA6C9499C05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4605FD6D-7EEA-4ED8-9127-4BA6C9499C05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13B17691-C421-4934-B9C2-519EDFB2AF60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13B17691-C421-4934-B9C2-519EDFB2AF60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13B17691-C421-4934-B9C2-519EDFB2AF60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13B17691-C421-4934-B9C2-519EDFB2AF60}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

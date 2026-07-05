@@ -12,7 +12,7 @@ namespace ZSharp.SourceCompiler.Objects
 
         public CompilerObject? DefaultValue { get; set; }
 
-        IResult IParameter.Match(Compiler.Compiler compiler, IArgumentStream arguments)
+        IResult IParameter.Match(ZSharp.Compiler.Compiler compiler, IArgumentStream arguments)
         {
             if (!arguments.PopArgument(Name, out var argument) &&
                 !arguments.PopArgument(out argument)

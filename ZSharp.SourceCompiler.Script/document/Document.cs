@@ -4,8 +4,6 @@ namespace ZSharp.SourceCompiler.Script
 {
     public sealed class Document
     {
-        public HIR.Code.Block Content { get; set; } = new();
-
         public Reference? Export(string name)
         {
             throw new NotImplementedException();

@@ -10,9 +10,9 @@
 
         public void Apply()
         {
-            @base = compiler.Evaluator;
+            @base = compiler.Evaluator.Clone();
 
-            ref var evaluator = ref compiler.Evaluator;
+            var evaluator = compiler.Evaluator;
 
             evaluator.Evaluate = Evaluate;
         }

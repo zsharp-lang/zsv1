@@ -20,7 +20,7 @@
         /// <param name="object"></param>
         /// <param name="index"></param>
         /// <returns></returns>
-        public readonly IResult Member(CompilerObject @object, MemberIndex index)
+        public IResult Member(CompilerObject @object, MemberIndex index)
             => GetMemberByIndex(@object, index);
 
         /// <summary>
@@ -30,7 +30,7 @@
         /// <param name="index"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public readonly IResult Member(CompilerObject @object, MemberIndex index, CompilerObject value)
+        public IResult Member(CompilerObject @object, MemberIndex index, CompilerObject value)
             => SetMemberByIndex(@object, index, value);
 
         /// <summary>
@@ -39,7 +39,7 @@
         /// <param name="object"></param>
         /// <param name="name"></param>
         /// <returns></returns>
-        public readonly IResult Member(CompilerObject @object, MemberName name)
+        public IResult Member(CompilerObject @object, MemberName name)
             => GetMemberByName(@object, name);
 
         /// <summary>
@@ -49,7 +49,7 @@
         /// <param name="name"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public readonly IResult Member(CompilerObject @object, MemberName name, CompilerObject value)
+        public IResult Member(CompilerObject @object, MemberName name, CompilerObject value)
             => SetMemberByName(@object, name, value);
     }
 }

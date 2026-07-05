@@ -2,7 +2,7 @@
 {
     public sealed partial class Interface
         : CompilerObject
-        , IClass
+        //, IClass
     {
         
     }

@@ -11,7 +11,7 @@ namespace Core.Runtime.Objects
 
         public List<CompilerObject> MembersByOrder { get; } = [];
 
-        IResult ICTGetMember<MemberName>.Member(Compiler compiler, MemberName name)
+        IResult ICTGetMember<MemberName>.Member(TheCompiler compiler, MemberName name)
         {
             if (!MembersByName.TryGetValue(name, out var member))
                 return Result.Error(
@@ -21,7 +21,7 @@ namespace Core.Runtime.Objects
             return Result.Ok(member);
         }
 
-        IResult IRTGetMember<MemberName>.Member(Compiler compiler, CompilerObject @object, MemberName name)
+        IResult IRTGetMember<MemberName>.Member(TheCompiler compiler, CompilerObject @object, MemberName name)
         {
             if (
                 compiler.CG.Member(this, name)
@@ -31,14 +31,14 @@ namespace Core.Runtime.Objects
 
             if (member!.Is<IBindable>(out var bindable))
                 return bindable.Bind(compiler, @object);
-            else if (member.Is<ICOProxy>(out var proxy))
-                return proxy.Apply(obj =>
-                {
-                    if (obj.Is<IBindable>(out var bindableProxy))
-                        return bindableProxy.Bind(compiler, @object);
-                    else
-                        return Result.Ok(obj);
-                });
+            //else if (member.Is<ICOProxy>(out var proxy))
+            //    return proxy.Apply(obj =>
+            //    {
+            //        if (obj.Is<IBindable>(out var bindableProxy))
+            //            return bindableProxy.Bind(compiler, @object);
+            //        else
+            //            return Result.Ok(obj);
+            //    });
 
             return Result.Ok(member);
         }

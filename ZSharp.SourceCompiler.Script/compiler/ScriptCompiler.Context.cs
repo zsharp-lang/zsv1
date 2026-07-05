@@ -2,6 +2,6 @@
 {
     partial class ScriptCompiler
     {
-        public Context Context { get; init; } = new();
+        public Context Context { get; } = Core.SourceCompiler.ModuleScope.Context;
     }
 }

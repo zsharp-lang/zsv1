@@ -8,7 +8,7 @@
             var context = new DocumentContext(document);
 
             List<CompilerObject> objects = new(node.Statements.Count);
-            List<Error> errors = new();
+            List<Error> errors = [];
 
             foreach (var statement in node.Statements)
             {
@@ -23,7 +23,7 @@
                 context.tasks.Reset();
             }
 
-            if (errors.Any())
+            if (errors.Count > 0)
                 return Result.Error(errors);
 
             return Result.Ok(document);

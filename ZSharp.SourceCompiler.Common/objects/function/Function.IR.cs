@@ -6,7 +6,7 @@
     {
         public IR.Function? IR { get; private set; }
 
-        void ICompileIRDefinitionIn<IR.Module>.CompileIRDefinition(Compiler.Compiler compiler, IR.Module owner, object? target)
+        void ICompileIRDefinitionIn<IR.Module>.CompileIRDefinition(ZSharp.Compiler.Compiler compiler, IR.Module owner, object? target)
         {
             if (
                 CompileIR(compiler, target)
@@ -22,10 +22,10 @@
             }
         }
 
-        IResult<IR.Function, Error> ICompileIRDefinitionAs<IR.Function>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
+        IResult<IR.Function, Error> ICompileIRDefinitionAs<IR.Function>.CompileIRDefinition(ZSharp.Compiler.Compiler compiler, object? target)
             => CompileIR(compiler, target);
 
-        private IResult<IR.Function, Error> CompileIR(Compiler.Compiler compiler, object? target)
+        private IResult<IR.Function, Error> CompileIR(ZSharp.Compiler.Compiler compiler, object? target)
         {
             if (ReturnType is null)
                 return Result<IR.Function>.Error(

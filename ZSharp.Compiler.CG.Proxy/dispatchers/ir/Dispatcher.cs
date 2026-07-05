@@ -5,13 +5,13 @@
         private readonly Compiler compiler = compiler;
         private IR @base;
 
-        private ref IR IR => ref compiler.IR;
+        private IR IR => compiler.IR;
 
         public void Apply()
         {
-            @base = compiler.IR;
+            @base = compiler.IR.Clone();
 
-            ref var ir = ref IR;
+            var ir = IR;
 
             ir.CompileCode = CompileCode;
             ir.DefinitionInCompiler = this;

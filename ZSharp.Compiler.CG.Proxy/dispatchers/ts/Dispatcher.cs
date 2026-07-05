@@ -7,9 +7,9 @@
 
         public void Apply()
         {
-            @base = compiler.TS;
+            @base = compiler.TS.Clone();
 
-            ref var ts = ref compiler.TS;
+            var ts = compiler.TS;
 
             ts.TypeOf = TypeOf;
         }

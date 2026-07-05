@@ -9,7 +9,7 @@ namespace ZSharp.SourceCompiler.Objects
     {
         internal readonly Collection<IParameter> parameters = [];
 
-        IEnumerable<CompilerObject> ISignature.Parameters(Compiler.Compiler compiler)
+        IEnumerable<CompilerObject> ISignature.Parameters(ZSharp.Compiler.Compiler compiler)
             => parameters.Cast<CompilerObject>();
     }
 }

@@ -10,13 +10,13 @@ namespace ZSharp.SourceCompiler
 
         public IStringImporter? DefaultImporter { get; set; }
 
-        public IResult Import(string source)
+        public IResult<HIR.Expression, Error> Import(string source)
         {
             var parts = source.Split(':', count: 2, options: StringSplitOptions.TrimEntries);
             if (parts.Length > 1)
             {
                 if (!customStringImporters.TryGetValue(parts[0], out var importer))
-                    return Result<CompilerObject>.Error(
+                    return Result<HIR.Expression>.Error(
                         $"No string importer registered for prefix '{parts[0]}'."
                     );
 
@@ -24,13 +24,13 @@ namespace ZSharp.SourceCompiler
             }
 
             if (parts.Length == 0)
-                return Result<CompilerObject>.Error("Source string is empty.");
+                return Result<HIR.Expression>.Error("Source string is empty.");
 
             if (DefaultImporter is null)
-                return Result<CompilerObject>.Error("No default string importer is set.");
+                return Result<HIR.Expression>.Error("No default string importer is set.");
 
             if (DefaultImporter == this)
-                return Result<CompilerObject>.Error("Default string importer cannot be itself.");
+                return Result<HIR.Expression>.Error("Default string importer cannot be itself.");
 
             return DefaultImporter.Import(parts[0]);
         }
@@ -43,5 +43,8 @@ namespace ZSharp.SourceCompiler
                 throw new ArgumentNullException(nameof(importer), "Importer cannot be null.");
             customStringImporters[prefix] = importer;
         }
+
+        public void RegisterImporter(string prefix, ICOStringImporter importer)
+            => RegisterImporter(prefix, new COStringImporterAdapter(importer));
     }
 }

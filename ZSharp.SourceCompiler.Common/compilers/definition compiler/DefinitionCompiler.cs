@@ -5,7 +5,7 @@
         Func<AST.Expression, IResult> compileExpression
     )
     {
-        private readonly Compiler.Compiler compiler = interpreter.Compiler;
+        private readonly ZSharp.Compiler.Compiler compiler = interpreter.Compiler;
 
         private readonly Interpreter.Interpreter interpreter = interpreter;
 

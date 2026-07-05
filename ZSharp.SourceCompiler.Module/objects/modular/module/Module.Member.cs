@@ -15,7 +15,7 @@
             return Result.Ok(member);
         }
 
-        IResult ICTGetMember<string>.Member(Compiler.Compiler compiler, string member)
+        IResult ICTGetMember<string>.Member(ZSharp.Compiler.Compiler compiler, string member)
         {
             if (members.TryGetValue(member, out var obj))
                 return Result<CompilerObject>.Ok(obj);

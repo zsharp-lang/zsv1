@@ -5,10 +5,10 @@
     {
         public IR.Function? IR { get; private set; }
 
-        IResult<IR.Function, Error> ICompileIRDefinitionAs<IR.Function>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
+        IResult<IR.Function, Error> ICompileIRDefinitionAs<IR.Function>.CompileIRDefinition(ZSharp.Compiler.Compiler compiler, object? target)
             => CompileIR(compiler, target);
 
-        private IResult<IR.Function, Error> CompileIR(Compiler.Compiler compiler, object? target)
+        private IResult<IR.Function, Error> CompileIR(ZSharp.Compiler.Compiler compiler, object? target)
         {
             if (
                 compiler.IR.CompileType(compiler.TS.Void, target)

@@ -2,6 +2,6 @@
 {
     public partial class CG()
     {
-        
+        public CG Clone() => (CG)MemberwiseClone();
     }
 }

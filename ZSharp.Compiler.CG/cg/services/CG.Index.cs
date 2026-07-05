@@ -9,10 +9,10 @@
 
         public SetIndex SetIndex { get; set; } = Dispatcher.Index;
 
-        public readonly IResult Index(CompilerObject @object, Argument[] arguments)
+        public IResult Index(CompilerObject @object, Argument[] arguments)
             => GetIndex(@object, arguments);
 
-        public readonly IResult Index(CompilerObject @object, Argument[] arguments, CompilerObject value)
+        public IResult Index(CompilerObject @object, Argument[] arguments, CompilerObject value)
             => SetIndex(@object, arguments, value);
     }
 }

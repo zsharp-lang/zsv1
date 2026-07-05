@@ -37,7 +37,7 @@
         {
             tasks.RunUntilComplete();
 
-            CompilerObject metaClass = Interpreter.Compiler.OOP.DefaultMetaclass;
+            CompilerObject? metaClass = null;
 
             if (
                 Node.Of is not null &&
@@ -48,7 +48,7 @@
                 Error($"Failed to compile metaclass expression: {error}", new NodeLogOrigin(Node.Of));
             else if (
                 Interpreter.Compiler.CG.Call(
-                    metaClass, [
+                    metaClass!, [
                         new(Interpreter.ILLoader.Expose(Interpreter.Compiler)), 
                         new(Interpreter.ILLoader.Expose(Spec))
                     ]

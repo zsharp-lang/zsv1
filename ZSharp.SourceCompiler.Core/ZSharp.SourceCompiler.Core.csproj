@@ -9,7 +9,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />
+    <ProjectReference Include="..\ZSharp.HIR\ZSharp.HIR.csproj" />
     <ProjectReference Include="..\ZSharp.Interpreter\ZSharp.Interpreter.csproj" />
+    <ProjectReference Include="..\ZSharp.Library.Core.Runtime\ZSharp.Library.Core.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

@@ -5,7 +5,7 @@
     {
         public IR.Module? IR { get; private set; }
 
-        IResult<IR.Module, Error> ICompileIRDefinitionAs<IR.Module>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
+        IResult<IR.Module, Error> ICompileIRDefinitionAs<IR.Module>.CompileIRDefinition(ZSharp.Compiler.Compiler compiler, object? target)
         {
             IR ??= new(Name);
 

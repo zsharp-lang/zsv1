@@ -9,9 +9,9 @@
 
         public void Apply()
         {
-            @base = compiler.CG;
+            @base = compiler.CG.Clone();
 
-            ref var cg = ref CG;
+            var cg = CG;
 
             cg.Call = Call;
             cg.Cast = Cast;

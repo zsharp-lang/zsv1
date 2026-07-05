@@ -3,6 +3,6 @@
     partial class ModuleScope
     {
         [Alias("cg")]
-        public static ZSharp.Compiler.CG CG = null!;
+        public static ZSharp.Compiler.CG? CG = null!;
     }
 }

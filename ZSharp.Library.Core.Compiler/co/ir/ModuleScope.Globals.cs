@@ -3,6 +3,6 @@
     partial class ModuleScope
     {
         [Alias("ir")]
-        public static ZSharp.Compiler.IR IR = null!;
+        public static ZSharp.Compiler.IR? IR = null!;
     }
 }

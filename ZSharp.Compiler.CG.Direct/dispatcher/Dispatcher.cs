@@ -7,9 +7,9 @@
 
         public void Apply()
         {
-            @base = compiler.CG;
+            @base = compiler.CG.Clone();
 
-            ref var cg = ref compiler.CG;
+            var cg = compiler.CG;
 
             cg.Call = Call;
             cg.Cast = Cast;

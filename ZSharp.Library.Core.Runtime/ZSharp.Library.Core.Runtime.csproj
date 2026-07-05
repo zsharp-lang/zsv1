@@ -8,16 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Core\ZSharp.Compiler.Core.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
     <ProjectReference Include="..\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
     <ProjectReference Include="..\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />
     <ProjectReference Include="..\ZSharp.Importer.RT\ZSharp.Importer.RT.csproj" />
-    <ProjectReference Include="..\ZSharp.Library.Core.Compiler\ZSharp.Library.Core.Compiler.csproj" />
     <ProjectReference Include="..\ZSharp.Platform.Runtime\ZSharp.Platform.Runtime.csproj" />
-    <ProjectReference Include="..\ZSharp.SourceCompiler.Core\ZSharp.SourceCompiler.Core.csproj" />
   </ItemGroup>
 
 </Project>

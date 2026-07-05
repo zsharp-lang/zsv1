@@ -5,7 +5,7 @@ namespace ZSharp.SourceCompiler.Objects
     partial class Function
         : ICTCallable
     {
-        IResult ICTCallable.Call(Compiler.Compiler compiler, Argument[] arguments)
+        IResult ICTCallable.Call(ZSharp.Compiler.Compiler compiler, Argument[] arguments)
         {
             IRCode result = new();
 

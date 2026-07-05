@@ -4,12 +4,12 @@ using ZSharp.Compiler;
 namespace ZSharp.SourceCompiler.Script
 {
     public sealed class ScopeContext()
-        : IContext
+        : ZSharp.Compiler.IContext
         , IScopeContext
     {
         private readonly Mapping<string, CompilerObject> scope = [];
 
-        public IContext? Parent { get; set; }
+        public ZSharp.Compiler.IContext? Parent { get; set; }
 
         public IResult Add(string name, CompilerObject value)
         {

@@ -2,6 +2,6 @@
 {
     public interface IStringImporter
     {
-        public IResult Import(string source);
+        public IResult<HIR.Expression, Error> Import(string source);
     }
 }

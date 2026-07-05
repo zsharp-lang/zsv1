@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.SourceCompiler
 {
-    partial class Interpreter
+    partial class Interpreter2
     {
         public Error? Execute(AST.Statement statement)
         {

@@ -7,9 +7,9 @@
 
         public void Apply()
         {
-            @base = compiler.IR;
+            @base = compiler.IR.Clone();
 
-            ref var ir = ref compiler.IR;
+            var ir = compiler.IR;
 
             ir.CompileCode = CompileCode;
             ir.DefinitionInCompiler = this;

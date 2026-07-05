@@ -1,6 +1,4 @@
-﻿using ZSharp.Compiler;
-
-namespace ZSharp.SourceCompiler
+﻿namespace ZSharp.SourceCompiler
 {
     partial class Context
     {

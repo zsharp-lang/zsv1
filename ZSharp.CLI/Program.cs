@@ -179,6 +179,9 @@ Core.Compiler.ModuleScope.compiler = interpreter.Compiler;
 Core.Runtime.ModuleScope.Runtime = interpreter.Runtime;
 Core.Runtime.ModuleScope.RTLoader = interpreter.RTLoader;
 Core.Runtime.ModuleScope.ILLoader = interpreter.ILLoader;
+Core.SourceCompiler.ModuleScope.Context = new();
+
+ImportSystem.InstallRTLoader();
 
 new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(interpreter.Compiler).Apply();
 new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(interpreter.Compiler).Apply();
@@ -193,10 +196,13 @@ new ZSharp.Compiler.IRDispatchers.Proxy.Dispatcher(interpreter.Compiler).Apply()
 new ZSharp.Compiler.EvaluatorDispatchers.Direct.Dispatcher(interpreter.Compiler).Apply();
 new ZSharp.Compiler.EvaluatorDispatchers.IR.Dispatcher(interpreter.Compiler, interpreter.Runtime, interpreter.RTLoader).Apply();
 
-var scriptCompiler = new ScriptCompiler(interpreter, documentNode, filePath);
-interpreter.Compiler.OOP.DefaultMetaclass = interpreter.ILLoader.Expose(
-    (Delegate)DefaultMetaClass
-);
+var scriptCompiler = new ScriptCompiler(documentNode, filePath)
+{
+    Interpreter = interpreter
+};
+//interpreter.Compiler.OOP.DefaultMetaclass = interpreter.ILLoader.Expose(
+//    (Delegate)DefaultMetaClass
+//);
 
 interpreter.ILLoader.OnLoadOperator = (@operator, method) =>
 {
@@ -258,10 +264,10 @@ coreImporter.Add(
     "runtime",
     interpreter.ILLoader.LoadModule(typeof(Core.Runtime.ModuleScope).Module)
 );
-coreImporter.Add(
-    "language-extensions",
-    interpreter.ILLoader.LoadModule(typeof(Core.LanguageExtensions.ModuleScope).Module)
-);
+//coreImporter.Add(
+//    "language-extensions",
+//    interpreter.ILLoader.LoadModule(typeof(Core.LanguageExtensions.ModuleScope).Module)
+//);
 
 #endregion
 

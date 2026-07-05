@@ -13,7 +13,7 @@ namespace Core.Runtime.Objects
     {
         private ZSharp.IR.Class? IR { get; set; }
 
-        private IRClassResult GetIR(Compiler compiler, object? target)
+        private IRClassResult GetIR(TheCompiler compiler, object? target)
         {
             if (IR is not null) return IRClassResult.Ok(IR);
 
@@ -44,10 +44,10 @@ namespace Core.Runtime.Objects
             return IRClassResult.Ok(IR);
         }
 
-        IResult<ZSharp.IR.Class, Error> ICompileIRDefinitionAs<ZSharp.IR.Class>.CompileIRDefinition(Compiler compiler, object? target)
+        IResult<ZSharp.IR.Class, Error> ICompileIRDefinitionAs<ZSharp.IR.Class>.CompileIRDefinition(TheCompiler compiler, object? target)
             => GetIR(compiler, target);
 
-        void ICompileIRDefinitionIn<Module>.CompileIRDefinition(Compiler compiler, Module owner, object? target)
+        void ICompileIRDefinitionIn<Module>.CompileIRDefinition(TheCompiler compiler, Module owner, object? target)
         {
             var result = GetIR(compiler, target);
 
@@ -55,7 +55,7 @@ namespace Core.Runtime.Objects
                 owner.Types.Add(ir);
         }
 
-        IResult<TypeReference<ZSharp.IR.Class>, Error> ICompileIRType<TypeReference<ZSharp.IR.Class>>.CompileIRType(Compiler compiler, object? target)
+        IResult<TypeReference<ZSharp.IR.Class>, Error> ICompileIRType<TypeReference<ZSharp.IR.Class>>.CompileIRType(TheCompiler compiler, object? target)
         {
             if (
                 GetIR(compiler, target)

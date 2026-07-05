@@ -6,7 +6,7 @@
     {
         public IR.Global? IR { get; private set; }
 
-        IResult<IR.Global, Error> ICompileIRDefinitionAs<IR.Global>.CompileIRDefinition(Compiler.Compiler compiler, object? target)
+        IResult<IR.Global, Error> ICompileIRDefinitionAs<IR.Global>.CompileIRDefinition(ZSharp.Compiler.Compiler compiler, object? target)
         {
             if (IR is null)
             {
@@ -26,7 +26,7 @@
             return Result<IR.Global>.Ok(IR);
         }
 
-        void ICompileIRDefinitionIn<IR.Module>.CompileIRDefinition(Compiler.Compiler compiler, IR.Module owner, object? target)
+        void ICompileIRDefinitionIn<IR.Module>.CompileIRDefinition(ZSharp.Compiler.Compiler compiler, IR.Module owner, object? target)
         {
             var result = compiler.IR.CompileDefinition<IR.Global>(this, target);
 

@@ -26,8 +26,8 @@
     <ProjectReference Include="..\ZSharp.Compiler.TS.Static\ZSharp.Compiler.TS.Static.csproj" />
     <ProjectReference Include="..\ZSharp.Interpreter\ZSharp.Interpreter.csproj" />
     <ProjectReference Include="..\ZSharp.Library.Core.Compiler\ZSharp.Library.Core.Compiler.csproj" />
-    <ProjectReference Include="..\ZSharp.Library.Core.LanguageExtensions\ZSharp.Library.Core.LanguageExtensions.csproj" />
     <ProjectReference Include="..\ZSharp.Library.Core.Runtime\ZSharp.Library.Core.Runtime.csproj" />
+    <ProjectReference Include="..\ZSharp.Library.Core.SourceCompiler\ZSharp.Library.Core.SourceCompiler.csproj" />
     <ProjectReference Include="..\ZSharp.Library.Standard.FileSystem\ZSharp.Library.Standard.FileSystem.csproj" />
     <ProjectReference Include="..\ZSharp.Library.Standard.IO\ZSharp.Library.Standard.IO.csproj" />
     <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />

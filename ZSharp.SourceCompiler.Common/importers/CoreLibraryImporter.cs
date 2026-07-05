@@ -1,14 +1,14 @@
 ﻿namespace ZSharp.SourceCompiler
 {
     public sealed class CoreLibraryImporter
-        : IStringImporter
+        : ICOStringImporter
     {
         private readonly Dictionary<string, CompilerObject> libraries = [];
 
         public void Add(string name, CompilerObject obj)
             => libraries.Add(name, obj);
 
-        IResult IStringImporter.Import(string source)
+        IResult ICOStringImporter.Import(string source)
         {
             if (libraries.TryGetValue(source, out var result))
                 return Result<CompilerObject>.Ok(result);

@@ -5,7 +5,7 @@ namespace Core.Runtime.Objects
     partial class Class
         : ICTCallable
     {
-        IResult ICTCallable.Call(Compiler compiler, Argument[] arguments)
+        IResult ICTCallable.Call(TheCompiler compiler, Argument[] arguments)
         {
             if (Constructor is null)
                 return Result.Error("Class does not have a constructor.");
