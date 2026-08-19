@@ -10,11 +10,10 @@ identity.
 
 Both approaches have their strengths, and Z# want it all.
 
-So, this is how we do it. If the type definition appears as a
-standalone `DefinitionStatement`, we treat it as an identity
-and compile it as a type. 
 If the type definition is cast to its meta-type, it is *not* an
-identity, and *cannot* be used as a type.
+identity, and *cannot* be used as a type. Otherwise, regardless
+of where in an expression a type definition appears, it is an
+identity.
 
 Let's see:
 ```

@@ -43,6 +43,7 @@ a normal recursive function makes more sense.
 
 After we've successfully applied all the interactions we want, we want to produce
 some object we can actually work with. For example, some form of platform-agnostic
-IR (see `design/lir.md` for more details).
+LIR (see `design/lir.md` for more details).
 
 The way we can do it, as we do with COs, is to define an additional API.
+The API defines endpoints to generate the output representation.

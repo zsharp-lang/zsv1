@@ -49,6 +49,12 @@ into ORS, as part of the compilation process.
 
 The script runner iterates over each statement in a document
 and executes them one-by-one.
+
+> NOTE: This doesn't contradict type definition compilation
+> since script code doesn't support forward referencing.
+> Forward referencing is only supported inside modules and
+> type definitions.
+
 Now, since Z# *is* statically type-safe, the runner should
 first compile a statement then execute it.
 
@@ -61,4 +67,16 @@ of ORS entities, but go through the default execution
 chain for the rest.
 
 We'll first explain what the default execution chain is.
-Recall that Z# defines its own ORS
+Recall that Z# defines its own ORS entities. Z# also
+provides OIS importers for them, which basically apply
+CG's API endpoints directly. That means we can go from
+Z# ORS -> CO. Then, we can go from CO -> LIR via the
+LIR API. Then, the runtime can directly load that LIR.
+
+This is how Z# can execute directly on top of .NET.
+
+Now, for some types of ORS nodes we don't want that
+because going this way requires full compilation.
+However, script code should support conditional code
+execution without compiling both branches. That's why
+the ORS interpreter needs to special case some nodes.

@@ -33,3 +33,25 @@ and populates it. The code object *must not* contain references to the
 AST node, since that nodes will be gone by the time the code actually runs.
 
 This is oddly similar to `reification.md`.
+
+## Compilation
+
+Compiling a type definition requires a bit of play. On the one hand we want
+forward references. On the other hand, we need to bind something concrete
+so a definition `A` which references `B` can know whether `B` actually fits
+in its slots, for example.
+
+The way we can do both is quite simple. Recall that meta-compilers produce
+ORS *code* object, not the meta-type instance itself. That code object 
+produces the meta-type instance when it is evaluated.
+
+So we need to do it in 2 passes.
+First pass we compile all normally, except that when we see a type
+defintion we only create a new variable in scope with its type set to the
+meta-type of the defintion. We then add a task for later.
+The second pass executes all deferred tasks. Each task actually calls the
+meta-compiler and uses the returned ORS code object as the initial value of
+the variable associated with that definition.
+
+This has an important consequence. Compile-time code *cannot inspect* type
+definitions because they don't actually exist during the first pass.
