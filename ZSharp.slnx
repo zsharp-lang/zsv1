@@ -3,6 +3,14 @@
   <Folder Name="/src/Common/">
     <Project Path="src/Common/CommonZ/CommonZ.csproj" />
   </Folder>
+  <Folder Name="/src/Compiler/">
+    <Project Path="src/Compiler/ZSharp.Compiler.CG.Direct/ZSharp.Compiler.CG.Direct.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.CG.Typed/ZSharp.Compiler.CG.Typed.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.CG/ZSharp.Compiler.CG.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.Core/ZSharp.Compiler.Core.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.TS.Static/ZSharp.Compiler.TS.Static.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.TS/ZSharp.Compiler.TS.csproj" />
+  </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/ZSharp.HIR/ZSharp.HIR.csproj" />
     <Project Path="src/Core/ZSharp.LIR/ZSharp.LIR.csproj" />
@@ -13,5 +21,8 @@
     <Project Path="src/Lang/ZSharp.Parser/ZSharp.Parser.csproj" />
     <Project Path="src/Lang/ZSharp.Text/ZSharp.Text.csproj" />
     <Project Path="src/Lang/ZSharp.Tokenizer/ZSharp.Tokenizer.csproj" />
+  </Folder>
+  <Folder Name="/src/Library/">
+    <Project Path="src/Library/ZSharp.Library.Core.Compiler/ZSharp.Library.Core.Compiler.csproj" />
   </Folder>
 </Solution>

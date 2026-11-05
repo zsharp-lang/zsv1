@@ -150,6 +150,18 @@ REIs.
   HIR -> MIR loader, that is the CLI and the CLR extension. Everyone else uses
   the REI.
 
+### CG and TS
+
+- `ZSharp.Compiler.Core` holds what the REIs share, including the known
+  `UnsupportedError`. A dispatcher falls through only on that error, so a real
+  failure is never replaced by a later dispatcher.
+- `CG` and `TS` are plain instance classes and know nothing about a current
+  instance. Dispatchers receive the instances they use.
+- `CG` and `TS` know nothing about LIR, so `MatchResult` carries no instructions.
+- `TS` names no types. An extension or the runtime exposes the ones it wants.
+- `CG.Typed` asks `TS.IsAssignableTo` whether a cast is a no-op, rather than
+  comparing COs or asking a separate reflection service.
+
 ### HIR -> MIR
 
 There are three entrypoints, one per concept. Extensions such as `Expression`
@@ -180,8 +192,10 @@ The toolchain objects are reached from Z# through the `core:` prefix:
 import { cg } from "core:compiler";
 ```
 
-`CG` is an instance, and the pointer to the current one is static. Z# sees a
-singleton and so does C#. There is no scoping: a compilation never needs a
+`CG` is an instance, and the pointer to the current one is static. That pointer
+lives in the library behind `core:compiler`, not in the API. Z# reaches it by
+importing the module and C# reaches it through the library, so both see the same
+singleton. There is no scoping: a compilation never needs a
 different setup, because a library is compiled when it is installed (not our
 responsibility) and only loaded on import. A library can export compile-time
 utilities, which can be imported and used at compile time.
@@ -246,6 +260,7 @@ src/
   Core/      ZSharp.HIR, ZSharp.MIR, ZSharp.LIR
   Compiler/  CG and TS APIs and implementations
   Lang/      Text, Tokenizer, AST, Parser, AST -> HIR
+  Library/   What `core:` and `std:` expose
   Packages/  DotNet (CLR entities, pure structure, HIR level)
   Runtime/   IL loader, LIR -> IL
   CLI/
