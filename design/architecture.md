@@ -289,8 +289,79 @@ node and emits HIR.
 per node type. `ZSharp.Lang.ZSharp` is the built-in language: its `Language` class
 and `Syntax` grammar only register things, as any extension would.
 
+### Defining Z# in Z#
+
+The language can be defined in itself. The bootstrap needs only a minimal set of
+AST nodes and the CLR metatypes. A CLR Class metatype can define new .NET types, so
+it can define new metatypes, the first of which can be `Class`.
+
+CLR Class compiles a function as a CLR method and `let` as a CLR field. Standalone
+functions therefore do not exist until `std:oop` and `std:functions` are written in
+Z# and register an `AST.Function` handler for module-level and document-level code.
+
+So the minimal bootstrap is the ability to define and express CLR entities, modules
+included. At its minimum, Z# is an interpreted language running on the CLR, though
+it is not defined that way, so CLR types are imported from `core:runtime`.
+
+`Package.DotNet` supplies HIR that directly represents .NET entities. The runtime
+supplies the ability to load them as COs, so they take part in code generation and
+in the runtime itself.
+
+A meta-type extends the AST compiler. It receives the AST and is responsible for
+compiling it to HIR that evaluates to the HIR representing the original definition.
+A `fun` inside a CLR class is special only because that meta-type handles it, so
+the AST compiler needs no context-dependent handlers.
+
+The `std:` libraries are written separately in Z#, as a proof of concept, and are
+compiled to DLLs or a custom file format that the CLI loads dynamically.
+
+### Definitions
+
 `class`, `module` and `fun` are all definitions sent to a builder, so there is one
-path for them. `zsv1`'s separate script, module and class compilers do not carry
+path for them. Every `AST.Definition` compiles to code that produces the definition
+object as HIR.
+
+A definition that is not cast has identity. Casting a definition node to its
+underlying type is code generation: the object is structure only and can't be used
+as a type. Python builds a class anew on each call and C# gives it one identity. Z#
+wants both.
+
+Casting an existing type to its underlying type is reflection, which is an ordinary
+cast. Code generation can construct entire modules, and they aren't usable until
+they are explicitly loaded through the HIR -> MIR -> LIR -> platform chain to be
+used. This is essentially how a build script works.
+
+The cast handler is the one accepted exception to definitions being invisible to
+the compiler: it checks whether its operand is a definition. So the definition AST
+compiler returns HIR that also contains the underlying type. Decorators are a
+possible alternative. A decorator is a function call that receives its operand as
+an HIR object, right after the object is constructed, and could apply to expressions
+and statements as well as definitions, like typed macros.
+
+Timing is relative, not compile time versus runtime. A definition that is not cast
+is built at the same time as whatever encloses it. A top-level identity definition
+is then executed, loaded as a CO, lowered and loaded into the runtime. A definition
+inside another definition's body has one identity per enclosing object.
+
+All statements at module level, including definition statements, are compiled and
+executed when the module object is built, by the HIR code that constructs it. The
+same goes for class level, at least for `Class`.
+
+A definition always binds its name inside itself. A definition statement also binds
+it in the enclosing scope, but a definition expression does not.
+
+### Reification
+
+Reification is code that builds code. It works on HIR through an REI, because it is
+about describing structure as code and COs are virtually structureless. A cast
+definition inside a body must happen when that body runs, so instead of constructing
+the object, the enclosing code adds HIR to the body that will construct it. Reference to an existing definition object
+becomes a direct `Get` of that object, not a name. Reification nests, and repeats a
+small set of `HIR.Code` nodes such as `Call`, `Argument` and constants. A definition
+reifies once, so further casts do nothing.
+
+A definition that captures a parameter must be cast, because the parameter does not
+exist when an identity definition is built. `zsv1`'s separate script, module and class compilers do not carry
 over. Project discovery belongs in a library that `build.zs` calls.
 
 ## Extensions
