@@ -14,7 +14,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             var candidates = il
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .Where(method => method.Name == member)
+                .Where(method => (method.GetCustomAttribute<AliasAttribute>()?.Name ?? method.Name) == member)
                 .ToArray();
 
             return candidates switch

@@ -27,7 +27,10 @@ namespace ZSharp.Importer.ILLoader
             loader.Types.Register<Package.DotNet.Class>(LoadClass);
 
             code.Expressions.Register<HIR.Code.StringLiteral>(literal =>
-                Result.Ok(new Objects.StringLiteral(literal.Value, Handle(typeof(string))))
+                Result.Ok(new Objects.Literal(literal.Value, Handle(typeof(string))))
+            );
+            code.Expressions.Register<HIR.Code.BooleanLiteral>(literal =>
+                Result.Ok(new Objects.Literal(literal.Value, Handle(typeof(bool))))
             );
         }
 

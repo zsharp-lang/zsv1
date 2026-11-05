@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/src/" />
+  <Folder Name="/src/CLI/">
+    <Project Path="src/CLI/ZSharp.CLI/ZSharp.CLI.csproj" />
+  </Folder>
   <Folder Name="/src/Common/">
     <Project Path="src/Common/CommonZ/CommonZ.csproj" />
   </Folder>
@@ -17,6 +20,8 @@
     <Project Path="src/Compiler/ZSharp.Compiler.IR/ZSharp.Compiler.IR.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.TS.Static/ZSharp.Compiler.TS.Static.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.TS/ZSharp.Compiler.TS.csproj" />
+    <Project Path="src/Compiler/ZSharp.HIRRunner.Mapped/ZSharp.HIRRunner.Mapped.csproj" />
+    <Project Path="src/Compiler/ZSharp.HIRRunner/ZSharp.HIRRunner.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/ZSharp.HIR/ZSharp.HIR.csproj" />
@@ -26,19 +31,27 @@
   <Folder Name="/src/HIR/">
     <Project Path="src/HIR/ZSharp.HIR.Code/ZSharp.HIR.Code.csproj" />
   </Folder>
+  <Folder Name="/src/Importers/">
+    <Project Path="src/Importers/ZSharp.Importer.String/ZSharp.Importer.String.csproj" />
+  </Folder>
   <Folder Name="/src/Lang/">
     <Project Path="src/Lang/ZSharp.AST/ZSharp.AST.csproj" />
+    <Project Path="src/Lang/ZSharp.Compiler.AST.Mapped/ZSharp.Compiler.AST.Mapped.csproj" />
+    <Project Path="src/Lang/ZSharp.Compiler.AST/ZSharp.Compiler.AST.csproj" />
+    <Project Path="src/Lang/ZSharp.Lang.ZSharp/ZSharp.Lang.ZSharp.csproj" />
     <Project Path="src/Lang/ZSharp.Parser/ZSharp.Parser.csproj" />
     <Project Path="src/Lang/ZSharp.Text/ZSharp.Text.csproj" />
     <Project Path="src/Lang/ZSharp.Tokenizer/ZSharp.Tokenizer.csproj" />
   </Folder>
   <Folder Name="/src/Library/">
     <Project Path="src/Library/ZSharp.Library.Core.Compiler/ZSharp.Library.Core.Compiler.csproj" />
+    <Project Path="src/Library/ZSharp.Library.Standard.IO/ZSharp.Library.Standard.IO.csproj" />
   </Folder>
   <Folder Name="/src/Packages/">
     <Project Path="src/Packages/ZSharp.Package.DotNet/ZSharp.Package.DotNet.csproj" />
   </Folder>
   <Folder Name="/src/Runtime/">
+    <Project Path="src/Runtime/ZSharp.Importer.ILLoader.Attributes/ZSharp.Importer.ILLoader.Attributes.csproj" />
     <Project Path="src/Runtime/ZSharp.Importer.ILLoader/ZSharp.Importer.ILLoader.csproj" />
     <Project Path="src/Runtime/ZSharp.Platform.Runtime/ZSharp.Platform.Runtime.csproj" />
   </Folder>

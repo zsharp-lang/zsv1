@@ -5,9 +5,15 @@ namespace ZSharp.Compiler
     /// </summary>
     public static class CodeLoaders
     {
-        public static void Register(MappedCodeLoader mapped, HIRCodeLoader code, HIRLoader loader, CG cg)
+        public static void Register(MappedCodeLoader mapped, MappedLoader instances, HIRCodeLoader code, HIRLoader loader, CG cg)
         {
             var expressions = mapped.Expressions;
+
+            instances.Instances.Register<HIR.Code.Reference>(reference =>
+                reference.Value is null
+                    ? Result.Error("A reference was used before it was set.")
+                    : loader.LoadInstance(reference.Value)
+            );
 
             expressions.Register<HIR.Code.Get>(get => loader.LoadInstance(get.Instance));
 

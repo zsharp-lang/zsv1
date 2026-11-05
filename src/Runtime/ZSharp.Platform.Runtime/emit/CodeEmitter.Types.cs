@@ -6,7 +6,7 @@ namespace ZSharp.Platform.Runtime
         /// Gets the type of an expression, or <see langword="null"/> if it produces
         /// no value.
         /// </summary>
-        private static LIR.Type? TypeOf(LIR.Expression expression)
+        internal static LIR.Type? TypeOf(LIR.Expression expression)
             => expression switch
             {
                 LIR.Constant node => node.Type,

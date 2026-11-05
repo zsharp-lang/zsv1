@@ -18,6 +18,9 @@ namespace ZSharp.Parser
             };
         }
 
+        public Statement ParseStatement(Parser parser)
+            => ParseContextItem(parser);
+
         protected override Statement ParseDefaultContextItem(Parser parser)
             => LangParser.ParseExpressionStatement(parser);
     }

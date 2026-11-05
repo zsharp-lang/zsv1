@@ -273,7 +273,25 @@ Parsing and execution both go statement by statement, so an earlier statement
 can extend the syntax of later ones.
 
 Compile-time evaluation is an operation, not an API of its own: the Evaluator
-service is not carried over. The source layer owns evaluation at HIR level.
+service is not carried over. `HIRRunner` is the REI for running HIR immediately,
+and it knows nothing about where the HIR came from. `MappedRunner` implements it
+with registered statement runners, which is how control flow runs and how an
+extension adds statements that act at compile time. Anything else is loaded and
+handed to functions the CLI supplies, which lower it and run it.
+
+## Z# frontend
+
+Meta-types are a Z# feature. They exist to construct HIR, so it makes sense for
+them to be bound to a specific source. A meta compiler takes a context and an AST
+node and emits HIR.
+
+`ASTCompiler` is the AST -> HIR REI, and `MappedASTCompiler` registers a compiler
+per node type. `ZSharp.Lang.ZSharp` is the built-in language: its `Language` class
+and `Syntax` grammar only register things, as any extension would.
+
+`class`, `module` and `fun` are all definitions sent to a builder, so there is one
+path for them. `zsv1`'s separate script, module and class compilers do not carry
+over. Project discovery belongs in a library that `build.zs` calls.
 
 ## Extensions
 
@@ -326,8 +344,9 @@ src/
   Common/    CommonZ
   Core/      ZSharp.HIR, ZSharp.MIR, ZSharp.LIR
   HIR/       Language-neutral HIR extensions, such as ZSharp.HIR.Code
-  Compiler/  CG and TS APIs and implementations
-  Lang/      Text, Tokenizer, AST, Parser, AST -> HIR
+  Compiler/  The CG, TS, IR, loader and runner REIs and implementations
+  Importers/ Language-neutral importers, such as the string importer
+  Lang/      Text, Tokenizer, AST, Parser, AST -> HIR, the Z# language
   Library/   What `core:` and `std:` expose
   Packages/  DotNet (CLR entities, pure structure, HIR level)
   Runtime/   IL loader, LIR -> IL

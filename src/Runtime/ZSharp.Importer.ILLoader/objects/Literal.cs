@@ -1,6 +1,6 @@
 namespace ZSharp.Importer.ILLoader.Objects
 {
-    internal sealed class StringLiteral(string value, LIR.TypeHandle type)
+    internal sealed class Literal(object value, LIR.TypeHandle type)
         : CompilerObject
         , ICompileIRExpression
     {

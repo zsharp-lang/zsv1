@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.Platform.Runtime\ZSharp.Platform.Runtime.csproj" />
+    <ProjectReference Include="..\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
     <ProjectReference Include="..\..\Packages\ZSharp.Package.DotNet\ZSharp.Package.DotNet.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader.Code.Mapped\ZSharp.Compiler.HIRLoader.Code.Mapped.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
