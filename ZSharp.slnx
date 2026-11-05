@@ -12,6 +12,8 @@
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Code/ZSharp.Compiler.HIRLoader.Code.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Mapped/ZSharp.Compiler.HIRLoader.Mapped.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader/ZSharp.Compiler.HIRLoader.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.IR.Static/ZSharp.Compiler.IR.Static.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.IR/ZSharp.Compiler.IR.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.TS.Static/ZSharp.Compiler.TS.Static.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.TS/ZSharp.Compiler.TS.csproj" />
   </Folder>

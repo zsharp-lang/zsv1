@@ -175,6 +175,22 @@ REIs.
 - `CG.Typed` asks `TS.IsAssignableTo` whether a cast is a no-op, rather than
   comparing COs or asking a separate reflection service.
 
+### IR
+
+`IR` is the MIR -> LIR REI. Every entrypoint takes an optional target. Its
+entrypoints ask different questions, so they stay separate:
+
+| Entrypoint | Question |
+|------------|----------|
+| `CompileExpression`, `CompileStatement` | What code does this produce where it is used? |
+| `CompileType` | What goes in a type slot? It need not be the definition: a class may define a `Structure` and have a `Reference` to it as its type. |
+| `CompileDefinition<T>(object)` | What entity does this define? It places nothing, so a reference can reach an entity before its owner places it. Imported objects have none. |
+| `CompileDefinition(object, owner)` | Place this in that owner. The owner need not know what kinds its members are. It returns `null`, or why it was not placed. Being unsupported means there is nothing to place. |
+| `CompileReference<T>` | What does code use to refer to this? It may be something the object does not define, such as a handle. |
+
+`zsv1`'s `CompileTypeAs<T>` is not carried over. It existed to require a specific
+class-like type, such as a base class, and LIR has no base classes.
+
 ### HIR -> MIR
 
 `HIRLoader` is the REI, with three entrypoints, one per concept. Extensions add
