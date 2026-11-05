@@ -1,16 +1,18 @@
 ﻿using CommonZ;
 using System.Diagnostics.CodeAnalysis;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 public static class IResultExtensions
 {
     public static bool Ok<TResult, TError>(
         this IResult<TResult, TError> result,
-        [NotNullWhen(true)] out TResult? output
+        [MaybeNullWhen(false)] out TResult output
     )
         where TResult : class?
         where TError : class
-        => (output = result.IsOk ? result.Unwrap() : null) is not null;
+    {
+        output = result.IsOk ? result.Unwrap() : null;
+        return result.IsOk;
+    }
 
     public static bool Error<TResult, TError>(
         this IResult<TResult, TError> result,

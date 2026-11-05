@@ -1,5 +1,3 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
 namespace CommonZ
 {
     public sealed class Result<TResult, TError>
@@ -7,41 +5,41 @@ namespace CommonZ
         where TResult : class?
         where TError : class
     {
+        private readonly bool isOk;
         private readonly TResult? result;
         private readonly TError? error;
 
-        [MemberNotNullWhen(true, nameof(result))]
-        public bool IsOk => result is not null;
+        public bool IsOk => isOk;
 
-        [MemberNotNullWhen(true, nameof(error))]
-        public bool IsError => error is not null;
+        public bool IsError => !isOk;
 
-        private Result(TResult? result, TError? error)
+        private Result(bool isOk, TResult? result, TError? error)
         {
+            this.isOk = isOk;
             this.result = result;
             this.error = error;
         }
 
         public static Result<TResult, TError> Ok(TResult result)
-            => new(result, null);
+            => new(true, result, null);
 
         public static Result<TResult, TError> Error(TError error)
-            => new(null, error);
+            => new(false, null, error);
 
         TResult IResult<TResult, TError>.Unwrap()
-            => result ?? throw new InvalidOperationException(error!.ToString());
+            => isOk ? result! : throw new InvalidOperationException(error!.ToString());
 
         TError IResult<TResult, TError>.UnwrapError()
-            => error ?? throw new InvalidOperationException("Result is Ok");
+            => isOk ? throw new InvalidOperationException("Result is Ok.") : error!;
 
         IResult<R, TError> IResult<TResult, TError>.When<R>(Func<TResult, R> map)
-            => IsOk
-                ? Result<R, TError>.Ok(map(result))
+            => isOk
+                ? Result<R, TError>.Ok(map(result!))
                 : Result<R, TError>.Error(error!);
 
         IResult<TResult, E> IResult<TResult, TError>.Else<E>(Func<TError, E> map)
-            => IsOk
-                ? Result<TResult, E>.Ok(result)
+            => isOk
+                ? Result<TResult, E>.Ok(result!)
                 : Result<TResult, E>.Error(map(error!));
     }
 }

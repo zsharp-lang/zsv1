@@ -75,7 +75,7 @@ Capabilities are reached through `Is<T>`, which an object may override to
 forward them.
 
 `Result` and `Error` are not part of MIR, because other layers such as AST -> HIR
-use them too. They live under `src/Common`, and no core depends on them.
+use them too. They live in `CommonZ`, and no core depends on them.
 
 - COs are never compared by identity. Code uses the APIs on a CO and acts on
   the result.
