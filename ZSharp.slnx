@@ -8,6 +8,7 @@
     <Project Path="src/Compiler/ZSharp.Compiler.CG.Typed/ZSharp.Compiler.CG.Typed.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.CG/ZSharp.Compiler.CG.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.Core/ZSharp.Compiler.Core.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Code.CG/ZSharp.Compiler.HIRLoader.Code.CG.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Code.Mapped/ZSharp.Compiler.HIRLoader.Code.Mapped.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Code/ZSharp.Compiler.HIRLoader.Code.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Mapped/ZSharp.Compiler.HIRLoader.Mapped.csproj" />
@@ -34,7 +35,11 @@
   <Folder Name="/src/Library/">
     <Project Path="src/Library/ZSharp.Library.Core.Compiler/ZSharp.Library.Core.Compiler.csproj" />
   </Folder>
+  <Folder Name="/src/Packages/">
+    <Project Path="src/Packages/ZSharp.Package.DotNet/ZSharp.Package.DotNet.csproj" />
+  </Folder>
   <Folder Name="/src/Runtime/">
+    <Project Path="src/Runtime/ZSharp.Importer.ILLoader/ZSharp.Importer.ILLoader.csproj" />
     <Project Path="src/Runtime/ZSharp.Platform.Runtime/ZSharp.Platform.Runtime.csproj" />
   </Folder>
 </Solution>

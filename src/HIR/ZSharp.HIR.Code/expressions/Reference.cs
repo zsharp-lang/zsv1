@@ -1,12 +1,12 @@
 namespace ZSharp.HIR.Code
 {
     /// <summary>
-    /// Refers to an instance from inside code. The instance is resolved on use, so
-    /// it may not exist yet when the code is built.
+    /// Refers to an instance from inside code. The instance may not exist yet when
+    /// the code is built, so it can be set later.
     /// </summary>
-    public sealed class Reference(Func<Instance> reference)
+    public sealed class Reference
         : Instance
     {
-        public Instance Value => reference();
+        public Instance? Value { get; set; }
     }
 }

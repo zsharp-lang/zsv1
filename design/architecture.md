@@ -44,7 +44,9 @@ crossed only by external transformers.
 | LIR  | Compiling down to a target | Undecided                    |
 
 HIR and LIR are purely structural: nothing in them does anything other than
-change itself. Only MIR has behaviour.
+change itself. Only MIR has behaviour. That rules out laziness too: a node never
+holds a function to resolve later. Part of the reason for HIR's purity is that it
+is meant to be usable for runtime reflection in the future.
 
 ### HIR
 
@@ -225,6 +227,18 @@ Reaching a member of another module loads that member too.
 
 Mapping a function handle to emitted code is how arithmetic becomes an `add`
 instruction rather than a call.
+
+### IL loader
+
+`ZSharp.Importer.ILLoader` describes CLR entities as `Package.DotNet` HIR. The HIR
+holds no reflection, so the link back to the CLR stays in the loader: it pre-creates
+LIR handles, maps them on the runtime, and remembers which node they belong to. Its
+registered HIR -> MIR loaders use that map to return COs primed with those handles.
+
+COs can do anything, so laziness lives there. Reflecting a whole type's members up
+front would reach much of the BCL, so a class CO discovers members when asked.
+Because a CO holds only LIR, it does not depend on a particular runtime. Another
+.NET platform primes the same kind of CO its own way.
 
 ## Composition
 

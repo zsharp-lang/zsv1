@@ -399,3 +399,6 @@ FodyWeavers.xsd
 
 .lh/
 /ZSharpTest/test.zs
+
+# src/Packages holds Z# packages, not NuGet output.
+!src/Packages/*
