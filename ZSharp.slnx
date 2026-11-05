@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Common/">
+    <Project Path="src/Common/CommonZ/CommonZ.csproj" />
+  </Folder>
+  <Folder Name="/src/Core/">
+    <Project Path="src/Core/ZSharp.HIR/ZSharp.HIR.csproj" />
+    <Project Path="src/Core/ZSharp.LIR/ZSharp.LIR.csproj" />
+    <Project Path="src/Core/ZSharp.MIR/ZSharp.MIR.csproj" />
+  </Folder>
+  <Folder Name="/src/Lang/">
+    <Project Path="src/Lang/ZSharp.AST/ZSharp.AST.csproj" />
+    <Project Path="src/Lang/ZSharp.Parser/ZSharp.Parser.csproj" />
+    <Project Path="src/Lang/ZSharp.Text/ZSharp.Text.csproj" />
+    <Project Path="src/Lang/ZSharp.Tokenizer/ZSharp.Tokenizer.csproj" />
+  </Folder>
+</Solution>
