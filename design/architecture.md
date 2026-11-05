@@ -164,9 +164,13 @@ REIs.
 
 ### HIR -> MIR
 
-There are three entrypoints, one per concept. Extensions such as `Expression`
-and `Statement` add their own through the same mechanism. Transformations are
-registered per type and may be overridden.
+`HIRLoader` is the REI, with three entrypoints, one per concept. Extensions add
+their own REI through the same mechanism: `HIRCodeLoader` does this for
+`Expression` and `Statement`.
+
+`MappedLoader` and `MappedCodeLoader` are the concrete implementations.
+Transformations are registered by exact type. Registering replaces any existing
+loader and returns it, so the new one can decide whether to delegate.
 
 The concrete loader may cache Definitions so that one Definition gives one CO,
 which can then own its LIR entity. This is the concrete loader's behaviour, not
@@ -258,6 +262,7 @@ The `as` cast marking such a definition is not settled.
 src/
   Common/    CommonZ
   Core/      ZSharp.HIR, ZSharp.MIR, ZSharp.LIR
+  HIR/       Language-neutral HIR extensions, such as ZSharp.HIR.Code
   Compiler/  CG and TS APIs and implementations
   Lang/      Text, Tokenizer, AST, Parser, AST -> HIR
   Library/   What `core:` and `std:` expose

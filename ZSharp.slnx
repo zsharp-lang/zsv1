@@ -8,6 +8,10 @@
     <Project Path="src/Compiler/ZSharp.Compiler.CG.Typed/ZSharp.Compiler.CG.Typed.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.CG/ZSharp.Compiler.CG.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.Core/ZSharp.Compiler.Core.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Code.Mapped/ZSharp.Compiler.HIRLoader.Code.Mapped.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Code/ZSharp.Compiler.HIRLoader.Code.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Mapped/ZSharp.Compiler.HIRLoader.Mapped.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader/ZSharp.Compiler.HIRLoader.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.TS.Static/ZSharp.Compiler.TS.Static.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.TS/ZSharp.Compiler.TS.csproj" />
   </Folder>
@@ -15,6 +19,9 @@
     <Project Path="src/Core/ZSharp.HIR/ZSharp.HIR.csproj" />
     <Project Path="src/Core/ZSharp.LIR/ZSharp.LIR.csproj" />
     <Project Path="src/Core/ZSharp.MIR/ZSharp.MIR.csproj" />
+  </Folder>
+  <Folder Name="/src/HIR/">
+    <Project Path="src/HIR/ZSharp.HIR.Code/ZSharp.HIR.Code.csproj" />
   </Folder>
   <Folder Name="/src/Lang/">
     <Project Path="src/Lang/ZSharp.AST/ZSharp.AST.csproj" />

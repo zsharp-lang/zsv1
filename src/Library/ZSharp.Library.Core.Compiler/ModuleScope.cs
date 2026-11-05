@@ -9,5 +9,9 @@ namespace Core.Compiler
         public static ZSharp.Compiler.CG CG { get; set; } = new();
 
         public static ZSharp.Compiler.TS TS { get; set; } = new();
+
+        public static ZSharp.Compiler.HIRLoader HIRLoader { get; set; } = new();
+
+        public static ZSharp.Compiler.HIRCodeLoader HIRCodeLoader { get; set; } = new();
     }
 }
