@@ -74,6 +74,9 @@ public interface CompilerObject
 Capabilities are reached through `Is<T>`, which an object may override to
 forward them.
 
+`Result` and `Error` live in the MIR core, because only the REIs use them. HIR
+and LIR are structural and need neither.
+
 - COs are never compared by identity. Code uses the APIs on a CO and acts on
   the result.
 - COs never capture toolchain APIs, and protocol methods do not receive a
@@ -90,6 +93,45 @@ To be designed. Settled so far:
 - There is no type system in LIR. A runtime may expose the pre-mapped entities
   it wants, but that has nothing to do with LIR itself.
 - The instruction model is decided later.
+- It is mainly a minimal common language for targets to use. Higher-level
+  concepts belong in HIR, not in LIR.
+- It is target agnostic. Example targets are the web (HTML, CSS, JS and
+  WebAssembly together), LLVM, x86, RISC-V and Python.
+- A build script invokes targets explicitly, so there is no target API to define.
+- The concepts are `Module`, `Function`, `ICallable`, `Signature`, `Global`,
+  `Structure`, `Reference`, `Type`, `Handle` and metadata. A `Function` body is
+  an empty `Code` concept until the instruction model is decided.
+- A `Signature` is ordered parameters and an optional return type. With no type
+  system, a function that returns nothing has no return type.
+- `Module` holds common code and data. The smallest data piece is a simple data
+  structure, and layout is inferred from field order.
+- Concepts such as a method are metadata attached to a `Function`. A target may
+  interpret metadata, but it is not strictly required for functionality.
+- `Reference` is a core LIR type that holds its target type. The lowerer (a CO,
+  for example) decides the exact type of a field, and so whether it is stored
+  inline. It can move out of the core if more targets show it isn't common.
+- `Args`, `KwArgs` and full generics move to HIR.
+- The LIR core has no generics, and everything in it is concrete. Simple generic
+  types, with placeholder markers on type definitions, may be added later as an
+  extension. Every use outside a generic definition would have concrete
+  arguments, so any target could compile it by substitution.
+- MIR -> LIR takes an optional target, so a CO can report an error when the
+  target has the wrong shape.
+- A CO returns whatever it wants from lowering, and nothing is enforced about
+  which LIR entity it returns. Custom COs fully control how custom HIR nodes
+  lower.
+- An external reference is an LIR handle. Each platform maps a handle however it
+  wants, so a platform should be able to map every reference in the `std:`
+  library.
+- LIR entities may directly reference entities owned by a different `Module`,
+  such as a `Global` or `Function`. Handles are only for what has no LIR
+  definition at all. Data with no LIR definition is reached through function
+  handles, so there is no global handle.
+- LIR stays properly shaped. `Call` requires a signature, as `ICallable` does in
+  `zsv1`, so anything callable carries a `Signature`, including a handle.
+- Primitive types such as `Int32` are handles too, so LIR names no type. To keep
+  a handle out of the wrong slot, a handle also implements the marker of what it
+  stands for: a type handle is a `Type`, and a function handle is an `ICallable`.
 
 ## REI: Replacable Entrypoints Interface
 
@@ -157,6 +199,10 @@ service is not carried over. The source layer owns evaluation at HIR level.
 Extensions nest without limit, and an extension can have its own extensions.
 The built-in language is itself an extension, written in C#.
 
+Every extension worries only about itself, and works with general shapes rather
+than concrete types as much as possible. COs for .NET, for example, should work
+with any .NET platform, both the runtime and Mono.Cecil.
+
 Z# should be able to reach the parser, the AST compiler and its configuration
 (`of`, imports, operators and so on), the string importer, the `std:` and
 `core:` importers, the CG, TS and IR APIs, the runtime, the IL loader, and more
@@ -223,8 +269,7 @@ The first target is parity with `zsv1`: importing `print` and calling it.
 
 ## Open questions
 
-- The shape of LIR, including its concepts and instruction model.
-- Whether `Result` and `Error` live in the MIR core or in a project of their own.
+- The LIR instruction model.
 - How an extension is packaged, and what a loadable library consists of.
 - Whether the CLI may use anything that Z# cannot reach. The working rule is no.
 - Whether a pluggable tokenizer is needed for new token forms.
