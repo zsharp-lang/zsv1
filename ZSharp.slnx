@@ -34,4 +34,7 @@
   <Folder Name="/src/Library/">
     <Project Path="src/Library/ZSharp.Library.Core.Compiler/ZSharp.Library.Core.Compiler.csproj" />
   </Folder>
+  <Folder Name="/src/Runtime/">
+    <Project Path="src/Runtime/ZSharp.Platform.Runtime/ZSharp.Platform.Runtime.csproj" />
+  </Folder>
 </Solution>

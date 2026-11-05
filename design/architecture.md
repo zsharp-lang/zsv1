@@ -206,6 +206,26 @@ which can then own its LIR entity. This is the concrete loader's behaviour, not
 part of the REI, and an extension may skip it. Instance and Type simply delegate
 to the registered loader.
 
+## CLR target
+
+`ZSharp.Platform.Runtime` loads LIR into the running process through
+`Reflection.Emit`, and depends only on LIR. Loading declares everything first and
+emits bodies afterwards, so modules can refer to each other, including in cycles.
+Reaching a member of another module loads that member too.
+
+| LIR | CLR |
+|-----|-----|
+| `Module` | A static class holding its functions and globals |
+| `Function`, `Global` | A static method, a static field |
+| `Structure` | A value type, which gives LIR's copy semantics |
+| `Reference` | `Box<T>`, because the CLR has no reference that can be stored in a field |
+| `FunctionType` | `nint`, called with `calli` |
+| `TypeHandle` | A mapped `System.Type` |
+| `FunctionHandle` | A mapped method or constructor, or code emitted in place of the call |
+
+Mapping a function handle to emitted code is how arithmetic becomes an `add`
+instruction rather than a call.
+
 ## Composition
 
 There is no pipeline and no platform as a concept.
