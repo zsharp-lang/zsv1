@@ -92,15 +92,28 @@ To be designed. Settled so far:
 - `Module` is the root of every graph. There are no submodules.
 - There is no type system in LIR. A runtime may expose the pre-mapped entities
   it wants, but that has nothing to do with LIR itself.
-- The instruction model is decided later.
+- Control flow is structured: `Block`, `If`, `Loop`, `Break`, `Continue` and
+  `Return`. Python, JS and WebAssembly have no general jumps, and structured code
+  turns into jumps easily, while the reverse is hard. `Break` and `Continue` act
+  on the innermost loop.
+- Code is an expression tree, and child expressions are evaluated in order. A
+  stack machine would suit only the CLR and WebAssembly. A tree is simple for
+  every target, and a CO lowers to one node holding its children's nodes.
+- Arithmetic, comparison and casts are not nodes. They are calls to function
+  handles that each platform maps. Virtual dispatch is not a concept either: it
+  is a structure of function references plus `CallIndirect`.
+- `Parameter` and `Local` are both `Variable`s, read and written the same way.
+- LIR is not a form of HIR, although they share a shape. HIR is unresolved and
+  open to extension. LIR is resolved and closed, so a target can handle all of
+  it. It is the contract between frontends on one side and targets on the other.
 - It is mainly a minimal common language for targets to use. Higher-level
   concepts belong in HIR, not in LIR.
 - It is target agnostic. Example targets are the web (HTML, CSS, JS and
   WebAssembly together), LLVM, x86, RISC-V and Python.
 - A build script invokes targets explicitly, so there is no target API to define.
 - The concepts are `Module`, `Function`, `ICallable`, `Signature`, `Global`,
-  `Structure`, `Reference`, `Type`, `Handle` and metadata. A `Function` body is
-  an empty `Code` concept until the instruction model is decided.
+  `Structure`, `Reference`, `FunctionType`, `Type`, `Handle`, metadata, and the
+  `Code` of a function body.
 - A `Signature` is ordered parameters and an optional return type. With no type
   system, a function that returns nothing has no return type.
 - `Module` holds common code and data. The smallest data piece is a simple data
@@ -289,7 +302,9 @@ The first target is parity with `zsv1`: importing `print` and calling it.
 
 ## Open questions
 
-- The LIR instruction model.
+- Exceptions in LIR. The CLR, Python and JS have them, and x86 does not.
+- How a reference is tested for null, and what `If` means with no boolean type
+  in LIR.
 - How an extension is packaged, and what a loadable library consists of.
 - Whether the CLI may use anything that Z# cannot reach. The working rule is no.
 - Whether a pluggable tokenizer is needed for new token forms.
