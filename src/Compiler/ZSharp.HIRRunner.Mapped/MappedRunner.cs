@@ -40,8 +40,10 @@ namespace ZSharp.Compiler
             if (error is not UnsupportedError)
                 return error;
 
-            if (statements.TryGetValue(statement.GetType(), out var run))
-                return run(statement);
+            if (
+                statements.TryGetValue(statement.GetType(), out var run)
+                && (error = run(statement)) is not UnsupportedError
+            ) return error;
 
             return loader.LoadStatement(statement)
                 .When(out var @object)

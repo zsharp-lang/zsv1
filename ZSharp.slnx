@@ -16,6 +16,8 @@
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Code/ZSharp.Compiler.HIRLoader.Code.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Mapped/ZSharp.Compiler.HIRLoader.Mapped.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader/ZSharp.Compiler.HIRLoader.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.HIRReifier.Mapped/ZSharp.Compiler.HIRReifier.Mapped.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.HIRReifier/ZSharp.Compiler.HIRReifier.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.IR.Static/ZSharp.Compiler.IR.Static.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.IR/ZSharp.Compiler.IR.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.TS.Static/ZSharp.Compiler.TS.Static.csproj" />
@@ -53,6 +55,7 @@
   </Folder>
   <Folder Name="/src/Runtime/">
     <Project Path="src/Runtime/ZSharp.Importer.ILLoader.Attributes/ZSharp.Importer.ILLoader.Attributes.csproj" />
+    <Project Path="src/Runtime/ZSharp.Compiler.HIRReifier.CLR/ZSharp.Compiler.HIRReifier.CLR.csproj" />
     <Project Path="src/Runtime/ZSharp.Importer.ILLoader/ZSharp.Importer.ILLoader.csproj" />
     <Project Path="src/Runtime/ZSharp.Platform.Runtime/ZSharp.Platform.Runtime.csproj" />
   </Folder>

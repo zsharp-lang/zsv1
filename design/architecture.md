@@ -105,6 +105,7 @@ To be designed. Settled so far:
   handles that each platform maps. Virtual dispatch is not a concept either: it
   is a structure of function references plus `CallIndirect`.
 - `Parameter` and `Local` are both `Variable`s, read and written the same way.
+  A `Block` declares its locals, in both LIR and `HIR.Code`.
 - LIR is not a form of HIR, although they share a shape. HIR is unresolved and
   open to extension. LIR is resolved and closed, so a target can handle all of
   it. It is the contract between frontends on one side and targets on the other.
@@ -240,6 +241,11 @@ front would reach much of the BCL, so a class CO discovers members when asked.
 Because a CO holds only LIR, it does not depend on a particular runtime. Another
 .NET platform primes the same kind of CO its own way.
 
+LIR has no classes. A `Package.DotNet` definition's CO emits a specialised LIR node
+owned by `ZSharp.Platform.Runtime`, not by the LIR core, which that platform handles
+specially. No other target ever handles CLR class definitions, so a CO reports an
+error for one.
+
 A `Package.DotNet` node for something that already exists is identity only, and one
 being defined lists its members. A C# library is imported through its CLR module.
 The members are the types it imports with `ImportType`, the static members of the
@@ -374,6 +380,87 @@ the object, the enclosing code adds HIR to the body that will construct it. Refe
 becomes a direct `Get` of that object, not a name. Reification nests, and repeats a
 small set of `HIR.Code` nodes such as `Call`, `Argument` and constants. A definition
 reifies once, so further casts do nothing.
+
+#### Worked example
+
+```text
+module Program; // whole file
+
+class Foo of Class { let x: I32; }
+
+fun foo() {
+    class Bar : Foo {}
+
+    return fun bar(): Bar {} as Function;
+}
+```
+
+This compiles to roughly the following build code:
+
+```text
+// the module's default meta-type
+let m = Module("Program");
+
+// the Class meta-type
+let c_Foo = Class("Foo");
+let c_Foo_x = Field("x", I32 as Type); // Type is the HIR marker
+c_Foo.fields.add(c_Foo_x);
+
+// the Function meta-type, assuming it is the default for fun
+let f_foo = Function("foo");
+
+// Bar is not cast, so it is built with what encloses it, not when foo runs
+let c_Bar = Class("Bar");
+c_Bar.base = c_Foo; // a Local of type Class: the real type doesn't exist yet
+
+// bar is cast, so its build code belongs in foo's body. Its build code is
+//     let f_foo_bar = Function("bar");
+//     f_foo_bar.returnType = c_Bar;
+// and reified, it becomes:
+let f_foo_bar = Local();
+f_foo.body.add(
+    Set(f_foo_bar, Call(Function, [String("bar")])),
+    Set(Member(f_foo_bar, "returnType"), Get(c_Bar))
+);
+
+f_foo.body.add(Return(f_foo_bar));
+```
+
+Since this module is an identity definition at top level, the code is then executed
+to get the `Module` object, which is loaded as a CO, compiled to LIR and loaded into
+the runtime. Casting the module to `Module` would keep it as structure instead.
+
+An identity definition inside an expression is loaded along with that expression,
+but binds no name outside itself:
+
+```text
+let x: Foo /* not ok */ = class Foo { let parent: Foo?; /* ok */ }();
+```
+
+So reification takes HIR code and produces HIR code that builds it, and it works on
+`HIR.Code` nodes alone. A definition needs no reifier of its own, because it already
+produces code that produces HIR: a nested definition is just more code in that build
+code. A local of the reified code becomes a `Local()` object at the outer level, and
+a value of the outer level, such as `c_Bar`, stays a value and is placed by `Get`.
+
+A parent registers its own members. This is the meta-compiler's job, as with
+`c_Foo.fields.add` above, so a member never places itself. A meta-compiler also
+controls where code runs, simply by overriding the cast while it compiles its
+contents. A function's meta-compiler emits a definition normally, as build code, and
+its override reifies a cast definition and inserts the `body.add` call. It then uses
+the code the cast returns like any other. The top level works the same way, so no
+concept of a current scope or destination is needed.
+
+A meta-compiler produces a `CompiledDefinition`: the build code and the underlying
+type. It is not HIR. The definition's expression handler keeps only the build code,
+and only the cast looks at the rest.
+
+A definition that isn't cast compiles to an `Escape` around its build code. That
+needs no override: where nothing reifies it, it runs as it is loaded and what it
+produced is loaded in its place, and where the code around it is reified, it stays
+unreified, so it runs with the code that does the building and the body gets a `Get`
+of the result. Reifying that code again reifies the inner code normally, so each
+definition lands on its own level.
 
 A definition that captures a parameter must be cast, because the parameter does not
 exist when an identity definition is built. `zsv1`'s separate script, module and class compilers do not carry

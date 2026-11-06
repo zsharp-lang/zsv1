@@ -42,6 +42,10 @@ new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 CodeLoaders.Register(codeLoader, loader, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
 il.Install(loader, codeLoader);
 
+var reifier = new MappedReifier(Scope.HIRReifier);
+reifier.Apply();
+new CodeReifiers(Scope.HIRReifier, il).Register(reifier);
+
 #endregion
 
 #region Execution
@@ -65,6 +69,7 @@ var runner = new HIRRunner();
 var mappedRunner = new MappedRunner(runner, Scope.HIRCodeLoader, Execute, Evaluate);
 mappedRunner.Apply();
 CodeRunners.Register(mappedRunner, runner);
+CodeRunners.Register(codeLoader, Scope.HIRLoader, runner);
 
 #endregion
 
@@ -94,7 +99,13 @@ var compiler = new ASTCompiler();
 var mappedCompiler = new MappedASTCompiler(compiler);
 mappedCompiler.Apply();
 
-new Language(compiler).Install(mappedCompiler);
+bool IsUnderlyingType(ZSharp.HIR.Code.Expression type, ZSharp.HIR.Instance underlying)
+    => Scope.HIRCodeLoader.LoadExpression(type).When(out var target).IsOk
+    && Scope.HIRLoader.LoadInstance(underlying).When(out var definition).IsOk
+    && Scope.TS.IsAssignableTo(target!, definition!)
+    && Scope.TS.IsAssignableTo(definition!, target!);
+
+new Language(compiler).Install(mappedCompiler, IsUnderlyingType);
 Language.Install(mappedRunner, runner, Import);
 
 #endregion

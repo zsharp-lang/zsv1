@@ -13,12 +13,15 @@ namespace ZSharp.Compiler
 
         public ASTMap<AST.Statement, HIR.Code.Statement> Statements { get; } = new();
 
+        public ASTMap<AST.Definition, CompiledDefinition> Definitions { get; } = new();
+
         public void Apply()
         {
             @base = compiler.Clone();
 
             compiler.CompileExpression = CompileExpression;
             compiler.CompileStatement = CompileStatement;
+            compiler.CompileDefinition = CompileDefinition;
         }
 
         private IResult<HIR.Code.Expression, Error> CompileExpression(AST.Expression expression)
@@ -27,6 +30,16 @@ namespace ZSharp.Compiler
 
             if (result.IsUnsupported())
                 result = Expressions.Compile(expression);
+
+            return result;
+        }
+
+        private IResult<CompiledDefinition, Error> CompileDefinition(AST.Definition definition)
+        {
+            var result = @base.CompileDefinition(definition);
+
+            if (result.IsUnsupported())
+                result = Definitions.Compile(definition);
 
             return result;
         }

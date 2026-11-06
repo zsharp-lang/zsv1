@@ -8,16 +8,28 @@ namespace ZSharp.Lang
     {
         private readonly ASTCompiler compiler = compiler;
 
+        private Func<HIRExpression, HIR.Instance, bool> isUnderlyingType = null!;
+
         public Scope Scope { get; private set; } = new();
 
-        public void Install(MappedASTCompiler mapped)
+        /// <param name="isUnderlyingType">
+        /// Whether code that evaluates to a type is the given definition type.
+        /// </param>
+        public void Install(MappedASTCompiler mapped, Func<HIRExpression, HIR.Instance, bool> isUnderlyingType)
         {
+            this.isUnderlyingType = isUnderlyingType;
+
             mapped.Expressions.Register<AST.IdentifierExpression>(Compile);
             mapped.Expressions.Register<AST.LiteralExpression>(Compile);
             mapped.Expressions.Register<AST.CallExpression>(Compile);
             mapped.Expressions.Register<AST.BinaryExpression>(Compile);
+            mapped.Expressions.Register<AST.CastExpression>(Compile);
+            mapped.Expressions.Register<AST.Function>(CompileDefinition);
+            mapped.Expressions.Register<AST.TypeDefinition>(CompileDefinition);
+            mapped.Expressions.Register<AST.Module>(CompileDefinition);
 
             mapped.Statements.Register<AST.ExpressionStatement>(Compile);
+            mapped.Statements.Register<AST.DefinitionStatement>(Compile);
             mapped.Statements.Register<AST.BlockStatement>(Compile);
             mapped.Statements.Register<AST.IfStatement>(Compile);
             mapped.Statements.Register<AST.ImportStatement>(Compile);
@@ -89,8 +101,51 @@ namespace ZSharp.Lang
             return Result<HIRExpression>.Ok(new HIR.Code.NamedMember { Target = target!, Name = member.Name });
         }
 
+        /// <summary>
+        /// A definition that isn't cast is an actual definition, so it runs with
+        /// whatever builds the code it is in, not with that code.
+        /// </summary>
+        private IResult<HIRExpression, Error> CompileDefinition(AST.Definition definition)
+            => compiler.CompileDefinition(definition).When(out var compiled).Error(out var error)
+                ? Result<HIRExpression>.Error(error)
+                : Result<HIRExpression>.Ok(new HIR.Code.Escape(compiled!.Build));
+
+        /// <summary>
+        /// The one place that tells definitions apart: casting one to its underlying
+        /// type keeps its build code, so the result is structure with no identity.
+        /// Anything else is an ordinary cast. A meta-compiler overrides this to
+        /// decide where that build code goes.
+        /// </summary>
+        private IResult<HIRExpression, Error> Compile(AST.CastExpression cast)
+        {
+            if (compiler.CompileExpression(cast.TargetType).When(out var type).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            HIRExpression? value;
+
+            if (cast.Expression is AST.Definition definition)
+            {
+                if (compiler.CompileDefinition(definition).When(out var compiled).Error(out error))
+                    return Result<HIRExpression>.Error(error);
+
+                if (isUnderlyingType(type!, compiled!.UnderlyingType))
+                    return Result<HIRExpression>.Ok(compiled.Build);
+
+                value = new HIR.Code.Escape(compiled.Build);
+            }
+            else if (compiler.CompileExpression(cast.Expression).When(out value).Error(out error))
+                return Result<HIRExpression>.Error(error);
+
+            return Result<HIRExpression>.Ok(new HIR.Code.Cast { Value = value!, Type = type! });
+        }
+
         private IResult<HIRStatement, Error> Compile(AST.ExpressionStatement statement)
             => compiler.CompileExpression(statement.Expression).When(out var expression).Error(out var error)
+                ? Result<HIRStatement>.Error(error)
+                : Result<HIRStatement>.Ok(new HIR.Code.ExpressionStatement(expression!));
+
+        private IResult<HIRStatement, Error> Compile(AST.DefinitionStatement statement)
+            => compiler.CompileExpression(statement.Definition).When(out var expression).Error(out var error)
                 ? Result<HIRStatement>.Error(error)
                 : Result<HIRStatement>.Ok(new HIR.Code.ExpressionStatement(expression!));
 

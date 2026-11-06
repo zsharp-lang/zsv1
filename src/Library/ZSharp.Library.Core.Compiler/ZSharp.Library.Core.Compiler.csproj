@@ -7,6 +7,7 @@
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.IR\ZSharp.Compiler.IR.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader\ZSharp.Compiler.HIRLoader.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader.Code\ZSharp.Compiler.HIRLoader.Code.csproj" />
+    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRReifier\ZSharp.Compiler.HIRReifier.csproj" />
   </ItemGroup>
 
 </Project>

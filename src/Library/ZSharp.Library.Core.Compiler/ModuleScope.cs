@@ -23,5 +23,8 @@ namespace Core.Compiler
 
         [Alias("hirCodeLoader")]
         public static ZSharp.Compiler.HIRCodeLoader HIRCodeLoader { get; set; } = new();
+
+        [Alias("hirReifier")]
+        public static ZSharp.Compiler.HIRReifier HIRReifier { get; set; } = new();
     }
 }

@@ -15,7 +15,30 @@ namespace ZSharp.Compiler
                     : loader.LoadInstance(reference.Value)
             );
 
+            instances.Definitions.Register<HIR.Code.Local>(local => Result.Ok(new Objects.Local(local)));
+            instances.Instances.Register<HIR.Code.Local>(local => loader.LoadDefinition(local));
+
             expressions.Register<HIR.Code.Get>(get => loader.LoadInstance(get.Instance));
+
+            expressions.Register<HIR.Code.Cast>(cast =>
+            {
+                if (code.LoadExpression(cast.Value).Error(out var error, out var value))
+                    return Result.Error(error);
+
+                return code.LoadExpression(cast.Type).Error(out error, out var type)
+                    ? Result.Error(error)
+                    : cg.Cast(value, type);
+            });
+
+            expressions.Register<HIR.Code.BlockExpression>(block =>
+            {
+                if (Block(block.Locals, block.Statements).Error(out var error, out var statements))
+                    return Result.Error(error);
+
+                return code.LoadExpression(block.Result).Error(out error, out var result)
+                    ? Result.Error(error)
+                    : Result.Ok(new Objects.BlockExpression((Objects.Block)statements, result));
+            });
 
             expressions.Register<HIR.Code.NamedMember>(member =>
                 code.LoadExpression(member.Target).Error(out var error, out var target)
@@ -52,6 +75,55 @@ namespace ZSharp.Compiler
             mapped.Statements.Register<HIR.Code.ExpressionStatement>(
                 statement => code.LoadExpression(statement.Expression)
             );
+
+            mapped.Statements.Register<HIR.Code.Block>(block => Block(block.Locals, block.Statements));
+
+            mapped.Statements.Register<HIR.Code.IfStatement>(statement =>
+            {
+                if (code.LoadExpression(statement.Condition).Error(out var error, out var condition))
+                    return Result.Error(error);
+
+                if (code.LoadStatement(statement.Then).Error(out error, out var then))
+                    return Result.Error(error);
+
+                if (statement.Else is null)
+                    return Result.Ok(new Objects.If(condition, then, null));
+
+                return code.LoadStatement(statement.Else).Error(out error, out var otherwise)
+                    ? Result.Error(error)
+                    : Result.Ok(new Objects.If(condition, then, otherwise));
+            });
+
+            mapped.Statements.Register<HIR.Code.Return>(statement =>
+            {
+                if (statement.Value is null)
+                    return Result.Ok(new Objects.Return(null));
+
+                return code.LoadExpression(statement.Value).Error(out var error, out var value)
+                    ? Result.Error(error)
+                    : Result.Ok(new Objects.Return(value));
+            });
+
+            IResult Block(List<HIR.Code.Local> locals, List<HIR.Code.Statement> statements)
+            {
+                var declared = new List<Objects.Local>();
+
+                foreach (var local in locals)
+                    if (loader.LoadDefinition(local).Error(out var error, out var value))
+                        return Result.Error(error);
+                    else
+                        declared.Add((Objects.Local)value);
+
+                var loaded = new List<CompilerObject>();
+
+                foreach (var statement in statements)
+                    if (code.LoadStatement(statement).Error(out var error, out var value))
+                        return Result.Error(error);
+                    else
+                        loaded.Add(value);
+
+                return Result.Ok(new Objects.Block([.. declared], [.. loaded]));
+            }
         }
 
         private static bool Error(

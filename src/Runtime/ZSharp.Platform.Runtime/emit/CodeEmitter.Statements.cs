@@ -7,6 +7,9 @@ namespace ZSharp.Platform.Runtime
             switch (statement)
             {
                 case LIR.Block node:
+                    foreach (var local in node.Locals)
+                        locals[local] = il.DeclareLocal(runtime.ImportType(local.Type));
+
                     foreach (var item in node.Statements)
                         Statement(item);
                     break;

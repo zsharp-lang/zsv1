@@ -26,6 +26,14 @@ namespace ZSharp.Importer.ILLoader
 
         public void Install(MappedLoader loader, MappedCodeLoader code)
         {
+            var ts = Core.Compiler.ModuleScope.TS;
+            var isAssignableTo = ts.IsAssignableTo;
+
+            ts.IsAssignableTo = (target, source) =>
+                target.Is<Objects.Class>(out var to) && source.Is<Objects.Class>(out var from)
+                    ? to.IL.IsAssignableFrom(from.IL)
+                    : isAssignableTo(target, source);
+
             loader.Instances.Register<Package.DotNet.Method>(LoadMethod);
             loader.Definitions.Register<Package.DotNet.Method>(LoadMethod);
 
@@ -200,7 +208,9 @@ namespace ZSharp.Importer.ILLoader
         }
 
         private IResult LoadType(Package.DotNet.TypeReference node)
-            => Result.Ok(Class(nodeTypes[node]));
+            => nodeTypes.TryGetValue(node, out var type)
+                ? Result.Ok(Class(type))
+                : Result.Error(new UnsupportedError($"{node.GetType().Name} is not an existing CLR type."));
 
         private IResult LoadMethod(Package.DotNet.Method node)
             => Result.Ok(new Objects.MethodGroup(this, [methodInfos[node]], null));

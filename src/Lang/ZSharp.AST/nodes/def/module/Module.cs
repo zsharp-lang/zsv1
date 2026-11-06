@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.AST
 {
-    public sealed class Module(ModuleTokens tokens) : Expression(tokens)
+    public sealed class Module(ModuleTokens tokens) : Definition(tokens)
     {
         public new ModuleTokens TokenInfo
         {

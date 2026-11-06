@@ -15,9 +15,6 @@ namespace ZSharp.Platform.Runtime
             if (function.Body is not { } code)
                 throw new InvalidOperationException($"Function {function.Name} has no body.");
 
-            foreach (var local in code.Locals)
-                locals[local] = il.DeclareLocal(runtime.ImportType(local.Type));
-
             Statement(code.Block);
 
             // Reaching the end is valid only when there is nothing to return.
