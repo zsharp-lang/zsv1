@@ -25,6 +25,15 @@ namespace ZSharp.Platform.Runtime
                 case LIR.Function function:
                     il.Emit(Emit.OpCodes.Call, ImportFunction(function));
                     break;
+                case ClassConstructor constructor:
+                    il.Emit(Emit.OpCodes.Newobj, classConstructors[constructor]);
+                    break;
+                case ClassMethod method:
+                    il.Emit(method.IsStatic ? Emit.OpCodes.Call : Emit.OpCodes.Callvirt, classMethods[method]);
+                    break;
+                case ClassFieldAccess access:
+                    il.Emit(access.IsSet ? Emit.OpCodes.Stfld : Emit.OpCodes.Ldfld, classFields[access.Field]);
+                    break;
                 case LIR.FunctionHandle handle:
                     if (!functionHandles.TryGetValue(handle, out var emit))
                         throw new InvalidOperationException("A function handle is not mapped.");

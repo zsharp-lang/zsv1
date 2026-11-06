@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.Lang.ZSharp\ZSharp.Lang.ZSharp.csproj" />
     <ProjectReference Include="..\..\Runtime\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />
+    <ProjectReference Include="..\..\Runtime\ZSharp.Compiler.HIRReifier.CLR\ZSharp.Compiler.HIRReifier.CLR.csproj" />
   </ItemGroup>
 
 </Project>

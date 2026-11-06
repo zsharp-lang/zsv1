@@ -245,7 +245,12 @@ LIR has no classes. Loading a `Package.DotNet.Class` that is being defined emits
 specialised LIR node, `ClassDefinition`, owned by `ZSharp.Platform.Runtime` and not
 by the LIR core, which that platform handles specially. No other target ever handles
 CLR class definitions, so a CO reports an error for one. Once loaded it is an existing
-type, reached like any other. A class may refer to itself while it loads.
+type, reached like any other.
+
+Classes that reach each other load together. Their members are declared before any
+code is lowered, so code can refer to any of them, through a `ClassInProgress` CO since
+there is no type to reflect on yet. For now, as in `zsv1`, a first parameter named
+`this` makes a method an instance method. That isn't settled, as the open questions say.
 
 A `Package.DotNet` node for something that already exists is identity only, and one
 being defined lists its members. A C# library is imported through its CLR module.
@@ -472,9 +477,19 @@ in an expression is plain code like everything around it, so it can't be used as
 type there. The `Escape` is what a function's reification needs, and the document
 level, where it also loads the result.
 
-A definition that captures a parameter must be cast, because the parameter does not
-exist when an identity definition is built. `zsv1`'s separate script, module and class compilers do not carry
-over. Project discovery belongs in a library that `build.zs` calls.
+A body is reified as a whole. Each local it declares gets a variable in the code that
+does the building, so every build has its own, and a type that depends on that level
+is a `TypeExpression`. A parameter or `this` is a variable of the building code as
+well, which is why its node ends up in the body by value, like `c_Bar`. A definition
+cast inside a body is plain code in that body, so it needs no override to get there.
+
+A cast definition is regular code, generated from a more declarative node, so it
+doesn't capture anything. A parameter in one is treated exactly as a parameter or a
+local in any other code. An identity definition can't use a parameter, because the
+parameter doesn't exist when the definition is built.
+
+`zsv1`'s separate script, module and class compilers do not carry over. Project
+discovery belongs in a library that `build.zs` calls.
 
 ### Document level and modules
 
@@ -507,7 +522,8 @@ A module's build code is generated in this order:
 2. After the walk, emit the inner fill code of every definition, in order.
 3. Then apply each definition's decorators in order. Each decorator's result is the
    input of the next.
-4. Add the last decorator's result to the module.
+4. If the last decorator's result is a definition, register it in the module.
+   Otherwise, emit it directly.
 
 Only the container sees the final output of the decorators. A name keeps meaning the
 object that was constructed, so what a definition refers to doesn't depend on source
@@ -563,6 +579,45 @@ the local, the code that constructs the object, and a function that compiles its
 
 HIR never references the AST. The AST is an input of a meta-compiler, and HIR is its
 output.
+
+### Decorators
+
+There are statement decorators and expression decorators, and they work the same way.
+The function is resolved and called with the decorated HIR object, with type checking.
+
+A definition's decorators are called when the definition object is constructed, not at
+compile time. The first receives the HIR object, and each one after it receives the
+result of the one before.
+
+For a definition, the result can be another definition. A definition gets the normal
+registration code, and anything else is emitted directly.
+
+This means a decorator can act as a code transformer. `@ct` is one: it takes an HIR
+statement or expression and evaluates it when it is called, through the HIR
+interpreter. A result that is a value has to be represented as HIR as well. A constant
+is wrapped, a type object is reflected on, raw HIR is returned as it is, and so on.
+
+### Members of a class
+
+A method compiler is part of the class compiler, and it handles references to other
+methods of the same class. It knows its own context, so it can check what a name
+resolved to.
+
+A constructor call and a base call use the same call syntax, which covers both
+`new Foo()` and `base()` in C#. A base call passes `this` explicitly as a named
+argument, `Base(this: this)`, so the constructor knows it is a base call.
+
+### Operators
+
+Operators work through mappings in the source compiler, as in `zsv1`. A table maps an
+operator to what it calls, an `[Operator]` method in a C# library provides an entry,
+and a binary expression compiles to an ordinary call. An operator stands for many
+functions, so this depends on overloading.
+
+### Overloads
+
+An overload is its own HIR concept, with its own COs. If it is needed, a new REI says
+how multiple HIR objects combine into one.
 
 ## Extensions
 
@@ -650,3 +705,8 @@ The first target is parity with `zsv1`: importing `print` and calling it.
 - Whether a pluggable tokenizer is needed for new token forms.
 - Nullable types such as `Foo?`. They are meant to be pure operator overloading, which
   is a future milestone.
+- How a method is marked as an instance method. A first parameter named `this` makes
+  the name special, and it isn't always used. The alternative is that a decorator marks
+  a method with an explicit `this`, and there is no implicit `this`.
+- Which `Package.DotNet` entities are needed to fully describe the CTS, including how
+  a value type becomes an object.

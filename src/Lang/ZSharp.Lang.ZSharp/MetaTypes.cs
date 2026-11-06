@@ -42,6 +42,8 @@ namespace ZSharp.Lang
         {
             mapped.Definitions.Register<AST.TypeDefinition>(Compile);
             mapped.Definitions.Register<AST.Module>(Compile);
+            mapped.Definitions.Register<AST.Function>(Compile);
+            mapped.Definitions.Register<AST.Constructor>(Compile);
         }
 
         private IResult<CompiledDefinition, Error> Compile(AST.Definition definition)
@@ -107,6 +109,7 @@ namespace ZSharp.Lang
             {
                 AST.TypeDefinition type => type.Name,
                 AST.Module module => module.Name,
+                AST.Function function => function.Name ?? string.Empty,
                 _ => string.Empty
             };
     }

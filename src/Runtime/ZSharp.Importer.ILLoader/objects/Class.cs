@@ -57,18 +57,16 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             if (IL.GetProperties(flags).FirstOrDefault(property => Named(property, member)) is { } found)
                 return Result.Ok(new Accessor(
-                    loader,
                     receiver,
-                    found.PropertyType,
+                    () => loader.Class(found.PropertyType),
                     found.GetMethod is { IsPublic: true } getter ? loader.Handle(getter) : null,
                     found.SetMethod is { IsPublic: true } setter ? loader.Handle(setter) : null
                 ));
 
             if (IL.GetFields(flags).FirstOrDefault(field => Named(field, member)) is { } field)
                 return Result.Ok(new Accessor(
-                    loader,
                     receiver,
-                    field.FieldType,
+                    () => loader.Class(field.FieldType),
                     loader.Handle(field, isSet: false),
                     field.IsInitOnly ? null : loader.Handle(field, isSet: true)
                 ));

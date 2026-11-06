@@ -1,6 +1,6 @@
 ﻿namespace ZSharp.AST
 {
-    public sealed class Constructor(ConstructorTokens tokens) : Expression(tokens)
+    public sealed class Constructor(ConstructorTokens tokens) : Definition(tokens)
     {
         public new ConstructorTokens TokenInfo
         {

@@ -4,6 +4,9 @@ namespace ZSharp.Platform.Runtime
     {
         private readonly Dictionary<LIR.Module, Emit.TypeBuilder> holders = [];
         private readonly Dictionary<ClassDefinition, Type> classes = [];
+        private readonly Dictionary<ClassField, IL.FieldInfo> classFields = [];
+        private readonly Dictionary<ClassConstructor, Emit.ConstructorBuilder> classConstructors = [];
+        private readonly Dictionary<ClassMethod, Emit.MethodBuilder> classMethods = [];
         private readonly HashSet<string> classNames = [];
         private readonly Queue<Action> bodies = [];
         private readonly List<LIR.Structure> pendingStructures = [];
@@ -36,39 +39,33 @@ namespace ZSharp.Platform.Runtime
         public Type[] Load(IReadOnlyList<ClassDefinition> definitions)
         {
             var builders = new Dictionary<ClassDefinition, Emit.TypeBuilder>();
-            var constructors = new Dictionary<ClassDefinition, Emit.ConstructorBuilder>();
 
             // Everything is declared first, as any of them can refer to any other.
             foreach (var definition in definitions.Where(definition => !classes.ContainsKey(definition)))
-            {
-                var builder = module.DefineType(
+                classes[definition] = builders[definition] = module.DefineType(
                     classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name),
                     IL.TypeAttributes.Public | IL.TypeAttributes.Class
                 );
 
-                classes[definition] = builders[definition] = builder;
-
-                constructors[definition] = builder.DefineConstructor(
-                    IL.MethodAttributes.Public,
-                    IL.CallingConventions.Standard,
-                    Type.EmptyTypes
-                );
-            }
-
             foreach (var (definition, builder) in builders)
+                DeclareMembers(definition, builder);
+
+            foreach (var definition in builders.Keys)
             {
                 var parent = definition.Base is null ? typeof(object) : ImportType(definition.Base);
 
-                builder.SetParent(parent);
+                foreach (var constructor in definition.Constructors)
+                {
+                    var il = classConstructors[constructor].GetILGenerator();
 
-                foreach (var field in definition.Fields)
-                    builder.DefineField(field.Name, ImportType(field.Type), IL.FieldAttributes.Public);
+                    il.Emit(Emit.OpCodes.Ldarg_0);
+                    il.Emit(Emit.OpCodes.Call, BaseConstructor(definition, parent));
 
-                var il = constructors[definition].GetILGenerator();
+                    new CodeEmitter(this, il, constructor.Function).EmitBody();
+                }
 
-                il.Emit(Emit.OpCodes.Ldarg_0);
-                il.Emit(Emit.OpCodes.Call, BaseConstructor(definition, parent, constructors));
-                il.Emit(Emit.OpCodes.Ret);
+                foreach (var method in definition.Methods)
+                    new CodeEmitter(this, classMethods[method].GetILGenerator(), method.Function).EmitBody();
             }
 
             foreach (var definition in builders.Keys)
@@ -77,14 +74,35 @@ namespace ZSharp.Platform.Runtime
             return [.. definitions.Select(definition => classes[definition])];
         }
 
-        private static IL.ConstructorInfo BaseConstructor(
-            ClassDefinition definition,
-            Type parent,
-            Dictionary<ClassDefinition, Emit.ConstructorBuilder> constructors
-        )
+        private void DeclareMembers(ClassDefinition definition, Emit.TypeBuilder builder)
         {
-            if (definition.Base is ClassDefinition @base && constructors.TryGetValue(@base, out var constructor))
-                return constructor;
+            builder.SetParent(definition.Base is null ? typeof(object) : ImportType(definition.Base));
+
+            foreach (var field in definition.Fields)
+                classFields[field] = builder.DefineField(field.Name, ImportType(field.Type), IL.FieldAttributes.Public);
+
+            foreach (var constructor in definition.Constructors)
+                classConstructors[constructor] = builder.DefineConstructor(
+                    IL.MethodAttributes.Public,
+                    IL.CallingConventions.Standard,
+                    [.. constructor.Signature.Parameters.Select(parameter => ImportType(parameter.Type))]
+                );
+
+            foreach (var method in definition.Methods)
+                classMethods[method] = builder.DefineMethod(
+                    method.Name,
+                    IL.MethodAttributes.Public | (method.IsStatic ? IL.MethodAttributes.Static : 0),
+                    ImportType(method.Signature.ReturnType),
+                    [.. method.Signature.Parameters.Skip(method.IsStatic ? 0 : 1).Select(parameter => ImportType(parameter.Type))]
+                );
+        }
+
+        private IL.ConstructorInfo BaseConstructor(ClassDefinition definition, Type parent)
+        {
+            if (definition.Base is ClassDefinition @base)
+                foreach (var constructor in @base.Constructors)
+                    if (constructor.Signature.Parameters.Count == 0 && classConstructors.TryGetValue(constructor, out var builder))
+                        return builder;
 
             return parent.GetConstructor(
                 IL.BindingFlags.Instance | IL.BindingFlags.Public | IL.BindingFlags.NonPublic,

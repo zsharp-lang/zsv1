@@ -7,7 +7,25 @@ namespace ZSharp.Compiler
     /// </summary>
     public static class Nodes
     {
-        public static Code.Get Get(HIR.Instance instance) => new(instance);
+        /// <summary>
+        /// Refers to a value of the code doing the building. A definition or a parameter
+        /// is HIR already. Anything else is a value that code captured.
+        /// </summary>
+        public static Code.Get Get(object value)
+            => new(value as HIR.Instance ?? Core.Runtime.ModuleScope.ILLoader.Expose(value));
+
+        public static Code.Local Local(string name, HIR.Type type) => new(name, type);
+
+        public static Code.TypeExpression TypeExpression(Code.Expression expression) => new(expression);
+
+        public static Code.Code CodeOf(Code.Statement statement)
+        {
+            var code = new Code.Code();
+
+            code.Block.Statements.Add(statement);
+
+            return code;
+        }
 
         public static Code.StringLiteral String(string value) => new(value);
 

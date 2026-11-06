@@ -3,16 +3,15 @@ using System.Diagnostics.CodeAnalysis;
 namespace ZSharp.Importer.ILLoader.Objects
 {
     internal sealed class Call(
-        ILLoader loader,
         LIR.ICallable callable,
         CompilerObject[] arguments,
-        Type? returnType
+        Func<CompilerObject>? returnType
     )
         : CompilerObject
         , ICompileIRExpression
         , ITyped
     {
-        CompilerObject ITyped.Type => loader.Class(returnType!);
+        CompilerObject ITyped.Type => returnType!();
 
         // A call that returns nothing has no type.
         bool CompilerObject.Is<T>([NotNullWhen(true)] out T? result) where T : class

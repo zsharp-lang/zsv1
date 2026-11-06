@@ -13,7 +13,8 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<Type, Package.DotNet.TypeReference> typeNodes = [];
         private readonly Dictionary<Package.DotNet.TypeReference, Type> nodeTypes = [];
         private readonly Dictionary<Type, LIR.TypeHandle> types = [];
-        private readonly Dictionary<Package.DotNet.Class, Platform.Runtime.ClassDefinition> inProgress = [];
+        private readonly Dictionary<Package.DotNet.Class, Objects.ClassInProgress> inProgress = [];
+        private readonly Dictionary<HIR.Instance, Objects.Variable> variables = [];
 
         private readonly Dictionary<Module, Package.DotNet.Module> modules = [];
         private readonly Dictionary<Package.DotNet.Module, Module> moduleInfos = [];
@@ -55,6 +56,8 @@ namespace ZSharp.Importer.ILLoader
             loader.Definitions.Register<Package.DotNet.Module>(LoadModule);
 
             loader.Instances.Register<Package.DotNet.ExposedObject>(LoadExposed);
+            loader.Instances.Register<Package.DotNet.Parameter>(LoadVariable);
+            loader.Instances.Register<Package.DotNet.This>(LoadVariable);
 
             code.Expressions.Register<HIR.Code.StringLiteral>(literal =>
                 Result.Ok(new Objects.Literal(literal.Value, typeof(string), this))
@@ -243,8 +246,8 @@ namespace ZSharp.Importer.ILLoader
         /// </summary>
         private IResult Define(Package.DotNet.Class node)
         {
-            if (inProgress.TryGetValue(node, out var definition))
-                return Result.Ok(new Objects.ClassInProgress(definition));
+            if (inProgress.TryGetValue(node, out var loading))
+                return Result.Ok(loading);
 
             return Define([node]) is { } error
                 ? Result.Error(error)
@@ -266,28 +269,19 @@ namespace ZSharp.Importer.ILLoader
                     return error;
 
             foreach (var node in nodes)
-                inProgress[node] = new(node.Name);
+                inProgress[node] = new(node, new(node.Name));
 
             try
             {
                 foreach (var node in nodes)
-                {
-                    var definition = inProgress[node];
+                    if (Declare(inProgress[node]) is { } error)
+                        return error;
 
-                    if (node.Base is not null)
-                        if (CompileType(node.Base).When(out var @base).Error(out var error))
-                            return error;
-                        else
-                            definition.Base = @base;
+                foreach (var node in nodes)
+                    if (Lower(inProgress[node]) is { } error)
+                        return error;
 
-                    foreach (var field in node.Fields)
-                        if (CompileType(field.Type).When(out var type).Error(out var error))
-                            return error;
-                        else
-                            definition.Fields.Add(new(field.Name, type!));
-                }
-
-                var loaded = runtime.Load([.. nodes.Select(node => inProgress[node])]);
+                var loaded = runtime.Load([.. nodes.Select(node => inProgress[node].Definition)]);
 
                 foreach (var (node, type) in nodes.Zip(loaded))
                 {
@@ -302,6 +296,160 @@ namespace ZSharp.Importer.ILLoader
                 foreach (var node in nodes)
                     inProgress.Remove(node);
             }
+        }
+
+        /// <summary>
+        /// Declares the members of a class, so that all the code can refer to them.
+        /// </summary>
+        private Error? Declare(Objects.ClassInProgress @class)
+        {
+            var (node, definition) = (@class.Node, @class.Definition);
+
+            if (node.Base is not null)
+                if (CompileType(node.Base).When(out var @base).Error(out var error))
+                    return error;
+                else
+                    definition.Base = @base;
+
+            foreach (var field in node.Fields)
+                if (CompileType(field.Type).When(out var type).Error(out var error))
+                    return error;
+                else
+                    definition.Fields.Add(new(field.Name, type!));
+
+            foreach (var constructor in @class.Constructors)
+            {
+                var creation = new LIR.Signature { ReturnType = definition };
+                var code = new LIR.Signature();
+
+                var @this = new LIR.Parameter(definition) { Name = "this" };
+                code.Parameters.Add(@this);
+                variables[constructor.This] = new(@this, () => @class);
+
+                if (Parameters(constructor.Parameters, code) is { } error)
+                    return error;
+
+                creation.Parameters.AddRange(code.Parameters.Skip(1));
+
+                definition.Constructors.Add(new(creation, new(code) { Body = new() }));
+            }
+
+            foreach (var method in node.Methods)
+            {
+                var signature = new LIR.Signature();
+
+                if (method.This is { } self)
+                {
+                    var @this = new LIR.Parameter(definition) { Name = "this" };
+                    signature.Parameters.Add(@this);
+                    variables[self] = new(@this, () => @class);
+                }
+
+                if (Parameters(method.Parameters, signature) is { } error)
+                    return error;
+
+                if (method.ReturnType is not null)
+                    if (CompileType(method.ReturnType).When(out var type).Error(out error))
+                        return error;
+                    else
+                        signature.ReturnType = type;
+
+                var declared = new Platform.Runtime.ClassMethod(
+                    method.Name,
+                    method.IsStatic,
+                    new(signature) { Name = method.Name, Body = new() }
+                );
+
+                definition.Methods.Add(declared);
+                @class.Methods[method] = declared;
+            }
+
+            return null;
+        }
+
+        private Error? Parameters(List<Package.DotNet.Parameter> parameters, LIR.Signature signature)
+        {
+            foreach (var parameter in parameters)
+            {
+                if (CompileType(parameter.Type).When(out var type).Error(out var error))
+                    return error;
+
+                var compiled = new LIR.Parameter(type!) { Name = parameter.Name };
+
+                signature.Parameters.Add(compiled);
+                variables[parameter] = new(
+                    compiled,
+                    () => Core.Compiler.ModuleScope.HIRLoader.LoadType(parameter.Type).Unwrap()
+                );
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Lowers the code of a class. Everything it can reach has been declared by now.
+        /// </summary>
+        private Error? Lower(Objects.ClassInProgress @class)
+        {
+            var (node, definition) = (@class.Node, @class.Definition);
+
+            foreach (var (constructor, declared) in @class.Constructors.Zip(definition.Constructors))
+            {
+                foreach (var field in node.Fields)
+                    if (field.DefaultValue is not null && Initialize(field, @class, constructor, declared) is { } error)
+                        return error;
+
+                if (constructor.Body is { } body && Lower(body, declared.Function) is { } invalid)
+                    return invalid;
+            }
+
+            foreach (var (method, declared) in @class.Methods)
+                if (method.Body is null)
+                    return new ErrorMessage($"Method {method.Name} has no body.");
+                else if (Lower(method.Body, declared.Function) is { } error)
+                    return error;
+
+            return null;
+        }
+
+        private Error? Initialize(
+            Package.DotNet.Field field,
+            Objects.ClassInProgress @class,
+            Package.DotNet.Constructor constructor,
+            Platform.Runtime.ClassConstructor declared
+        )
+        {
+            if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadExpression(field.DefaultValue!).When(out var value).Error(out var error))
+                return error;
+
+            if (Core.Compiler.ModuleScope.HIRLoader.LoadInstance(constructor.This).When(out var @this).Error(out error))
+                return error;
+
+            if (@class.Member(@this!, field.Name).When(out var target).Error(out error))
+                return error;
+
+            if (Core.Compiler.ModuleScope.CG.Set(target!, value!).When(out var set).Error(out error))
+                return error;
+
+            if (Core.Compiler.ModuleScope.IR.CompileStatement(set!, runtime).When(out var statement).Error(out error))
+                return error;
+
+            declared.Function.Body!.Block.Statements.Add(statement!);
+
+            return null;
+        }
+
+        private Error? Lower(HIR.Code.Code body, LIR.Function function)
+        {
+            if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadStatement(body.Block).When(out var loaded).Error(out var error))
+                return error;
+
+            if (Core.Compiler.ModuleScope.IR.CompileStatement(loaded!, runtime).When(out var statement).Error(out error))
+                return error;
+
+            function.Body!.Block.Statements.Add(statement!);
+
+            return null;
         }
 
         private void Reach(Package.DotNet.Class node, List<Package.DotNet.Class> nodes)
@@ -321,8 +469,8 @@ namespace ZSharp.Importer.ILLoader
 
         private Error? Check(Package.DotNet.Class node)
         {
-            if (node.Methods.Count > 0 || node.Constructors.Count > 0 || node.StaticConstructor is not null)
-                return new ErrorMessage($"Class {node.Name} has code, which can't be defined yet.");
+            if (node.StaticConstructor is not null)
+                return new ErrorMessage($"Class {node.Name} has a static constructor, which can't be defined yet.");
 
             if (node.Interfaces.Count > 0 || node.Properties.Count > 0 || node.NestedDefinitions.Count > 0)
                 return new ErrorMessage($"Class {node.Name} has members that can't be defined yet.");
@@ -345,10 +493,19 @@ namespace ZSharp.Importer.ILLoader
                 : Core.Compiler.ModuleScope.IR.CompileType(loaded!, runtime);
 
         private IResult LoadMethod(Package.DotNet.Method node)
-            => Result.Ok(new Objects.MethodGroup(this, [methodInfos[node]], null));
+            => methodInfos.TryGetValue(node, out var method)
+                ? Result.Ok(new Objects.MethodGroup(this, [method], null))
+                : Result.Error($"Method {node.Name} can only be reached through its class.");
 
         private IResult LoadConstructor(Package.DotNet.Constructor node)
-            => Result.Ok(new Objects.MethodGroup(this, [constructorInfos[node]], null));
+            => constructorInfos.TryGetValue(node, out var constructor)
+                ? Result.Ok(new Objects.MethodGroup(this, [constructor], null))
+                : Result.Error("A constructor can only be reached through its class.");
+
+        private IResult LoadVariable(HIR.Instance node)
+            => variables.TryGetValue(node, out var variable)
+                ? Result.Ok(variable)
+                : Result.Error("A parameter can only be used by the code it belongs to.");
 
         private IResult LoadExposed(Package.DotNet.ExposedObject node)
             => Result.Ok(new Objects.Literal(node.Value, nodeTypes[node.Type], this));

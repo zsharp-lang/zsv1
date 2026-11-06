@@ -6,13 +6,13 @@ namespace ZSharp.Compiler
 {
     /// <summary>
     /// Registers how the nodes of <c>ZSharp.HIR.Code</c> are reified on the CLR.
-    /// A local declared by the code being reified is structure, so it is placed as
-    /// it is. A local from outside is a variable of the code that does the building,
-    /// so its value is what goes in the node.
+    /// A local declared by the code being reified is created by the code that does the
+    /// building, so each build has its own. A local from outside is a variable of that
+    /// code, so its value is what goes in the node.
     /// </summary>
     public sealed class CodeReifiers(HIRReifier reifier, ILLoader il)
     {
-        private readonly HashSet<Code.Local> declared = [];
+        private readonly Dictionary<Code.Local, Code.Local> declared = [];
 
         public void Register(MappedReifier mapped)
         {
@@ -38,10 +38,12 @@ namespace ZSharp.Compiler
         }
 
         private Reified Reify(Code.Get get)
-            => Ok(Call("Get", get.Instance is Code.Local local && !declared.Contains(local)
-                ? get
-                : Constant(get.Instance)
-            ));
+            => Ok(Call("Get", get.Instance switch
+            {
+                Code.Local local when declared.TryGetValue(local, out var holder) => new Code.Get(holder),
+                Code.Local => get,
+                _ => Constant(get.Instance)
+            }));
 
         private Reified Reify(Code.NamedMember member)
             => Expression(member.Target).When(out var target).Error(out var error)
@@ -85,19 +87,51 @@ namespace ZSharp.Compiler
 
         private Reified Reify(Code.BlockExpression block)
         {
-            declared.UnionWith(block.Locals);
+            if (Declare(block.Locals).When(out var holders).Error(out var error))
+                return Fail(error);
 
-            return Expression(block.Result).When(out var result).Error(out var error)
+            return Expression(block.Result).When(out var result).Error(out error)
                 ? Fail(error)
-                : Fill(Call("BlockExpression", result!), block.Locals, block.Statements);
+                : Fill(Call("BlockExpression", result!), block.Locals, block.Statements, holders!);
         }
 
         private Reified Reify(Code.Block block)
-        {
-            declared.UnionWith(block.Locals);
+            => Declare(block.Locals).When(out var holders).Error(out var error)
+                ? Fail(error)
+                : Fill(Call("Block"), block.Locals, block.Statements, holders!);
 
-            return Fill(Call("Block"), block.Locals, block.Statements);
+        /// <summary>
+        /// Gives each local a variable in the code that does the building.
+        /// </summary>
+        private IResult<List<Code.Statement>, Error> Declare(List<Code.Local> locals)
+        {
+            var holders = new List<Code.Statement>();
+
+            foreach (var local in locals)
+            {
+                if (TypeOf(local).When(out var type).Error(out var error))
+                    return Result<List<Code.Statement>>.Error(error);
+
+                var holder = new Code.Local(local.Name, il.Load(typeof(Code.Local)));
+
+                declared[local] = holder;
+
+                holders.Add(new Code.ExpressionStatement(new Code.Set
+                {
+                    Target = new Code.Get(holder),
+                    Value = Call("Local", new Code.StringLiteral(local.Name), type!)
+                }));
+            }
+
+            return Result<List<Code.Statement>>.Ok(holders);
         }
+
+        private Reified TypeOf(Code.Local local)
+            => local.Type is Code.TypeExpression type
+                ? Expression(type.Expression).When(out var expression).Error(out var error)
+                    ? Fail(error)
+                    : Ok(Call("TypeExpression", expression!))
+                : Ok(Constant(local.Type));
 
         private Reified Reify(Code.ExpressionStatement statement)
             => Expression(statement.Expression).When(out var expression).Error(out var error)
@@ -143,10 +177,15 @@ namespace ZSharp.Compiler
             return Ok(target);
         }
 
-        private Reified Fill(Code.Expression block, List<Code.Local> locals, List<Code.Statement> statements)
+        private Reified Fill(
+            Code.Expression block,
+            List<Code.Local> locals,
+            List<Code.Statement> statements,
+            List<Code.Statement> holders
+        )
         {
             foreach (var local in locals)
-                block = Call("Declare", block, Constant(local));
+                block = Call("Declare", block, new Code.Get(declared[local]));
 
             foreach (var statement in statements)
                 if (reifier.ReifyStatement(statement).When(out var reified).Error(out var error))
@@ -154,7 +193,14 @@ namespace ZSharp.Compiler
                 else
                     block = Call("Add", block, reified!);
 
-            return Ok(block);
+            if (locals.Count == 0)
+                return Ok(block);
+
+            var result = new Code.BlockExpression { Result = block, Statements = holders };
+
+            result.Locals.AddRange(locals.Select(local => declared[local]));
+
+            return Ok(result);
         }
 
         private Reified Expression(Code.Expression expression)

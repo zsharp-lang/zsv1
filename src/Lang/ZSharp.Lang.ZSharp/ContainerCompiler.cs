@@ -10,19 +10,20 @@ namespace ZSharp.Lang
     public sealed class ContainerCompiler(Language language, ASTCompiler compiler, MappedASTCompiler mapped)
     {
         /// <param name="body">The statements of the container.</param>
-        /// <param name="register">Code that adds a definition's object to the container.</param>
+        /// <param name="register">Code that adds a definition to the container.</param>
         /// <param name="member">
         /// Compiles a statement the container treats specially, returning
         /// <see langword="null"/> for one that is plain code.
         /// </param>
         public IResult<HIR.Code.Block, Error> Compile(
             IEnumerable<AST.Statement> body,
-            Func<HIRExpression, HIRStatement> register,
+            Func<CompiledDefinition, HIRStatement> register,
             Func<AST.Statement, IResult<HIRStatement, Error>?>? member = null
         )
         {
             var typeDefinitions = mapped.Expressions.Register<AST.TypeDefinition>(Plain);
             var modules = mapped.Expressions.Register<AST.Module>(Plain);
+            var functions = mapped.Expressions.Register<AST.Function>(Plain);
 
             try
             {
@@ -32,12 +33,13 @@ namespace ZSharp.Lang
             {
                 mapped.Expressions.Register<AST.TypeDefinition>(typeDefinitions!);
                 mapped.Expressions.Register<AST.Module>(modules!);
+                mapped.Expressions.Register<AST.Function>(functions!);
             }
         }
 
         private IResult<HIR.Code.Block, Error> Walk(
             IEnumerable<AST.Statement> body,
-            Func<HIRExpression, HIRStatement> register,
+            Func<CompiledDefinition, HIRStatement> register,
             Func<AST.Statement, IResult<HIRStatement, Error>?>? member
         )
         {
@@ -81,7 +83,7 @@ namespace ZSharp.Lang
                     block.Statements.Add(fill!);
 
             foreach (var definition in definitions)
-                block.Statements.Add(register(new HIR.Code.Get(definition.Variable)));
+                block.Statements.Add(register(definition));
 
             return Result<HIR.Code.Block>.Ok(block);
         }

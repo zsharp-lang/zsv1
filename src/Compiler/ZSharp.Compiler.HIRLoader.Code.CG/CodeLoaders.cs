@@ -15,6 +15,8 @@ namespace ZSharp.Compiler
                     : loader.LoadInstance(reference.Value)
             );
 
+            instances.Types.Register<HIR.Code.TypeExpression>(type => code.LoadExpression(type.Expression));
+
             instances.Definitions.Register<HIR.Code.Local>(local => Result.Ok(new Objects.Local(local)));
             instances.Instances.Register<HIR.Code.Local>(local => loader.LoadDefinition(local));
 

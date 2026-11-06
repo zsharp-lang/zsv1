@@ -8,6 +8,11 @@ namespace Package.DotNet
 
         public bool IsStatic { get; set; }
 
+        /// <summary>
+        /// What the code of an instance method being defined refers to as itself.
+        /// </summary>
+        public This? This { get; set; }
+
         public List<Parameter> Parameters { get; } = [];
 
         /// <summary>

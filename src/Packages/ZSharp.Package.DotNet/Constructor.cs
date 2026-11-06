@@ -7,6 +7,8 @@ namespace Package.DotNet
         : ZSharp.HIR.Definition
         , ZSharp.HIR.Instance
     {
+        public This This { get; } = new();
+
         public List<Parameter> Parameters { get; } = [];
 
         /// <summary>

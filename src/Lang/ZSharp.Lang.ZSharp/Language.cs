@@ -12,6 +12,8 @@ namespace ZSharp.Lang
 
         public Scope Scope { get; set; } = new();
 
+        private HIR.Code.Block? block;
+
         /// <param name="isUnderlyingType">
         /// Whether code that evaluates to a type is the given definition type.
         /// </param>
@@ -24,6 +26,7 @@ namespace ZSharp.Lang
             mapped.Expressions.Register<AST.CallExpression>(Compile);
             mapped.Expressions.Register<AST.BinaryExpression>(Compile);
             mapped.Expressions.Register<AST.CastExpression>(Compile);
+            mapped.Expressions.Register<AST.LetExpression>(Compile);
             mapped.Expressions.Register<AST.Function>(CompileDefinition);
             mapped.Expressions.Register<AST.TypeDefinition>(CompileDefinition);
             mapped.Expressions.Register<AST.Module>(CompileDefinition);
@@ -33,6 +36,7 @@ namespace ZSharp.Lang
             mapped.Statements.Register<AST.BlockStatement>(Compile);
             mapped.Statements.Register<AST.IfStatement>(Compile);
             mapped.Statements.Register<AST.ImportStatement>(Compile);
+            mapped.Statements.Register<AST.Return>(Compile);
         }
 
         /// <param name="import">
@@ -72,7 +76,8 @@ namespace ZSharp.Lang
 
                 statement.Result.Value = instance;
 
-                return load(instance);
+                // A definition that can't load is a failure, not an unsupported statement.
+                return load(instance) is { } failure ? new ErrorMessage($"{failure}") : null;
             });
         }
 
@@ -108,6 +113,9 @@ namespace ZSharp.Lang
 
         private IResult<HIRExpression, Error> Compile(AST.BinaryExpression binary)
         {
+            if (binary.Operator == "=")
+                return Assign(binary);
+
             if (binary.Operator != ".")
                 return Result<HIRExpression>.Error($"Operator ({binary.Operator}) is not supported yet.");
 
@@ -120,11 +128,51 @@ namespace ZSharp.Lang
             return Result<HIRExpression>.Ok(new HIR.Code.NamedMember { Target = target!, Name = member.Name });
         }
 
+        private IResult<HIRExpression, Error> Assign(AST.BinaryExpression assignment)
+        {
+            if (compiler.CompileExpression(assignment.Left).When(out var target).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            return compiler.CompileExpression(assignment.Right).When(out var value).Error(out error)
+                ? Result<HIRExpression>.Error(error)
+                : Result<HIRExpression>.Ok(new HIR.Code.Set { Target = target!, Value = value! });
+        }
+
+        /// <summary>
+        /// A <c>let</c> declares a local in the enclosing block.
+        /// </summary>
+        private IResult<HIRExpression, Error> Compile(AST.LetExpression let)
+        {
+            if (block is null)
+                return Result<HIRExpression>.Error($"Local {let.Name} isn't in a block.");
+
+            if (let.Type is null)
+                return Result<HIRExpression>.Error($"Local {let.Name} needs a type.");
+
+            if (compiler.CompileExpression(let.Type).When(out var type).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            HIRExpression? value = null;
+
+            if (let.Value is not null && compiler.CompileExpression(let.Value).When(out value).Error(out error))
+                return Result<HIRExpression>.Error(error);
+
+            var local = new HIR.Code.Local(let.Name, new HIR.Code.TypeExpression(type!));
+
+            block.Locals.Add(local);
+            Scope.Add(let.Name, new HIR.Code.Get(local));
+
+            return Result<HIRExpression>.Ok(value is null
+                ? new HIR.Code.Get(local)
+                : new HIR.Code.Set { Target = new HIR.Code.Get(local), Value = value }
+            );
+        }
+
         /// <summary>
         /// A definition that isn't cast is an actual definition, so it runs with
         /// whatever builds the code it is in, not with that code.
         /// </summary>
-        private IResult<HIRExpression, Error> CompileDefinition(AST.Definition definition)
+        public IResult<HIRExpression, Error> CompileDefinition(AST.Definition definition)
         {
             if (compiler.CompileDefinition(definition).When(out var compiled).Error(out var error))
                 return Result<HIRExpression>.Error(error);
@@ -196,24 +244,36 @@ namespace ZSharp.Lang
         private IResult<HIRStatement, Error> Compile(AST.BlockStatement block)
         {
             var previous = Scope;
+            var outer = this.block;
+
             Scope = new(previous);
+            this.block = new();
 
             try
             {
-                var statements = new List<HIRStatement>();
-
                 foreach (var statement in block.Statements)
                     if (compiler.CompileStatement(statement).When(out var compiled).Error(out var error))
                         return Result<HIRStatement>.Error(error);
                     else
-                        statements.Add(compiled!);
+                        this.block.Statements.Add(compiled!);
 
-                return Result<HIRStatement>.Ok(new HIR.Code.Block(statements));
+                return Result<HIRStatement>.Ok(this.block);
             }
             finally
             {
                 Scope = previous;
+                this.block = outer;
             }
+        }
+
+        private IResult<HIRStatement, Error> Compile(AST.Return statement)
+        {
+            if (statement.Value is null)
+                return Result<HIRStatement>.Ok(new HIR.Code.Return());
+
+            return compiler.CompileExpression(statement.Value).When(out var value).Error(out var error)
+                ? Result<HIRStatement>.Error(error)
+                : Result<HIRStatement>.Ok(new HIR.Code.Return { Value = value });
         }
 
         private IResult<HIRStatement, Error> Compile(AST.IfStatement statement)

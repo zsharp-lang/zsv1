@@ -1,17 +1,120 @@
 using ZSharp.Platform.Runtime;
 
+using Scope = Core.Compiler.ModuleScope;
+
 namespace ZSharp.Importer.ILLoader.Objects
 {
     /// <summary>
-    /// A class while it is being loaded, which is how it refers to itself.
+    /// A class while it is being loaded. Its own code and that of the classes loading
+    /// with it reach it through this, as there is no type to reflect on yet.
     /// </summary>
-    internal sealed class ClassInProgress(ClassDefinition definition)
+    internal sealed class ClassInProgress(Package.DotNet.Class node, ClassDefinition definition)
         : CompilerObject
         , ICompileIRType
+        , ICTCallable
+        , ICTGetMember<MemberName>
+        , IRTGetMember<MemberName>
     {
+        public Package.DotNet.Class Node { get; } = node;
+
+        public ClassDefinition Definition { get; } = definition;
+
+        /// <summary>
+        /// A class with no constructor gets one here, as loading doesn't change HIR.
+        /// </summary>
+        public List<Package.DotNet.Constructor> Constructors { get; }
+            = node.Constructors.Count == 0 ? [new() { Body = new() }] : node.Constructors;
+
+        public Dictionary<Package.DotNet.Method, ClassMethod> Methods { get; } = [];
+
         public IResult<LIR.Type, Error> CompileIRType(object? target)
             => target is Runtime
-                ? Result<LIR.Type>.Ok(definition)
-                : Result<LIR.Type>.Error($"Class {definition.Name} can only be compiled for the CLR runtime.");
+                ? Result<LIR.Type>.Ok(Definition)
+                : Result<LIR.Type>.Error($"Class {Definition.Name} can only be compiled for the CLR runtime.");
+
+        public IResult Call(Argument[] arguments)
+        {
+            if (Definition.Constructors.Where(constructor => constructor.Signature.Parameters.Count == arguments.Length).ToArray() is not [var constructor])
+                return Result.Error($"Class {Definition.Name} has no single constructor for {arguments.Length} arguments.");
+
+            return Result.Ok(new Call(constructor, [.. arguments.Select(argument => argument.Object)], () => this));
+        }
+
+        public IResult Member(MemberName member)
+            => Find(member, null);
+
+        public IResult Member(CompilerObject @object, MemberName member)
+            => Find(member, @object);
+
+        private IResult Find(MemberName member, CompilerObject? receiver)
+        {
+            var methods = Methods
+                .Where(method => method.Key.Name == member && method.Key.IsStatic == receiver is null)
+                .ToArray();
+
+            if (methods.Length > 0)
+                return Result.Ok(new ClassMethods(Definition.Name, methods, receiver));
+
+            if (receiver is not null && Definition.Fields.FirstOrDefault(field => field.Name == member) is { } field)
+            {
+                var type = Node.Fields.First(item => item.Name == member).Type;
+
+                return Result.Ok(new Accessor(
+                    receiver,
+                    () => Scope.HIRLoader.LoadType(type).Unwrap(),
+                    Access(field, receiver, isSet: false),
+                    Access(field, receiver, isSet: true)
+                ));
+            }
+
+            if (Node.Base is not null && Scope.HIRLoader.LoadType(Node.Base).When(out var @base).IsOk)
+                if (receiver is not null && @base!.Is<IRTGetMember<MemberName>>(out var instance))
+                    return instance.Member(receiver, member);
+                else if (receiver is null && @base!.Is<ICTGetMember<MemberName>>(out var @static))
+                    return @static.Member(member);
+
+            return Result.Error(new UnsupportedError($"{Definition.Name} has no member named {member}."));
+        }
+
+        private ClassFieldAccess Access(ClassField field, CompilerObject receiver, bool isSet)
+        {
+            var signature = new LIR.Signature();
+
+            signature.Parameters.Add(new(Definition));
+
+            if (isSet)
+                signature.Parameters.Add(new(field.Type));
+            else
+                signature.ReturnType = field.Type;
+
+            return new(field, isSet, signature);
+        }
+    }
+
+    /// <summary>
+    /// The methods of a class being loaded that a name stands for, optionally bound to
+    /// the object they are called on.
+    /// </summary>
+    internal sealed class ClassMethods(
+        string @class,
+        KeyValuePair<Package.DotNet.Method, ClassMethod>[] candidates,
+        CompilerObject? receiver
+    )
+        : CompilerObject
+        , ICTCallable
+    {
+        public IResult Call(Argument[] arguments)
+        {
+            if (candidates.Where(candidate => candidate.Key.Parameters.Count == arguments.Length).ToArray() is not [var method])
+                return Result.Error($"{@class}.{candidates[0].Key.Name} has no single overload for {arguments.Length} arguments.");
+
+            var returnType = method.Key.ReturnType;
+
+            return Result.Ok(new Call(
+                method.Value,
+                [.. (receiver is null ? [] : new[] { receiver }), .. arguments.Select(argument => argument.Object)],
+                returnType is null ? null : () => Scope.HIRLoader.LoadType(returnType).Unwrap()
+            ));
+        }
     }
 }

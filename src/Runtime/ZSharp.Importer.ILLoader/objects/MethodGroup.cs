@@ -29,10 +29,9 @@ namespace ZSharp.Importer.ILLoader.Objects
                 );
 
             return Result.Ok(new Call(
-                loader,
                 loader.Handle(method),
                 [.. Receiver(), .. arguments.Select(argument => argument.Object)],
-                ILLoader.ReturnType(method)
+                ILLoader.ReturnType(method) is { } type ? () => loader.Class(type) : null
             ));
         }
 

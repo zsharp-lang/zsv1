@@ -22,14 +22,22 @@ namespace ZSharp.Lang.DotNet
             var metaTypes = new MetaTypes(language, compiler, of => Resolve(of, runner, il));
             var container = new ContainerCompiler(language, compiler, mapped);
 
+            var body = new CodeBody(language, compiler, mapped, il);
+
             var @class = il.Load(typeof(Package.DotNet.Class));
             var module = il.Load(typeof(Package.DotNet.Module));
+            var method = il.Load(typeof(Package.DotNet.Method));
+            var constructor = il.Load(typeof(Package.DotNet.Constructor));
 
-            metaTypes.Register(@class, new ClassMetaType(compiler, il, container, @class).Compile);
+            metaTypes.Register(@class, new ClassMetaType(il, container, body, @class).Compile);
             metaTypes.Register(module, new ModuleMetaType(il, container, module).Compile);
+            metaTypes.Register(method, new MethodMetaType(language, il, body, method).Compile);
+            metaTypes.Register(constructor, new ConstructorMetaType(language, il, body, constructor).Compile);
 
             metaTypes.Default<AST.TypeDefinition>(@class);
             metaTypes.Default<AST.Module>(module);
+            metaTypes.Default<AST.Function>(method);
+            metaTypes.Default<AST.Constructor>(constructor);
 
             metaTypes.Install(mapped);
         }

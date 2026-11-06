@@ -23,27 +23,17 @@ namespace ZSharp.Lang.DotNet
 
             return Result<CompiledDefinition>.Ok(new(
                 self,
-                new Code.Call
-                {
-                    Callee = new Code.Get(underlyingType),
-                    Arguments = [new() { Value = new Code.StringLiteral(module.Name) }]
-                },
+                CodeBody.Construct(underlyingType, new Code.StringLiteral(module.Name)),
                 underlyingType,
                 () => container.Compile(
                     module.Body,
-                    definition => new Code.ExpressionStatement(new Code.Call
-                    {
-                        Callee = new Code.NamedMember
-                        {
-                            Target = new Code.NamedMember
-                            {
-                                Target = new Code.Get(self),
-                                Name = nameof(Package.DotNet.Module.Definitions)
-                            },
-                            Name = "Add"
-                        },
-                        Arguments = [new() { Value = definition }]
-                    })
+                    member => new Code.ExpressionStatement(CodeBody.Add(
+                        self,
+                        ReferenceEquals(member.UnderlyingType, il.Load(typeof(Package.DotNet.Method)))
+                            ? nameof(Package.DotNet.Module.Methods)
+                            : nameof(Package.DotNet.Module.Definitions),
+                        new Code.Get(member.Variable)
+                    ))
                 )
             ));
         }
