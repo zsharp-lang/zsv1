@@ -14,8 +14,10 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<Package.DotNet.Class, Type> classTypes = [];
         private readonly Dictionary<Type, LIR.TypeHandle> types = [];
 
-        private readonly Dictionary<MethodInfo, Package.DotNet.Method> methods = [];
-        private readonly Dictionary<Package.DotNet.Method, LIR.FunctionHandle> functions = [];
+        private readonly Dictionary<MethodBase, Package.DotNet.Method> methods = [];
+        private readonly Dictionary<Package.DotNet.Method, MethodBase> methodBases = [];
+        private readonly Dictionary<MethodBase, LIR.FunctionHandle> functions = [];
+        private readonly Dictionary<(FieldInfo Field, bool IsSet), LIR.FunctionHandle> fieldAccessors = [];
 
         public void Install(MappedLoader loader, MappedCodeLoader code)
         {
@@ -26,11 +28,13 @@ namespace ZSharp.Importer.ILLoader
             loader.Definitions.Register<Package.DotNet.Class>(LoadClass);
             loader.Types.Register<Package.DotNet.Class>(LoadClass);
 
+            loader.Instances.Register<Package.DotNet.ExposedObject>(LoadExposed);
+
             code.Expressions.Register<HIR.Code.StringLiteral>(literal =>
-                Result.Ok(new Objects.Literal(literal.Value, Handle(typeof(string))))
+                Result.Ok(new Objects.Literal(literal.Value, typeof(string), this))
             );
             code.Expressions.Register<HIR.Code.BooleanLiteral>(literal =>
-                Result.Ok(new Objects.Literal(literal.Value, Handle(typeof(bool))))
+                Result.Ok(new Objects.Literal(literal.Value, typeof(bool), this))
             );
         }
 
@@ -45,24 +49,24 @@ namespace ZSharp.Importer.ILLoader
             return result;
         }
 
-        public Package.DotNet.Method Load(MethodInfo method)
+        public Package.DotNet.Method Load(MethodBase method)
         {
             if (!methods.TryGetValue(method, out var result))
             {
                 methods[method] = result = new(method.Name);
-                functions[result] = Handle(method);
+                methodBases[result] = method;
             }
 
             return result;
         }
 
-        internal IResult LoadClass(Package.DotNet.Class node)
-            => Result.Ok(new Objects.Class(this, classTypes[node], Handle(classTypes[node])));
+        public Package.DotNet.ExposedObject Expose(object value)
+            => new(value, Load(value.GetType()));
 
-        internal IResult LoadMethod(Package.DotNet.Method node)
-            => Result.Ok(new Objects.Method(functions[node]));
+        internal Objects.Class Class(Type type)
+            => new(this, type);
 
-        private LIR.TypeHandle Handle(Type type)
+        internal LIR.TypeHandle Handle(Type type)
         {
             if (!types.TryGetValue(type, out var handle))
             {
@@ -73,21 +77,72 @@ namespace ZSharp.Importer.ILLoader
             return handle;
         }
 
-        private LIR.FunctionHandle Handle(MethodInfo method)
+        internal LIR.FunctionHandle Handle(MethodBase method)
         {
-            var signature = new LIR.Signature
-            {
-                ReturnType = method.ReturnType == typeof(void) ? null : Handle(method.ReturnType)
-            };
+            if (functions.TryGetValue(method, out var handle))
+                return handle;
+
+            var signature = new LIR.Signature();
+
+            if (!method.IsStatic && method is MethodInfo)
+                signature.Parameters.Add(new(Handle(method.DeclaringType!)) { Name = "this" });
 
             foreach (var parameter in method.GetParameters())
                 signature.Parameters.Add(new(Handle(parameter.ParameterType)) { Name = parameter.Name });
 
-            var handle = new LIR.FunctionHandle(signature);
+            signature.ReturnType = ReturnType(method) is { } type ? Handle(type) : null;
 
+            functions[method] = handle = new(signature);
             runtime.Map(handle, method);
 
             return handle;
         }
+
+        internal LIR.FunctionHandle Handle(FieldInfo field, bool isSet)
+        {
+            if (fieldAccessors.TryGetValue((field, isSet), out var handle))
+                return handle;
+
+            var signature = new LIR.Signature();
+
+            if (!field.IsStatic)
+                signature.Parameters.Add(new(Handle(field.DeclaringType!)) { Name = "this" });
+
+            if (isSet)
+                signature.Parameters.Add(new(Handle(field.FieldType)) { Name = "value" });
+            else
+                signature.ReturnType = Handle(field.FieldType);
+
+            fieldAccessors[(field, isSet)] = handle = new(signature);
+
+            var opcode = (isSet, field.IsStatic) switch
+            {
+                (false, false) => System.Reflection.Emit.OpCodes.Ldfld,
+                (false, true) => System.Reflection.Emit.OpCodes.Ldsfld,
+                (true, false) => System.Reflection.Emit.OpCodes.Stfld,
+                (true, true) => System.Reflection.Emit.OpCodes.Stsfld,
+            };
+
+            runtime.Map(handle, il => il.Emit(opcode, field));
+
+            return handle;
+        }
+
+        internal static Type? ReturnType(MethodBase method)
+            => method switch
+            {
+                ConstructorInfo constructor => constructor.DeclaringType,
+                MethodInfo { ReturnType: var type } when type != typeof(void) => type,
+                _ => null
+            };
+
+        private IResult LoadClass(Package.DotNet.Class node)
+            => Result.Ok(Class(classTypes[node]));
+
+        private IResult LoadMethod(Package.DotNet.Method node)
+            => Result.Ok(new Objects.MethodGroup(this, [methodBases[node]], null));
+
+        private IResult LoadExposed(Package.DotNet.ExposedObject node)
+            => Result.Ok(new Objects.Literal(node.Value, classTypes[node.Type], this));
     }
 }

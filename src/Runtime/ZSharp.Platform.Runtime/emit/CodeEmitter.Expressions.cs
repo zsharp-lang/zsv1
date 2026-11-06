@@ -32,8 +32,17 @@ namespace ZSharp.Platform.Runtime
                 case long value: il.Emit(Emit.OpCodes.Ldc_I8, value); break;
                 case float value: il.Emit(Emit.OpCodes.Ldc_R4, value); break;
                 case double value: il.Emit(Emit.OpCodes.Ldc_R8, value); break;
-                default: throw new NotSupportedException($"Can't emit a constant of {node.Value.GetType().Name}.");
+                default: Exposed(node); break;
             }
+        }
+
+        private void Exposed(LIR.Constant node)
+        {
+            var type = runtime.ImportType(node.Type);
+
+            il.Emit(Emit.OpCodes.Ldc_I4, ExposedObjects.Add(node.Value!));
+            il.Emit(Emit.OpCodes.Call, typeof(ExposedObjects).GetMethod(nameof(ExposedObjects.Get))!);
+            il.Emit(type.IsValueType ? Emit.OpCodes.Unbox_Any : Emit.OpCodes.Castclass, type);
         }
 
         private void Default(Type type)

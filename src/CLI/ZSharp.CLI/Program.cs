@@ -32,6 +32,8 @@ loader.Apply();
 codeLoader.Apply();
 
 new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(Scope.CG).Apply();
+new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(Scope.CG, Scope.TS).Apply();
+new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(Scope.TS).Apply();
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 
 CodeLoaders.Register(codeLoader, loader, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);

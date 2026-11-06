@@ -39,6 +39,16 @@ namespace ZSharp.Compiler
                 return cg.Call(callee, [.. arguments]);
             });
 
+            expressions.Register<HIR.Code.Set>(set =>
+            {
+                if (code.LoadExpression(set.Target).Error(out var error, out var target))
+                    return Result.Error(error);
+
+                return code.LoadExpression(set.Value).Error(out error, out var value)
+                    ? Result.Error(error)
+                    : cg.Set(target, value);
+            });
+
             mapped.Statements.Register<HIR.Code.ExpressionStatement>(
                 statement => code.LoadExpression(statement.Expression)
             );

@@ -2,27 +2,68 @@ using System.Reflection;
 
 namespace ZSharp.Importer.ILLoader.Objects
 {
-    internal sealed class Class(ILLoader loader, Type il, LIR.TypeHandle handle)
+    /// <summary>
+    /// A CLR type. It discovers members when asked, so loading a type never reaches
+    /// the types its members mention.
+    /// </summary>
+    internal sealed class Class(ILLoader loader, Type il)
         : CompilerObject
         , ICompileIRType
+        , ICTCallable
         , ICTGetMember<MemberName>
+        , IRTGetMember<MemberName>
     {
+        public Type IL { get; } = il;
+
         public IResult<LIR.Type, Error> CompileIRType(object? target)
-            => Result<LIR.Type>.Ok(handle);
+            => Result<LIR.Type>.Ok(loader.Handle(IL));
+
+        /// <summary>
+        /// Calling a type constructs an instance of it.
+        /// </summary>
+        public IResult Call(Argument[] arguments)
+            => new MethodGroup(loader, IL.GetConstructors(), null).Call(arguments);
 
         public IResult Member(MemberName member)
-        {
-            var candidates = il
-                .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .Where(method => (method.GetCustomAttribute<AliasAttribute>()?.Name ?? method.Name) == member)
-                .ToArray();
+            => Find(BindingFlags.Static, member, null);
 
-            return candidates switch
-            {
-                [] => Result.Error(new UnsupportedError($"{il.Name} has no static method named {member}.")),
-                [var method] => loader.LoadMethod(loader.Load(method)),
-                _ => Result.Error($"{il.Name}.{member} is overloaded, which is not supported yet.")
-            };
+        public IResult Member(CompilerObject @object, MemberName member)
+            => Find(BindingFlags.Instance, member, @object);
+
+        private IResult Find(BindingFlags kind, MemberName member, CompilerObject? receiver)
+        {
+            var flags = BindingFlags.Public | BindingFlags.FlattenHierarchy | kind;
+
+            var methods = IL
+                .GetMethods(flags)
+                .Where(method => !method.IsSpecialName && Named(method, member))
+                .ToArray<MethodBase>();
+
+            if (methods.Length > 0)
+                return Result.Ok(new MethodGroup(loader, methods, receiver));
+
+            if (IL.GetProperties(flags).FirstOrDefault(property => Named(property, member)) is { } found)
+                return Result.Ok(new Accessor(
+                    loader,
+                    receiver,
+                    found.PropertyType,
+                    found.GetMethod is { IsPublic: true } getter ? loader.Handle(getter) : null,
+                    found.SetMethod is { IsPublic: true } setter ? loader.Handle(setter) : null
+                ));
+
+            if (IL.GetFields(flags).FirstOrDefault(field => Named(field, member)) is { } field)
+                return Result.Ok(new Accessor(
+                    loader,
+                    receiver,
+                    field.FieldType,
+                    loader.Handle(field, isSet: false),
+                    field.IsInitOnly ? null : loader.Handle(field, isSet: true)
+                ));
+
+            return Result.Error(new UnsupportedError($"{IL.Name} has no member named {member}."));
         }
+
+        private static bool Named(MemberInfo member, string name)
+            => (member.GetCustomAttribute<AliasAttribute>()?.Name ?? member.Name) == name;
     }
 }
