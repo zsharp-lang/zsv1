@@ -241,10 +241,11 @@ front would reach much of the BCL, so a class CO discovers members when asked.
 Because a CO holds only LIR, it does not depend on a particular runtime. Another
 .NET platform primes the same kind of CO its own way.
 
-LIR has no classes. A `Package.DotNet` definition's CO emits a specialised LIR node
-owned by `ZSharp.Platform.Runtime`, not by the LIR core, which that platform handles
-specially. No other target ever handles CLR class definitions, so a CO reports an
-error for one.
+LIR has no classes. Loading a `Package.DotNet.Class` that is being defined emits a
+specialised LIR node, `ClassDefinition`, owned by `ZSharp.Platform.Runtime` and not
+by the LIR core, which that platform handles specially. No other target ever handles
+CLR class definitions, so a CO reports an error for one. Once loaded it is an existing
+type, reached like any other. A class may refer to itself while it loads.
 
 A `Package.DotNet` node for something that already exists is identity only, and one
 being defined lists its members. A C# library is imported through its CLR module.
@@ -332,6 +333,12 @@ A meta-type extends the AST compiler. It receives the AST and is responsible for
 compiling it to HIR that evaluates to the HIR representing the original definition.
 A `fun` inside a CLR class is special only because that meta-type handles it, so
 the AST compiler needs no context-dependent handlers.
+
+`ZSharp.Lang.ZSharp.DotNet` holds the CLR class meta-type, the default for `class`.
+A definition statement runs its build code once, so a name means one object, and
+the object is loaded right after. Casting a type to what describes it, as in
+`String as Type` with the HIR marker, is reflection. It gives the type's node, which
+is how a field's type gets into the HIR being built.
 
 The `std:` libraries are written separately in Z#, as a proof of concept, and are
 compiled to DLLs or a custom file format that the CLI loads dynamically.
@@ -460,11 +467,95 @@ needs no override: where nothing reifies it, it runs as it is loaded and what it
 produced is loaded in its place, and where the code around it is reified, it stays
 unreified, so it runs with the code that does the building and the body gets a `Get`
 of the result. Reifying that code again reifies the inner code normally, so each
-definition lands on its own level.
+definition lands on its own level. At module and class level, an identity definition
+in an expression is plain code like everything around it, so it can't be used as a
+type there. The `Escape` is what a function's reification needs, and the document
+level, where it also loads the result.
 
 A definition that captures a parameter must be cast, because the parameter does not
 exist when an identity definition is built. `zsv1`'s separate script, module and class compilers do not carry
 over. Project discovery belongs in a library that `build.zs` calls.
+
+### Document level and modules
+
+The document level runs statement by statement, so it has no forward references.
+Statement by statement execution with actual type safety rules them out, especially
+with meta-types in the picture.
+
+A module is one full statement: one piece of code that produces a `Module` object.
+So forward references work inside a module. The limit is that a definition can't be
+used as a compile-time value in the module that defines it: a function can't decorate
+another definition in its own module, and a type can't be a meta-type there. A
+definition in a module is structure until the module is loaded.
+
+Reading that structure is fine, because this code runs while the module object is
+being built, which is also when `Foo` is built:
+
+```text
+module Program {
+
+    class Foo {}
+
+    print((Foo as Class).name);
+}
+```
+
+A module's build code is generated in this order:
+
+1. Walk the module body and emit each statement directly. For a definition, emit only
+   the construction of its object, which is the declaration of its variable.
+2. After the walk, emit the inner fill code of every definition, in order.
+3. Then apply each definition's decorators in order. Each decorator's result is the
+   input of the next.
+4. Add the last decorator's result to the module.
+
+Only the container sees the final output of the decorators. A name keeps meaning the
+object that was constructed, so what a definition refers to doesn't depend on source
+order. The type of a decorator's result is inferred from the decorator's signature,
+so the parent knows what it will register while compiling.
+
+This has consequences:
+
+- A definition compiles in two parts: its construction, and its fill. The fill must
+  also be *compiled* after the walk, not only emitted after it, because that is what
+  puts every name of the module in scope. At document level and in a cast, the two
+  parts run together.
+- Everything that can refer to another definition belongs to the fill, base classes
+  included. That is what makes forward references work: by then every object exists.
+- A statement of the module body sees definitions constructed but not filled. In the
+  example, `name` is available and `Foo`'s fields are not.
+- A statement can only use names from before it, so forward references work inside
+  definitions, not between statements of the module body.
+
+Classes use the same flow. Since a class is compiled by its meta-compiler, the flow
+is supplied as a service for meta-compilers to use, not as something the compiler
+imposes.
+
+Module-level code is plain code, running as part of the construction of the module
+object. The same goes for class-level code, at least for `Class`, and a meta-compiler
+can do whatever it wants. So a function is the special case: it is the one whose
+contents don't run while it is being built, which is why they are reified.
+
+### Definition handling
+
+Compiling a definition is the meta-compiler's responsibility. Nothing about how it
+does that is enforced: all that matters is that it returns the relevant result. The
+compiler can supply common compilers and utilities, such as a map-based lookup from a
+meta-type to its compiler, or the construction and fill flow, and a meta-compiler uses
+them or doesn't.
+
+The definition node handler can construct the local variable holding the definition,
+with the meta-type as its type, so that a meta-compiler doesn't have to. A meta-compiler
+can change the type of that variable. The meta-type is also used for reflection, which
+doesn't support mutation, so it may be a shape that can only be read. A meta-compiler
+can change the local to a more concrete type that is also editable.
+
+`ScriptCompiler` in `zsv1` is the reference for how `of` resolves: it is evaluated to
+the HIR object of the meta-type, which finds the compiler to call, and that compiler
+produces HIR.
+
+HIR never references the AST. The AST is an input of a meta-compiler, and HIR is its
+output.
 
 ## Extensions
 
@@ -550,3 +641,5 @@ The first target is parity with `zsv1`: importing `print` and calling it.
 - How an extension is packaged, and what a loadable library consists of.
 - Whether the CLI may use anything that Z# cannot reach. The working rule is no.
 - Whether a pluggable tokenizer is needed for new token forms.
+- Nullable types such as `Foo?`. They are meant to be pure operator overloading, which
+  is a future milestone.

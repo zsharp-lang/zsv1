@@ -15,9 +15,14 @@ namespace ZSharp.Parser
             if (parser.Is(TokenType.Colon, eat: true))
                 type = ParseType(parser);
 
-            parser.Eat(Symbols.Assign);
-
-            var value = parser.Parse<Expression>();
+            Expression? value = null;
+            if (type is null)
+            {
+                parser.Eat(Symbols.Assign);
+                value = parser.Parse<Expression>();
+            }
+            else if (parser.Is(Symbols.Assign, eat: true))
+                value = parser.Parse<Expression>();
 
             return new()
             {

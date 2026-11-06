@@ -15,6 +15,9 @@ namespace ZSharp.Platform.Runtime
                     ? mapped
                     : throw new InvalidOperationException("A type handle is not mapped."),
                 LIR.Structure structure => ImportStructure(structure),
+                ClassDefinition definition => classes.TryGetValue(definition, out var @class)
+                    ? @class
+                    : throw new InvalidOperationException($"Class {definition.Name} is not loaded."),
                 LIR.Reference reference => typeof(Box<>).MakeGenericType(ImportType(reference.Target)),
                 LIR.FunctionType => typeof(nint),
                 _ => throw new NotSupportedException($"Can't import a {type.GetType().Name}.")

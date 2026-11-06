@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Lang\ZSharp.Lang.ZSharp\ZSharp.Lang.ZSharp.csproj" />
+    <ProjectReference Include="..\..\Lang\ZSharp.Lang.ZSharp.DotNet\ZSharp.Lang.ZSharp.DotNet.csproj" />
     <ProjectReference Include="..\..\Runtime\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />
     <ProjectReference Include="..\..\Runtime\ZSharp.Compiler.HIRReifier.CLR\ZSharp.Compiler.HIRReifier.CLR.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader.Code.CG\ZSharp.Compiler.HIRLoader.Code.CG.csproj" />

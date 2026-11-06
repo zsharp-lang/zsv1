@@ -13,6 +13,7 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<Type, Package.DotNet.TypeReference> typeNodes = [];
         private readonly Dictionary<Package.DotNet.TypeReference, Type> nodeTypes = [];
         private readonly Dictionary<Type, LIR.TypeHandle> types = [];
+        private readonly Dictionary<Package.DotNet.Class, Platform.Runtime.ClassDefinition> inProgress = [];
 
         private readonly Dictionary<Module, Package.DotNet.Module> modules = [];
         private readonly Dictionary<Package.DotNet.Module, Module> moduleInfos = [];
@@ -208,9 +209,63 @@ namespace ZSharp.Importer.ILLoader
         }
 
         private IResult LoadType(Package.DotNet.TypeReference node)
-            => nodeTypes.TryGetValue(node, out var type)
-                ? Result.Ok(Class(type))
-                : Result.Error(new UnsupportedError($"{node.GetType().Name} is not an existing CLR type."));
+        {
+            if (nodeTypes.TryGetValue(node, out var type))
+                return Result.Ok(Class(type));
+
+            return node is Package.DotNet.Class definition
+                ? Define(definition)
+                : Result.Error(new UnsupportedError($"{node.GetType().Name} can't be defined yet."));
+        }
+
+        /// <summary>
+        /// Loads a class being defined into the runtime. It is then an existing type,
+        /// so from here on it is reached like any other.
+        /// </summary>
+        private IResult Define(Package.DotNet.Class node)
+        {
+            if (inProgress.TryGetValue(node, out var definition))
+                return Result.Ok(new Objects.ClassInProgress(definition));
+
+            if (node.Methods.Count > 0 || node.Constructors.Count > 0 || node.StaticConstructor is not null)
+                return Result.Error($"Class {node.Name} has code, which can't be defined yet.");
+
+            if (node.Interfaces.Count > 0 || node.Properties.Count > 0 || node.NestedDefinitions.Count > 0)
+                return Result.Error($"Class {node.Name} has members that can't be defined yet.");
+
+            inProgress[node] = definition = new(node.Name);
+
+            try
+            {
+                if (node.Base is not null)
+                    if (CompileType(node.Base).When(out var @base).Error(out var error))
+                        return Result.Error(error);
+                    else
+                        definition.Base = @base;
+
+                foreach (var field in node.Fields)
+                    if (CompileType(field.Type).When(out var type).Error(out var error))
+                        return Result.Error(error);
+                    else
+                        definition.Fields.Add(new(field.Name, type!));
+
+                var loaded = runtime.Load(definition);
+
+                nodeTypes[node] = loaded;
+                typeNodes[loaded] = node;
+
+                return Result.Ok(Class(loaded));
+            }
+            finally
+            {
+                inProgress.Remove(node);
+            }
+        }
+
+        private IResult<LIR.Type, Error> CompileType(HIR.Type type)
+            => Core.Compiler.ModuleScope.HIRLoader.LoadType(type).When(out var loaded).Error(out var error)
+                ? Result<LIR.Type>.Error(error)
+                : Core.Compiler.ModuleScope.IR.CompileType(loaded!, runtime);
 
         private IResult LoadMethod(Package.DotNet.Method node)
             => Result.Ok(new Objects.MethodGroup(this, [methodInfos[node]], null));

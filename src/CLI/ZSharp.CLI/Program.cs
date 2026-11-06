@@ -105,8 +105,13 @@ bool IsUnderlyingType(ZSharp.HIR.Code.Expression type, ZSharp.HIR.Instance under
     && Scope.TS.IsAssignableTo(target!, definition!)
     && Scope.TS.IsAssignableTo(definition!, target!);
 
-new Language(compiler).Install(mappedCompiler, IsUnderlyingType);
-Language.Install(mappedRunner, runner, Import);
+var language = new Language(compiler);
+language.Install(mappedCompiler, IsUnderlyingType);
+Language.Install(mappedRunner, runner, Import, instance =>
+    Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
+);
+
+new ZSharp.Lang.DotNet.ClassMetaType(language, compiler, il, IsUnderlyingType).Install(mappedCompiler);
 
 #endregion
 

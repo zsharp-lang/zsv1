@@ -10,6 +10,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         : CompilerObject
         , ICompileIRType
         , ICTCallable
+        , ICTCastTo
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
     {
@@ -23,6 +24,18 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// </summary>
         public IResult Call(Argument[] arguments)
             => new MethodGroup(loader, IL.GetConstructors(), null).Call(arguments);
+
+        /// <summary>
+        /// Casting a type to what describes it is reflection.
+        /// </summary>
+        public IResult Cast(CompilerObject targetType)
+        {
+            var node = loader.Load(IL);
+
+            return targetType.Is<Class>(out var target) && target.IL.IsInstanceOfType(node)
+                ? Result.Ok(new Literal(node, node.GetType(), loader))
+                : Result.Error(new UnsupportedError($"{IL.Name} can't be cast to that type."));
+        }
 
         public IResult Member(MemberName member)
             => Find(BindingFlags.Static, member, null);

@@ -10,7 +10,7 @@ namespace ZSharp.Lang
 
         private Func<HIRExpression, HIR.Instance, bool> isUnderlyingType = null!;
 
-        public Scope Scope { get; private set; } = new();
+        public Scope Scope { get; set; } = new();
 
         /// <param name="isUnderlyingType">
         /// Whether code that evaluates to a type is the given definition type.
@@ -39,12 +39,17 @@ namespace ZSharp.Lang
         /// Imports from the value an import source evaluates to. A source is an
         /// expression, so that value can be anything.
         /// </param>
+        /// <param name="load">
+        /// Loads a definition that was just built, returning why it could not be.
+        /// </param>
         public static void Install(
             MappedRunner mapped,
             HIRRunner runner,
-            Func<object?, IResult<HIR.Instance, Error>> import
+            Func<object?, IResult<HIR.Instance, Error>> import,
+            Func<HIR.Instance, Error?> load
         )
-            => mapped.Register<Import>(statement =>
+        {
+            mapped.Register<Import>(statement =>
             {
                 if (runner.EvaluateExpression(statement.Source).When(out var source).Error(out var error))
                     return error;
@@ -56,6 +61,20 @@ namespace ZSharp.Lang
 
                 return null;
             });
+
+            mapped.Register<Define>(statement =>
+            {
+                if (runner.EvaluateExpression(statement.Build).When(out var value).Error(out var error))
+                    return error;
+
+                if (value is not HIR.Instance instance)
+                    return new ErrorMessage($"A definition must produce an instance, but got {value?.GetType().Name ?? "null"}.");
+
+                statement.Result.Value = instance;
+
+                return load(instance);
+            });
+        }
 
         private IResult<HIRExpression, Error> Compile(AST.IdentifierExpression identifier)
             => Scope.Get(identifier.Name) is { } value
@@ -144,10 +163,24 @@ namespace ZSharp.Lang
                 ? Result<HIRStatement>.Error(error)
                 : Result<HIRStatement>.Ok(new HIR.Code.ExpressionStatement(expression!));
 
+        /// <summary>
+        /// A definition statement also binds its name outside itself.
+        /// </summary>
         private IResult<HIRStatement, Error> Compile(AST.DefinitionStatement statement)
-            => compiler.CompileExpression(statement.Definition).When(out var expression).Error(out var error)
-                ? Result<HIRStatement>.Error(error)
-                : Result<HIRStatement>.Ok(new HIR.Code.ExpressionStatement(expression!));
+        {
+            if (statement.Definition is not AST.Definition definition)
+                return Result<HIRStatement>.Error("A definition statement needs a definition.");
+
+            if (compiler.CompileDefinition(definition).When(out var compiled).Error(out var error))
+                return Result<HIRStatement>.Error(error);
+
+            var result = new HIR.Code.Reference();
+
+            if (compiled!.Name is { Length: > 0 } name)
+                Scope.Add(name, new HIR.Code.Get(result));
+
+            return Result<HIRStatement>.Ok(new Define(compiled.Build, result));
+        }
 
         private IResult<HIRStatement, Error> Compile(AST.BlockStatement block)
         {

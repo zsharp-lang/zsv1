@@ -3,6 +3,8 @@ namespace ZSharp.Platform.Runtime
     partial class Runtime
     {
         private readonly Dictionary<LIR.Module, Emit.TypeBuilder> holders = [];
+        private readonly Dictionary<ClassDefinition, Type> classes = [];
+        private readonly HashSet<string> classNames = [];
         private readonly Queue<Action> bodies = [];
         private readonly List<LIR.Structure> pendingStructures = [];
         private readonly List<LIR.Global> pendingGlobals = [];
@@ -26,6 +28,33 @@ namespace ZSharp.Platform.Runtime
                 body();
 
             Complete();
+        }
+
+        /// <summary>
+        /// Loads a class, which may refer to itself.
+        /// </summary>
+        public Type Load(ClassDefinition definition)
+        {
+            if (classes.TryGetValue(definition, out var loaded))
+                return loaded;
+
+            // Recorded first, as a class can refer to itself.
+            var builder = module.DefineType(
+                classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name),
+                IL.TypeAttributes.Public | IL.TypeAttributes.Class
+            );
+
+            classes[definition] = builder;
+
+            if (definition.Base is not null)
+                builder.SetParent(ImportType(definition.Base));
+
+            foreach (var field in definition.Fields)
+                builder.DefineField(field.Name, ImportType(field.Type), IL.FieldAttributes.Public);
+
+            builder.DefineDefaultConstructor(IL.MethodAttributes.Public);
+
+            return classes[definition] = builder.CreateType();
         }
 
         /// <summary>

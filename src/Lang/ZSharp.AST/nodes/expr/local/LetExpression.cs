@@ -6,6 +6,6 @@
 
         public Expression? Type { get; set; }
 
-        public required Expression Value { get; set; }
+        public Expression? Value { get; set; }
     }
 }

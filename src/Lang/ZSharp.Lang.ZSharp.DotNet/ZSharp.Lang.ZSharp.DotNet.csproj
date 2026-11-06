@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Lang.ZSharp\ZSharp.Lang.ZSharp.csproj" />
+    <ProjectReference Include="..\..\Runtime\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />
+  </ItemGroup>
+
+</Project>

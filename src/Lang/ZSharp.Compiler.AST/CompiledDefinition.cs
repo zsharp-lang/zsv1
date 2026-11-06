@@ -7,5 +7,10 @@ namespace ZSharp.Compiler
     /// </summary>
     /// <param name="Build">Code that produces the definition object as HIR.</param>
     /// <param name="UnderlyingType">The HIR type of that object.</param>
-    public sealed record CompiledDefinition(HIR.Code.Expression Build, HIR.Instance UnderlyingType);
+    /// <param name="Name">The name a definition statement binds, if it has one.</param>
+    public sealed record CompiledDefinition(
+        HIR.Code.Expression Build,
+        HIR.Instance UnderlyingType,
+        string? Name = null
+    );
 }

@@ -40,6 +40,7 @@
     <Project Path="src/Lang/ZSharp.AST/ZSharp.AST.csproj" />
     <Project Path="src/Lang/ZSharp.Compiler.AST.Mapped/ZSharp.Compiler.AST.Mapped.csproj" />
     <Project Path="src/Lang/ZSharp.Compiler.AST/ZSharp.Compiler.AST.csproj" />
+    <Project Path="src/Lang/ZSharp.Lang.ZSharp.DotNet/ZSharp.Lang.ZSharp.DotNet.csproj" />
     <Project Path="src/Lang/ZSharp.Lang.ZSharp/ZSharp.Lang.ZSharp.csproj" />
     <Project Path="src/Lang/ZSharp.Parser/ZSharp.Parser.csproj" />
     <Project Path="src/Lang/ZSharp.Text/ZSharp.Text.csproj" />
