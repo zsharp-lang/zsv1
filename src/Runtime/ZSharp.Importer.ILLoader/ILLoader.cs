@@ -185,7 +185,26 @@ namespace ZSharp.Importer.ILLoader
             };
 
         private IResult LoadModule(Package.DotNet.Module node)
-            => Result.Ok(new Objects.Module(this, moduleInfos[node]));
+        {
+            if (moduleInfos.TryGetValue(node, out var module))
+                return Result.Ok(new Objects.Module(this, module));
+
+            if (node.Fields.Count > 0 || node.Properties.Count > 0 || node.Methods.Count > 0)
+                return Result.Error($"Module {node.Name} has members that can't be defined yet.");
+
+            if (node.Definitions.FirstOrDefault(definition => definition is not Package.DotNet.Class) is { } other)
+                return Result.Error($"Module {node.Name} has a {other.GetType().Name}, which can't be defined yet.");
+
+            return Define(node.Definitions.Cast<Package.DotNet.Class>()) is { } error
+                ? Result.Error(error)
+                : Result.Ok(new Objects.DefinedModule(this, node));
+        }
+
+        /// <summary>
+        /// Gets a class that was defined, as a type that now exists.
+        /// </summary>
+        internal Objects.Class Class(Package.DotNet.Class node)
+            => Class(nodeTypes[node]);
 
         private Package.DotNet.TypeReference Describe(Type type)
         {
@@ -227,39 +246,97 @@ namespace ZSharp.Importer.ILLoader
             if (inProgress.TryGetValue(node, out var definition))
                 return Result.Ok(new Objects.ClassInProgress(definition));
 
-            if (node.Methods.Count > 0 || node.Constructors.Count > 0 || node.StaticConstructor is not null)
-                return Result.Error($"Class {node.Name} has code, which can't be defined yet.");
+            return Define([node]) is { } error
+                ? Result.Error(error)
+                : Result.Ok(Class(nodeTypes[node]));
+        }
 
-            if (node.Interfaces.Count > 0 || node.Properties.Count > 0 || node.NestedDefinitions.Count > 0)
-                return Result.Error($"Class {node.Name} has members that can't be defined yet.");
+        /// <summary>
+        /// Loads classes together with those they reach, as they can refer to each other.
+        /// </summary>
+        private Error? Define(IEnumerable<Package.DotNet.Class> roots)
+        {
+            var nodes = new List<Package.DotNet.Class>();
 
-            inProgress[node] = definition = new(node.Name);
+            foreach (var root in roots)
+                Reach(root, nodes);
+
+            foreach (var node in nodes)
+                if (Check(node) is { } error)
+                    return error;
+
+            foreach (var node in nodes)
+                inProgress[node] = new(node.Name);
 
             try
             {
-                if (node.Base is not null)
-                    if (CompileType(node.Base).When(out var @base).Error(out var error))
-                        return Result.Error(error);
-                    else
-                        definition.Base = @base;
+                foreach (var node in nodes)
+                {
+                    var definition = inProgress[node];
 
-                foreach (var field in node.Fields)
-                    if (CompileType(field.Type).When(out var type).Error(out var error))
-                        return Result.Error(error);
-                    else
-                        definition.Fields.Add(new(field.Name, type!));
+                    if (node.Base is not null)
+                        if (CompileType(node.Base).When(out var @base).Error(out var error))
+                            return error;
+                        else
+                            definition.Base = @base;
 
-                var loaded = runtime.Load(definition);
+                    foreach (var field in node.Fields)
+                        if (CompileType(field.Type).When(out var type).Error(out var error))
+                            return error;
+                        else
+                            definition.Fields.Add(new(field.Name, type!));
+                }
 
-                nodeTypes[node] = loaded;
-                typeNodes[loaded] = node;
+                var loaded = runtime.Load([.. nodes.Select(node => inProgress[node])]);
 
-                return Result.Ok(Class(loaded));
+                foreach (var (node, type) in nodes.Zip(loaded))
+                {
+                    nodeTypes[node] = type;
+                    typeNodes[type] = node;
+                }
+
+                return null;
             }
             finally
             {
-                inProgress.Remove(node);
+                foreach (var node in nodes)
+                    inProgress.Remove(node);
             }
+        }
+
+        private void Reach(Package.DotNet.Class node, List<Package.DotNet.Class> nodes)
+        {
+            if (nodeTypes.ContainsKey(node) || nodes.Contains(node))
+                return;
+
+            nodes.Add(node);
+
+            if (node.Base is Package.DotNet.Class @base)
+                Reach(@base, nodes);
+
+            foreach (var field in node.Fields)
+                if (field.Type is Package.DotNet.Class type)
+                    Reach(type, nodes);
+        }
+
+        private Error? Check(Package.DotNet.Class node)
+        {
+            if (node.Methods.Count > 0 || node.Constructors.Count > 0 || node.StaticConstructor is not null)
+                return new ErrorMessage($"Class {node.Name} has code, which can't be defined yet.");
+
+            if (node.Interfaces.Count > 0 || node.Properties.Count > 0 || node.NestedDefinitions.Count > 0)
+                return new ErrorMessage($"Class {node.Name} has members that can't be defined yet.");
+
+            if (node.Base is Package.DotNet.TypeReference known && nodeTypes.TryGetValue(known, out var type) && type.IsSealed)
+                return new ErrorMessage($"Class {node.Name} can't derive from {type.Name}, which is sealed.");
+
+            var seen = new HashSet<Package.DotNet.ClassReference>();
+
+            for (var @base = node.Base; @base is Package.DotNet.Class current; @base = current.Base)
+                if (!seen.Add(current))
+                    return new ErrorMessage($"Class {node.Name} derives from itself.");
+
+            return null;
         }
 
         private IResult<LIR.Type, Error> CompileType(HIR.Type type)

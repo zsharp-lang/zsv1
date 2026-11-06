@@ -125,9 +125,14 @@ namespace ZSharp.Lang
         /// whatever builds the code it is in, not with that code.
         /// </summary>
         private IResult<HIRExpression, Error> CompileDefinition(AST.Definition definition)
-            => compiler.CompileDefinition(definition).When(out var compiled).Error(out var error)
+        {
+            if (compiler.CompileDefinition(definition).When(out var compiled).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            return compiled!.Build().When(out var build).Error(out error)
                 ? Result<HIRExpression>.Error(error)
-                : Result<HIRExpression>.Ok(new HIR.Code.Escape(compiled!.Build));
+                : Result<HIRExpression>.Ok(new HIR.Code.Escape(build!));
+        }
 
         /// <summary>
         /// The one place that tells definitions apart: casting one to its underlying
@@ -147,10 +152,13 @@ namespace ZSharp.Lang
                 if (compiler.CompileDefinition(definition).When(out var compiled).Error(out error))
                     return Result<HIRExpression>.Error(error);
 
-                if (isUnderlyingType(type!, compiled!.UnderlyingType))
-                    return Result<HIRExpression>.Ok(compiled.Build);
+                if (compiled!.Build().When(out var build).Error(out error))
+                    return Result<HIRExpression>.Error(error);
 
-                value = new HIR.Code.Escape(compiled.Build);
+                if (isUnderlyingType(type!, compiled.UnderlyingType))
+                    return Result<HIRExpression>.Ok(build!);
+
+                value = new HIR.Code.Escape(build!);
             }
             else if (compiler.CompileExpression(cast.Expression).When(out value).Error(out error))
                 return Result<HIRExpression>.Error(error);
@@ -174,12 +182,15 @@ namespace ZSharp.Lang
             if (compiler.CompileDefinition(definition).When(out var compiled).Error(out var error))
                 return Result<HIRStatement>.Error(error);
 
+            if (compiled!.Build().When(out var build).Error(out error))
+                return Result<HIRStatement>.Error(error);
+
             var result = new HIR.Code.Reference();
 
-            if (compiled!.Name is { Length: > 0 } name)
+            if (compiled.Name is { Length: > 0 } name)
                 Scope.Add(name, new HIR.Code.Get(result));
 
-            return Result<HIRStatement>.Ok(new Define(compiled.Build, result));
+            return Result<HIRStatement>.Ok(new Define(build!, result));
         }
 
         private IResult<HIRStatement, Error> Compile(AST.BlockStatement block)

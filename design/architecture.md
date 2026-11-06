@@ -554,6 +554,13 @@ can change the local to a more concrete type that is also editable.
 the HIR object of the meta-type, which finds the compiler to call, and that compiler
 produces HIR.
 
+`ZSharp.Lang.ZSharp` supplies both utilities. `MetaTypes` is the map from a meta-type
+to its compiler. It resolves the meta-type, declares the local and binds the name
+inside the definition. `ContainerCompiler` is the construction and fill flow. While
+it runs it overrides the `AST.Definition` expression handlers, so a definition inside
+an expression is plain code too. What a meta-compiler returns is a `CompiledDefinition`:
+the local, the code that constructs the object, and a function that compiles its fill.
+
 HIR never references the AST. The AST is an input of a meta-compiler, and HIR is its
 output.
 

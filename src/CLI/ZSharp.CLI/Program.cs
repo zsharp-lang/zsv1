@@ -111,7 +111,7 @@ Language.Install(mappedRunner, runner, Import, instance =>
     Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
 );
 
-new ZSharp.Lang.DotNet.ClassMetaType(language, compiler, il, IsUnderlyingType).Install(mappedCompiler);
+ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, compiler, mappedCompiler, runner, il);
 
 #endregion
 

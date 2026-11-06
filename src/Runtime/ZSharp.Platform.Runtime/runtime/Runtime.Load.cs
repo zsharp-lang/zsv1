@@ -31,30 +31,79 @@ namespace ZSharp.Platform.Runtime
         }
 
         /// <summary>
-        /// Loads a class, which may refer to itself.
+        /// Loads classes that may refer to each other and to themselves.
         /// </summary>
-        public Type Load(ClassDefinition definition)
+        public Type[] Load(IReadOnlyList<ClassDefinition> definitions)
         {
-            if (classes.TryGetValue(definition, out var loaded))
-                return loaded;
+            var builders = new Dictionary<ClassDefinition, Emit.TypeBuilder>();
+            var constructors = new Dictionary<ClassDefinition, Emit.ConstructorBuilder>();
 
-            // Recorded first, as a class can refer to itself.
-            var builder = module.DefineType(
-                classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name),
-                IL.TypeAttributes.Public | IL.TypeAttributes.Class
-            );
+            // Everything is declared first, as any of them can refer to any other.
+            foreach (var definition in definitions.Where(definition => !classes.ContainsKey(definition)))
+            {
+                var builder = module.DefineType(
+                    classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name),
+                    IL.TypeAttributes.Public | IL.TypeAttributes.Class
+                );
 
-            classes[definition] = builder;
+                classes[definition] = builders[definition] = builder;
 
-            if (definition.Base is not null)
-                builder.SetParent(ImportType(definition.Base));
+                constructors[definition] = builder.DefineConstructor(
+                    IL.MethodAttributes.Public,
+                    IL.CallingConventions.Standard,
+                    Type.EmptyTypes
+                );
+            }
 
-            foreach (var field in definition.Fields)
-                builder.DefineField(field.Name, ImportType(field.Type), IL.FieldAttributes.Public);
+            foreach (var (definition, builder) in builders)
+            {
+                var parent = definition.Base is null ? typeof(object) : ImportType(definition.Base);
 
-            builder.DefineDefaultConstructor(IL.MethodAttributes.Public);
+                builder.SetParent(parent);
 
-            return classes[definition] = builder.CreateType();
+                foreach (var field in definition.Fields)
+                    builder.DefineField(field.Name, ImportType(field.Type), IL.FieldAttributes.Public);
+
+                var il = constructors[definition].GetILGenerator();
+
+                il.Emit(Emit.OpCodes.Ldarg_0);
+                il.Emit(Emit.OpCodes.Call, BaseConstructor(definition, parent, constructors));
+                il.Emit(Emit.OpCodes.Ret);
+            }
+
+            foreach (var definition in builders.Keys)
+                CreateClass(definition, builders);
+
+            return [.. definitions.Select(definition => classes[definition])];
+        }
+
+        private static IL.ConstructorInfo BaseConstructor(
+            ClassDefinition definition,
+            Type parent,
+            Dictionary<ClassDefinition, Emit.ConstructorBuilder> constructors
+        )
+        {
+            if (definition.Base is ClassDefinition @base && constructors.TryGetValue(@base, out var constructor))
+                return constructor;
+
+            return parent.GetConstructor(
+                IL.BindingFlags.Instance | IL.BindingFlags.Public | IL.BindingFlags.NonPublic,
+                Type.EmptyTypes
+            ) ?? throw new InvalidOperationException($"{parent.Name} has no default constructor.");
+        }
+
+        /// <summary>
+        /// The CLR needs a base class to exist before the classes deriving from it.
+        /// </summary>
+        private void CreateClass(ClassDefinition definition, Dictionary<ClassDefinition, Emit.TypeBuilder> builders)
+        {
+            if (classes[definition] is not Emit.TypeBuilder builder || !builders.ContainsKey(definition))
+                return;
+
+            if (definition.Base is ClassDefinition @base)
+                CreateClass(@base, builders);
+
+            classes[definition] = builder.CreateType();
         }
 
         /// <summary>
