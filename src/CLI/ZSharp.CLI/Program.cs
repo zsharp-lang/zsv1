@@ -26,6 +26,9 @@ if (args.Length != 1)
 var runtime = new Runtime();
 var il = new ILLoader(runtime);
 
+Core.Runtime.ModuleScope.Runtime = runtime;
+Core.Runtime.ModuleScope.ILLoader = il;
+
 var loader = new MappedLoader(Scope.HIRLoader);
 var codeLoader = new MappedCodeLoader(Scope.HIRCodeLoader);
 loader.Apply();
@@ -68,10 +71,15 @@ CodeRunners.Register(mappedRunner, runner);
 #region Imports
 
 var std = new LibraryImporter("standard");
-std.Add("io", il.Load(typeof(Standard.IO.ModuleScope)));
+std.Add("io", il.Load(typeof(Standard.IO.ModuleScope).Module));
+
+var core = new LibraryImporter("core");
+core.Add("compiler", il.Load(typeof(Scope).Module));
+core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 
 var importer = new StringImporter();
 importer.Register("std", std);
+importer.Register("core", core);
 
 IResult<ZSharp.HIR.Instance, Error> Import(object? source)
     => source is string text

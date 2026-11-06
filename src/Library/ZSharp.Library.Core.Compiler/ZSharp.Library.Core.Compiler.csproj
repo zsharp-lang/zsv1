@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Runtime\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.CG\ZSharp.Compiler.CG.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.TS\ZSharp.Compiler.TS.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.IR\ZSharp.Compiler.IR.csproj" />

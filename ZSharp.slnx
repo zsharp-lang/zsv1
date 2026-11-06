@@ -45,6 +45,7 @@
   </Folder>
   <Folder Name="/src/Library/">
     <Project Path="src/Library/ZSharp.Library.Core.Compiler/ZSharp.Library.Core.Compiler.csproj" />
+    <Project Path="src/Library/ZSharp.Library.Core.Runtime/ZSharp.Library.Core.Runtime.csproj" />
     <Project Path="src/Library/ZSharp.Library.Standard.IO/ZSharp.Library.Standard.IO.csproj" />
   </Folder>
   <Folder Name="/src/Packages/">

@@ -240,6 +240,14 @@ front would reach much of the BCL, so a class CO discovers members when asked.
 Because a CO holds only LIR, it does not depend on a particular runtime. Another
 .NET platform primes the same kind of CO its own way.
 
+A `Package.DotNet` node for something that already exists is identity only, and one
+being defined lists its members. A C# library is imported through its CLR module.
+The members are the types it imports with `ImportType`, the static members of the
+class marked `ModuleScope` (C# has no module-level functions or variables) and its
+public types. `core:runtime`, `core:compiler` and `std:io` are all loaded this way.
+That is how an import finds a library, not what a module is: a module defined in Z#
+reaches the CLR as a static class, through LIR.
+
 ## Composition
 
 There is no pipeline and no platform as a concept.
@@ -306,6 +314,13 @@ it is not defined that way, so CLR types are imported from `core:runtime`.
 `Package.DotNet` supplies HIR that directly represents .NET entities. The runtime
 supplies the ability to load them as COs, so they take part in code generation and
 in the runtime itself.
+
+HIR deals in the highest-level concepts possible, so these entities are .NET's
+concepts, not how CLR metadata encodes them. A constructor is its own entity, not
+a method named `.ctor`, and a static constructor is another: each has only what
+that concept has. A struct, an interface and a static class are concepts too, not
+a class with flags or a base type. Where two things differ only by an attribute,
+as static and instance methods do, a property says so.
 
 A meta-type extends the AST compiler. It receives the AST and is responsible for
 compiling it to HIR that evaluates to the HIR representing the original definition.

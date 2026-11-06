@@ -2,6 +2,7 @@ using ZSharp.Importer.ILLoader;
 
 namespace Standard.IO
 {
+    [ModuleScope]
     public static class ModuleScope
     {
         [Alias("print")]
