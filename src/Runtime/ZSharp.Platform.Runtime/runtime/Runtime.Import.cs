@@ -14,6 +14,7 @@ namespace ZSharp.Platform.Runtime
                 LIR.TypeHandle handle => typeHandles.TryGetValue(handle, out var mapped)
                     ? mapped
                     : throw new InvalidOperationException("A type handle is not mapped."),
+                LIR.Structure structure when PolymorphicOf(structure) is not null => ImportType(ClassOf(structure)),
                 LIR.Structure structure => ImportStructure(structure),
                 // A generic class still being defined is its self instance to its own code.
                 ClassDefinition definition => classes.TryGetValue(definition, out var @class)
@@ -29,6 +30,9 @@ namespace ZSharp.Platform.Runtime
 
         internal IL.FieldInfo ImportField(LIR.Structure structure, LIR.Field field)
         {
+            if (PolymorphicOf(structure) is not null)
+                return PolymorphicField(structure, field);
+
             ImportStructure(structure);
 
             return fields[field];

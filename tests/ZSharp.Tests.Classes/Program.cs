@@ -3805,6 +3805,54 @@ Try("a fun in a CLR module is still a function of the module", () =>
         Keep(M224.one());
         """) is null && Kept() is 7);
 
+// ---- std:traits: traits, defined in Z#
+
+Try("std:traits installs, with both flavors of dispatchers", () =>
+    Run("""
+        import { Implementation } from "std:traits";
+        import "std:traits/static";
+        import "std:traits/dynamic";
+        """) is null);
+
+Try("a trait is implemented for a CLR type, and a value of it goes where the trait is expected", () =>
+    Run("""
+        def Greeting226 of DotNet_Interface { fun greet(): String; }
+
+        def StringGreeting226 of Implementation[Greeting226, String] {
+            let value: String;
+            @explicitThis new(this, value: String) { this.value = value; }
+            @explicitThis fun greet(this): String { return "Hello, " + this.value; }
+        }
+
+        def Uses226 { @static fun hello(greeting: Greeting226): String { return greeting.greet(); } }
+        Keep(Uses226.hello("Z#"));
+        """) is null && (string)Kept() == "Hello, Z#");
+
+Try("a value whose static type says nothing matches a trait its type implements", () =>
+    ResetKept() && Run("""
+        let o227: Object = "dynamic";
+        Keep(o227 is of Greeting226);
+        if (o227 is greeting227 of Greeting226) Keep(greeting227.greet());
+        let n227: Object = 5;
+        Keep(n227 is of Greeting226);
+        """) is null && Probe.Kept is [true, "Hello, dynamic", false]);
+
+Try("the runtime has the capability of polymorphism, given by a trait", () =>
+    ResetKept() && Run("""
+        import { runtime } from "core:runtime";
+        import { Polymorphism } from "std:zsharp/capabilities";
+        import { Structure } from "std:zsharp/lir";
+        import "std:zsharp/clr";
+
+        let target228: Object = runtime;
+        Keep(target228 is of Polymorphism);
+        if (target228 is capability228 of Polymorphism) {
+            let structure228 = Structure();
+            capability228.objects(structure228);
+            Keep(structure228.Metadata.Count);
+        }
+        """) is null && Probe.Kept is [true, 1]);
+
 Try("a Z# function given too many arguments is an error", () =>
     Run("Keep(twice215(1, 2));") is { } e && e.Contains("too many arguments"));
 

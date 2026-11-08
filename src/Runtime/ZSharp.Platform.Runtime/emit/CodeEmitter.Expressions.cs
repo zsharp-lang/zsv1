@@ -136,6 +136,21 @@ namespace ZSharp.Platform.Runtime
 
         private void New(LIR.New node)
         {
+            // A polymorphic structure's value is a new object of its class.
+            if (Runtime.IsPolymorphic(node.Structure))
+            {
+                il.Emit(Emit.OpCodes.Newobj, runtime.Referenced(runtime.ConstructorOf(node.Structure)));
+
+                foreach (var (field, initializer) in node.Structure.Fields.Zip(node.Fields))
+                {
+                    il.Emit(Emit.OpCodes.Dup);
+                    Expression(initializer);
+                    il.Emit(Emit.OpCodes.Stfld, runtime.ImportField(node.Structure, field));
+                }
+
+                return;
+            }
+
             var type = runtime.ImportType(node.Structure);
             var value = il.DeclareLocal(type);
 
@@ -170,7 +185,10 @@ namespace ZSharp.Platform.Runtime
         /// </summary>
         private void FieldOwnerAddress(LIR.Expression target)
         {
-            if (TypeOf(target) is LIR.Reference)
+            // An object's fields are reached through the object itself.
+            if (Runtime.IsPolymorphic(TypeOf(target)))
+                Expression(target);
+            else if (TypeOf(target) is LIR.Reference)
             {
                 Expression(target);
                 il.Emit(Emit.OpCodes.Ldflda, Runtime.BoxValue(runtime.ImportType(TypeOf(target))));

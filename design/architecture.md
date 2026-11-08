@@ -690,6 +690,32 @@ a custom type gets into the language to be used as a meta-type.
   as code is compiled, and dynamic typing dispatchers look an implementation up by the
   type a value has as the code runs, which a capability check needs, since the target a
   CO is given has no static type.
+- `std:traits` is that, in Z#. `Implementation[Trait, For]` is a generic class whose
+  instantiations its `Find` recognizes; its meta-compiler reads the trait and the type
+  from the meta-type and builds a `TraitImplementation` node, which is what the local
+  holds. While a trait is a CLR interface, an implementation of it is a bridge between
+  CLR types, so its members compile as a CLR class, its adapter, which holds the value and
+  implements the trait. Loading an implementation defines the adapter and adds it to a
+  table of what is implemented for what, as COs for code being compiled and as CLR types
+  for code that runs. `std:traits/static` replaces `CG.ImplicitCast` and `CG.Cast`: a
+  value whose static type implements the trait goes to it as its adapter.
+  `std:traits/dynamic` replaces `CG.Match` and `CG.Cast` for traits: a match or a cast
+  calls what looks the implementation up by the value's runtime type, so an `Object`
+  holding a value of an implementing type matches the trait. It applies to traits that
+  have an implementation when the code is compiled. The prelude installs both.
+- `std:zsharp/capabilities` has the first capability, `Polymorphism`, an interface
+  written in Z#: a structure's values are objects of a class, or of anything that
+  implements an interface, a class implements an interface, and a function is a method of
+  one. `std:zsharp/clr` gives it to the CLR runtime by a trait, whose implementation marks
+  the LIR with the runtime's own metadata, `Polymorphic` and `MethodOf`. The runtime
+  realizes the polymorphic structures of a module as one batch of CLR classes and
+  interfaces, with the functions marked as theirs as their methods: a call of one is a
+  method call, a new value of one is a new object, and its fields are reached through the
+  object. A CO lowering for the runtime, which it sees as an `Object`, matches it against
+  `Polymorphism` through the dynamic trait dispatchers. The prelude installs both.
+- In building code, `Get(node)` is the entity the node stands for. A definition that
+  needs the node itself, as a type's description, casts the entity to what describes it,
+  which is reflection.
 - A CLR class, interface or module compiles a `fun` written directly in it as a CLR
   method, through `CodeBody.WithMethods`, whatever the default for `fun` is: the meta-type
   of its members is the container's to choose.

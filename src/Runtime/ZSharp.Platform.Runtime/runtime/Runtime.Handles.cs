@@ -110,6 +110,9 @@ namespace ZSharp.Platform.Runtime
         {
             switch (callable)
             {
+                case LIR.Function function when TryMethod(function, out var method):
+                    EmitCall(il, method);
+                    break;
                 case LIR.Function function:
                     il.Emit(Emit.OpCodes.Call, ImportFunction(function));
                     break;

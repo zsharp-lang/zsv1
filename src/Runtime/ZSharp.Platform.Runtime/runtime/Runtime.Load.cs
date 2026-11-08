@@ -31,13 +31,16 @@ namespace ZSharp.Platform.Runtime
         /// </summary>
         public void Load(LIR.Module module)
         {
-            foreach (var structure in module.Structures)
+            // Polymorphic structures are classes, realized together with their methods.
+            LoadPolymorphic(module.Structures.Where(structure => PolymorphicOf(structure) is not null));
+
+            foreach (var structure in module.Structures.Where(structure => PolymorphicOf(structure) is null))
                 ImportStructure(structure);
 
             foreach (var global in module.Globals)
                 ImportGlobal(global);
 
-            foreach (var function in module.Functions)
+            foreach (var function in module.Functions.Where(function => !IsMethod(function)))
                 ImportFunction(function);
 
             while (bodies.TryDequeue(out var body))

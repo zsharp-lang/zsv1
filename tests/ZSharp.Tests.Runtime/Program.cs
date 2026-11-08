@@ -233,6 +233,46 @@ var callsModule = new L.Function(Sig(i32)) { Name = "callsModule", Body = new L.
 callsModule.Body.Block.Statements.Add(new L.Return(new L.Call(sum, I(4))));
 Report("a standalone function calls a module function", (int)runtime.LoadMethod(callsModule).Invoke(null, [])! == 6);
 
+// Polymorphic structures, as a platform with polymorphism marks them: an interface with
+// an abstract method, and a class that implements it, called through the interface.
+var multiply = new L.FunctionHandle(Sig(i32, i32, i32));
+runtime.Map(multiply, il => il.Emit(OpCodes.Mul));
+
+var shapes = new L.Module("Shapes");
+var shape = new L.Structure { Name = "Shape" };
+shape.Metadata.Add(new Polymorphic { IsInterface = true });
+shapes.Structures.Add(shape);
+
+var area = new L.Function(Sig(i32, shape)) { Name = "area" };
+area.Metadata.Add(new MethodOf(shape));
+shapes.Functions.Add(area);
+
+var square = new L.Structure { Name = "Square" };
+var side = new L.Field(i32) { Name = "side" };
+square.Fields.Add(side);
+square.Metadata.Add(new Polymorphic { Interfaces = { shape } });
+shapes.Structures.Add(square);
+
+var squareAreaSig = Sig(i32, square);
+var squareArea = Fn(shapes, "area", squareAreaSig, code =>
+{
+    var self = new L.GetLocal(squareAreaSig.Parameters[0]);
+    code.Block.Statements.Add(new L.Return(new L.Call(multiply, new L.GetField(self, side), new L.GetField(self, side))));
+});
+squareArea.Metadata.Add(new MethodOf(square));
+
+var makeSig = Sig(shape, i32);
+var make = Fn(shapes, "make", makeSig, code =>
+    code.Block.Statements.Add(new L.Return(new L.New(square, new L.GetLocal(makeSig.Parameters[0])))));
+
+var useShape = Fn(shapes, "use", Sig(i32), code =>
+    code.Block.Statements.Add(new L.Return(new L.Call(area, new L.Call(make, I(3))))));
+
+runtime.Load(shapes);
+Report("a method called through an interface runs what the class has", (int)Run(useShape)! == 9);
+Report("a polymorphic structure is a CLR class that implements the interface",
+    Run(make, 4) is { } made && !made.GetType().IsValueType && made.GetType().GetInterfaces().Any(@interface => @interface.Name == "Shape"));
+
 var unmapped = new L.Module("Unmapped");
 var missing = new L.FunctionHandle(Sig(null));
 Fn(unmapped, "bad", Sig(null), code => code.Block.Statements.Add(new L.Evaluate(new L.Call(missing))));
