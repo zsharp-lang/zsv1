@@ -11,6 +11,8 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         CompilerObject ITyped.Type => type();
 
+        public LIR.Variable Lowered => variable;
+
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
             => Result<LIR.Expression>.Ok(new LIR.GetLocal(variable));
 

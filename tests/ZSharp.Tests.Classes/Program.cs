@@ -1383,17 +1383,76 @@ Try("a cast definition sees a variable by value and a local function sees it by 
         && (string?)type.GetMethod("through")!.Invoke(null, []) == "after";
 });
 
-Try("capturing a parameter isn't supported yet", () =>
-    Run("""
-        class Cap11 {
-            @static fun run(p: String): String {
-                fun read(): String { return p; }
+Try("a local function captures a parameter by reference", () => Captured2("""
+    class CapP1 {
+        @static fun run(n: Int32): Int32 {
+            fun add() { n = n + 1; }
+            add();
+            add();
+            return n;
+        }
+    }
+    Keep(CapP1.run(5));
+    """) is 7);
+
+Try("a local function sees a parameter assigned after it is defined", () => Captured2("""
+    class CapP2 {
+        @static fun run(s: String): String {
+            fun read(): String { return s; }
+            s = s + "!";
+            return read();
+        }
+    }
+    Keep(CapP2.run("a"));
+    """) is "a!");
+
+Try("a named parameter can be captured", () => Captured2("""
+    class CapP3 {
+        @static fun run({n: Int32}): Int32 {
+            fun twice(): Int32 { return n * 2; }
+            return twice();
+        }
+    }
+    Keep(CapP3.run(n: 21));
+    """) is 42);
+
+Try("a local function captures a parameter of the local function it is in", () => Captured2("""
+    class CapP4 {
+        @static fun run(): String {
+            fun outer(text: String): String {
+                fun inner() { text = text + "!"; }
+                inner();
+                return text;
+            }
+            return outer("hi");
+        }
+    }
+    Keep(CapP4.run());
+    """) is "hi!");
+
+Try("a captured parameter is marked", () =>
+{
+    if (Run("""
+        Keep(class CapP5 {
+            @static fun run(a: String, b: String): String {
+                fun read(): String { return a; }
                 return read();
             }
-        }
-        """) is { } e && e.Contains("Capturing parameter p"));
+        } as DotNet_Class);
+        """) is { } error)
+        throw new Exception(error);
 
-// ---- Numbers and operators
+    var parameters = ((Package.DotNet.Class)Kept()).Methods.First(method => method.Name == "run").Parameters;
+    return parameters[0].IsCaptured && !parameters[1].IsCaptured;
+});
+
+object Captured2(string source)
+{
+    if (Run(source) is { } error)
+        throw new Exception(error);
+
+    return Kept();
+}
 
 Try("a string that looks like an operator or a keyword is a string", () =>
     ResetKept()

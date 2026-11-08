@@ -134,10 +134,9 @@ namespace ZSharp.Lang.DotNet
                 if (ReferenceEquals(holder.Type, owner.capture))
                     return Share(holder);
 
-                if (ReferenceEquals(holder.Type, owner.positional) || ReferenceEquals(holder.Type, owner.named))
-                    return Result<Code.Expression>.Error($"Capturing parameter {name} isn't supported yet.");
-
-                if (!ReferenceEquals(holder.Type, owner.local))
+                if (!ReferenceEquals(holder.Type, owner.local)
+                    && !ReferenceEquals(holder.Type, owner.positional)
+                    && !ReferenceEquals(holder.Type, owner.named))
                     return resolved;
 
                 if (Binding(name, holder) is not { } scope)
@@ -151,7 +150,7 @@ namespace ZSharp.Lang.DotNet
                 around.Statements.Add(new Code.Declare(made));
                 around.Statements.Add(new Code.ExpressionStatement(new Code.Set
                 {
-                    Target = new Code.NamedMember { Target = new Code.Get(holder), Name = nameof(Code.Local.IsCaptured) },
+                    Target = new Code.NamedMember { Target = new Code.Get(holder), Name = nameof(Code.Parameter.IsCaptured) },
                     Value = new Code.BooleanLiteral(true)
                 }));
 

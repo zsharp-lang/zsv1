@@ -618,26 +618,29 @@ variable of that code, the function captures it:
 - The code around gets a capture of the variable, bound over the variable's name in the
   scope it was bound in, so it and the function both refer to the capture from then on.
   Nothing already compiled is rewritten.
-- The variable's node is marked captured (`Local.IsCaptured`), because code compiled
-  before the capture still refers to the variable, and may run after it.
+- The variable's node is marked captured (`IsCaptured`, on a local or a parameter),
+  because code compiled before the capture still refers to the variable, and may run
+  after it.
 - A capture found that way is shared: a second function that uses the name finds the
   capture and adds it to its own list. A variable is captured once.
 - Resolving through the code around is what makes nesting work. A function two levels
   in asks the middle function, which captures the variable first, and then shares the
   middle function's capture.
 
-Only variables are captured, as `HIR.Variable` marks them. A definition or any other
-instance is referred to as it is. Capturing a parameter isn't supported yet.
+Only variables are captured, as `HIR.Variable` marks them: locals and parameters. A
+definition or any other instance is referred to as it is.
 
 The same `Capture` loads differently in each place. Outside the functions that capture
-it, it is what it captures, so in the capturee it is the variable's own CO: one
-definition gives one CO, and that CO stores the variable so it can be shared because it
-is marked. Code from before and after the capture uses the same storage, so a capture in
+it, it is what it captures, loaded as an instance, so in the capturee it is the
+variable's own CO, and that CO stores the variable so it can be shared because it is
+marked. (A parameter as a definition is what a call matches arguments to, which is why
+a capture loads what it captures as an instance.) Code from before and after the capture uses the same storage, so a capture in
 a branch needs no special handling. Inside a function that captures it, it is what that
 function was given. How a captured variable is stored is up to the platform. On the CLR:
 
 - A marked local lives in a cell, an `LIR.Allocate`d reference made when its declaration
-  runs.
+  runs. A marked parameter is copied into a cell when its function starts, and the
+  function uses the cell from then on.
 - A local function is a function of its own, which takes the cell of each capture as a
   hidden parameter before its own. Calling it passes the cells as the caller has them, so
   calling it from another local function passes on what that one was given.

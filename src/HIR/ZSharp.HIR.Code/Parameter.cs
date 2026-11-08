@@ -19,6 +19,12 @@ namespace ZSharp.HIR.Code
         /// to completes it.
         /// </summary>
         public Type? Type { get; }
+
+        /// <summary>
+        /// Whether a function inside the code captures this parameter. The code it belongs
+        /// to then stores its value so that it can be shared.
+        /// </summary>
+        public bool IsCaptured { get; set; }
     }
 
     /// <summary>
@@ -37,6 +43,8 @@ namespace ZSharp.HIR.Code
         public Type? Type { get; set; } = type;
 
         public Expression? DefaultValue { get; set; }
+
+        public bool IsCaptured { get; set; }
     }
 
     /// <summary>
@@ -55,5 +63,7 @@ namespace ZSharp.HIR.Code
         public Type? Type { get; set; } = type;
 
         public Expression? DefaultValue { get; set; }
+
+        public bool IsCaptured { get; set; }
     }
 }

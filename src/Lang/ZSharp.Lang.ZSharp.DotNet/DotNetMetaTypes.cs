@@ -54,12 +54,13 @@ namespace ZSharp.Lang.DotNet
                     : null
             );
 
-            // A capture of a local is bound over the local, so the code around a function
-            // that captures it refers to the capture from then on.
+            // A capture of a local or a parameter is bound over it, so the code around a
+            // function that captures it refers to the capture from then on.
             var capture = il.Load(typeof(Code.Capture));
+            HIR.Instance[] capturable = [local, il.Load(typeof(Code.PositionalParameter)), il.Load(typeof(Code.NamedParameter))];
 
             binding.Merges.Add((existing, value) =>
-                existing is Code.Get { Instance: Code.Local { Type: var before } } && ReferenceEquals(before, local)
+                existing is Code.Get { Instance: Code.Local { Type: var before } } && capturable.Any(kind => ReferenceEquals(before, kind))
                 && value is Code.Get { Instance: Code.Local { Type: var after } } && ReferenceEquals(after, capture)
                     ? value
                     : null

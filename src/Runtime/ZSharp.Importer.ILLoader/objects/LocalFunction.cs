@@ -115,9 +115,10 @@ namespace ZSharp.Importer.ILLoader.Objects
     }
 
     /// <summary>
-    /// A captured variable inside a function that captures it: the cell it was given.
+    /// A captured variable as a cell: inside a function that captures it, the cell it was
+    /// given, and in the code a captured parameter belongs to, the cell it was copied into.
     /// </summary>
-    internal sealed class Cell(LIR.Parameter cell, CompilerObject type)
+    internal sealed class Cell(LIR.Variable cell, CompilerObject type)
         : CompilerObject
         , ICompileIRExpression
         , ICompileIRReference<LIR.Expression>
@@ -137,7 +138,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? Result.Ok(new SetCell(cell, type, converted))
                 : Result.Error("The value doesn't match the type of this variable.");
 
-        private sealed class SetCell(LIR.Parameter cell, CompilerObject type, CompilerObject value)
+        private sealed class SetCell(LIR.Variable cell, CompilerObject type, CompilerObject value)
             : CompilerObject
             , ICompileIRExpression
             , ITyped

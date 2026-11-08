@@ -14,7 +14,7 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<Package.DotNet.TypeReference, Type> nodeTypes = [];
         private readonly Dictionary<Type, LIR.TypeHandle> types = [];
         private readonly Dictionary<Package.DotNet.Class, Objects.ClassInProgress> inProgress = [];
-        private readonly Dictionary<HIR.Instance, Objects.Variable> variables = [];
+        private readonly Dictionary<HIR.Instance, CompilerObject> variables = [];
 
         /// <summary>
         /// The local functions lowered so far.
@@ -551,7 +551,7 @@ namespace ZSharp.Importer.ILLoader
                 var compiled = new LIR.Parameter(type!) { Name = parameter.Name };
 
                 signature.Parameters.Add(compiled);
-                variables[parameter] = new(
+                variables[parameter] = new Objects.Variable(
                     compiled,
                     () => Core.Compiler.ModuleScope.HIRLoader.LoadType(parameter.Type!).Unwrap()
                 );
@@ -573,14 +573,14 @@ namespace ZSharp.Importer.ILLoader
                     if (field.DefaultValue is not null && Initialize(field, @class, constructor, declared) is { } error)
                         return error;
 
-                if (constructor.Body is { } body && Lower(body, declared.Function, null) is { } invalid)
+                if (constructor.Body is { } body && Lower(body, declared.Function, null, constructor.Parameters) is { } invalid)
                     return invalid;
             }
 
             foreach (var (method, declared) in @class.Methods)
                 if (method.Body is null)
                     return new ErrorMessage($"Method {method.Name} has no body.");
-                else if (Lower(method.Body, declared.Function, method.ReturnType) is { } error)
+                else if (Lower(method.Body, declared.Function, method.ReturnType, method.Parameters) is { } error)
                     return error;
 
             return null;
@@ -613,10 +613,13 @@ namespace ZSharp.Importer.ILLoader
             return null;
         }
 
-        private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned)
+        private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned, List<HIR.Code.Parameter> parameters)
         {
             if (Returns.Check(body.Block, returned is not null) is { } invalid)
                 return invalid;
+
+            if (Cells(parameters, function) is { } failed)
+                return failed;
 
             var outer = returnType;
 
@@ -663,7 +666,7 @@ namespace ZSharp.Importer.ILLoader
 
             foreach (var capture in node.Captures)
             {
-                if (Core.Compiler.ModuleScope.HIRLoader.LoadDefinition(capture.Captured).When(out var captured).Error(out var error))
+                if (Core.Compiler.ModuleScope.HIRLoader.LoadInstance((HIR.Instance)capture.Captured).When(out var captured).Error(out var error))
                     return Result<LIR.Function>.Error(error);
 
                 if (Core.Compiler.ModuleScope.TS.TypeOf(captured!).When(out var type).Error(out error))
@@ -697,7 +700,7 @@ namespace ZSharp.Importer.ILLoader
 
             try
             {
-                if (Lower(node.Body, function, node.ReturnType) is { } error)
+                if (Lower(node.Body, function, node.ReturnType, node.Parameters) is { } error)
                 {
                     localFunctions.Remove(node);
                     return Result<LIR.Function>.Error(error);
@@ -709,6 +712,33 @@ namespace ZSharp.Importer.ILLoader
             {
                 captures.Pop();
             }
+        }
+
+        /// <summary>
+        /// A parameter that a function inside the code captures is copied into a cell when
+        /// the code starts, and the code uses the cell from then on, so it and the
+        /// functions that capture it share it.
+        /// </summary>
+        private Error? Cells(List<HIR.Code.Parameter> parameters, LIR.Function function)
+        {
+            foreach (var parameter in parameters.Where(parameter => parameter.IsCaptured))
+            {
+                if (!variables.TryGetValue(parameter, out var known) || known is not Objects.Variable variable)
+                    continue;
+
+                var type = ((ITyped)variable).Type;
+
+                if (Core.Compiler.ModuleScope.IR.CompileType(type, runtime).When(out var compiled).Error(out var error))
+                    return error;
+
+                var cell = new LIR.Local(new LIR.Reference(compiled!)) { Name = parameter.Name };
+
+                function.Body!.Block.Locals.Add(cell);
+                function.Body.Block.Statements.Add(new LIR.SetLocal(cell, new LIR.Allocate(new LIR.GetLocal(variable.Lowered))));
+                variables[parameter] = new Objects.Cell(cell, type);
+            }
+
+            return null;
         }
 
         private void Reach(Package.DotNet.Class node, List<Package.DotNet.Class> nodes)
