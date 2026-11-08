@@ -1,7 +1,11 @@
 namespace Package.DotNet
 {
+    /// <summary>
+    /// A parameter as C# has them: an argument with its name fills it, or else the next
+    /// positional one, or else its default value.
+    /// </summary>
     public sealed class Parameter(string name, ZSharp.HIR.Type? type)
-        : ZSharp.HIR.Instance
+        : ZSharp.HIR.Code.Parameter
     {
         /// <summary>
         /// A parameter whose type is left to a rule of what it belongs to.

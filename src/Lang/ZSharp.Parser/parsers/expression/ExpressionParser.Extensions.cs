@@ -73,7 +73,11 @@ namespace ZSharp.Parser
         private SubExpressionParser? GetSubParserFor(string value)
             => subParserByValue.TryGetValue(value, out var parser) ? parser : null;
 
+        /// <summary>
+        /// A token is syntax by its value, as a keyword or an operator is, unless it is a
+        /// literal: the string <c>"-"</c> is a string, not the operator.
+        /// </summary>
         private SubExpressionParser? GetSubParserFor(Token token)
-            => GetSubParserFor(token.Value) ?? GetSubParserFor(token.Type);
+            => (Parser.IsLiteral(token) ? null : GetSubParserFor(token.Value)) ?? GetSubParserFor(token.Type);
     }
 }

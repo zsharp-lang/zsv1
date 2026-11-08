@@ -15,7 +15,7 @@ namespace Package.DotNet
 
         public List<CustomMetadata> CustomMetadata { get; } = [];
 
-        public List<Parameter> Parameters { get; } = [];
+        public List<ZSharp.HIR.Code.Parameter> Parameters { get; } = [];
 
         /// <summary>
         /// The locals of the code, each declared where it starts in the body.

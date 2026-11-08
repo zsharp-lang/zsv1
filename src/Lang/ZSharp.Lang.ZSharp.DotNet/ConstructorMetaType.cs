@@ -32,9 +32,6 @@ namespace ZSharp.Lang.DotNet
         {
             var signature = constructor.Signature;
 
-            if (signature.VarArgs is not null || signature.KwArgs is not null || signature.VarKwArgs is not null)
-                return Result<Code.Block>.Error("A constructor has parameters that aren't supported yet.");
-
             var block = new Code.Block();
 
             if (body.Parameters(
@@ -42,7 +39,7 @@ namespace ZSharp.Lang.DotNet
                 block,
                 self,
                 nameof(Package.DotNet.Constructor.Parameters),
-                signature.Args ?? []
+                signature
             ) is { } error)
                 return Result<Code.Block>.Error(error);
 

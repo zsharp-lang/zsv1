@@ -108,6 +108,8 @@ document.Scope.Add("Boolean", new C.Get(il.Load(typeof(bool))));
 document.Scope.Add("Int32", new C.Get(il.Load(typeof(int))));
 document.Scope.Add("Keep2", new C.NamedMember { Target = probe, Name = "Keep2" });
 document.Scope.Add("Which", new C.NamedMember { Target = probe, Name = "Which" });
+foreach (var (name, member) in new[] { ("PairOf", "Pair"), ("GreetWith", "Greet"), ("NamedBy", "Named"), ("NextNumber", "Next") })
+    document.Scope.Add(name, new C.NamedMember { Target = probe, Name = member });
 document.Scope.Add("Either", new C.NamedMember { Target = probe, Name = "Either" });
 
 var coreRuntime = new C.Get(il.Load(typeof(Core.Runtime.ModuleScope).Module));
@@ -1393,6 +1395,11 @@ Try("capturing a parameter isn't supported yet", () =>
 
 // ---- Numbers and operators
 
+Try("a string that looks like an operator or a keyword is a string", () =>
+    ResetKept()
+    && Run("""Keep("-"); Keep("/"); Keep("from"); Keep("as"); Keep("a" + "-" + "b");""") is null
+    && Probe.Kept is ["-", "/", "from", "as", "a-b"]);
+
 Try("a whole number is an Int32", () => Run("Keep(42);") is null && Kept() is 42);
 
 Try("a number with a fraction is a Double", () => Run("Keep(1.5);") is null && Kept() is 1.5);
@@ -1660,6 +1667,110 @@ Try("code from before a capture in a loop shares the captured variable", () => L
     }
     Keep(L20.run());
     """) is 33);
+
+// ---- Named arguments and default values
+
+bool ResetKept() { Probe.Kept.Clear(); return true; }
+
+Try("a CLR method takes named arguments in any order", () =>
+    Run("""Keep(PairOf(second: "b", first: "a"));""") is null && (string)Kept() == "ab");
+
+Try("a CLR default value fills a missing argument", () =>
+    Run("""Keep(GreetWith("Ann"));""") is null && (string)Kept() == "Hello, Ann");
+
+Try("a named argument replaces a CLR default value", () =>
+    Run("""Keep(GreetWith("Ann", greeting: "Hi"));""") is null && (string)Kept() == "Hi, Ann");
+
+Try("a name no parameter has is an error", () =>
+    Run("""Keep(PairOf(first: "a", third: "c"));""") is { } e && e.Contains("can't be called with these arguments"));
+
+Try("a named argument goes to its parameter, and positional ones fill the rest in order", () =>
+    Run("""Keep(PairOf("a", first: "b"));""") is null && (string)Kept() == "ba");
+
+Try("named and positional arguments can come in any order", () =>
+    Run("""Keep(PairOf(first: "a", "b"));""") is null && (string)Kept() == "ab");
+
+Try("an argument no parameter takes is an error", () =>
+    Run("""Keep(PairOf("a", "b", "c"));""") is { } e && e.Contains("can't be called with these arguments"));
+
+Try("overloads are chosen by the names of the arguments", () =>
+    ResetKept() &&
+    Run("""Keep(NamedBy(text: "x")); Keep(NamedBy(count: 1));""") is null && Probe.Kept is ["text", "count"]);
+
+Try("a Z# method takes positional and named parameters, with default values", () =>
+    ResetKept() &&
+    Run("""
+        class Named1 {
+            @static fun greet(name: String, {greeting: String = "Hello"}): String { return greeting + ", " + name; }
+        }
+        Keep(Named1.greet("Ann"));
+        Keep(Named1.greet("Bo", greeting: "Hi"));
+        """) is null && Probe.Kept is ["Hello, Ann", "Hi, Bo"]);
+
+Try("a Z# constructor takes named arguments and default values", () =>
+    ResetKept() &&
+    Run("""
+        class WithDefaultTag {
+            let tag: String;
+            @explicitThis new(this, {tag: String = "default"}) { this.tag = tag; }
+        }
+        Keep(WithDefaultTag().tag);
+        Keep(WithDefaultTag(tag: "given").tag);
+        """) is null && Probe.Kept is ["default", "given"]);
+
+Try("a Z# positional parameter takes only a positional argument", () =>
+    Run("""
+        class Named5 {
+            @static fun join(a: String, {b: String}): String { return a + b; }
+        }
+        Keep(Named5.join(a: "A", b: "B"));
+        """) is { } e && e.Contains("can't be called with these arguments"));
+
+Try("a Z# named parameter takes only a named argument", () =>
+    Run("""Keep(Named5.join("A", "B"));""") is { } e && e.Contains("can't be called with these arguments"));
+
+Try("arguments to a Z# method can come in any order", () =>
+    Run("""Keep(Named5.join(b: "B", "A"));""") is null && (string)Kept() == "AB");
+
+Try("a parameter is named outside by its external name and inside by its alias", () =>
+    Run("""
+        class Named6 {
+            @static fun label(value as v: String, {text as t: String = "none"}): String { return v + "/" + t; }
+        }
+        Keep(Named6.label("a", text: "b"));
+        """) is null && (string)Kept() == "a/b");
+
+Try("a named argument names the external name, not the alias", () =>
+    Run("""Keep(Named6.label("a", t: "b"));""") is { } e && e.Contains("can't be called with these arguments"));
+
+Try("parameters that take the rest of the arguments aren't supported yet", () =>
+    Run("""class Named7 { @static fun all(...rest: String) { } }""") is { } e && e.Contains("take the rest"));
+
+Try("a local function takes named arguments and default values", () =>
+    Run("""
+        class Named3 {
+            @static fun run(): String {
+                fun join(a: String, {b: String = "!"}): String { return a + b; }
+                return join("x") + join(b: "?", "y");
+            }
+        }
+        Keep(Named3.run());
+        """) is null && (string)Kept() == "x!y?");
+
+Try("a default value is code that runs at each call", () =>
+{
+    Probe.Counter = 0;
+    Probe.Kept.Clear();
+
+    return Run("""
+        class Named4 {
+            @static fun next(n: Int32 = NextNumber()): Int32 { return n; }
+        }
+        Keep(Named4.next());
+        Keep(Named4.next());
+        Keep(Named4.next(10));
+        """) is null && Probe.Kept is [1, 2, 10];
+});
 
 // ---- Overloading
 
@@ -2096,6 +2207,16 @@ Try("an import passes its arguments to the import function after the source", ()
         && Probe.ImportedWith is ["noted"];
 });
 
+Try("an import passes keyword arguments by name", () =>
+{
+    var library = Library("Library97", "named");
+    Probe.ImportedWith.Clear();
+
+    return Run($$"""import(note: "by name") { Library97 } from "{{library}}"; Keep(Library97.hello());""") is null
+        && (string)Kept() == "named"
+        && Probe.ImportedWith is ["by name"];
+});
+
 Try("an import in a body passes its arguments too", () =>
 {
     var library = Library("Library94b", "body");
@@ -2358,6 +2479,18 @@ public static class Probe
     public static string PickBool(bool value) => "bool";
 
     public static string Which(object value) => "object";
+
+    public static string Pair(string first, string second) => first + second;
+
+    public static string Greet(string name, string greeting = "Hello") => $"{greeting}, {name}";
+
+    public static string Named(string text) => "text";
+
+    public static string Named(int count) => "count";
+
+    public static int Counter;
+
+    public static int Next() => ++Counter;
 
     public static string Which(string value) => "string";
 

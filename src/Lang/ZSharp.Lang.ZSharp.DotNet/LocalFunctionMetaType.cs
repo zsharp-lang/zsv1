@@ -27,7 +27,8 @@ namespace ZSharp.Lang.DotNet
     {
         private readonly HIR.Instance local = il.Load(typeof(Code.Local));
         private readonly HIR.Instance capture = il.Load(typeof(Code.Capture));
-        private readonly HIR.Instance parameter = il.Load(typeof(Package.DotNet.Parameter));
+        private readonly HIR.Instance positional = il.Load(typeof(Code.PositionalParameter));
+        private readonly HIR.Instance named = il.Load(typeof(Code.NamedParameter));
 
         public IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition node, Code.Local self)
         {
@@ -58,9 +59,6 @@ namespace ZSharp.Lang.DotNet
         {
             var signature = function.Signature;
 
-            if (signature.VarArgs is not null || signature.KwArgs is not null || signature.VarKwArgs is not null)
-                return Result<Code.Block>.Error($"Function {function.Name} has parameters that aren't supported yet.");
-
             var block = new Code.Block();
             var captures = new Captures(this, self, block, around, boundary);
             var fork = compiler.Fork();
@@ -71,7 +69,7 @@ namespace ZSharp.Lang.DotNet
                     ? captures.Capture(identifier.Name, expressions(current, expression))
                     : expressions(current, expression);
 
-            if (body.Parameters(fork, block, self, nameof(Package.DotNet.LocalFunction.Parameters), signature.Args ?? []) is { } error)
+            if (body.Parameters(fork, block, self, nameof(Package.DotNet.LocalFunction.Parameters), signature) is { } error)
                 return Result<Code.Block>.Error(error);
 
             if (function.ReturnType is not null)
@@ -136,7 +134,7 @@ namespace ZSharp.Lang.DotNet
                 if (ReferenceEquals(holder.Type, owner.capture))
                     return Share(holder);
 
-                if (ReferenceEquals(holder.Type, owner.parameter))
+                if (ReferenceEquals(holder.Type, owner.positional) || ReferenceEquals(holder.Type, owner.named))
                     return Result<Code.Expression>.Error($"Capturing parameter {name} isn't supported yet.");
 
                 if (!ReferenceEquals(holder.Type, owner.local))

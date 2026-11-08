@@ -18,6 +18,7 @@ namespace ZSharp.Compiler.CGDispatchers.Direct
             cg.GetMemberByName = Member;
             cg.ImplicitCast = ImplicitCast;
             cg.Match = Match;
+            cg.MatchParameter = MatchParameter;
             cg.Set = Set;
             cg.SetIndex = Index;
             cg.SetMemberByIndex = Member;

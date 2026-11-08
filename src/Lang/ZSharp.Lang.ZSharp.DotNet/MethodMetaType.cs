@@ -33,18 +33,14 @@ namespace ZSharp.Lang.DotNet
         {
             var signature = function.Signature;
 
-            if (signature.VarArgs is not null || signature.KwArgs is not null || signature.VarKwArgs is not null)
-                return Result<Code.Block>.Error($"Method {function.Name} has parameters that aren't supported yet.");
-
             var block = new Code.Block();
-            var parameters = signature.Args ?? [];
 
             if (body.Parameters(
                 compiler,
                 block,
                 self,
                 nameof(Package.DotNet.Method.Parameters),
-                parameters
+                signature
             ) is { } error)
                 return Result<Code.Block>.Error(error);
 

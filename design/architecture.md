@@ -1077,6 +1077,58 @@ These rules are provisional, and nothing should rely much on them:
   because it is the simplest one; a different rule is a different answer to
   `IsAsSpecificAs`, or a different dispatcher.
 
+### Arguments
+
+Parameters take their values from a call, as in `zsv1`. A call's arguments become an
+`ArgumentStream`: positional ones in order, and named ones by name, in any order. Each
+parameter, in order, takes what it needs from the stream through `CG.MatchParameter`,
+and an argument left over when they are done is one too many. A callable never looks at
+its parameters: it asks each one to match, and a candidate whose parameters don't match
+doesn't apply, so overloading doesn't change.
+
+A parameter is any `HIR.Code.Parameter`: a variable that takes its value from a call,
+with the name the outside sees and a type, which is all that lowering needs to give it a
+place in a signature. How it takes its value is its kind's, through its definition, and
+as an instance it is the variable of the code it belongs to. A list of parameters only
+holds parameters, so nothing else can get into one; a kind whose definition doesn't
+match arguments fails at the call. The kinds so far:
+
+- `PositionalParameter` takes only the next positional argument.
+- `NamedParameter` takes only the argument with its name.
+- `Package.DotNet.Parameter` takes the argument with its name, or else the next
+  positional one, as C# does. A CLR method's parameters match this way too, with the
+  default values their metadata gives.
+
+Each takes its default value when it gets no argument. Z# writes the first two:
+
+```zs
+fun f(a, b, c, {d, e, f})
+```
+
+`a`, `b` and `c` are positional only, and `d`, `e` and `f` named only, so a call can't
+name a positional parameter or pass a named one by position, which avoids what mixing
+does in Python. The arguments of a call can still come in any order. A CLR method
+allows both, as C# does.
+
+A parameter can be written `external as internal`: the external name is what a named
+argument names and what documents it, and the internal name is what the code uses, so
+an API can read well from outside while the code stays convenient. HIR keeps the
+external name; only the frontend knows the internal one, as it binds it.
+
+A Z# default value, `x: T = value`, is code, run at each call that leaves the argument
+out, so it isn't limited to constants. A Z# method keeps its parameters once its class
+is loaded: the IL loader remembers the parameters each method and constructor it
+defined was written with, so a call to it matches those rather than its CLR metadata. A
+default can't use the other parameters yet.
+
+How a parameter gets its value is its own, so other kinds fit without changing calls.
+An injected parameter takes nothing from the stream and gives the value it is injected
+with, so it needs no default value standing in for "not given", and callers never see
+it. This generalizes default values and dependency injection. A parameter that takes
+the rest of the arguments, `...rest` or `{...rest}`, is another kind: it takes every
+positional or every named argument left. It isn't supported yet, because its values
+have to be gathered into a collection, which LIR can't build yet.
+
 ## Diagnostics
 
 `ZSharp.Diagnostics.HIR` prints any HIR graph, with the common code nodes printed as
@@ -1151,9 +1203,9 @@ The `as` cast marking such a definition is not settled.
   kwargs...)`. Whatever runs the import runs that call, so a body puts it in its
   building code and the document evaluates it as its statement. `core:zsharp`'s
   `import(String)` is the first overload, and adding overloads lets an import take
-  sources other than a string, or arguments. Keyword arguments need named arguments in
-  calls, which aren't supported yet. An import has no alias of its own: only the names
-  it brings in can be renamed, as in `{ a as b }`.
+  sources other than a string, or arguments. Keyword arguments are named arguments of
+  that call. An import has no alias of its own: only the names it brings in can be
+  renamed, as in `{ a as b }`.
 - Importers route by prefix through the string importer.
 - Importers do nothing CO-related. They return real HIR, and imported names
   cross into MIR through the HIR -> MIR REI when used.

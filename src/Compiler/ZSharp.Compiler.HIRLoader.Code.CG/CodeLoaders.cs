@@ -56,6 +56,15 @@ namespace ZSharp.Compiler
                     : Result.Ok(Local(local, inferred, init));
             });
 
+            // A parameter as defined is what a call matches arguments to. As an instance it is
+            // the variable of the code it belongs to, which whatever lowers that code gives.
+            instances.Definitions.Register<HIR.Code.PositionalParameter>(parameter => Result.Ok(new Objects.ParameterMatch(
+                parameter.Name, parameter.Type, parameter.DefaultValue, byName: false, byPosition: true
+            )));
+            instances.Definitions.Register<HIR.Code.NamedParameter>(parameter => Result.Ok(new Objects.ParameterMatch(
+                parameter.Name, parameter.Type, parameter.DefaultValue, byName: true, byPosition: false
+            )));
+
             // Outside the functions that capture it, a capture is what it captures.
             instances.Instances.Register<HIR.Code.Capture>(capture => loader.LoadDefinition(capture.Captured));
             instances.Instances.Register<HIR.Code.Local>(local => loader.LoadDefinition(local));

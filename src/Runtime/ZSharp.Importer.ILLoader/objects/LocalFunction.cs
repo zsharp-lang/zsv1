@@ -71,7 +71,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (loader.Lower(node).When(out var function).Error(out var error))
                 return Result.Error(error);
 
-            if (Parameters() is not { } types || Arguments.Convert(types, arguments) is not { } values)
+            if (Arguments.Parameters(node.Parameters) is not { } matching || Arguments.Match(matching, arguments) is not { } values)
                 return Result.Error($"{node.Name} can't be called with these arguments.");
 
             var cells = new List<CompilerObject>();

@@ -29,35 +29,57 @@ namespace ZSharp.Lang.DotNet
                 : Result<Code.Expression>.Ok(new Code.Cast { Value = compiled!, Type = new Code.Get(il.Load(typeof(T))) });
 
         /// <summary>
-        /// Adds code that builds each parameter, and binds its name.
+        /// Adds code that builds each parameter, and binds its name. In <c>(a, b, {c, d})</c>,
+        /// <c>a</c> and <c>b</c> are positional only and <c>c</c> and <c>d</c> named only. A
+        /// parameter written <c>external as internal</c> is named <c>external</c> outside,
+        /// which is what a named argument names, and <c>internal</c> in the code.
         /// </summary>
-        public Error? Parameters(ASTCompiler compiler, Code.Block block, Code.Local owner, string list, IEnumerable<AST.Parameter> parameters)
+        public Error? Parameters(ASTCompiler compiler, Code.Block block, Code.Local owner, string list, AST.Signature signature)
         {
-            foreach (var parameter in parameters)
-            {
-                Code.Expression[] arguments = [new Code.StringLiteral(parameter.Name)];
+            if (signature.VarArgs is not null || signature.VarKwArgs is not null)
+                return new ErrorMessage("Parameters that take the rest of the arguments aren't supported yet.");
 
-                // A parameter with no type is completed by a rule or is an error, which
-                // the code it belongs to decides when it is loaded.
-                if (parameter.Type is not null)
-                    if (Described<HIR.Type>(compiler, parameter.Type).When(out var type).Error(out var error))
-                        return error;
-                    else
-                        arguments = [.. arguments, type!];
+            foreach (var parameter in signature.Args ?? [])
+                if (Parameter(compiler, block, owner, list, parameter, il.Load(typeof(Code.PositionalParameter))) is { } error)
+                    return error;
 
-                var local = new Code.Local(parameter.Name, il.Load(typeof(Package.DotNet.Parameter)))
-                {
-                    Init = Construct(il.Load(typeof(Package.DotNet.Parameter)), arguments)
-                };
-
-                block.Statements.Add(new Code.Declare(local));
-                block.Statements.Add(new Code.ExpressionStatement(Add(owner, list, new Code.Get(local))));
-
-                if (language.Bind(compiler, parameter.Name, new Code.Get(local)) is { } invalid)
-                    return invalid;
-            }
+            foreach (var parameter in signature.KwArgs ?? [])
+                if (Parameter(compiler, block, owner, list, parameter, il.Load(typeof(Code.NamedParameter))) is { } error)
+                    return error;
 
             return null;
+        }
+
+        private Error? Parameter(ASTCompiler compiler, Code.Block block, Code.Local owner, string list, AST.Parameter parameter, Package.DotNet.TypeReference kind)
+        {
+            Code.Expression[] arguments = [new Code.StringLiteral(parameter.Name)];
+
+            // A parameter with no type is completed by a rule or is an error, which the code
+            // it belongs to decides when it is loaded.
+            if (parameter.Type is not null)
+                if (Described<HIR.Type>(compiler, parameter.Type).When(out var type).Error(out var error))
+                    return error;
+                else
+                    arguments = [.. arguments, type!];
+
+            var local = new Code.Local(parameter.Alias ?? parameter.Name, kind) { Init = Construct(kind, arguments) };
+
+            block.Statements.Add(new Code.Declare(local));
+
+            // A default value is code, which the call runs where the argument is left out.
+            if (parameter.Initializer is not null)
+                if (Reified(compiler, block, parameter.Initializer).When(out var initializer).Error(out var error))
+                    return error;
+                else
+                    block.Statements.Add(new Code.ExpressionStatement(new Code.Set
+                    {
+                        Target = new Code.NamedMember { Target = new Code.Get(local), Name = nameof(Code.PositionalParameter.DefaultValue) },
+                        Value = initializer!
+                    }));
+
+            block.Statements.Add(new Code.ExpressionStatement(Add(owner, list, new Code.Get(local))));
+
+            return language.Bind(compiler, parameter.Alias ?? parameter.Name, new Code.Get(local));
         }
 
         /// <summary>

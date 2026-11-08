@@ -43,9 +43,15 @@ namespace ZSharp.Parser
 			return true;
 		}
 
+		/// <summary>
+		/// Whether a token's value is what it is: a literal's value is never syntax.
+		/// </summary>
+		public static bool IsLiteral(Token token)
+			=> ((ushort)token.Type & (ushort)TokenType.Mask) == (ushort)TokenCategory.Literal;
+
 		public bool Is(string value, bool eat = false)
 		{
-            if (TokenStream.PeekToken().Value != value) return false;
+            if (IsLiteral(TokenStream.PeekToken()) || TokenStream.PeekToken().Value != value) return false;
             if (eat) TokenStream.Advance();
             return true;
         }
@@ -53,7 +59,7 @@ namespace ZSharp.Parser
 		public bool Is(string value, out Token token, bool eat = false)
         {
             token = TokenStream.PeekToken();
-            if (TokenStream.PeekToken().Value != value) return false;
+            if (IsLiteral(token) || token.Value != value) return false;
             if (eat) TokenStream.Advance();
             return true;
         }

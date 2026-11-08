@@ -134,7 +134,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     internal sealed class Callable(
         string name,
         LIR.ICallable callable,
-        List<Package.DotNet.Parameter> parameters,
+        List<HIR.Code.Parameter> parameters,
         CompilerObject? receiver,
         Func<CompilerObject>? returnType
     )
@@ -144,7 +144,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         public IResult Call(Argument[] arguments)
         {
-            if (Arguments.Types(parameters) is not { } types || Arguments.Convert(types, arguments) is not { } values)
+            if (Arguments.Parameters(parameters) is not { } matching || Arguments.Match(matching, arguments) is not { } values)
                 return Result.Error($"{name} can't be called with these arguments.");
 
             return Result.Ok(new Call(callable, [.. (receiver is null ? [] : new[] { receiver }), .. values], returnType));

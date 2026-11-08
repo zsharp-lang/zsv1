@@ -3,7 +3,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     /// <summary>
     /// A value that already exists, whether written in code or exposed from C#.
     /// </summary>
-    internal sealed class Literal(object value, Type type, ILLoader loader)
+    internal sealed class Literal(object? value, Type type, ILLoader loader)
         : CompilerObject
         , ICompileIRExpression
         , ITyped

@@ -14,7 +14,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         public IResult Call(Argument[] arguments)
         {
-            if (Arguments.Convert(Parameters(), arguments) is not { } values)
+            if (Arguments.Match(Matching(), arguments) is not { } values)
                 return Result.Error($"{method.Name} can't be called with these arguments.");
 
             return Result.Ok(new Call(
@@ -32,5 +32,14 @@ namespace ZSharp.Importer.ILLoader.Objects
 
         private CompilerObject[] Parameters()
             => [.. method.GetParameters().Select(parameter => loader.Class(parameter.ParameterType))];
+
+        /// <summary>
+        /// The parameters as they match arguments. A method defined from HIR has them as
+        /// written, so its default values are code. Any other has those of its metadata.
+        /// </summary>
+        private CompilerObject[] Matching()
+            => loader.DefinedParameters(method) is { } defined && Arguments.Parameters(defined) is { } written
+                ? written
+                : [.. method.GetParameters().Select(parameter => new ClrParameter(parameter, loader))];
     }
 }

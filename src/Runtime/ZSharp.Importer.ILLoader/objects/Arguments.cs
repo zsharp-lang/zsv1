@@ -1,42 +1,114 @@
+using System.Reflection;
+
+using Scope = Core.Compiler.ModuleScope;
+
 namespace ZSharp.Importer.ILLoader.Objects
 {
     internal static class Arguments
     {
         /// <summary>
-        /// Converts arguments to the types of the parameters they go to, or returns
-        /// <see langword="null"/> if there are more or fewer of them, or one can't be.
+        /// The values of parameters for a call. Each parameter, in order, takes what it
+        /// needs from the call's arguments, and any argument left over is one too many.
+        /// Returns <see langword="null"/> if they don't match.
         /// </summary>
-        public static CompilerObject[]? Convert(CompilerObject[] types, Argument[] arguments)
+        public static CompilerObject[]? Match(IEnumerable<CompilerObject> parameters, Argument[] arguments)
         {
-            if (types.Length != arguments.Length)
-                return null;
+            var stream = new ArgumentStream(arguments);
+            var values = new List<CompilerObject>();
 
-            var converted = new List<CompilerObject>();
-
-            foreach (var (type, argument) in types.Zip(arguments))
-                if (Core.Compiler.ModuleScope.CG.ImplicitCast(argument.Object, type).Ok(out var value))
-                    converted.Add(value);
+            foreach (var parameter in parameters)
+                if (Scope.CG.MatchParameter(parameter, stream).Ok(out var value))
+                    values.Add(value);
                 else
                     return null;
 
-            return [.. converted];
+            return stream.HasArguments ? null : [.. values];
+        }
+
+        /// <summary>
+        /// What an ordinary parameter takes: the argument with its name, or else the next
+        /// positional one, or else its default value, converted to its type.
+        /// </summary>
+        public static IResult Take(string name, CompilerObject type, Func<CompilerObject?>? fallback, ArgumentStream arguments)
+        {
+            if ((arguments.Pop(name) ?? arguments.Pop() ?? fallback?.Invoke()) is not { } argument)
+                return Result.Error($"No argument is given for parameter {name}.");
+
+            return Scope.CG.ImplicitCast(argument, type);
+        }
+
+        /// <summary>
+        /// The parameters of something being defined, as they match arguments.
+        /// </summary>
+        public static CompilerObject[]? Parameters(List<HIR.Code.Parameter> parameters)
+        {
+            var loaded = new List<CompilerObject>();
+
+            foreach (var parameter in parameters)
+                if (Scope.HIRLoader.LoadDefinition(parameter).Ok(out var definition))
+                    loaded.Add(definition);
+                else
+                    return null;
+
+            return [.. loaded];
         }
 
         /// <summary>
         /// The types of the parameters of something being defined, or <see langword="null"/>
         /// if one of them can't be loaded.
         /// </summary>
-        public static CompilerObject[]? Types(List<Package.DotNet.Parameter> parameters)
+        public static CompilerObject[]? Types(List<HIR.Code.Parameter> parameters)
         {
             var types = new List<CompilerObject>();
 
             foreach (var parameter in parameters)
-                if (parameter.Type is not null && Core.Compiler.ModuleScope.HIRLoader.LoadType(parameter.Type).Ok(out var type))
+                if (parameter.Type is not null && Scope.HIRLoader.LoadType(parameter.Type).Ok(out var type))
                     types.Add(type);
                 else
                     return null;
 
             return [.. types];
+        }
+    }
+
+    /// <summary>
+    /// A parameter of a CLR method, with the default value its metadata gives.
+    /// </summary>
+    internal sealed class ClrParameter(ParameterInfo parameter, ILLoader loader)
+        : CompilerObject
+        , ICTMatchParameter
+    {
+        public IResult Match(ArgumentStream arguments)
+            => Arguments.Take(
+                parameter.Name ?? string.Empty,
+                loader.Class(parameter.ParameterType),
+                parameter.HasDefaultValue ? () => new Literal(parameter.DefaultValue, parameter.ParameterType, loader) : null,
+                arguments
+            );
+    }
+
+    /// <summary>
+    /// A parameter defined in HIR, as a call matches arguments to it. Its default value is
+    /// code, loaded where the call is. The code it belongs to uses it as a variable, which
+    /// is what it is as an instance.
+    /// </summary>
+    internal sealed class DefinedParameter(Package.DotNet.Parameter node)
+        : CompilerObject
+        , ICTMatchParameter
+    {
+        public IResult Match(ArgumentStream arguments)
+        {
+            if (node.Type is null || !Scope.HIRLoader.LoadType(node.Type).Ok(out var type))
+                return Result.Error($"Parameter {node.Name} has no type.");
+
+            return Arguments.Take(
+                node.Name,
+                type,
+                node.DefaultValue is { } fallback
+                    ? () => Scope.HIRCodeLoader.LoadExpression(fallback).Ok(out var loaded) ? loaded : null
+                    : null,
+                arguments
+            );
         }
     }
 }

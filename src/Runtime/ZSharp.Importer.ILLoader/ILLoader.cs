@@ -38,6 +38,12 @@ namespace ZSharp.Importer.ILLoader
 
         private readonly Dictionary<MethodInfo, Package.DotNet.Method> methods = [];
         private readonly Dictionary<Package.DotNet.Method, MethodInfo> methodInfos = [];
+
+        /// <summary>
+        /// The parameters of each method and constructor defined from HIR, as written, with
+        /// default values that are code.
+        /// </summary>
+        private readonly Dictionary<MethodBase, List<HIR.Code.Parameter>> definedParameters = [];
         private readonly Dictionary<ConstructorInfo, Package.DotNet.Constructor> constructors = [];
         private readonly Dictionary<Package.DotNet.Constructor, ConstructorInfo> constructorInfos = [];
         private readonly Dictionary<MethodBase, LIR.FunctionHandle> functions = [];
@@ -68,6 +74,12 @@ namespace ZSharp.Importer.ILLoader
 
             loader.Instances.Register<Package.DotNet.ExposedObject>(LoadExposed);
             loader.Instances.Register<Package.DotNet.Parameter>(LoadVariable);
+            loader.Instances.Register<HIR.Code.PositionalParameter>(LoadVariable);
+            loader.Instances.Register<HIR.Code.NamedParameter>(LoadVariable);
+
+            // A parameter as defined is what a call matches arguments to, and as an instance
+            // it is the variable the code it belongs to uses.
+            loader.Definitions.Register<Package.DotNet.Parameter>(node => Result.Ok(new Objects.DefinedParameter(node)));
 
             loader.Definitions.Register<Package.DotNet.LocalFunction>(node => Result.Ok(new Objects.LocalFunction(this, node)));
             loader.Instances.Register<Package.DotNet.LocalFunction>(node => Core.Compiler.ModuleScope.HIRLoader.LoadDefinition(node));
@@ -164,6 +176,12 @@ namespace ZSharp.Importer.ILLoader
         }
 
         internal Platform.Runtime.Runtime Runtime => runtime;
+
+        /// <summary>
+        /// The parameters a method was defined with from HIR, if it was.
+        /// </summary>
+        internal List<HIR.Code.Parameter>? DefinedParameters(MethodBase method)
+            => definedParameters.TryGetValue(method, out var parameters) ? parameters : null;
 
         /// <summary>
         /// The functions the methods of a type say operators stand for.
@@ -386,6 +404,14 @@ namespace ZSharp.Importer.ILLoader
                 {
                     nodeTypes[node] = type;
                     typeNodes[type] = node;
+
+                    var @class = inProgress[node];
+
+                    foreach (var (method, declared) in @class.Methods)
+                        definedParameters[runtime.Defined(declared)] = CallParameters(method.Parameters, method.CustomMetadata);
+
+                    foreach (var (constructor, declared) in @class.Constructors.Zip(@class.Definition.Constructors))
+                        definedParameters[runtime.Defined(declared)] = CallParameters(constructor.Parameters, constructor.CustomMetadata);
                 }
 
                 return null;
@@ -477,8 +503,8 @@ namespace ZSharp.Importer.ILLoader
         /// <summary>
         /// The parameters a call passes arguments to, which leaves out an explicit this.
         /// </summary>
-        internal List<Package.DotNet.Parameter> CallParameters(
-            List<Package.DotNet.Parameter> parameters,
+        internal List<HIR.Code.Parameter> CallParameters(
+            List<HIR.Code.Parameter> parameters,
             List<Package.DotNet.CustomMetadata> metadata
         )
             => ExplicitThis(metadata) ? [.. parameters.Skip(1)] : parameters;
@@ -490,7 +516,7 @@ namespace ZSharp.Importer.ILLoader
         private Error? This(
             Package.DotNet.This @this,
             Objects.ClassInProgress @class,
-            List<Package.DotNet.Parameter> parameters,
+            List<HIR.Code.Parameter> parameters,
             List<Package.DotNet.CustomMetadata> metadata,
             LIR.Signature signature
         )
@@ -512,7 +538,7 @@ namespace ZSharp.Importer.ILLoader
             return null;
         }
 
-        private Error? Parameters(List<Package.DotNet.Parameter> parameters, LIR.Signature signature)
+        private Error? Parameters(List<HIR.Code.Parameter> parameters, LIR.Signature signature)
         {
             foreach (var parameter in parameters)
             {

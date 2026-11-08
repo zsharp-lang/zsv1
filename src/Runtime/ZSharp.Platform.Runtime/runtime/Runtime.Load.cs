@@ -125,6 +125,25 @@ namespace ZSharp.Platform.Runtime
         }
 
         /// <summary>
+        /// The method a class method became, once its class is loaded.
+        /// </summary>
+        public IL.MethodBase Defined(ClassMethod method)
+            => Created(classMethods[method]);
+
+        /// <summary>
+        /// The constructor a class constructor became, once its class is loaded.
+        /// </summary>
+        public IL.MethodBase Defined(ClassConstructor constructor)
+            => Created(classConstructors[constructor]);
+
+        private IL.MethodBase Created(IL.MethodBase builder)
+            => classes.Values
+                .First(type => type is not Emit.TypeBuilder && type.MetadataToken == builder.DeclaringType!.MetadataToken)
+                .GetMembers(IL.BindingFlags.Public | IL.BindingFlags.NonPublic | IL.BindingFlags.Instance | IL.BindingFlags.Static | IL.BindingFlags.DeclaredOnly)
+                .OfType<IL.MethodBase>()
+                .First(member => member.MetadataToken == builder.MetadataToken);
+
+        /// <summary>
         /// Gets the method of a loaded function.
         /// </summary>
         public IL.MethodInfo GetMethod(LIR.Function function)

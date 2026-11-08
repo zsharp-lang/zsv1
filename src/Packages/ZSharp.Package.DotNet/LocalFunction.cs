@@ -12,7 +12,7 @@ namespace Package.DotNet
     {
         public string Name { get; set; } = name;
 
-        public List<Parameter> Parameters { get; } = [];
+        public List<ZSharp.HIR.Code.Parameter> Parameters { get; } = [];
 
         /// <summary>
         /// The locals of the code, each declared where it starts in the body.
