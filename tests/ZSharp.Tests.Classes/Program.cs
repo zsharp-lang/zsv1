@@ -994,6 +994,20 @@ Try("a decorator runs after the fill", () =>
     return Run("class Filled { @markMethod fun later() { } }") is null && Probe.Marked is ["later"];
 });
 
+Try("a decorator can be defined in Z#", () =>
+{
+    if (Run("""
+        class Decorators {
+            @static fun named(node: DotNet_Class): DotNet_Class { Keep(node); return node; }
+        }
+        @Decorators.named class DecoratedInZ {}
+        Keep(DecoratedInZ());
+        """) is { } error)
+        throw new Exception(error);
+
+    return Probe.Kept[^2] is Package.DotNet.Class { Name: "DecoratedInZ" } && Kept().GetType().Name == "DecoratedInZ";
+});
+
 Try("a decorator is type checked", () =>
     Run("@markMethod class NotAMethod {}") is { } e && e.Contains("can't be called with these arguments"));
 
@@ -1431,10 +1445,36 @@ Try("a document exports what is marked", () =>
 Try("a document doesn't export what isn't marked", () =>
     Run("class NotExported1 {}") is null && !document.Document.Exports.ContainsKey("NotExported1"));
 
-// In a module, export's result is only an Instance, which the module can't register, so
-// this fails as a type error before the export itself would.
+// A module doesn't know Export, so registering what @export returns is a type error:
+// the module's Add doesn't take it.
 Try("only a definition in a document can be exported", () =>
-    Run("module M80 { @export class Inner80 {} }") is not null);
+    Run("module M80 { @export class Inner80 {} }") is { } e && e.Contains("Add can't be called with these arguments"));
+
+Try("an export with an alias exports under the alias", () =>
+    Run("""@export("Aliased81") class Original81 {}""") is null
+    && document.Document.Exports.ContainsKey("Aliased81")
+    && !document.Document.Exports.ContainsKey("Original81"));
+
+Try("an exported definition keeps its own name in the document", () =>
+    Run("""@export("Aliased82") class Original82 { @static fun name(): String { return "own"; } } Keep(Original82.name());""") is null
+    && (string)Kept() == "own");
+
+Try("an export comes after the decorators nearer the definition", () =>
+{
+    Probe.Marked.Clear();
+
+    return Run("""@export @mark class Marked83 {}""") is null
+        && Probe.Marked is ["Marked83"]
+        && document.Document.Exports.ContainsKey("Marked83");
+});
+
+Try("an export goes to no decorator but the document", () =>
+    Run("""@mark @export class Marked84 {}""") is { } e && e.Contains("can't be called with these arguments"));
+
+Try("a CLR delegate can be called", () =>
+    Run("""Keep(export("Called85")(DotNet_Class as Object));""") is not { } failure
+        ? Kept() is ZSharp.Lang.Export { Alias: "Called85" }
+        : throw new Exception(failure));
 
 Try("importing a document gives what it exports", () =>
 {
@@ -1447,6 +1487,19 @@ Try("importing a document gives what it exports", () =>
 
     return Run($$"""import { Library1 } from "{{library}}"; Keep(Library1.hello());""") is null
         && (string)Kept() == "imported";
+});
+
+Try("importing a document gives what it exports under an alias", () =>
+{
+    var library = WriteDocument("library86.zs", Header + """
+        @export("Public86")
+        class Private86 {
+            @static fun hello(): String { return "aliased"; }
+        }
+        """);
+
+    return Run($$"""import { Public86 } from "{{library}}"; Keep(Public86.hello());""") is null
+        && (string)Kept() == "aliased";
 });
 
 Try("a name a document doesn't export can't be imported", () =>

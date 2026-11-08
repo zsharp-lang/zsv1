@@ -9,15 +9,6 @@ namespace ZSharp.Lang
     }
 
     /// <summary>
-    /// A context that can export definitions.
-    /// </summary>
-    public interface IExports
-    {
-        /// <returns>Why the definition can't be exported, or <see langword="null"/>.</returns>
-        public Error? Export(HIR.Instance definition);
-    }
-
-    /// <summary>
     /// What running a document needs from what runs it.
     /// </summary>
     public interface IDocumentHost
@@ -173,7 +164,7 @@ namespace ZSharp.Lang
                             if (Run(defined) is { } failed)
                                 return failed;
 
-                        return Run(compiled!) ?? context.Publish();
+                        return Run(compiled!);
                     });
             }
         }
@@ -206,6 +197,15 @@ namespace ZSharp.Lang
                 case Define define:
                     if (host.Evaluate(Document, define.Build).When(out var value).Error(out var error))
                         return error;
+
+                    if (value is Export export)
+                    {
+                        if ((export.Alias ?? define.Name) is not { Length: > 0 } name)
+                            return new ErrorMessage("A definition with no name can only be exported with an alias.");
+
+                        Document.Exports[name] = export.Definition;
+                        value = export.Definition;
+                    }
 
                     if (value is not HIR.Instance instance)
                         return new ErrorMessage($"A definition must produce an instance, but got {value?.GetType().Name ?? "null"}.");
@@ -312,11 +312,7 @@ namespace ZSharp.Lang
             , INames
             , IBuildsDefinitions
             , IDocument
-            , IExports
         {
-            private readonly List<(string? Name, HIR.Code.Reference Result)> defines = [];
-            private readonly List<HIR.Instance> exported = [];
-
             public Scope Names => names;
 
             public Package.ZSharp.Document Document => owner.Document;
@@ -330,31 +326,9 @@ namespace ZSharp.Lang
 
                 var result = new HIR.Code.Reference();
 
-                Defined.Add(new Define(Language.Decorate(build!, decorators), result));
-                defines.Add((definition.Name, result));
+                Defined.Add(new Define(Language.Decorate(build!, decorators), result, definition.Name));
 
                 return Result<HIRExpression>.Ok(new HIR.Code.Get(result));
-            }
-
-            /// <summary>
-            /// A definition is exported under the name it was defined with, which is known
-            /// once the statement that defines it has run.
-            /// </summary>
-            public Error? Export(HIR.Instance definition)
-            {
-                exported.Add(definition);
-                return null;
-            }
-
-            public Error? Publish()
-            {
-                foreach (var definition in exported)
-                    if (defines.FirstOrDefault(define => ReferenceEquals(define.Result.Value, definition)) is { Name: { Length: > 0 } name })
-                        owner.Document.Exports[name] = definition;
-                    else
-                        return new ErrorMessage("Only a named definition that this statement defines can be exported.");
-
-                return null;
             }
         }
 

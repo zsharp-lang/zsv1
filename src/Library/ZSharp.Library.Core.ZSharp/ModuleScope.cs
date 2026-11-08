@@ -28,18 +28,17 @@ namespace Core.ZSharp
                 : imported!;
 
         /// <summary>
-        /// Exports a definition from the document it is defined in.
+        /// Marks a definition to be exported under its name.
         /// </summary>
         [Alias("export")]
-        public static global::ZSharp.HIR.Instance Export(global::ZSharp.HIR.Instance definition)
-        {
-            if (!Compiler.Contexts.Has<global::ZSharp.Lang.IExports>(out var exports))
-                throw new InvalidOperationException("Only a definition in a document can be exported.");
+        public static global::ZSharp.Lang.Export Export(global::ZSharp.HIR.Instance definition)
+            => new(definition, null);
 
-            if (exports.Export(definition) is { } error)
-                throw new InvalidOperationException(error.ToString());
-
-            return definition;
-        }
+        /// <summary>
+        /// Marks a definition to be exported under an alias, as in <c>@export("name")</c>.
+        /// </summary>
+        [Alias("export")]
+        public static Func<global::ZSharp.HIR.Instance, global::ZSharp.Lang.Export> Export(string alias)
+            => definition => new(definition, alias);
     }
 }

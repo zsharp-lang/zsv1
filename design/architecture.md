@@ -341,7 +341,7 @@ The toolchain objects are reached from Z# through the `core:` prefix:
   the CTS HIR.
 - `core:compiler`: the compiler, such as CG and TS.
 - `core:zsharp`: the language, such as the parser, the binder and the import system.
-  Today it has the compiler and `@export`.
+  Today it has the compiler, `import` and `@export`.
 
 A project compiler, meant to be written in Z#, would add `core:project`, which gives
 insight into the project being compiled.
@@ -613,18 +613,18 @@ document gives, as in `import { foo } from "foo.zs";`.
 own context, so code that runs during a statement, such as a decorator, can find the
 document. The document's HIR object is `Package.ZSharp.Document`, which holds its path
 and what it exports. A document exports only what is marked `@export`, from
-`core:zsharp`: the decorator asks the context stack for a context that exports, and the
-document matches what it was given to the names its statement defined. Inside a module,
-`@export` is an error, as the open question about decorators in modules says.
+`core:zsharp`.
 
-That is to be replaced, once overloading is done: `@export` returns an `Export` object,
-and `@export("name")` exports under an alias. Any meta-compiler that registers what a
-decorator returned can record an `Export` in its own exports, so exporting doesn't
-depend on the context stack or on when the decorator runs. The document unwraps it: it
-exports the definition under the alias or its name, and binds its name to the
-definition. A meta-compiler that doesn't know `Export` fails to register it.
-`export("name")` has to return something that can be called. Overloads of `export` in C#
-already resolve, so what is missing is calling the object it returns.
+`@export` returns an `Export` object, which holds the definition and an optional alias,
+and `@export("name")` exports under an alias: `export("name")` returns a delegate that
+makes the `Export`, and a CLR delegate is called through its `Invoke`, as in C#. Any
+meta-compiler that registers what a definition's decorators returned can record an
+`Export` in its own exports, so exporting doesn't depend on the context stack or on when
+the decorator runs. The document unwraps it: it exports the definition under the alias
+or its name, and binds its name to the definition itself. A definition with no name can
+only be exported with an alias. A meta-compiler that doesn't know `Export`, such as a
+module, fails to register it, as a type error. `@export` comes last, since a decorator
+outside it receives the `Export`.
 
 `DocumentImporter` is the default importer, so a source with no prefix is a document. A
 relative path is relative to the importing document, each document runs once however
@@ -757,11 +757,9 @@ members, having a definition variable or having exports, and it can delegate to 
 contexts above it. Nothing cares about the specifics of a context. Document-related
 behaviour lives only in the document meta-compiler.
 
-A document exports only what is marked `@export`. The decorator finds the context stack
-through `core:zsharp`, checks that the current context has exports, and adds its target
-to them, and otherwise reports an error. This is deferred: a decorator runs when its
-target is constructed, which inside a module is after the module's context has left the
-stack, so `@export` there needs an answer first. The
+A document exports only what is marked `@export`, which returns an `Export` object that
+the document records when it registers the definition (see Document level and modules).
+The
 compiler can supply common compilers and utilities, such as a map-based lookup from a
 meta-type to its compiler, or the construction and fill flow, and a meta-compiler uses
 them or doesn't.
@@ -815,6 +813,12 @@ member accesses and calls, as in `@api.post("/login")`. Several decorators apply
 first, so in `@a @b fun f()`, `b` receives the method and `a` receives what `b` returned.
 So far only definitions can be decorated. `core:runtime` supplies `@explicitThis` and
 `@static` for .NET methods and constructors.
+
+A decorator can be defined in Z# as a static method that takes the definition's HIR
+node. A decorator that takes arguments, as in `@named("x")`, has to return something
+callable that captures them, which needs function values and captures in Z#. Neither
+exists yet: a `fun` is always a method of a class. `@export("name")` works because its
+factory is C#.
 
 This means a decorator can act as a code transformer. `@ct` is one: it takes an HIR
 statement or expression and evaluates it when it is called, through the HIR

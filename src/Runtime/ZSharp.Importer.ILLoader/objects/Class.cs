@@ -13,6 +13,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTCastTo
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
+        , IRTCallable
         , IRTImplicitCastTo
         , IILType
         , IAssignableTo
@@ -48,6 +49,14 @@ namespace ZSharp.Importer.ILLoader.Objects
                 OverloadGroup.Of(IL.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
                 arguments
             );
+
+        /// <summary>
+        /// A value of a delegate type is called through its <c>Invoke</c> method, as in C#.
+        /// </summary>
+        public IResult Call(CompilerObject @object, Argument[] arguments)
+            => typeof(Delegate).IsAssignableFrom(IL) && IL.GetMethod("Invoke") is { } invoke
+                ? new Method(loader, invoke, @object).Call(arguments)
+                : Result.Error(new UnsupportedError($"A value of {IL.Name} can't be called."));
 
         /// <summary>
         /// Casting a type to what describes it is reflection.
