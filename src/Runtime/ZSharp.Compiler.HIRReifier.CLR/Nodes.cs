@@ -20,9 +20,7 @@ namespace ZSharp.Compiler
         public static Code.Local Local(string name, HIR.Type type) => new(name, type);
 
 
-        public static Code.TypeExpression TypeExpression(Code.Expression expression) => new(expression);
-
-        public static Code.TypeOf TypeOf(Code.Expression value) => new(value);
+        public static Code.Declare Declare(HIR.Definition definition) => new(definition);
 
         public static Code.Code CodeOf(Code.Statement statement)
         {
@@ -74,13 +72,6 @@ namespace ZSharp.Compiler
         public static Code.BlockExpression BlockExpression(Code.Expression result)
             => new() { Result = result };
 
-        public static Code.BlockExpression Declare(Code.BlockExpression block, Code.Local local)
-        {
-            block.Locals.Add(local);
-
-            return block;
-        }
-
         public static Code.BlockExpression Add(Code.BlockExpression block, Code.Statement statement)
         {
             block.Statements.Add(statement);
@@ -89,13 +80,6 @@ namespace ZSharp.Compiler
         }
 
         public static Code.Block Block() => new();
-
-        public static Code.Block Declare(Code.Block block, Code.Local local)
-        {
-            block.Locals.Add(local);
-
-            return block;
-        }
 
         public static Code.Block Add(Code.Block block, Code.Statement statement)
         {

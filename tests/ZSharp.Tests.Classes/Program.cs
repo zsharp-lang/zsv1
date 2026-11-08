@@ -72,14 +72,30 @@ var mappedBinder = new ZSharp.Lang.MappedBinder(binder);
 mappedBinder.Apply();
 
 var language = new Language(binder);
-var document = new DocumentCompiler();
-language.Install(mappedCompiler, mappedBinder, IsUnderlying);
+var document = new DocumentCompiler(language);
+
+Core.ZSharp.ModuleScope.Compiler = compiler;
+DocumentCompiler.Install(mapped, Scope.HIRLoader);
+
+var core = new ZSharp.Importer.String.LibraryImporter("core");
+core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
+core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
+
+var importer = new ZSharp.Importer.String.StringImporter();
+var documents = new DocumentImporter(language, compiler, runner);
+importer.Register("core", core);
+importer.DefaultImporter = documents;
+language.Install(mappedCompiler, IsUnderlying);
 Language.Install(
     mappedRunner, runner,
-    _ => Result<ZSharp.HIR.Instance>.Error("no imports here"),
+    source => source is string text ? importer.Import(text) : Result<ZSharp.HIR.Instance>.Error("Only a string can be imported here."),
     instance => Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
 );
-DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
+Core.ZSharp.ModuleScope.Importer = importer.Import;
+DotNetMetaTypes.Install(
+    language, mappedCompiler, mappedBinder, runner, il,
+    () => new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "import" }
+);
 
 var probe = new C.Get(il.Load(typeof(Probe)));
 document.Scope.Add("Keep", new C.NamedMember { Target = probe, Name = "Keep" });
@@ -90,6 +106,7 @@ document.Scope.Add("Keep2", new C.NamedMember { Target = probe, Name = "Keep2" }
 var coreRuntime = new C.Get(il.Load(typeof(Core.Runtime.ModuleScope).Module));
 document.Scope.Add("explicitThis", new C.NamedMember { Target = coreRuntime, Name = "explicitThis" });
 document.Scope.Add("static", new C.NamedMember { Target = coreRuntime, Name = "static" });
+document.Scope.Add("export", new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "export" });
 
 foreach (var decorator in new[] { "first", "second", "mark", "markMethod" })
     document.Scope.Add(decorator, new C.NamedMember { Target = probe, Name = decorator });
@@ -114,11 +131,8 @@ string? Run(string source)
     {
         var statement = syntax.Document.ParseStatement(parser);
 
-        if (document.Compile(compiler, statement).When(out var hir).Error(out var error))
+        if (document.Run(compiler, runner, statement) is { } error)
             return error.ToString();
-
-        if (runner.RunStatement(hir!) is { } failure)
-            return failure.ToString();
     }
 
     return null;
@@ -673,11 +687,11 @@ Try("a definition in a field default is built once", () =>
 Try("a definition at document level runs before its statement", () =>
     Run("""Keep(class First {}());""") is null && Kept().GetType().Name == "First");
 
-Try("a definition in a document block with locals", () =>
+Try("a definition in a document block", () =>
 {
     if (Run("""
         if (true) {
-            let text: String = "x";
+            Keep("x");
             Keep(class InBlock {}());
         }
         """) is { } error)
@@ -1211,6 +1225,331 @@ Try("three levels of generation", () =>
         && (string?)Call(leaf, "getInner") == "i";
 });
 
+// ---- A let is a local definition
+
+Try("a let is a local of the method", () =>
+{
+    if (Run("""
+        class LocalsOf {
+            fun get(): String {
+                let first = "a";
+                let second: String = first;
+                return second;
+            }
+        }
+        Keep(LocalsOf().get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "a";
+});
+
+Try("a let starts where it is", () =>
+{
+    Probe.Kept.Clear();
+    if (Run("""
+        class Ordered2 {
+            fun run() {
+                Keep("before");
+                let a = "a";
+                Keep(a);
+            }
+        }
+        Ordered2().run();
+        """) is { } error)
+        throw new Exception(error);
+
+    return Probe.Kept is ["before", "a"];
+});
+
+Try("a let nested in a block", () =>
+{
+    if (Run("""
+        class Nested3 {
+            fun pick(yes: Boolean): String {
+                let result = "no";
+                if (yes) {
+                    let inner = "yes";
+                    result = inner;
+                }
+                return result;
+            }
+        }
+        Keep(Nested3().pick(true));
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "yes";
+});
+
+Try("a method lists its locals", () =>
+{
+    if (Run("""
+        class Listed {
+            fun get(): String {
+                let a = "a";
+                if (true) { let b = "b"; }
+                return a;
+            }
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    return Run("Keep(Listed as DotNet_Class);") is null
+        && Kept() is Package.DotNet.Class { Methods: [{ Locals: [{ Name: "a" }, { Name: "b" }] }] };
+});
+
+Try("a let in a cast definition inside a body", () =>
+{
+    if (Run("""
+        class Maker72 {
+            @static fun make(text: String): DotNet_Class {
+                return class Made72 {
+                    fun get(): String {
+                        let copy = text;
+                        return copy;
+                    }
+                } as DotNet_Class;
+            }
+        }
+        Keep(Maker72.make("captured"));
+        """) is { } error)
+        throw new Exception(error);
+
+    var node = (Package.DotNet.Class)Kept();
+    var instance = runner.EvaluateExpression(new C.Call { Callee = new C.Get(node) }).Unwrap()!;
+    return (string?)Call(instance, "get") == "captured";
+});
+
+Try("a type that wasn't inferred is an error", () =>
+    Scope.HIRLoader.LoadType(ZSharp.HIR.Infer.Value) is { IsError: true } failure
+    && failure.UnwrapError().ToString()!.Contains("inferred"));
+
+Try("unquoted code outside reified code is an error", () =>
+    Scope.HIRCodeLoader.LoadExpression(new C.Unquote(Str2("x"))) is { IsError: true } failure
+    && failure.UnwrapError().ToString()!.Contains("reified"));
+
+C.Expression Str2(string value) => new C.StringLiteral(value);
+
+// ---- Documents
+
+var documentsDirectory = Directory.CreateTempSubdirectory("zsharp-documents").FullName;
+
+string WriteDocument(string name, string source)
+{
+    var path = Path.Combine(documentsDirectory, name);
+    File.WriteAllText(path, source);
+    return path.Replace("\\", "/");
+}
+
+const string Header = """
+    import { String, static } from "core:runtime";
+    import { export } from "core:zsharp";
+    """;
+
+Try("a document exports what is marked", () =>
+    Run("@export class Exported1 {}") is null && document.Document.Exports.ContainsKey("Exported1"));
+
+Try("a document doesn't export what isn't marked", () =>
+    Run("class NotExported1 {}") is null && !document.Document.Exports.ContainsKey("NotExported1"));
+
+// In a module, export's result is only an Instance, which the module can't register, so
+// this fails as a type error before the export itself would.
+Try("only a definition in a document can be exported", () =>
+    Run("module M80 { @export class Inner80 {} }") is not null);
+
+Try("importing a document gives what it exports", () =>
+{
+    var library = WriteDocument("library1.zs", Header + """
+        @export
+        class Library1 {
+            @static fun hello(): String { return "imported"; }
+        }
+        """);
+
+    return Run($$"""import { Library1 } from "{{library}}"; Keep(Library1.hello());""") is null
+        && (string)Kept() == "imported";
+});
+
+Try("a name a document doesn't export can't be imported", () =>
+{
+    var library = WriteDocument("library2.zs", Header + "class Hidden2 {}");
+
+    return Run($$"""import { Hidden2 } from "{{library}}"; Keep(Hidden2);""") is { } e && e.Contains("exports nothing named Hidden2");
+});
+
+Try("a document runs once however often it is imported", () =>
+{
+    var library = WriteDocument("library3.zs", Header + "@export class Once3 {}");
+
+    return Run($$"""import { Once3 } from "{{library}}";""") is null
+        && Run($$"""import { Once3 as Again3 } from "{{library}}"; Keep(Once3 as DotNet_Class); Keep(Again3 as DotNet_Class);""") is null
+        && Probe.Kept is [var first, var second] && ReferenceEquals(first, second);
+});
+
+Try("a document imports another relative to itself", () =>
+{
+    WriteDocument("inner4.zs", Header + """
+        @export
+        class Inner4 {
+            @static fun name(): String { return "relative"; }
+        }
+        """);
+    var outer = WriteDocument("outer4.zs", Header + """
+        import { Inner4 } from "inner4.zs";
+
+        @export
+        class Outer4 {
+            @static fun name(): String { return Inner4.name(); }
+        }
+        """);
+
+    return Run($$"""import { Outer4 } from "{{outer}}"; Keep(Outer4.name());""") is null
+        && (string)Kept() == "relative";
+});
+
+Try("an import cycle is an error", () =>
+{
+    WriteDocument("cycle-b.zs", "import { a } from \"cycle-a.zs\";");
+    var a = WriteDocument("cycle-a.zs", "import { b } from \"cycle-b.zs\";");
+
+    return Run($$"""import { b } from "{{a}}";""") is { } e && e.Contains("import cycle");
+});
+
+Try("a missing document is an error", () =>
+    Run("""import { x } from "no-such-document.zs";""") is { } e && e.Contains("no document"));
+
+// ---- Imports are what their meta-compiler makes them
+
+string Library(string name, string text) => WriteDocument(name + ".zs", Header + $$"""
+    @export
+    class {{name}} {
+        @static fun hello(): String { return "{{text}}"; }
+    }
+    """);
+
+Try("an import outside any meta-compiler that compiles it is an error", () =>
+    compiler.CompileStatement(ParseOne("""import { a } from "x";""")) is { IsError: true } failure
+    && failure.UnwrapError().ToString()!.Contains("Nothing here compiles the import"));
+
+Try("an import in a body runs as the body is built", () =>
+{
+    var library = Library("Library90", "built");
+
+    if (Run("""
+        class Maker90 {
+            @static fun make(src: String): DotNet_Class {
+                return class Made90 {
+                    fun get(): String {
+                        import { Library90 as L } from src;
+                        return L.hello();
+                    }
+                } as DotNet_Class;
+            }
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    string Built(string path)
+    {
+        if (Run($$"""Keep(Maker90.make("{{path}}"));""") is { } failure)
+            throw new Exception(failure);
+
+        var node = (Package.DotNet.Class)Kept();
+        var instance = runner.EvaluateExpression(new C.Call { Callee = new C.Get(node) }).Unwrap()!;
+        return (string)Call(instance, "get")!;
+    }
+
+    return Built(library) == "built";
+});
+
+Try("each construction of a body runs its import again", () =>
+{
+    var first = WriteDocument("Again91a.zs", Header + """
+        @export class Shared91 { @static fun hello(): String { return "one"; } }
+        """);
+    var second = WriteDocument("Again91b.zs", Header + """
+        @export class Shared91 { @static fun hello(): String { return "two"; } }
+        """);
+
+    if (Run("""
+        class Maker91 {
+            @static fun make(src: String): DotNet_Class {
+                return class Made91 {
+                    fun get(): String {
+                        import { Shared91 } from src;
+                        return Shared91.hello();
+                    }
+                } as DotNet_Class;
+            }
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    if (Run($$"""Keep(Maker91.make("{{first}}")); Keep(Maker91.make("{{second}}"));""") is { } failure)
+        throw new Exception(failure);
+
+    if (Probe.Kept is not [Package.DotNet.Class one, Package.DotNet.Class two])
+        return false;
+    Probe.Kept.Clear();
+
+    object Make(Package.DotNet.Class node) => runner.EvaluateExpression(new C.Call { Callee = new C.Get(node) }).Unwrap()!;
+
+    return (string?)Call(Make(one), "get") == "one" && (string?)Call(Make(two), "get") == "two";
+});
+
+Try("an import in a body can't use what the body is given", () =>
+{
+    var library = Library("Library92", "x");
+
+    return Run("""
+        class Uses92 {
+            @static fun use(src: String): String {
+                import { Library92 } from src;
+                return Library92.hello();
+            }
+        }
+        """) is { } e && e.Contains("Import");
+});
+
+Try("an import in a module runs as the module is constructed", () =>
+{
+    var library = Library("Library93", "from a module");
+
+    if (Run($$"""
+        module M93 {
+            import { Library93 } from "{{library}}";
+
+            class C93 {
+                @static fun get(): String { return Library93.hello(); }
+            }
+        }
+        Keep(M93.C93.get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "from a module";
+});
+
+Try("a module can't use what it imports while it is compiled", () =>
+{
+    var library = WriteDocument("Library94.zs", Header + """
+        @export
+        class Library94 {
+            @static fun mark(definition: Object): Object { return definition; }
+        }
+        """);
+
+    return Run($$"""
+        module M94 {
+            import { Library94 } from "{{library}}";
+
+            @Library94.mark
+            class C94 {}
+        }
+        """) is { } e && e.Contains("no member named Library94");
+});
+
 // ---- Forking
 
 C.Expression FirstArgument(ZSharp.Compiler.ASTCompiler with)
@@ -1235,17 +1574,16 @@ Try("a fork shares the contexts", () =>
 
 Try("a context offers what its parent offers", () =>
 {
-    var names = new ZSharp.Lang.Scope();
-    var outer = new ZSharp.Lang.DefinitionContext(null, names);
-    var inner = new ZSharp.Lang.BlockContext(outer, new ZSharp.Lang.Scope(names), new C.Block());
+    var outer = new ZSharp.Lang.BuildContext(null, new C.Block());
+    var inner = new ZSharp.Lang.BlockContext(outer, new ZSharp.Lang.Scope());
 
-    return ((ZSharp.Compiler.Context)inner).Is<ZSharp.Lang.IDeclaresLocals>(out _)
-        && ((ZSharp.Compiler.Context)outer).Is<ZSharp.Lang.IDeclaresLocals>(out _) is false
-        && ((ZSharp.Compiler.Context)inner).Is<ZSharp.Lang.INames>(out var found) && found != (object)outer;
+    return ((ZSharp.Compiler.Context)inner).Is<ZSharp.Lang.IBuildsDefinitions>(out _)
+        && ((ZSharp.Compiler.Context)outer).Is<ZSharp.Lang.INames>(out _) is false
+        && ((ZSharp.Compiler.Context)inner).Is<ZSharp.Lang.INames>(out var found) && ReferenceEquals(found, inner);
 });
 
 Try("a let outside a block is an error", () =>
-    Run("""let loose = "x";""") is { } e && e.Contains("isn't in a block"));
+    Run("""let loose = "x";""") is { } e && e.Contains("Nothing here compiles the let"));
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;

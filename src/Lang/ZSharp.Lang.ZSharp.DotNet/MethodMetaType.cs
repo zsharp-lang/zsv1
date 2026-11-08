@@ -60,7 +60,7 @@ namespace ZSharp.Lang.DotNet
                 }));
             }
 
-            return body.Body(compiler, block, self, function.Body) is { } invalid
+            return body.Body(body.WithLocals(compiler, block, self, nameof(Package.DotNet.Method.Locals)), block, self, function.Body) is { } invalid
                 ? Result<Code.Block>.Error(invalid)
                 : Result<Code.Block>.Ok(block);
         }

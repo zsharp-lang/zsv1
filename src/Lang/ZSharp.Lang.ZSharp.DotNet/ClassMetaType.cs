@@ -33,11 +33,18 @@ namespace ZSharp.Lang.DotNet
 
         private IResult<Code.Block, Error> Fill(ASTCompiler compiler, AST.TypeDefinition definition, Code.Local self)
         {
+            // In a class, a let is a field.
+            var fork = compiler.Fork();
+            var previous = fork.Expression;
+
+            fork.Expression = (current, expression) => expression is AST.LetExpression let
+                ? Field(current, let, self)
+                : previous(current, expression);
+
             var filled = container.Compile(
-                compiler,
+                fork,
                 definition.Content?.Statements ?? [],
-                (member, value) => new Code.ExpressionStatement(CodeBody.Add(self, ListOf(member), value)),
-                member => Member(compiler, member, self)
+                (member, value) => new Code.ExpressionStatement(CodeBody.Add(self, ListOf(member), value))
             );
 
             if (filled.When(out var block).Error(out var error))
@@ -71,28 +78,27 @@ namespace ZSharp.Lang.DotNet
                 : nameof(Package.DotNet.Class.NestedDefinitions);
         }
 
-        private IResult<Code.Statement, Error>? Member(ASTCompiler compiler, AST.Statement member, Code.Local self)
+        private IResult<Code.Expression, Error> Field(ASTCompiler compiler, AST.LetExpression let, Code.Local self)
         {
-            if (member is not AST.ExpressionStatement { Expression: AST.LetExpression let })
-                return null;
-
             if (let.Type is null)
-                return Result<Code.Statement>.Error($"Field {let.Name} needs a type.");
+                return Result<Code.Expression>.Error($"Field {let.Name} needs a type.");
 
             if (body.Described<HIR.Type>(compiler, let.Type).When(out var type).Error(out var error))
-                return Result<Code.Statement>.Error(error);
+                return Result<Code.Expression>.Error(error);
 
             var fieldType = il.Load(typeof(Package.DotNet.Field));
-            var field = new Code.Local(let.Name, fieldType);
+            var field = new Code.Local(let.Name, fieldType)
+            {
+                Init = CodeBody.Construct(fieldType, new Code.StringLiteral(let.Name), type!)
+            };
             var block = new Code.Block();
 
-            block.Locals.Add(field);
-            block.Statements.Add(CodeBody.Assign(field, CodeBody.Construct(fieldType, new Code.StringLiteral(let.Name), type!)));
+            block.Statements.Add(new Code.Declare(field));
 
             if (let.Value is not null)
             {
                 if (body.Reified(compiler, block, let.Value).When(out var value).Error(out error))
-                    return Result<Code.Statement>.Error(error);
+                    return Result<Code.Expression>.Error(error);
 
                 block.Statements.Add(new Code.ExpressionStatement(new Code.Set
                 {
@@ -105,7 +111,11 @@ namespace ZSharp.Lang.DotNet
                 CodeBody.Add(self, nameof(Package.DotNet.Class.Fields), new Code.Get(field))
             ));
 
-            return Result<Code.Statement>.Ok(block);
+            return Result<Code.Expression>.Ok(new Code.BlockExpression
+            {
+                Statements = block.Statements,
+                Result = new Code.Get(field)
+            });
         }
     }
 }

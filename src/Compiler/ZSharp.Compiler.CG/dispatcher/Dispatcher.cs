@@ -5,6 +5,9 @@ namespace ZSharp.Compiler
         public static IResult Call(CompilerObject callee, Argument[] arguments)
             => Unsupported($"Object [{callee}] does not support call operation.");
 
+        public static IResult Declare(CompilerObject definition)
+            => Unsupported($"Object [{definition}] does not support declaration.");
+
         public static IResult Cast(CompilerObject @object, CompilerObject type)
             => Unsupported($"Object [{@object}] does not support casting to [{type}].");
 

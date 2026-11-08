@@ -16,13 +16,14 @@ namespace ZSharp.Lang.DotNet
             MappedASTCompiler mapped,
             MappedBinder binding,
             HIRRunner runner,
-            ILLoader il
+            ILLoader il,
+            Func<HIR.Code.Expression> importer
         )
         {
             var metaTypes = new MetaTypes(language, of => Resolve(of, runner, il));
             var container = new ContainerCompiler(language);
 
-            var body = new CodeBody(language, il);
+            var body = new CodeBody(language, il, importer);
 
             var @class = il.Load(typeof(Package.DotNet.Class));
             var module = il.Load(typeof(Package.DotNet.Module));
@@ -30,7 +31,7 @@ namespace ZSharp.Lang.DotNet
             var constructor = il.Load(typeof(Package.DotNet.Constructor));
 
             metaTypes.Register(@class, new ClassMetaType(il, container, body, @class).Compile);
-            metaTypes.Register(module, new ModuleMetaType(il, container, module).Compile);
+            metaTypes.Register(module, new ModuleMetaType(il, body, container, module).Compile);
             metaTypes.Register(method, new MethodMetaType(il, body, method).Compile);
             metaTypes.Register(constructor, new ConstructorMetaType(il, body, constructor).Compile);
 
@@ -40,6 +41,17 @@ namespace ZSharp.Lang.DotNet
             metaTypes.Default<AST.Constructor>(constructor);
 
             metaTypes.Install(mapped);
+
+            // A name bound to a local's definition can be bound to another one, which is how
+            // a let reuses a name. The type of what holds the definition decides.
+            var local = il.Load(typeof(Code.Local));
+
+            binding.Merges.Add((existing, value) =>
+                existing is Code.Get { Instance: Code.Local { Type: var before } } && ReferenceEquals(before, local)
+                && value is Code.Get { Instance: Code.Local { Type: var after } } && ReferenceEquals(after, local)
+                    ? value
+                    : null
+            );
 
             binding.Merges.Add((existing, value) =>
                 Overloads(existing, method) is { } before && Overloads(value, method) is { } after

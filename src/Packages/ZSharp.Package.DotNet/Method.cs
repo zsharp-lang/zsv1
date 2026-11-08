@@ -18,6 +18,11 @@ namespace Package.DotNet
         public List<Parameter> Parameters { get; } = [];
 
         /// <summary>
+        /// The locals of the code, each declared where it starts in the body.
+        /// </summary>
+        public List<ZSharp.HIR.Code.Local> Locals { get; } = [];
+
+        /// <summary>
         /// The returned type, or <see langword="null"/> if nothing is returned.
         /// </summary>
         public ZSharp.HIR.Type? ReturnType { get; set; }

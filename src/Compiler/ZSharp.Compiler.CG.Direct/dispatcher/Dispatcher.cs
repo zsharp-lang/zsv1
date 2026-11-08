@@ -11,6 +11,7 @@ namespace ZSharp.Compiler.CGDispatchers.Direct
 
             cg.Call = Call;
             cg.Cast = Cast;
+            cg.Declare = Declare;
             cg.Get = Get;
             cg.GetIndex = Index;
             cg.GetMemberByIndex = Member;

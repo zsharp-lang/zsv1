@@ -28,22 +28,33 @@ namespace ZSharp.Compiler
                 return Result.Ok(new Objects.OverloadGroup([.. overloads]));
             });
 
-            instances.Types.Register<HIR.Code.TypeExpression>(type => code.LoadExpression(type.Expression));
+            instances.Types.Register<HIR.Infer>(_ => Result.Error("A type was meant to be inferred, but wasn't."));
 
             instances.Definitions.Register<HIR.Code.Local>(local =>
-                loader.LoadType(local.Type).Error(out var error, out var type)
-                    ? Result.Error(error)
-                    : Result.Ok(new Objects.Local(type))
-            );
+            {
+                CompilerObject? init = null;
+
+                if (local.Init is not null && code.LoadExpression(local.Init).Error(out var error, out init))
+                    return Result.Error(error);
+
+                if (local.Type is not HIR.Infer)
+                    return loader.LoadType(local.Type).Error(out error, out var declared)
+                        ? Result.Error(error)
+                        : Result.Ok(new Objects.Local(declared, init));
+
+                if (init is null)
+                    return Result.Error($"Local {local.Name} has no initial value to infer its type from.");
+
+                return Core.Compiler.ModuleScope.TS.TypeOf(init).Error(out _, out var inferred)
+                    ? Result.Error($"The type of local {local.Name} can't be inferred from its initial value.")
+                    : Result.Ok(new Objects.Local(inferred, init));
+            });
             instances.Instances.Register<HIR.Code.Local>(local => loader.LoadDefinition(local));
 
             expressions.Register<HIR.Code.Get>(get => loader.LoadInstance(get.Instance));
 
-            expressions.Register<HIR.Code.TypeOf>(typeOf =>
-                code.LoadExpression(typeOf.Value).Error(out var error, out var value)
-                    ? Result.Error(error)
-                    : Core.Compiler.ModuleScope.TS.TypeOf(value)
-            );
+            expressions.Register<HIR.Code.Unquote>(_ => Unquoted());
+            mapped.Statements.Register<HIR.Code.UnquoteStatement>(_ => Unquoted());
 
             expressions.Register<HIR.Code.Cast>(cast =>
             {
@@ -57,7 +68,7 @@ namespace ZSharp.Compiler
 
             expressions.Register<HIR.Code.BlockExpression>(block =>
             {
-                if (Block(block.Locals, block.Statements).Error(out var error, out var statements))
+                if (Block(block.Statements).Error(out var error, out var statements))
                     return Result.Error(error);
 
                 return code.LoadExpression(block.Result).Error(out error, out var result)
@@ -101,7 +112,13 @@ namespace ZSharp.Compiler
                 statement => code.LoadExpression(statement.Expression)
             );
 
-            mapped.Statements.Register<HIR.Code.Block>(block => Block(block.Locals, block.Statements));
+            mapped.Statements.Register<HIR.Code.Block>(block => Block(block.Statements));
+
+            mapped.Statements.Register<HIR.Code.Declare>(declare =>
+                loader.LoadDefinition(declare.Definition).Error(out var error, out var definition)
+                    ? Result.Error(error)
+                    : cg.Declare(definition)
+            );
 
             mapped.Statements.Register<HIR.Code.IfStatement>(statement =>
             {
@@ -129,16 +146,11 @@ namespace ZSharp.Compiler
                     : Result.Ok(new Objects.Return(value));
             });
 
-            IResult Block(List<HIR.Code.Local> locals, List<HIR.Code.Statement> statements)
+            static IResult Unquoted()
+                => Result.Error("Unquoted code can only be inside code that is reified.");
+
+            IResult Block(List<HIR.Code.Statement> statements)
             {
-                var declared = new List<Objects.Local>();
-
-                foreach (var local in locals)
-                    if (loader.LoadDefinition(local).Error(out var error, out var value))
-                        return Result.Error(error);
-                    else
-                        declared.Add((Objects.Local)value);
-
                 var loaded = new List<CompilerObject>();
 
                 foreach (var statement in statements)
@@ -147,7 +159,7 @@ namespace ZSharp.Compiler
                     else
                         loaded.Add(value);
 
-                return Result.Ok(new Objects.Block([.. declared], [.. loaded]));
+                return Result.Ok(new Objects.Block([.. loaded]));
             }
         }
 

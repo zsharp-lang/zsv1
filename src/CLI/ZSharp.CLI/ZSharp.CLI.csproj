@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\Library\ZSharp.Library.Core.Runtime\ZSharp.Library.Core.Runtime.csproj" />
     <ProjectReference Include="..\..\Library\ZSharp.Library.Standard.IO\ZSharp.Library.Standard.IO.csproj" />
     <ProjectReference Include="..\..\Diagnostics\ZSharp.Diagnostics.HIR\ZSharp.Diagnostics.HIR.csproj" />
+    <ProjectReference Include="..\..\Library\ZSharp.Library.Core.ZSharp\ZSharp.Library.Core.ZSharp.csproj" />
   </ItemGroup>
 
 </Project>

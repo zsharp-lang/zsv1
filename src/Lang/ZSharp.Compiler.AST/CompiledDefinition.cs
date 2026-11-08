@@ -28,22 +28,13 @@ namespace ZSharp.Compiler
             if (Fill().When(out var fill).Error(out var error))
                 return Result<HIR.Code.Expression>.Error(error);
 
-            var build = new HIR.Code.BlockExpression
+            Variable.Init = Construct;
+
+            return Result<HIR.Code.Expression>.Ok(new HIR.Code.BlockExpression
             {
                 Result = new HIR.Code.Get(Variable),
-                Statements = [
-                    new HIR.Code.ExpressionStatement(new HIR.Code.Set
-                    {
-                        Target = new HIR.Code.Get(Variable),
-                        Value = Construct
-                    }),
-                    fill!
-                ]
-            };
-
-            build.Locals.Add(Variable);
-
-            return Result<HIR.Code.Expression>.Ok(build);
+                Statements = [new HIR.Code.Declare(Variable), fill!]
+            });
         }
     }
 }

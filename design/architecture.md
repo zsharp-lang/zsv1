@@ -341,6 +341,7 @@ The toolchain objects are reached from Z# through the `core:` prefix:
   the CTS HIR.
 - `core:compiler`: the compiler, such as CG and TS.
 - `core:zsharp`: the language, such as the parser, the binder and the import system.
+  Today it has the compiler and `@export`.
 
 A project compiler, meant to be written in Z#, would add `core:project`, which gives
 insight into the project being compiled.
@@ -549,6 +550,34 @@ is a `TypeExpression`. A parameter or `this` is a variable of the building code 
 well, which is why its node ends up in the body by value, like `c_Bar`. A definition
 cast inside a body is plain code in that body, so it needs no override to get there.
 
+Code doesn't list its locals. A local is a definition, and a `Declare` of it is where it
+starts; for a local, that is where it takes its `init`. A `Declare` inside code being
+reified declares a variable of that code, so the reifier gives it a variable of its own in
+the building code, which creates the local for each build. `CG.Declare` lets a CO decide
+what declaring it means, so other definitions can do something else, such as capture
+values. A method or constructor lists its locals as structure, filled by its
+construction code like its parameters.
+
+`let` and `var` don't choose their meta-type: the container compiles them, through its
+fork of the compiler. A method or constructor builds a `Local` in its construction code,
+adds it to its locals and binds the name to it. At the `let`'s position, the body gets a
+`Declare` that the construction code builds itself, so it is already in the form of the
+building code. `Unquote` carries such code: reifying the code around it places it as it
+is, so it runs where that code is built and its result goes there. It can't be loaded,
+since it only means something inside code that is reified. It is also what a decorator
+that injects code, or `@ct`, would produce; evaluating it at compile time, for code that
+isn't reified, is not done yet. A class compiles its `let` as a field. A document has no
+`let` yet.
+
+A type that is meant to be inferred is `Infer`. It isn't a type: whoever loads the thing
+that has it infers the type, such as a local from its `init`, and loading `Infer` as a type
+is an error, so it never reaches a CO. Types are values in construction code, so there is
+no node for a type given as code.
+
+A name bound to a local's definition can be bound to another one, which is how a `let`
+reuses a name. The rule is keyed by the type of what holds the definition, as the merging
+of methods into an overload group is.
+
 A variable of the building code is kept as it is through every reification, and is
 resolved at the first execution that contains it. What it holds then has to be encoded
 into the code being built, and how depends on the type of the value: a string is a
@@ -579,6 +608,43 @@ definitions don't. That is a choice of the meta-compiler, not of where the code 
 a meta-type can also execute statement by statement, even inside a module. As it goes,
 the document meta-compiler builds a `Document` object, which is what importing another
 document gives, as in `import { foo } from "foo.zs";`.
+
+`DocumentCompiler` is that meta-compiler. It compiles and runs each statement inside its
+own context, so code that runs during a statement, such as a decorator, can find the
+document. The document's HIR object is `Package.ZSharp.Document`, which holds its path
+and what it exports. A document exports only what is marked `@export`, from
+`core:zsharp`: the decorator asks the context stack for a context that exports, and the
+document matches what it was given to the names its statement defined. Inside a module,
+`@export` is an error, as the open question about decorators in modules says.
+
+That is to be replaced, once overloading is done: `@export` returns an `Export` object,
+and `@export("name")` exports under an alias. Any meta-compiler that registers what a
+decorator returned can record an `Export` in its own exports, so exporting doesn't
+depend on the context stack or on when the decorator runs. The document unwraps it: it
+exports the definition under the alias or its name, and binds its name to the
+definition. A meta-compiler that doesn't know `Export` fails to register it.
+`export("name")` has to return something that can be called, which needs overloads and
+calling an object.
+
+`DocumentImporter` is the default importer, so a source with no prefix is a document. A
+relative path is relative to the importing document, each document runs once however
+often it is imported, and importing a document while it runs is an error. Loading a
+`Document` gives a CO whose members are its exports. The document given to the CLI is
+run the same way.
+
+Each statement of a document is meant to compile to a function that accepts the
+document's frame: an array of objects, one element per document local. That lets
+dynamic methods be used without creating many types, and lets the same compiled
+statements run with another frame. Document locals don't exist yet. The runner doesn't
+know about the frame: running the document is the document meta-compiler's own job, so
+it calls each statement's function with its frame itself, and runs its own statements
+(definitions and imports) itself.
+
+Every nested statement runs one at a time too, since in the CLI Z# is a scripting
+language. So the document meta-compiler runs `if` and `while` itself: it evaluates the
+condition, then compiles and runs each statement of the branch when it is reached. A
+loop's statements are compiled the first time they are reached and run on each
+iteration.
 
 `let` is a definition like any other, and each meta-compiler sees it in its own terms:
 a module sees a global, a CLR class a field, and a method a local. `let` and `var` are
@@ -875,8 +941,32 @@ The `as` cast marking such a definition is not settled.
 
 ## Imports
 
-- An import runs at compile time through the string importer, which routes by
-  prefix.
+- An import means what the meta-compiler it is in makes it mean, like `let`: where it
+  runs and what holds what it imports. A meta-type could record its imports and run
+  them in a static constructor. With no meta-compiler that compiles it, an import is
+  an error. `Language.BindImported` binds the imported names to whatever holds the
+  value, for meta-compilers that want it.
+- The current meta-compilers run an import as the definition it is in is
+  constructed. A body runs it in the code that builds the body: a local of that code
+  holds what it imported, declared in the building block, and nothing of the import
+  is left in the body. A name used in the body is reified like any value of the
+  building code, so the body gets the imported value encoded. A module declares the
+  local in its own construction code. The document runs the import as its statement
+  runs.
+- So `fun bar(src: String) { return fun() { import { a } from src; print(a); } as
+  Function; }` works: the inner function is constructed when `bar` runs, so `src` is
+  a value there. The same import directly in `bar`'s body is an error, since while
+  `bar` is constructed `src` is its parameter, not a string. Each construction runs
+  the import again.
+- What an import gives is only known once construction runs, so whatever the compiler
+  decides can't use it: a meta-type, a decorator, another import's source. At compile
+  time an imported name is only an `Instance`. Code that is built, such as a body, can
+  use it. The document hides this, since each statement runs before the next one is
+  compiled. Types in definitions are meant to be built code too, so that they can use
+  imported names; today a type is resolved while compiling, so they can't yet.
+- Code that is built imports through `import` from `core:zsharp`, which calls the
+  importer the CLI gives it.
+- Importers route by prefix through the string importer.
 - Importers do nothing CO-related. They return real HIR, and imported names
   cross into MIR through the HIR -> MIR REI when used.
 - Libraries are supplied by a `pkg:` importer written purely in Z#.

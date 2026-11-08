@@ -9,10 +9,6 @@ namespace ZSharp.Compiler
         {
             mapped.Register<HIR.Code.Block>(block =>
             {
-                // Statements run one at a time here, so locals would not survive.
-                if (block.Locals.Count > 0)
-                    return new UnsupportedError("A block with locals runs as a whole.");
-
                 foreach (var statement in block.Statements)
                     if (runner.RunStatement(statement) is { } error)
                         return error;

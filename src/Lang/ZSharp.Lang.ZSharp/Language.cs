@@ -9,31 +9,15 @@ namespace ZSharp.Lang
     {
         private Func<HIRExpression, HIR.Instance, bool> isUnderlyingType = null!;
 
-        /// <summary>
-        /// The locals that <c>let</c> declared, as opposed to the locals holding
-        /// definitions, which are never overridden.
-        /// </summary>
-        private readonly HashSet<HIR.Code.Local> lets = [];
-
         /// <param name="isUnderlyingType">
         /// Whether code that evaluates to a type is the given definition type.
         /// </param>
         public void Install(
             MappedASTCompiler mapped,
-            MappedBinder binding,
             Func<HIRExpression, HIR.Instance, bool> isUnderlyingType
         )
         {
             this.isUnderlyingType = isUnderlyingType;
-
-            // A let bound over another let overrides it, which is how a let reuses a name.
-            // The local holding a definition is never overridden.
-            binding.Merges.Add((existing, value) =>
-                existing is HIR.Code.Get { Instance: HIR.Code.Local before } && lets.Contains(before)
-                && value is HIR.Code.Get { Instance: HIR.Code.Local after } && lets.Contains(after)
-                    ? value
-                    : null
-            );
 
             mapped.Expressions.Register<AST.IdentifierExpression>(Compile);
             mapped.Expressions.Register<AST.LiteralExpression>(Compile);
@@ -70,11 +54,13 @@ namespace ZSharp.Lang
         {
             mapped.Register<Import>(statement =>
             {
+                // These statements are always run, so what fails in them is a failure, not
+                // an unsupported statement.
                 if (runner.EvaluateExpression(statement.Source).When(out var source).Error(out var error))
-                    return error;
+                    return new ErrorMessage($"{error}");
 
                 if (import(source).When(out var result).Error(out error))
-                    return error;
+                    return new ErrorMessage($"{error}");
 
                 statement.Result.Value = result;
 
@@ -84,14 +70,13 @@ namespace ZSharp.Lang
             mapped.Register<Define>(statement =>
             {
                 if (runner.EvaluateExpression(statement.Build).When(out var value).Error(out var error))
-                    return error;
+                    return new ErrorMessage($"{error}");
 
                 if (value is not HIR.Instance instance)
                     return new ErrorMessage($"A definition must produce an instance, but got {value?.GetType().Name ?? "null"}.");
 
                 statement.Result.Value = instance;
 
-                // A definition that can't load is a failure, not an unsupported statement.
                 return load(instance) is { } failure ? new ErrorMessage($"{failure}") : null;
             });
         }
@@ -171,38 +156,11 @@ namespace ZSharp.Lang
         }
 
         /// <summary>
-        /// A <c>let</c> declares a local in the context the compiler is in.
+        /// A <c>let</c> doesn't choose its meta-type: whatever contains it compiles it in
+        /// its own terms, through its fork of the compiler.
         /// </summary>
-        private IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.LetExpression let)
-        {
-            if (!compiler.Contexts.Has<IDeclaresLocals>(out var locals))
-                return Result<HIRExpression>.Error($"Local {let.Name} isn't in a block.");
-
-            if (let.Type is null && let.Value is null)
-                return Result<HIRExpression>.Error($"Local {let.Name} needs a type or a value.");
-
-            HIRExpression? type = null;
-            HIRExpression? value = null;
-
-            if (let.Type is not null && compiler.CompileExpression(let.Type).When(out type).Error(out var error))
-                return Result<HIRExpression>.Error(error);
-
-            if (let.Value is not null && compiler.CompileExpression(let.Value).When(out value).Error(out error))
-                return Result<HIRExpression>.Error(error);
-
-            var local = new HIR.Code.Local(let.Name, new HIR.Code.TypeExpression(type ?? new HIR.Code.TypeOf(value!)));
-
-            locals.Declare(local);
-            lets.Add(local);
-
-            if (Bind(compiler, let.Name, new HIR.Code.Get(local)) is { } invalid)
-                return Result<HIRExpression>.Error(invalid);
-
-            return Result<HIRExpression>.Ok(value is null
-                ? new HIR.Code.Get(local)
-                : new HIR.Code.Set { Target = new HIR.Code.Get(local), Value = value }
-            );
-        }
+        private static IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.LetExpression let)
+            => Result<HIRExpression>.Error($"Nothing here compiles the let {let.Name}.");
 
         private static IResult<HIRExpression, Error> CompileDefinition(ASTCompiler compiler, AST.Definition definition)
             => compiler.CompileDefinition(definition).When(out var compiled).Error(out var error)
@@ -333,7 +291,7 @@ namespace ZSharp.Lang
         private static IResult<HIRStatement, Error> Compile(ASTCompiler compiler, AST.BlockStatement block)
         {
             var compiled = new HIR.Code.Block();
-            var context = new BlockContext(compiler.Contexts.Current, new Scope(Names(compiler)), compiled);
+            var context = new BlockContext(compiler.Contexts.Current, new Scope(Names(compiler)));
 
             return compiler.Contexts.Within(context, () =>
             {
@@ -378,25 +336,32 @@ namespace ZSharp.Lang
             });
         }
 
+        /// <summary>
+        /// An import means what the meta-compiler it is in makes it mean: where it runs,
+        /// and what holds what it imports.
+        /// </summary>
         private IResult<HIRStatement, Error> Compile(ASTCompiler compiler, AST.ImportStatement import)
+            => Result<HIRStatement>.Error("Nothing here compiles the import.");
+
+        /// <summary>
+        /// Binds the names an import brings in to what holds the imported value, for
+        /// meta-compilers that compile imports.
+        /// </summary>
+        /// <param name="imported">Code that gives the imported value, made once for each name.</param>
+        public Error? BindImported(ASTCompiler compiler, AST.ImportStatement import, Func<HIRExpression> imported)
         {
-            if (compiler.CompileExpression(import.Source).When(out var source).Error(out var error))
-                return Result<HIRStatement>.Error(error);
-
-            var result = new HIR.Code.Reference();
-
-            if (import.Alias is not null && Bind(compiler, import.Alias, new HIR.Code.Get(result)) is { } invalid)
-                return Result<HIRStatement>.Error(invalid);
+            if (import.Alias is not null && Bind(compiler, import.Alias, imported()) is { } invalid)
+                return invalid;
 
             foreach (var name in import.ImportedNames ?? [])
                 if (Bind(
                     compiler,
                     name.Alias ?? name.Name,
-                    new HIR.Code.NamedMember { Target = new HIR.Code.Get(result), Name = name.Name }
+                    new HIR.Code.NamedMember { Target = imported(), Name = name.Name }
                 ) is { } conflict)
-                    return Result<HIRStatement>.Error(conflict);
+                    return conflict;
 
-            return Result<HIRStatement>.Ok(new Import(source!, result));
+            return null;
         }
     }
 }

@@ -12,15 +12,10 @@ namespace ZSharp.Lang
         /// <param name="compiler">The compiler the container is compiled with.</param>
         /// <param name="body">The statements of the container.</param>
         /// <param name="register">Code that adds a definition to the container.</param>
-        /// <param name="member">
-        /// Compiles a statement the container treats specially, returning
-        /// <see langword="null"/> for one that is plain code.
-        /// </param>
         public IResult<HIR.Code.Block, Error> Compile(
             ASTCompiler compiler,
             IEnumerable<AST.Statement> body,
-            Func<CompiledDefinition, HIRExpression, HIRStatement> register,
-            Func<AST.Statement, IResult<HIRStatement, Error>?>? member = null
+            Func<CompiledDefinition, HIRExpression, HIRStatement> register
         )
         {
             var block = new HIR.Code.Block();
@@ -28,7 +23,7 @@ namespace ZSharp.Lang
             // A definition inside an expression is plain code here too, built in this block.
             return compiler.Contexts.Within(
                 new BuildContext(compiler.Contexts.Current, block),
-                () => Walk(compiler, block, body, register, member)
+                () => Walk(compiler, block, body, register)
             );
         }
 
@@ -36,8 +31,7 @@ namespace ZSharp.Lang
             ASTCompiler compiler,
             HIR.Code.Block block,
             IEnumerable<AST.Statement> body,
-            Func<CompiledDefinition, HIRExpression, HIRStatement> register,
-            Func<AST.Statement, IResult<HIRStatement, Error>?>? member
+            Func<CompiledDefinition, HIRExpression, HIRStatement> register
         )
         {
             var definitions = new List<(CompiledDefinition Definition, List<HIRExpression> Decorators)>();
@@ -52,12 +46,8 @@ namespace ZSharp.Lang
                     if (compiler.CompileDefinition(definition).When(out var compiled).Error(out error))
                         return Result<HIR.Code.Block>.Error(error);
 
-                    block.Locals.Add(compiled!.Variable);
-                    block.Statements.Add(new HIR.Code.ExpressionStatement(new HIR.Code.Set
-                    {
-                        Target = new HIR.Code.Get(compiled.Variable),
-                        Value = compiled.Construct
-                    }));
+                    compiled!.Variable.Init = compiled.Construct;
+                    block.Statements.Add(new HIR.Code.Declare(compiled.Variable));
 
                     if (compiled.Name is { Length: > 0 } name && language.Bind(compiler, name, new HIR.Code.Get(compiled.Variable)) is { } invalid)
                         return Result<HIR.Code.Block>.Error(invalid);
@@ -66,7 +56,7 @@ namespace ZSharp.Lang
                 }
                 else
                 {
-                    var result = member?.Invoke(statement) ?? compiler.CompileStatement(statement);
+                    var result = compiler.CompileStatement(statement);
 
                     if (result.When(out var compiled).Error(out var error))
                         return Result<HIR.Code.Block>.Error(error);

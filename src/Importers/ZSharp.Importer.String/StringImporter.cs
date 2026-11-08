@@ -15,7 +15,10 @@ namespace ZSharp.Importer.String
 
         public IResult<HIR.Instance, Error> Import(string source)
         {
-            var parts = source.Split(':', count: 2, StringSplitOptions.TrimEntries);
+            // A rooted path, such as C:/a.zs, has no prefix.
+            var parts = Path.IsPathRooted(source)
+                ? [source]
+                : source.Split(':', count: 2, StringSplitOptions.TrimEntries);
 
             if (parts.Length > 1)
                 return importers.TryGetValue(parts[0], out var importer)

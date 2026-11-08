@@ -46,7 +46,7 @@ namespace ZSharp.Lang.DotNet
             ) is { } error)
                 return Result<Code.Block>.Error(error);
 
-            return body.Body(compiler, block, self, constructor.Body) is { } invalid
+            return body.Body(body.WithLocals(compiler, block, self, nameof(Package.DotNet.Constructor.Locals)), block, self, constructor.Body) is { } invalid
                 ? Result<Code.Block>.Error(invalid)
                 : Result<Code.Block>.Ok(block);
         }

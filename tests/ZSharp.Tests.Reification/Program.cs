@@ -71,6 +71,9 @@ void Run(C.Statement statement)
 {
     if (hirRunner.RunStatement(statement) is { } error) throw new Exception(error.ToString());
 }
+// A block with locals runs as one piece, the way the body of a method does.
+void RunWhole(C.Block block)
+    => Evaluate(new C.BlockExpression { Statements = block.Statements, Result = new C.StringLiteral("done") });
 C.Expression Reify(C.Expression e) => Scope.HIRReifier.ReifyExpression(e).Unwrap();
 C.Expression ReifyS(C.Statement s) => Scope.HIRReifier.ReifyStatement(s).Unwrap();
 
@@ -102,17 +105,18 @@ Try("cast survives", () =>
 
 Try("block with a local runs", () =>
 {
-    var local = new C.Local("l", T(typeof(string)));
+    var local = new C.Local("l", T(typeof(string))) { Init = Str("via local") };
     var block = new C.Block(
-        new C.ExpressionStatement(new C.Set { Target = Get(local), Value = Str("via local") }),
+        new C.Declare(local),
         new C.ExpressionStatement(Call(Member(probe, "Record"), Get(local)))
     );
-    block.Locals.Add(local);
 
     var built = (C.Block)Evaluate(ReifyS(block))!;
     Probe.Last = null;
-    Run(built);
-    return built.Locals is [{ Name: "l" }] && !ReferenceEquals(built.Locals[0], local) && built.Statements.Count == 2 && Probe.Last == "via local";
+    RunWhole(built);
+    return built.Statements is [C.Declare { Definition: C.Local { Name: "l", Init: C.StringLiteral } declared }, _]
+        && !ReferenceEquals(declared, local)
+        && Probe.Last == "via local";
 });
 
 Try("if and return are structure", () =>
@@ -128,25 +132,23 @@ Try("if and return are structure", () =>
 
 Try("block expression runs", () =>
 {
-    var local = new C.Local("l", T(typeof(string)));
+    var local = new C.Local("l", T(typeof(string))) { Init = Str("v") };
     var block = new C.BlockExpression
     {
         Result = Get(local),
-        Statements = [new C.ExpressionStatement(new C.Set { Target = Get(local), Value = Str("v") })]
+        Statements = [new C.Declare(local)]
     };
-    block.Locals.Add(local);
     return (string?)Evaluate((C.Expression)Evaluate(Reify(block))!) == "v";
 });
 
 Try("outer local is placed by value", () =>
 {
-    var outer = new C.Local("c_Bar", T(typeof(ZSharp.HIR.Instance)));
+    var outer = new C.Local("c_Bar", T(typeof(ZSharp.HIR.Instance))) { Init = Call(Member(probe, "Make")) };
     var code = new C.BlockExpression
     {
         Result = Reify(Get(outer)),
-        Statements = [new C.ExpressionStatement(new C.Set { Target = Get(outer), Value = Call(Member(probe, "Make")) })]
+        Statements = [new C.Declare(outer)]
     };
-    code.Locals.Add(outer);
     return Evaluate(code) is C.Get { Instance: var instance } && ReferenceEquals(instance, identity);
 });
 
@@ -154,15 +156,13 @@ Try("outer local is placed by value", () =>
 // variable of its own, and the body refers to that variable.
 C.Expression Built(C.Expression body, C.Local made)
 {
-    var build = new C.BlockExpression
+    made.Init = Call(Member(probe, "Make"));
+
+    return new C.BlockExpression
     {
         Result = body,
-        Statements = [new C.ExpressionStatement(new C.Set { Target = Get(made), Value = Call(Member(probe, "Make")) })]
+        Statements = [new C.Declare(made)]
     };
-
-    build.Locals.Add(made);
-
-    return build;
 }
 
 Try("identity runs when the code is built, not when it runs", () =>
@@ -228,8 +228,8 @@ var mappedBinder = new ZSharp.Lang.MappedBinder(binder);
 mappedBinder.Apply();
 
 var language = new Language(binder);
-var document = new DocumentCompiler();
-language.Install(mappedCompiler, mappedBinder, IsUnderlying);
+var document = new DocumentCompiler(language);
+language.Install(mappedCompiler, IsUnderlying);
 
 var dotnetClass = il.Load(typeof(Package.DotNet.Class));
 document.Scope.Add("DotNet_Class", Get(dotnetClass));
@@ -326,9 +326,8 @@ C.Expression CompileWith(ZSharp.Compiler.ASTCompiler with, A.Expression expressi
 IResult<C.Expression, Error> SendTo(C.Block body, ZSharp.Compiler.ASTCompiler current, A.CastExpression cast)
 {
     var compiled = document.Within(current, () => current.CompileDefinition((A.Definition)cast.Expression)).Unwrap();
-    var local = new C.Local("f_foo_bar", il.Load(typeof(ZSharp.HIR.Instance)));
-    body.Locals.Add(local);
-    body.Statements.Add(new C.ExpressionStatement(new C.Set { Target = new C.Get(local), Value = compiled.Build().Unwrap() }));
+    var local = new C.Local("f_foo_bar", il.Load(typeof(ZSharp.HIR.Instance))) { Init = compiled.Build().Unwrap() };
+    body.Statements.Add(new C.Declare(local));
     return Result<C.Expression>.Ok(new C.Get(local));
 }
 
@@ -366,8 +365,8 @@ Try("worked example: reified body builds bar each time it runs", () =>
     var built = (C.Block)Evaluate(ReifyS(body))!;
 
     Probe.Kept.Clear();
-    Run(built);
-    Run(built);
+    RunWhole(built);
+    RunWhole(built);
 
     return Probe.Kept is [Package.DotNet.Class { Name: "A" } first, Package.DotNet.Class { Name: "A" } second]
         && !ReferenceEquals(first, second);

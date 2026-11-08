@@ -130,10 +130,20 @@ namespace ZSharp.Lang
             Decorated(zsharpParser.Function);
             Decorated(zsharpParser.Statement);
 
+            // An import runs where it is, so it can be anywhere a statement can.
+            Imports(zsharpParser.Class.Method);
+            Imports(zsharpParser.Class.Constructor);
+            Imports(zsharpParser.Function);
+            Imports(zsharpParser.Statement);
+
             zsharpParser.RegisterParsers(target);
 
             return zsharpParser;
         }
+
+        private static void Imports<T>(ContextParser<T, ZSharp.AST.Statement> parser)
+            where T : ZSharp.AST.Node
+            => parser.AddKeywordParser(LangParser.Keywords.Import, LangParser.ParseImportStatement);
 
         private static void Decorated<T>(ContextParser<T, ZSharp.AST.Statement> parser)
             where T : ZSharp.AST.Node

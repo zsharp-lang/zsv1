@@ -2,7 +2,7 @@ using Scope = Core.Compiler.ModuleScope;
 
 namespace ZSharp.Compiler.Objects
 {
-    internal sealed class Block(Local[] locals, CompilerObject[] statements)
+    internal sealed class Block(CompilerObject[] statements)
         : CompilerObject
         , ICompileIRStatement
     {
@@ -14,12 +14,6 @@ namespace ZSharp.Compiler.Objects
         public IResult<LIR.Block, Error> Compile(object? target)
         {
             var block = new LIR.Block();
-
-            foreach (var local in locals)
-                if (local.Compile(target).When(out var compiled).Error(out var error))
-                    return Result<LIR.Block>.Error(error);
-                else
-                    block.Locals.Add(compiled!);
 
             foreach (var statement in statements)
                 if (Scope.IR.CompileStatement(statement, target).When(out var compiled).Error(out var error))

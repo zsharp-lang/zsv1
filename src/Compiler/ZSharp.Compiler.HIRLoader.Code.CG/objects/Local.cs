@@ -3,12 +3,14 @@ using Scope = Core.Compiler.ModuleScope;
 namespace ZSharp.Compiler.Objects
 {
     /// <summary>
-    /// A local. A definition is loaded once, so every use shares one LIR local.
+    /// A local. A definition is loaded once, so every use shares one LIR local. Declaring
+    /// it is where it takes its initial value.
     /// </summary>
-    internal sealed class Local(CompilerObject type)
+    internal sealed class Local(CompilerObject type, CompilerObject? init)
         : CompilerObject
         , ICompileIRExpression
         , ICTSet
+        , ICTDeclare
         , ITyped
     {
         private LIR.Local? local;
@@ -35,6 +37,41 @@ namespace ZSharp.Compiler.Objects
             => Scope.CG.ImplicitCast(value, type).Ok(out var converted)
                 ? Result.Ok(new SetLocal(this, converted))
                 : Result.Error("The value doesn't match the type of this local.");
+
+        public IResult Declare()
+        {
+            if (init is null)
+                return Result.Ok(new DeclareLocal(this, null));
+
+            return Scope.CG.ImplicitCast(init, type).Ok(out var converted)
+                ? Result.Ok(new DeclareLocal(this, converted))
+                : Result.Error("The initial value doesn't match the type of this local.");
+        }
+    }
+
+    internal sealed class DeclareLocal(Local local, CompilerObject? value)
+        : CompilerObject
+        , ICompileIRStatement
+    {
+        public IResult<LIR.Statement, Error> CompileIRStatement(object? target)
+        {
+            if (local.Compile(target).When(out var compiled).Error(out var error))
+                return Result<LIR.Statement>.Error(error);
+
+            var block = new LIR.Block();
+
+            block.Locals.Add(compiled!);
+
+            if (value is null)
+                return Result<LIR.Statement>.Ok(block);
+
+            if (Scope.IR.CompileExpression(value, target).When(out var result).Error(out error))
+                return Result<LIR.Statement>.Error(error);
+
+            block.Statements.Add(new LIR.SetLocal(compiled!, result!));
+
+            return Result<LIR.Statement>.Ok(block);
+        }
     }
 
     internal sealed class SetLocal(Local local, CompilerObject value)

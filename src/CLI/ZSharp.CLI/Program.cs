@@ -90,6 +90,7 @@ var core = new LibraryImporter("core");
 core.Add("compiler", il.Load(typeof(Scope).Module));
 core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 core.Add("diagnostics", il.Load(typeof(ZSharp.Diagnostics.ModuleScope).Module));
+core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
 
 var importer = new StringImporter();
 importer.Register("std", std);
@@ -119,8 +120,11 @@ var mappedBinder = new ZSharp.Lang.MappedBinder(binder);
 mappedBinder.Apply();
 
 var language = new Language(binder);
-var document = new DocumentCompiler();
-language.Install(mappedCompiler, mappedBinder, IsUnderlyingType);
+
+Core.ZSharp.ModuleScope.Compiler = compiler;
+Core.ZSharp.ModuleScope.Importer = importer.Import;
+DocumentCompiler.Install(loader, Scope.HIRLoader);
+language.Install(mappedCompiler, IsUnderlyingType);
 Language.Install(mappedRunner, runner, Import, instance =>
 {
     if (options.Contains("--dump-definitions"))
@@ -129,37 +133,22 @@ Language.Install(mappedRunner, runner, Import, instance =>
     return Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null;
 });
 
-ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
+ZSharp.Lang.DotNet.DotNetMetaTypes.Install(
+    language, mappedCompiler, mappedBinder, runner, il,
+    () => new ZSharp.HIR.Code.NamedMember { Target = new ZSharp.HIR.Code.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "import" }
+);
 
 #endregion
 
 #region Run
 
-using var stream = File.OpenText(files[0]);
+// A source with no prefix is a document, and the document given to the CLI is the first.
+var documents = new DocumentImporter(language, compiler, runner);
+importer.DefaultImporter = documents;
 
-var parser = new Parser(Tokenizer.Tokenize(new(stream)));
-var syntax = Syntax.Install(parser);
-
-try
+if (documents.Run(files[0]).When(out _).Error(out var failure))
 {
-    while (parser.HasTokens && !parser.Is(ZSharp.Text.TokenType.EOF))
-    {
-        var statement = syntax.Document.ParseStatement(parser);
-
-        if (
-            document.Compile(compiler, statement).When(out var hir).Error(out var error)
-            || (error = runner.RunStatement(hir!)) is not null
-        )
-        {
-            Console.Error.WriteLine($"error: {error}");
-
-            return 1;
-        }
-    }
-}
-catch (ParseError error)
-{
-    Console.Error.WriteLine($"syntax error: {error.Message}");
+    Console.Error.WriteLine($"error: {failure}");
 
     return 1;
 }
