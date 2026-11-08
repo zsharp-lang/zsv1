@@ -20,6 +20,11 @@ namespace ZSharp.Importer.ILLoader
         /// machinery handles; its type is then the interface's.
         /// </summary>
         private readonly Dictionary<Package.DotNet.Interface, Package.DotNet.Class> views = [];
+
+        /// <summary>
+        /// The type parameters of the generic classes defined, as their code uses them.
+        /// </summary>
+        private readonly Dictionary<Package.DotNet.GenericParameter, Objects.GenericParameterType> typeParameters = [];
         private readonly Dictionary<Package.DotNet.Class, Package.DotNet.Interface> viewed = [];
         private readonly Dictionary<HIR.Instance, CompilerObject> variables = [];
 
@@ -72,6 +77,7 @@ namespace ZSharp.Importer.ILLoader
             RegisterType<Package.DotNet.ArrayType>(loader);
             RegisterType<Package.DotNet.RefType>(loader);
             RegisterType<Package.DotNet.GenericInstance>(loader);
+            RegisterType<Package.DotNet.GenericParameter>(loader);
 
             loader.Definitions.Register<Package.DotNet.Class>(LoadType);
             loader.Definitions.Register<Package.DotNet.Struct>(LoadType);
@@ -481,6 +487,11 @@ namespace ZSharp.Importer.ILLoader
             if (node is Package.DotNet.Interface @interface)
                 return Define(View(@interface));
 
+            if (node is Package.DotNet.GenericParameter parameter)
+                return typeParameters.TryGetValue(parameter, out var known)
+                    ? Result.Ok(known)
+                    : Result.Error($"Type parameter {parameter.Name} can only be used inside its definition.");
+
             return node is Package.DotNet.Class definition
                 ? Define(definition)
                 : Result.Error(new UnsupportedError($"{node.GetType().Name} can't be defined yet."));
@@ -517,7 +528,20 @@ namespace ZSharp.Importer.ILLoader
                     return error;
 
             foreach (var node in nodes)
-                inProgress[node] = new(this, node, new(node.Name));
+            {
+                var definition = new Platform.Runtime.ClassDefinition(node.Name);
+
+                // A class's type parameters exist before its members are declared, which use them.
+                foreach (var parameter in node.GenericParameters)
+                {
+                    var lowered = new Platform.Runtime.ClassGenericParameter(parameter.Name);
+
+                    definition.GenericParameters.Add(lowered);
+                    typeParameters[parameter] = new(parameter, lowered);
+                }
+
+                inProgress[node] = new(this, node, definition);
+            }
 
             try
             {
@@ -612,6 +636,15 @@ namespace ZSharp.Importer.ILLoader
             foreach (var method in node.Methods)
             {
                 var signature = new LIR.Signature();
+                var methodParameters = new List<Platform.Runtime.ClassGenericParameter>();
+
+                foreach (var parameter in method.GenericParameters)
+                {
+                    var lowered = new Platform.Runtime.ClassGenericParameter(parameter.Name);
+
+                    methodParameters.Add(lowered);
+                    typeParameters[parameter] = new(parameter, lowered);
+                }
 
                 if (method.IsStatic && ExplicitThis(method.CustomMetadata))
                     return new ErrorMessage($"Method {method.Name} is static, so it has no this.");
@@ -638,6 +671,8 @@ namespace ZSharp.Importer.ILLoader
                     IsAbstract = method.IsAbstract || definition.IsInterface,
                     IsOverride = method.IsOverride
                 };
+
+                declared.GenericParameters.AddRange(methodParameters);
 
                 definition.Methods.Add(declared);
                 @class.Methods[method] = declared;

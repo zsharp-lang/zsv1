@@ -84,6 +84,10 @@ namespace ZSharp.Importer.ILLoader.Objects
                 .ToArray();
 
             if (methods.Length > 0)
+            {
+                if (methods.Any(method => method.Key.GenericParameters.Count > 0))
+                    return Result.Error($"Generic method {Definition.Name}.{member} can only be reached once its class is loaded.");
+
                 return Result.Ok(OverloadGroup.Of(methods.Select(method => new Callable(
                     $"{Definition.Name}.{member}",
                     method.Value,
@@ -91,6 +95,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                     receiver,
                     method.Key.ReturnType is { } returnType ? () => Scope.HIRLoader.LoadType(returnType).Unwrap() : null
                 ))));
+            }
 
             if (receiver is not null && Definition.Fields.FirstOrDefault(field => field.Name == member) is { } field)
             {

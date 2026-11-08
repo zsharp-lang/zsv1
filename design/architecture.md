@@ -361,6 +361,20 @@ On the CLR, the runtime makes the delegate from the method's pointer. Methods of
 or module still being loaded, and local functions, aren't made this way yet: a local
 function still becomes a delegate through expression trees.
 
+A generic CLR class is written `class Box[T] { let value: T; }`. Its type parameters are
+`Package.DotNet.GenericParameter`s, bound inside the class before its members are
+compiled, so they are types like any other there, and unknown outside it. On the CLR,
+the class's type builder defines them, and the class's own code refers to its members
+through the class instantiated over its own parameters, as C# emits it. Once loaded it
+is an ordinary generic CLR type, so `Box[Int32](5)` instantiates it as any other.
+A generic method is written `fun id[T](value: T): T`, and its type parameters are bound
+before its parameters, whose types use them. On the CLR the method is defined before its
+signature, which uses its type parameters. Once its class is loaded, `Ids.id[Int32](7)`
+instantiates it as any CLR generic method.
+
+Constraints, boxing a value of a type parameter, inferring type arguments, and using a
+generic class or method while its class is still being loaded aren't supported yet.
+
 ## Composition
 
 There is no pipeline and no platform as a concept.

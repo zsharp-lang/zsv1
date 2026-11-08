@@ -23,11 +23,25 @@ namespace ZSharp.Platform.Runtime
         /// </summary>
         public List<LIR.Type> Interfaces { get; } = [];
 
+        /// <summary>
+        /// The type parameters of a generic class, which its members' types can use.
+        /// </summary>
+        public List<ClassGenericParameter> GenericParameters { get; } = [];
+
         public List<ClassField> Fields { get; } = [];
 
         public List<ClassConstructor> Constructors { get; } = [];
 
         public List<ClassMethod> Methods { get; } = [];
+    }
+
+    /// <summary>
+    /// A type parameter of a generic class, as a type its members use.
+    /// </summary>
+    public sealed class ClassGenericParameter(string name)
+        : LIR.Type
+    {
+        public string Name { get; set; } = name;
     }
 
     public sealed class ClassField(string name, LIR.Type type)
@@ -73,6 +87,11 @@ namespace ZSharp.Platform.Runtime
         public bool IsStatic { get; } = isStatic;
 
         public bool IsVirtual { get; set; }
+
+        /// <summary>
+        /// The type parameters of a generic method, which its signature and code use.
+        /// </summary>
+        public List<ClassGenericParameter> GenericParameters { get; } = [];
 
         /// <summary>
         /// Whether it has no code, so a derived class must override it.

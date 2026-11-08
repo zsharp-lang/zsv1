@@ -35,6 +35,12 @@ namespace ZSharp.Lang.DotNet
 
             var block = new Code.Block();
 
+            // A generic method's type parameters come first, as its parameters' types use them.
+            if (body.TypeParameters(compiler, function.GenericParameters, self, nameof(Package.DotNet.Method.GenericParameters)).When(out var typeParameters).Error(out var failure))
+                return Result<Code.Block>.Error(failure);
+
+            block.Statements.AddRange(typeParameters!);
+
             if (body.Parameters(
                 compiler,
                 block,

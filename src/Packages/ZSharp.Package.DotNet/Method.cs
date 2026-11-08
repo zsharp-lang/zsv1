@@ -30,6 +30,11 @@ namespace Package.DotNet
 
         public List<CustomMetadata> CustomMetadata { get; } = [];
 
+        /// <summary>
+        /// The type parameters of a generic method.
+        /// </summary>
+        public List<GenericParameter> GenericParameters { get; } = [];
+
         public List<ZSharp.HIR.Code.Parameter> Parameters { get; } = [];
 
         /// <summary>

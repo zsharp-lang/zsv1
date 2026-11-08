@@ -90,6 +90,7 @@ namespace ZSharp.Parser
             {
                 Type = type.Value,
                 Signature = signature,
+                GenericParameters = genericParameters,
                 Of = of,
                 Bases = bases,
                 Content = body,

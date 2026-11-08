@@ -2209,6 +2209,68 @@ Try("a method that doesn't fit a delegate type is an error", () =>
         let wrong138: Func[Int32, String] = Upper;
         """) is not null);
 
+// ---- Generic classes
+
+Try("a generic class is defined and instantiated", () =>
+    ResetKept()
+    && Run("""
+        class Box139[T] {
+            let value: T;
+            @explicitThis new(this, value: T) { this.value = value; }
+            @explicitThis fun get(this): T { return this.value; }
+        }
+        Keep(Box139[Int32](5).get());
+        Keep(Box139[String]("x").value);
+        """) is null
+    && Probe.Kept is [5, "x"]);
+
+Try("a generic class has two type parameters", () =>
+    Run("""
+        class Pair140[A, B] {
+            let first: A;
+            let second: B;
+            @explicitThis new(this, first: A, second: B) { this.first = first; this.second = second; }
+        }
+        let pair140 = Pair140[String, Int32]("one", 1);
+        Keep(pair140.second);
+        """) is null && Kept() is 1);
+
+Try("a generic class is a CLR generic type definition", () =>
+    Run("class Generic141[T] { let item: T; }") is null
+    && Probe.LastType("Generic141") is { IsGenericTypeDefinition: true } type
+    && type.GetField("item")!.FieldType.IsGenericParameter);
+
+Try("a generic method is defined and given its arguments", () =>
+    ResetKept()
+    && Run("""
+        class Ids143 { @static fun id[T](value: T): T { return value; } }
+        Keep(Ids143.id[Int32](7));
+        Keep(Ids143.id[String]("seven"));
+        """) is null
+    && Probe.Kept is [7, "seven"]);
+
+Try("a generic class has a generic method", () =>
+    Run("""
+        class Holder144[T] {
+            let held: T;
+            @explicitThis new(this, held: T) { this.held = held; }
+            @explicitThis fun with[U](this, other: U): U { return other; }
+        }
+        Keep(Holder144[Int32](1).with[String]("other"));
+        """) is null && (string)Kept() == "other");
+
+Try("a generic method's type parameter is a CLR method type parameter", () =>
+    Run("class Ids145 { @static fun id[T](value: T): T { return value; } }") is null
+    && Probe.LastType("Ids145") is { } type
+    && type.GetMethod("id") is { IsGenericMethodDefinition: true } method
+    && method.ReturnType.IsGenericMethodParameter);
+
+Try("a type parameter is only known inside its class", () =>
+    Run("""
+        class Inside142[T] { let item: T; }
+        let outside142: T = 1;
+        """) is not null);
+
 // ---- Overloading
 
 Try("a CLR overload is chosen by its parameter types", () =>

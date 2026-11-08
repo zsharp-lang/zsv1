@@ -7,6 +7,19 @@ namespace ZSharp.Platform.Runtime
         private readonly Dictionary<ClassField, IL.FieldInfo> classFields = [];
         private readonly Dictionary<ClassConstructor, Emit.ConstructorBuilder> classConstructors = [];
         private readonly Dictionary<ClassMethod, Emit.MethodBuilder> classMethods = [];
+        private readonly Dictionary<ClassGenericParameter, Type> genericParameters = [];
+
+        /// <summary>
+        /// A generic class as its own code refers to it: instantiated over its own type
+        /// parameters, as C# emits it.
+        /// </summary>
+        private readonly Dictionary<ClassDefinition, Type> selves = [];
+
+        /// <summary>
+        /// The class each member belongs to, for a member of a generic class, which its
+        /// code refers to through the class's self instance.
+        /// </summary>
+        private readonly Dictionary<object, ClassDefinition> owners = [];
         private readonly HashSet<string> classNames = [];
         private readonly Queue<Action> bodies = [];
         private readonly List<LIR.Structure> pendingStructures = [];
@@ -50,6 +63,16 @@ namespace ZSharp.Platform.Runtime
                             | (definition.Methods.Any(method => method.IsAbstract) ? IL.TypeAttributes.Abstract : 0)
                 );
 
+            foreach (var (definition, builder) in builders.Where(pair => pair.Key.GenericParameters.Count > 0))
+            {
+                var parameters = builder.DefineGenericParameters([.. definition.GenericParameters.Select(parameter => parameter.Name)]);
+
+                foreach (var (parameter, type) in definition.GenericParameters.Zip(parameters))
+                    genericParameters[parameter] = type;
+
+                selves[definition] = builder.MakeGenericType(parameters);
+            }
+
             foreach (var (definition, builder) in builders)
                 DeclareMembers(definition, builder);
 
@@ -90,6 +113,10 @@ namespace ZSharp.Platform.Runtime
             foreach (var field in definition.Fields)
                 classFields[field] = builder.DefineField(field.Name, ImportType(field.Type), IL.FieldAttributes.Public);
 
+            if (definition.GenericParameters.Count > 0)
+                foreach (var member in definition.Fields.Cast<object>().Concat(definition.Constructors).Concat(definition.Methods))
+                    owners[member] = definition;
+
             foreach (var constructor in definition.Constructors)
                 classConstructors[constructor] = builder.DefineConstructor(
                     IL.MethodAttributes.Public,
@@ -98,12 +125,19 @@ namespace ZSharp.Platform.Runtime
                 );
 
             foreach (var method in definition.Methods)
-                classMethods[method] = builder.DefineMethod(
-                    method.Name,
-                    Attributes(definition, method, implemented),
-                    ImportType(method.Signature.ReturnType),
-                    [.. method.Signature.Parameters.Skip(method.IsStatic ? 0 : 1).Select(parameter => ImportType(parameter.Type))]
-                );
+            {
+                // A generic method is defined before its signature, which uses its type parameters.
+                var declared = builder.DefineMethod(method.Name, Attributes(definition, method, implemented));
+
+                if (method.GenericParameters.Count > 0)
+                    foreach (var (parameter, type) in method.GenericParameters.Zip(declared.DefineGenericParameters([.. method.GenericParameters.Select(parameter => parameter.Name)])))
+                        genericParameters[parameter] = type;
+
+                declared.SetReturnType(ImportType(method.Signature.ReturnType));
+                declared.SetParameters([.. method.Signature.Parameters.Skip(method.IsStatic ? 0 : 1).Select(parameter => ImportType(parameter.Type))]);
+
+                classMethods[method] = declared;
+            }
         }
 
         /// <summary>
@@ -151,6 +185,25 @@ namespace ZSharp.Platform.Runtime
 
             return names;
         }
+
+        /// <summary>
+        /// A member as code refers to it. A member of a generic class is referred to
+        /// through the class's self instance.
+        /// </summary>
+        internal IL.FieldInfo Referenced(ClassField field)
+            => owners.TryGetValue(field, out var owner) && selves.TryGetValue(owner, out var self)
+                ? Emit.TypeBuilder.GetField(self, classFields[field])
+                : classFields[field];
+
+        internal IL.MethodInfo Referenced(ClassMethod method)
+            => owners.TryGetValue(method, out var owner) && selves.TryGetValue(owner, out var self)
+                ? Emit.TypeBuilder.GetMethod(self, classMethods[method])
+                : classMethods[method];
+
+        internal IL.ConstructorInfo Referenced(ClassConstructor constructor)
+            => owners.TryGetValue(constructor, out var owner) && selves.TryGetValue(owner, out var self)
+                ? Emit.TypeBuilder.GetConstructor(self, classConstructors[constructor])
+                : classConstructors[constructor];
 
         private IL.ConstructorInfo BaseConstructor(ClassDefinition definition, Type parent)
         {

@@ -84,13 +84,13 @@ namespace ZSharp.Platform.Runtime
                     il.Emit(Emit.OpCodes.Call, ImportFunction(function));
                     break;
                 case ClassConstructor constructor:
-                    il.Emit(Emit.OpCodes.Newobj, classConstructors[constructor]);
+                    il.Emit(Emit.OpCodes.Newobj, Referenced(constructor));
                     break;
                 case ClassMethod method:
-                    il.Emit(method.IsStatic ? Emit.OpCodes.Call : Emit.OpCodes.Callvirt, classMethods[method]);
+                    il.Emit(method.IsStatic ? Emit.OpCodes.Call : Emit.OpCodes.Callvirt, Referenced(method));
                     break;
                 case ClassFieldAccess access:
-                    il.Emit(access.IsSet ? Emit.OpCodes.Stfld : Emit.OpCodes.Ldfld, classFields[access.Field]);
+                    il.Emit(access.IsSet ? Emit.OpCodes.Stfld : Emit.OpCodes.Ldfld, Referenced(access.Field));
                     break;
                 case LIR.FunctionHandle handle:
                     if (!functionHandles.TryGetValue(handle, out var emit))

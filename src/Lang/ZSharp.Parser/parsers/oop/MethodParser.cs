@@ -26,6 +26,19 @@ namespace ZSharp.Parser
             if (parser.Is(TokenType.Identifier))
                 name = parser.Eat(TokenType.Identifier).Value;
 
+            List<GenericParameter>? genericParameters = null;
+            if (parser.Is(TokenType.LBracket, eat: true))
+            {
+                genericParameters = [];
+
+                do
+                {
+                    genericParameters.Add(LangParser.ParseGenericParameter(parser));
+                } while (parser.Is(TokenType.Comma, eat: true));
+
+                parser.Eat(TokenType.RBracket);
+            }
+
             parser.Eat(TokenType.LParen);
 
             var signature = LangParser.ParseSignature(parser);
@@ -48,6 +61,7 @@ namespace ZSharp.Parser
             })
             {
                 Body = body,
+                GenericParameters = genericParameters,
                 Name = name,
                 ReturnType = returnType,
                 Signature = signature,

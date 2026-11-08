@@ -30,7 +30,7 @@ namespace ZSharp.Lang.DotNet
             var method = il.Load(typeof(Package.DotNet.Method));
             var constructor = il.Load(typeof(Package.DotNet.Constructor));
 
-            var classes = new ClassMetaType(il, container, body, @class);
+            var classes = new ClassMetaType(language, il, container, body, @class);
             var @interface = il.Load(typeof(Package.DotNet.Interface));
 
             metaTypes.Register(@class, classes.Compile);

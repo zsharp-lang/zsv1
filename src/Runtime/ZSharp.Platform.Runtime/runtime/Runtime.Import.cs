@@ -15,9 +15,13 @@ namespace ZSharp.Platform.Runtime
                     ? mapped
                     : throw new InvalidOperationException("A type handle is not mapped."),
                 LIR.Structure structure => ImportStructure(structure),
+                // A generic class still being defined is its self instance to its own code.
                 ClassDefinition definition => classes.TryGetValue(definition, out var @class)
-                    ? @class
+                    ? @class is Emit.TypeBuilder && selves.TryGetValue(definition, out var self) ? self : @class
                     : throw new InvalidOperationException($"Class {definition.Name} is not loaded."),
+                ClassGenericParameter parameter => genericParameters.TryGetValue(parameter, out var argument)
+                    ? argument
+                    : throw new InvalidOperationException($"Type parameter {parameter.Name} is not defined."),
                 LIR.Reference reference => typeof(Box<>).MakeGenericType(ImportType(reference.Target)),
                 LIR.FunctionType => typeof(nint),
                 _ => throw new NotSupportedException($"Can't import a {type.GetType().Name}.")

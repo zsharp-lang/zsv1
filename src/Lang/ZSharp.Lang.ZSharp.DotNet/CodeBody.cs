@@ -31,6 +31,35 @@ namespace ZSharp.Lang.DotNet
                 : Result<Code.Expression>.Ok(new Code.Cast { Value = compiled!, Type = new Code.Get(il.Load(typeof(T))) });
 
         /// <summary>
+        /// Code that builds the type parameters of a generic definition and adds them to the
+        /// owner's list, binding each name, so what is compiled after them can use them.
+        /// </summary>
+        public IResult<List<Code.Statement>, Error> TypeParameters(ASTCompiler compiler, List<AST.GenericParameter>? parameters, Code.Local owner, string list)
+        {
+            var statements = new List<Code.Statement>();
+            var kind = il.Load(typeof(Package.DotNet.GenericParameter));
+
+            foreach (var parameter in parameters ?? [])
+            {
+                if (parameter.Constraint is not null)
+                    return Result<List<Code.Statement>>.Error($"Type parameter {parameter.Name} has a constraint, which isn't supported yet.");
+
+                var holder = new Code.Local(parameter.Name, kind)
+                {
+                    Init = Construct(kind, new Code.StringLiteral(parameter.Name))
+                };
+
+                statements.Add(new Code.Declare(holder));
+                statements.Add(new Code.ExpressionStatement(Add(owner, list, new Code.Get(holder))));
+
+                if (language.Bind(compiler, parameter.Name, new Code.Get(holder)) is { } error)
+                    return Result<List<Code.Statement>>.Error(error);
+            }
+
+            return Result<List<Code.Statement>>.Ok(statements);
+        }
+
+        /// <summary>
         /// Adds code that builds each parameter, and binds its name. In <c>(a, b, {c, d})</c>,
         /// <c>a</c> and <c>b</c> are positional only and <c>c</c> and <c>d</c> named only. A
         /// parameter written <c>external as internal</c> is named <c>external</c> outside,

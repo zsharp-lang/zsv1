@@ -25,6 +25,11 @@ namespace Package.DotNet
         /// </summary>
         public List<TypeReference> Interfaces { get; } = [];
 
+        /// <summary>
+        /// The type parameters of a generic class.
+        /// </summary>
+        public List<GenericParameter> GenericParameters { get; } = [];
+
         public List<Constructor> Constructors { get; } = [];
 
         public StaticConstructor? StaticConstructor { get; set; }

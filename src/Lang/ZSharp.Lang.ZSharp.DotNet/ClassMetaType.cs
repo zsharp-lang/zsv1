@@ -12,6 +12,7 @@ namespace ZSharp.Lang.DotNet
     /// a <c>let</c> becomes a field, and the rest of its members are definitions.
     /// </summary>
     public sealed class ClassMetaType(
+        Language language,
         ILLoader il,
         ContainerCompiler container,
         CodeBody body,
@@ -33,6 +34,11 @@ namespace ZSharp.Lang.DotNet
 
         private IResult<Code.Block, Error> Fill(ASTCompiler compiler, AST.TypeDefinition definition, Code.Local self)
         {
+            // A class's type parameters are bound before its members are compiled, which use
+            // them, and built before anything else.
+            if (body.TypeParameters(compiler, definition.GenericParameters, self, nameof(Package.DotNet.Class.GenericParameters)).When(out var parameters).Error(out var invalid))
+                return Result<Code.Block>.Error(invalid);
+
             // In a class, a let is a field.
             var fork = compiler.Fork();
             var previous = fork.Expression;
@@ -50,8 +56,11 @@ namespace ZSharp.Lang.DotNet
             if (filled.When(out var block).Error(out var error))
                 return Result<Code.Block>.Error(error);
 
-            return Bases(compiler, definition, self, block!) is { } invalid ? Result<Code.Block>.Error(invalid) : filled;
+            block!.Statements.InsertRange(0, parameters!);
+
+            return Bases(compiler, definition, self, block!) is { } failed ? Result<Code.Block>.Error(failed) : filled;
         }
+
 
         /// <summary>
         /// Adds code that gives the definition its bases, before anything else, as they are

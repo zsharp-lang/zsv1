@@ -10,6 +10,11 @@
 
         public string Name { get; init; } = string.Empty;
 
+        /// <summary>
+        /// The type parameters of a generic function, as in <c>fun id[T](x: T): T</c>.
+        /// </summary>
+        public List<GenericParameter>? GenericParameters { get; set; }
+
         public required Signature Signature { get; set; }
 
         public Expression? ReturnType { get; set; }
