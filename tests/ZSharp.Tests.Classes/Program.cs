@@ -96,8 +96,10 @@ core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
 core.Add("compiler", il.Load(typeof(Scope).Module));
 
+var std = new ZSharp.Importer.String.LibraryImporter("standard");
+
 foreach (var (name, module) in ToolchainModules.All())
-    core.Add(name, il.Load(module));
+    std.Add(name, il.Load(module));
 
 var importer = new ZSharp.Importer.String.StringImporter();
 var host = new DotNetDocuments(
@@ -111,7 +113,11 @@ DocumentCompiler.Install(mappedBinder);
 var document = new DocumentCompiler(language, host);
 var documents = new DocumentImporter(language, compiler, host);
 importer.Register("core", core);
+importer.Register("std", std);
 importer.DefaultImporter = documents;
+
+if (ZSharp.Importer.String.DocumentLibrary.Above(AppContext.BaseDirectory, "std") is { } standard)
+    std.Fallback = new ZSharp.Importer.String.DocumentLibrary(standard, documents);
 language.Install(mappedCompiler, IsUnderlying);
 Core.ZSharp.ModuleScope.Importer = importer.Import;
 Core.ZSharp.ModuleScope.MetaTypes = DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
@@ -2903,10 +2909,10 @@ Try("an array of several dimensions is indexed by an index for each", () =>
 Try("the toolchain's types are imported from its modules", () =>
     ResetKept() && Run("""
         module M212 {
-            import { Instance } from "core:hir";
-            import { Function } from "core:ast";
-            import { CompilerObject } from "core:mir";
-            import { Result } from "core:common";
+            import { Instance } from "std:zsharp/hir";
+            import { Function } from "std:zsharp/lang/ast";
+            import { CompilerObject } from "std:zsharp/mir";
+            import { Result } from "std:zsharp/common";
             import { String } from "core:runtime";
         }
         """) is null);
@@ -2914,7 +2920,7 @@ Try("the toolchain's types are imported from its modules", () =>
 Try("a generic type of a module is found by its name, every arity of it", () =>
     Run("""
         module M213 {
-            import { Result, Error } from "core:common";
+            import { Result, Error } from "std:zsharp/common";
             import { String, Type } from "core:runtime";
             let kind: Type = Result[String, Error];
         }
@@ -2933,6 +2939,32 @@ Try("Z# reaches the meta-types and the mapped loaders", () =>
         Keep(M214.types);
         Keep(M214.loader);
         """) is null && Probe.Kept is [ZSharp.Lang.MetaTypes, ZSharp.Compiler.MappedLoader]);
+
+// ---- finding a meta-compiler is an operation Z# can replace
+
+Try("Z# replaces how a meta-compiler is found, asking what it replaced", () =>
+    ResetKept() && Run("""
+        module M225 {
+            import { MetaCompilerOf, MetaCompiler } from "std:zsharp/lang";
+            import { Instance } from "std:zsharp/hir";
+            import { IResult, Error } from "std:zsharp/common";
+            import { Int32 } from "core:runtime";
+
+            let previous: MetaCompilerOf;
+            let asked: Int32 = 0;
+
+            fun find(metaType: Instance): IResult[MetaCompiler, Error] {
+                asked = asked + 1;
+                return previous(metaType);
+            }
+        }
+        import { metaTypes } from "core:zsharp";
+        M225.previous = metaTypes.Find;
+        metaTypes.Find = M225.find;
+        def Asked225 {}
+        metaTypes.Find = M225.previous;
+        Keep(M225.asked);
+        """) is null && Kept() is int asked && asked > 0);
 
 // ---- CLR value types
 
@@ -3706,17 +3738,11 @@ Try("a condition sees the document locals", () =>
 // ---- std:functions: Z#'s own functions, defined in Z#. Installing it makes every fun
 // that nothing else compiles a Z# function, so these come last.
 
-string StandardLibrary(string path)
-{
-    for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        if (File.Exists(Path.Combine(directory.FullName, "std", path)))
-            return Path.Combine(directory.FullName, "std", path).Replace("\\", "/");
+Try("std:functions installs, by its name", () =>
+    Run("""import { Function } from "std:functions";""") is null);
 
-    throw new FileNotFoundException(path);
-}
-
-Try("std:functions installs", () =>
-    Run($$"""import { Function } from "{{StandardLibrary("functions/functions.zs")}}";""") is null);
+Try("the prelude brings the standard definitions", () =>
+    Run("""import "std:prelude";""") is null);
 
 Try("a fun in a document is a Z# function", () =>
     Run("""

@@ -101,7 +101,7 @@ core.Add("diagnostics", il.Load(typeof(ZSharp.Diagnostics.ModuleScope).Module));
 core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
 
 foreach (var (name, module) in ZSharp.Lang.DotNet.ToolchainModules.All())
-    core.Add(name, il.Load(module));
+    std.Add(name, il.Load(module));
 
 var importer = new StringImporter();
 importer.Register("std", std);
@@ -166,6 +166,10 @@ Core.ZSharp.ModuleScope.MetaTypes = ZSharp.Lang.DotNet.DotNetMetaTypes.Install(l
 // A source with no prefix is a document, and the document given to the CLI is the first.
 var documents = new DocumentImporter(language, compiler, host);
 importer.DefaultImporter = documents;
+
+// The standard library written in Z# is found from where the toolchain runs.
+if (DocumentLibrary.Above(AppContext.BaseDirectory, "std") is { } standard)
+    std.Fallback = new DocumentLibrary(standard, documents);
 
 if (documents.Run(files[0]).When(out _).Error(out var failure))
 {

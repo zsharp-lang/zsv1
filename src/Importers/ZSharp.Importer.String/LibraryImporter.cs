@@ -8,12 +8,19 @@ namespace ZSharp.Importer.String
     {
         private readonly Dictionary<string, HIR.Instance> modules = [];
 
+        /// <summary>
+        /// What imports a library this one has no module for, if anything does.
+        /// </summary>
+        public IStringImporter? Fallback { get; set; }
+
         public void Add(string name, HIR.Instance module)
             => modules[name] = module;
 
         public IResult<HIR.Instance, Error> Import(string source)
             => modules.TryGetValue(source, out var module)
                 ? Result<HIR.Instance>.Ok(module)
-                : Result<HIR.Instance>.Error($"Could not find {name} library '{source}'.");
+                : Fallback is not null
+                    ? Fallback.Import(source)
+                    : Result<HIR.Instance>.Error($"Could not find {name} library '{source}'.");
     }
 }

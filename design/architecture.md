@@ -654,13 +654,42 @@ a custom type gets into the language to be used as a meta-type.
 - A return converts its value to what the code being loaded returns, which is
   `CodeLoaders.Returns`: whatever lowers a function's code sets it while it loads that
   code and puts it back after, the IL loader as `std:functions` does.
-- Z# reaches the toolchain through `core:` modules made of its assemblies, as
-  `core:hir`, `core:hir/code`, `core:mir`, `core:lir`, `core:ast`, `core:common`,
-  `core:compiler/cg`, `core:compiler/ir`, `core:compiler/ts`, `core:compiler/code` and
-  `core:lang`, listed once in `ToolchainModules`. A module's generic types are found by
-  their name without their arity, all arities as overloads. `core:zsharp` gives
-  `metaTypes` and `bodies`, and `core:compiler` gives `mappedLoader` and
-  `mappedCodeLoader`.
+- Z# reaches the toolchain's types through `std:zsharp/` modules made of its
+  assemblies, as `std:zsharp/hir`, `std:zsharp/hir/code`, `std:zsharp/mir`,
+  `std:zsharp/lir`, `std:zsharp/lang`, `std:zsharp/lang/ast`, `std:zsharp/common` and
+  `std:zsharp/compiler/...`, listed once in `ToolchainModules`. A module's generic types
+  are found by their name without their arity, all arities as overloads. What is live
+  is under `core:`: `core:zsharp` gives `metaTypes` and `bodies`, and `core:compiler`
+  gives `mappedLoader` and `mappedCodeLoader`.
+- A CO lowers for the target it is given, and passes it on to what it lowers, so a
+  Z# function lowers its code for the target its call is compiled for.
+- Lowering is to be by capability: a CO asks the target what it can do and lowers to
+  the richest form the target has, or to a shallow one built of LIR's core. The CLR has
+  polymorphism, so a Z# class can be a class there, and a target without it gets
+  records, tables of functions and `CallIndirect`. A capability is standard, not a
+  platform's: its LIR nodes and what they mean are part of the standard under
+  `std:zsharp/`, and each platform implements those it can. So an LIR structure is a
+  record of fields, and how it is laid out is the target's.
+- The minimal target is a platform that writes LIR modules as they are, written in pure
+  Z#, which shows how Z# defines a platform. It comes after classes.
+- A capability is an interface, and a CO checks for it by matching the target against
+  it. It doesn't produce LIR: it marks the LIR the CO builds with metadata of its own, as
+  a platform with polymorphism marks a structure polymorphic, so what it adds is opaque
+  and the CO still builds the definition. The CLR's own entities lower without
+  capabilities, by matching the runtime directly. A capability is given to a platform
+  that exists, as the CLR runtime, by a trait: an implementation of the capability for
+  the platform's type, which the trait dispatchers make the platform match.
+- Finding the meta-compiler of a meta-type is an operation, `MetaTypes.Find`: what is
+  registered for the meta-type is one way to find it, and whatever replaces it may find
+  one some other way and ask what it replaced, as by what a meta-type is an instance of,
+  so a meta-type can take arguments, as `Implementation[Polymorphism, Runtime]`.
+- Traits are a meta-type, `Implementation[Trait, For]`, so an implementation is a
+  definition of its own, first-class for reflection and code generation; anything else is
+  built on it. They are added by dispatchers for the operations they take part in, in two
+  flavors that are installed apart: static typing dispatchers decide from the static type
+  as code is compiled, and dynamic typing dispatchers look an implementation up by the
+  type a value has as the code runs, which a capability check needs, since the target a
+  CO is given has no static type.
 - A CLR class, interface or module compiles a `fun` written directly in it as a CLR
   method, through `CodeBody.WithMethods`, whatever the default for `fun` is: the meta-type
   of its members is the container's to choose.
@@ -1556,7 +1585,21 @@ The `as` cast marking such a definition is not settled.
   sources other than a string, or arguments. Keyword arguments are named arguments of
   that call. An import has no alias of its own: only the names it brings in can be
   renamed, as in `{ a as b }`.
-- Importers route by prefix through the string importer.
+- Importers route by prefix through the string importer. The prefixes say what a
+  library is: `core:` is live and stateful, bound to the toolchain that is running, as
+  `core:compiler`'s CG and loaders, `core:zsharp`'s compiler and meta-types, and
+  `core:runtime`, which also keeps the CLR's types for now; `pkg:` is an external
+  package installed by the package manager; `std:` is the standard library, its common
+  APIs; and `std:zsharp/` is the standard API of the toolchain, its types, as
+  `std:zsharp/hir`, `std:zsharp/lang/ast` and `std:zsharp/lang/parser`. The CLR
+  package's HIR, `std:zsharp/package/dotnet`, isn't standard: it is there until a package
+  manager can give it as a `pkg:`.
+- A `std:` library is a CLR module, or else a document of the standard library written
+  in Z#, found from where the toolchain runs: `std:name` is `std/name.zs`, or else
+  `std/name/name.zs`.
+- Nothing is imported for a script. The prelude, `std:prelude`, imports what a script
+  wants, so a script imports it first, `import "std:prelude";`, and gets the standard
+  definitions, as Z# functions, through an ordinary import.
 - Importers do nothing CO-related. They return real HIR, and imported names
   cross into MIR through the HIR -> MIR REI.
 - Libraries are supplied by a `pkg:` importer written purely in Z#.

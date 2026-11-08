@@ -14,6 +14,12 @@ namespace ZSharp.Lang
     );
 
     /// <summary>
+    /// Finds the compiler of a meta-type. Registering one for the meta-type is one way;
+    /// anything may find one some other way, as by what the meta-type is an instance of.
+    /// </summary>
+    public delegate IResult<MetaCompiler, Error> MetaCompilerOf(HIR.Instance metaType);
+
+    /// <summary>
     /// A map from a meta-type to its compiler. It is a utility, and nothing depends on
     /// it: anything registered for a definition node may compile it some other way. It
     /// resolves the meta-type, declares the local, and gives the definition a context
@@ -29,8 +35,28 @@ namespace ZSharp.Lang
             = new(ReferenceEqualityComparer.Instance);
         private readonly Dictionary<Type, HIR.Instance> defaults = [];
 
+        private MetaCompilerOf? find;
+
         public void Register(HIR.Instance metaType, MetaCompiler compiler)
             => compilers[metaType] = compiler;
+
+        /// <summary>
+        /// How a meta-type's compiler is found. It is what is registered for the meta-type
+        /// unless something replaces it, which may ask what it replaced.
+        /// </summary>
+        public MetaCompilerOf Find
+        {
+            get => find ??= Registered;
+            set => find = value;
+        }
+
+        /// <summary>
+        /// The compiler registered for exactly this meta-type.
+        /// </summary>
+        public IResult<MetaCompiler, Error> Registered(HIR.Instance metaType)
+            => compilers.TryGetValue(metaType, out var compiler)
+                ? Result<MetaCompiler>.Ok(compiler)
+                : Result<MetaCompiler>.Error(new UnsupportedError("No meta-compiler is registered for this meta-type."));
 
         /// <summary>
         /// Sets the meta-type of a kind of definition that has no <c>of</c>.
@@ -60,7 +86,7 @@ namespace ZSharp.Lang
         {
             Error? error;
 
-            if (!compilers.TryGetValue(metaType, out var metaCompiler))
+            if (Find(metaType).When(out var metaCompiler).Error(out _))
                 return Result<CompiledDefinition>.Error($"No meta-compiler is registered for the meta-type of {NameOf(definition)}.");
 
             if (metaType is not HIR.Type type)
@@ -74,7 +100,7 @@ namespace ZSharp.Lang
             if (name.Length > 0 && language.Bind(context.Names, name, new HIR.Code.Get(variable)) is { } invalid)
                 return Result<CompiledDefinition>.Error(invalid);
 
-            if (compiler.Contexts.Within(context, () => metaCompiler(compiler, definition, variable)).When(out var compiled).Error(out error))
+            if (compiler.Contexts.Within(context, () => metaCompiler!(compiler, definition, variable)).When(out var compiled).Error(out error))
                 return Result<CompiledDefinition>.Error(error);
 
             return Result<CompiledDefinition>.Ok(compiled! with

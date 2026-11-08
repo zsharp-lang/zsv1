@@ -5,19 +5,19 @@
 // makes it a CO, and makes it what `fun` is wherever nothing else compiles one.
 
 import { String, Object, Boolean, Int32, List, explicitThis } from "core:runtime";
-import { Instance, Definition, Variable, Type } from "core:hir";
-import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral } from "core:hir/code";
-import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "core:ast";
-import { CompilerObject } from "core:mir";
-import { Error, Result, IResult } from "core:common";
-import { Argument, ArgumentStream } from "core:compiler/cg";
-import { ICTCallable, ICTMatchParameter } from "core:compiler/cg/direct";
-import { ICompileIRExpression } from "core:compiler/ir";
-import { ITyped } from "core:compiler/ts";
-import { ASTCompiler, CompiledDefinition } from "core:compiler/ast";
-import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode } from "core:lir";
-import { Bodies } from "core:lang";
-import { CodeLoaders } from "core:compiler/code";
+import { Instance, Definition, Variable, Type } from "std:zsharp/hir";
+import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral } from "std:zsharp/hir/code";
+import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "std:zsharp/lang/ast";
+import { CompilerObject } from "std:zsharp/mir";
+import { Error, Result, IResult } from "std:zsharp/common";
+import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
+import { ICTCallable, ICTMatchParameter } from "std:zsharp/compiler/cg/direct";
+import { ICompileIRExpression } from "std:zsharp/compiler/ir";
+import { ITyped } from "std:zsharp/compiler/ts";
+import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
+import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode } from "std:zsharp/lir";
+import { Bodies } from "std:zsharp/lang";
+import { CodeLoaders } from "std:zsharp/compiler/code";
 import { metaTypes, bodies, export } from "core:zsharp";
 import { cg, ir, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
 
@@ -82,9 +82,9 @@ module Objects {
             return hirLoader.LoadType(this.type).Unwrap();
         }
 
-        @explicitThis fun parameter(this): LIRParameter {
+        @explicitThis fun parameter(this, target: Object): LIRParameter {
             if (this.lowered == null) {
-                this.lowered = LIRParameter(ir.CompileType(this.get_Type(), null).Unwrap());
+                this.lowered = LIRParameter(ir.CompileType(this.get_Type(), target).Unwrap());
                 this.lowered.Name = this.name;
             }
 
@@ -92,7 +92,7 @@ module Objects {
         }
 
         @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
-            return Result[LIRExpression].Ok(GetLocal(this.parameter()));
+            return Result[LIRExpression].Ok(GetLocal(this.parameter(target)));
         }
 
         // The argument with its name, or the next positional one, or else the default.
@@ -128,17 +128,17 @@ module Objects {
             return hirLoader.LoadType(this.node.ReturnType).Unwrap();
         }
 
-        @explicitThis fun function(this): LIRFunction {
+        @explicitThis fun function(this, target: Object): LIRFunction {
             if (this.lowered != null) return this.lowered;
 
             let signature = Signature();
             let returned = this.returnType();
 
-            if (returned != null) signature.ReturnType = ir.CompileType(returned, null).Unwrap();
+            if (returned != null) signature.ReturnType = ir.CompileType(returned, target).Unwrap();
 
             let index = 0;
             while (index < this.node.Parameters.Count) {
-                signature.Parameters.Add(this.parameter(index).parameter());
+                signature.Parameters.Add(this.parameter(index).parameter(target));
                 index = index + 1;
             }
 
@@ -158,7 +158,7 @@ module Objects {
                 return null;
             }
 
-            let statement = ir.CompileStatement(loaded.Unwrap(), null);
+            let statement = ir.CompileStatement(loaded.Unwrap(), target);
             if (statement.IsError) {
                 this.lowered = null;
                 return null;
@@ -201,7 +201,7 @@ module Objects {
         @explicitThis fun get_Type(this): CompilerObject { return this.callee.returnType(); }
 
         @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
-            let function = this.callee.function();
+            let function = this.callee.function(target);
             if (function == null) return Result[LIRExpression].Error("The code of " + this.callee.node.Name + " can't be lowered.");
 
             let values = List[LIRExpression]();
