@@ -6,6 +6,6 @@ namespace ZSharp.AST
     {
         public Token ModuleKeyword { get; init; }
 
-        public Token Name { get; init; }
+        public Token? Name { get; init; }
     }
 }

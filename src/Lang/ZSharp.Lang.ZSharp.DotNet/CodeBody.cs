@@ -12,10 +12,12 @@ namespace ZSharp.Lang.DotNet
     /// constructs it as HIR.
     /// </summary>
     /// <param name="function">Compiles a function defined directly in a body.</param>
+    /// <param name="evaluate">Runs code while compiling.</param>
     public sealed class CodeBody(
         Language language,
         ILLoader il,
-        Func<ASTCompiler, AST.Definition, IResult<CompiledDefinition, Error>> function
+        Func<ASTCompiler, AST.Definition, IResult<CompiledDefinition, Error>> function,
+        Func<Code.Expression, IResult<object?, Error>> evaluate
     )
     {
         /// <summary>
@@ -83,6 +85,53 @@ namespace ZSharp.Lang.DotNet
         }
 
         /// <summary>
+        /// Compiles a <c>let</c> of a container to code that builds a field and adds it to
+        /// the owner's list. Its initial value is code, reified for whoever runs it. A class
+        /// reaches its fields through an object, so only a container whose fields its code
+        /// reaches by name, such as a module, binds the name.
+        /// </summary>
+        public IResult<Code.Expression, Error> Field(ASTCompiler compiler, AST.LetExpression let, Code.Local owner, string list, bool bind)
+        {
+            if (let.Type is null)
+                return Result<Code.Expression>.Error($"Field {let.Name} needs a type.");
+
+            if (Described<HIR.Type>(compiler, let.Type).When(out var type).Error(out var error))
+                return Result<Code.Expression>.Error(error);
+
+            var fieldType = il.Load(typeof(Package.DotNet.Field));
+            var field = new Code.Local(let.Name, fieldType)
+            {
+                Init = Construct(fieldType, new Code.StringLiteral(let.Name), type!)
+            };
+            var block = new Code.Block();
+
+            block.Statements.Add(new Code.Declare(field));
+
+            if (let.Value is not null)
+            {
+                if (Reified(compiler, block, let.Value).When(out var value).Error(out error))
+                    return Result<Code.Expression>.Error(error);
+
+                block.Statements.Add(new Code.ExpressionStatement(new Code.Set
+                {
+                    Target = Member(field, nameof(Package.DotNet.Field.DefaultValue)),
+                    Value = value!
+                }));
+            }
+
+            block.Statements.Add(new Code.ExpressionStatement(Add(owner, list, new Code.Get(field))));
+
+            if (bind && language.Bind(compiler, let.Name, new Code.Get(field)) is { } invalid)
+                return Result<Code.Expression>.Error(invalid);
+
+            return Result<Code.Expression>.Ok(new Code.BlockExpression
+            {
+                Statements = block.Statements,
+                Result = new Code.Get(field)
+            });
+        }
+
+        /// <summary>
         /// Adds code that sets the body of what is being built.
         /// </summary>
         public Error? Body(ASTCompiler compiler, Code.Block block, Code.Local owner, AST.Statement? body)
@@ -147,7 +196,7 @@ namespace ZSharp.Lang.DotNet
             fork.Statement = (current, statement) => statement is AST.ImportStatement import
                 ? Imported(current, import).When(out var holder).Error(out var error)
                     ? Result<Code.Statement>.Error(error)
-                    : Declared(block, holder!)
+                    : holder is null ? Result<Code.Statement>.Ok(new Code.Block()) : Declared(block, holder)
                 : statements(current, statement);
 
             return fork;
@@ -172,19 +221,35 @@ namespace ZSharp.Lang.DotNet
         }
 
         /// <summary>
-        /// Compiles an import to a local that holds what it imports, and binds the names
-        /// it brings in to that local. Declaring the local runs the import.
+        /// Compiles an import. One whose call is compile-time, as with a constant source,
+        /// runs now, and the names it brings in are bound to what it gave, so they are known
+        /// while compiling. Any other runs as the code is constructed: it compiles to a local
+        /// that holds what it imports, which the names are bound to, and declaring the local
+        /// runs the import. Gives that local, or <see langword="null"/> if the import ran now.
         /// </summary>
-        public IResult<Code.Local, Error> Imported(ASTCompiler compiler, AST.ImportStatement import)
+        public IResult<Code.Local?, Error> Imported(ASTCompiler compiler, AST.ImportStatement import)
         {
             if (language.Importing(compiler, import).When(out var importing).Error(out var error))
-                return Result<Code.Local>.Error(error);
+                return Result<Code.Local?>.Error(error);
+
+            if (CompileTime.Is(importing!))
+            {
+                if (evaluate(importing!).When(out var value).Error(out error))
+                    return Result<Code.Local?>.Error(error);
+
+                if (value is not HIR.Instance imported)
+                    return Result<Code.Local?>.Error($"An import must give an instance, but gave {value?.GetType().Name ?? "null"}.");
+
+                return language.BindImported(compiler, import, () => new Code.Get(imported)) is { } conflict
+                    ? Result<Code.Local?>.Error(conflict)
+                    : Result<Code.Local?>.Ok(null);
+            }
 
             var holder = new Code.Local("import", HIR.Infer.Value) { Init = importing };
 
             return language.BindImported(compiler, import, () => new Code.Get(holder)) is { } invalid
-                ? Result<Code.Local>.Error(invalid)
-                : Result<Code.Local>.Ok(holder);
+                ? Result<Code.Local?>.Error(invalid)
+                : Result<Code.Local?>.Ok(holder);
         }
 
         private IResult<Code.Expression, Error> Local(

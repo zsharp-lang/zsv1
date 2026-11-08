@@ -137,6 +137,7 @@ var host = new ZSharp.Lang.DotNet.DotNetDocuments(runtime, il, instance =>
     return Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null;
 });
 host.Install(loader);
+host.Install(reifier);
 
 ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
 

@@ -58,6 +58,10 @@ namespace ZSharp.Lang
                 LangParser.Keywords.Class,
                 zsharpParser.Class.Parse
             );
+            expressionParser.Nud(
+                LangParser.Keywords.Module,
+                zsharpParser.Module.Parse
+            );
 
             expressionParser.InfixR("=", 10);
             expressionParser.InfixL("<", 20);

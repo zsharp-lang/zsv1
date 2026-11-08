@@ -87,6 +87,7 @@ var host = new DotNetDocuments(
     instance => Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
 );
 host.Install(mapped);
+host.Install(reifier);
 DocumentCompiler.Install(mappedBinder);
 
 var document = new DocumentCompiler(language, host);
@@ -672,8 +673,6 @@ Try("a bare method name is an error", () =>
     Run("class E7 { @explicitThis fun f(this) { g(); } @explicitThis fun g(this) { } }") is not null);
 Try("a function outside a class is an error", () =>
     Run("fun loose() { }") is not null);
-Try("a method in a module is an error", () =>
-    Run("module E8 { fun loose() { } }") is not null);
 
 // ---- Definitions go to the level that builds the code
 
@@ -1831,6 +1830,100 @@ Try("a default value is code that runs at each call", () =>
         """) is null && Probe.Kept is [1, 2, 10];
 });
 
+// ---- Module members
+
+Try("a module has functions, which call each other by name", () =>
+    Run("""
+        module M101 {
+            fun twice(n: Int32): Int32 { return n * 2; }
+            fun four(): Int32 { return twice(2); }
+        }
+        Keep(M101.four());
+        """) is null && Kept() is 4);
+
+Try("a module's let is a variable of it, with its initial value", () =>
+    ResetKept()
+    && Run("""
+        module M102 {
+            let greeting: String = "hi";
+            fun get(): String { return greeting; }
+            fun set(value: String) { greeting = value; }
+        }
+        Keep(M102.get());
+        M102.set("bye");
+        Keep(M102.get());
+        Keep(M102.greeting);
+        """) is null
+    && Probe.Kept is ["hi", "bye", "bye"]);
+
+Try("a module's let can have a type the module imports", () =>
+    Run("""
+        module M103 {
+            import { String } from "core:runtime";
+
+            let name: String = "Z#";
+
+            fun main(): String { return "Hello, " + name; }
+        }
+        Keep(M103.main());
+        """) is null && (string)Kept() == "Hello, Z#");
+
+Try("a class in a module calls the module's functions and reads its lets", () =>
+    Run("""
+        module M105 {
+            let suffix: String = "!";
+            fun shout(text: String): String { return text + suffix; }
+
+            class Speaker105 {
+                @static fun speak(): String { return shout("hey"); }
+            }
+        }
+        Keep(M105.Speaker105.speak());
+        """) is null && (string)Kept() == "hey!");
+
+Try("a module's functions and its classes use each other", () =>
+    Run("""
+        module M106 {
+            fun greet(name: String): String { return "hello " + name; }
+
+            class Greeter106 {
+                let name: String;
+                @explicitThis new(this, name: String) { this.name = name; }
+                @explicitThis fun greeting(this): String { return greet(this.name); }
+            }
+
+            fun make(): String { return Greeter106("you").greeting(); }
+        }
+        Keep(M106.make());
+        """) is null && (string)Kept() == "hello you");
+
+Try("a function builds a module that imports, has a let and a function, and the module runs", () =>
+{
+    if (Run("""
+        class Factory104 {
+            @static fun make(): DotNet_Module {
+                return module {
+                    import { String } from "core:runtime";
+
+                    let name: String = "Z#";
+
+                    fun main() { Keep("Hello, " + name); }
+                } as DotNet_Module;
+            }
+        }
+        Keep(Factory104.make());
+        """) is { } error)
+        throw new Exception(error);
+
+    var module = (Package.DotNet.Module)Kept();
+    var main = new C.Call { Callee = new C.NamedMember { Target = new C.Get(module), Name = "main" } };
+
+    if (runner.EvaluateExpression(main).When(out _).Error(out var failure))
+        throw new Exception(failure.ToString());
+
+    return (string)Kept() == "Hello, Z#";
+});
+
 // ---- Overloading
 
 Try("a CLR overload is chosen by its parameter types", () =>
@@ -2397,12 +2490,15 @@ Try("an import in a module runs as the module is constructed", () =>
     return (string)Kept() == "from a module";
 });
 
-Try("a module can't use what it imports while it is compiled", () =>
+Try("a module can use what it imports from a compile-time source while it is compiled", () =>
 {
-    var library = WriteDocument("Library94.zs", Header + """
+    var library = WriteDocument("Library94.zs", """
+        import { String, static, DotNet_Class } from "core:runtime";
+        import { export } from "core:zsharp";
+
         @export
         class Library94 {
-            @static fun mark(definition: Object): Object { return definition; }
+            @static fun mark(definition: DotNet_Class): DotNet_Class { return definition; }
         }
         """);
 
@@ -2413,7 +2509,73 @@ Try("a module can't use what it imports while it is compiled", () =>
             @Library94.mark
             class C94 {}
         }
-        """) is { } e && e.Contains("no member named Library94");
+        Keep(M94.C94());
+        """) is null && Kept().GetType().Name == "C94";
+});
+
+Try("a module's definitions can use what it imports as types", () =>
+{
+    var library = Library("Library98", "typed");
+
+    if (Run($$"""
+        module M98 {
+            import { Library98 } from "{{library}}";
+
+            class Holder98 {
+                let held: Library98;
+                @static fun take(value: Library98): Library98 { return value; }
+                @static fun hello(): String { return Library98.hello(); }
+            }
+        }
+        Keep(M98.Holder98.hello());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "typed";
+});
+
+Try("an import with a compile-time source runs once, while compiling", () =>
+{
+    var library = Library("Library99", "once");
+    Probe.ImportedWith.Clear();
+
+    if (Run($$"""
+        class Uses99 {
+            @static fun get(): String {
+                import("compiled") { Library99 } from "{{library}}";
+                return Library99.hello();
+            }
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    var whileCompiling = Probe.ImportedWith is ["compiled"];
+
+    return whileCompiling
+        && Run("Keep(Uses99.get()); Keep(Uses99.get());") is null
+        && Probe.ImportedWith is ["compiled"]
+        && Probe.Kept is ["once", "once"];
+});
+
+Try("an import from a document local is a compile-time import", () =>
+{
+    var library = Library("Library100", "from a local");
+    Probe.ImportedWith.Clear();
+
+    if (Run($$"""
+        let source100 = "{{library}}";
+        class Uses100 {
+            @static fun get(): String {
+                import("from a local") { Library100 } from source100;
+                return Library100.hello();
+            }
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    return Probe.ImportedWith is ["from a local"]
+        && Run("Keep(Uses100.get());") is null
+        && (string)Kept() == "from a local";
 });
 
 // ---- Forking

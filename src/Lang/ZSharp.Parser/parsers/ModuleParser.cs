@@ -10,7 +10,8 @@ namespace ZSharp.Parser
         {
             var moduleKeyword = parser.Eat(LangParser.Keywords.Module);
 
-            var name = parser.Eat(TokenType.Identifier);
+            // A module that is an expression, as in module { ... } as Module, needs no name.
+            Token? name = parser.Is(TokenType.Identifier) ? parser.Eat(TokenType.Identifier) : null;
 
             List<Statement> body;
             if (parser.Is(TokenType.LCurly, eat: true))
@@ -28,7 +29,7 @@ namespace ZSharp.Parser
             })
             {
                 Body = body,
-                Name = name.Value,
+                Name = name?.Value ?? string.Empty,
             };
         }
 

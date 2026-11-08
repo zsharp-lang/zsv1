@@ -11,8 +11,10 @@ namespace ZSharp.Lang.DotNet
 {
     /// <summary>
     /// Runs documents on the CLR. Each document has a frame: an array of objects with one
-    /// element for each of its locals. Each statement runs as a function that takes the
-    /// frame, so the same code can run with another frame, and no types are made for it.
+    /// element for each of its locals, and no types are made for it. Code that reads or
+    /// writes a document local refers to the frame as a constant, put in when its LIR is
+    /// made, so any code loaded to run now can use document locals, wherever it comes
+    /// from. Document level belongs to the runtime, so tying it to the process is fine.
     /// </summary>
     public sealed class DotNetDocuments(
         Platform.Runtime.Runtime runtime,
@@ -21,11 +23,13 @@ namespace ZSharp.Lang.DotNet
     )
         : IDocumentHost
     {
-        private readonly Dictionary<Package.ZSharp.Document, Frame> frames = [];
+        private readonly Dictionary<Package.ZSharp.Document, DocumentFrame> frames = [];
         private readonly Dictionary<LIR.Type, (LIR.FunctionHandle Get, LIR.FunctionHandle Set)> elements = [];
 
         private readonly LIR.TypeHandle objects = Handle(runtime, typeof(object[]));
         private readonly LIR.TypeHandle index = Handle(runtime, typeof(int));
+        private readonly LIR.TypeHandle frameType = Handle(runtime, typeof(DocumentFrame));
+        private LIR.FunctionHandle? values;
 
         /// <summary>
         /// Loads a local of a document as an element of its document's frame.
@@ -57,6 +61,26 @@ namespace ZSharp.Lang.DotNet
             loader.Instances.Register<Package.ZSharp.DocumentLocal>(local => Toolchain.HIRLoader.LoadDefinition(local));
         }
 
+        /// <summary>
+        /// Code that is built gets the value a document local has when the code is built,
+        /// as it does a variable of the code building it.
+        /// </summary>
+        public void Install(MappedReifier reifier)
+        {
+            Func<HIR.Code.Expression, IResult<HIR.Code.Expression, Error>>? previous = null;
+
+            previous = reifier.Expressions.Register<HIR.Code.Get>(get => get.Instance is Package.ZSharp.DocumentLocal
+                ? Result<HIR.Code.Expression>.Ok(new HIR.Code.Call
+                {
+                    Callee = new HIR.Code.NamedMember { Target = new HIR.Code.Get(il.Load(typeof(Nodes))), Name = nameof(Nodes.Encode) },
+                    Arguments = [new() { Value = get }]
+                })
+                : previous is null
+                    ? Result<HIR.Code.Expression>.Error(new UnsupportedError("Nothing reifies a Get."))
+                    : previous(get)
+            );
+        }
+
         public Error? Execute(Package.ZSharp.Document document, HIR.Code.Statement statement)
         {
             if (Toolchain.HIRCodeLoader.LoadStatement(statement).When(out var loaded).Error(out var error))
@@ -65,9 +89,7 @@ namespace ZSharp.Lang.DotNet
             if (Toolchain.IR.CompileStatement(loaded!, runtime).When(out var compiled).Error(out error))
                 return error;
 
-            var frame = FrameOf(document);
-
-            runtime.Execute(compiled!, (frame.Parameter, (object?)frame.Values(document)));
+            runtime.Execute(compiled!);
 
             return null;
         }
@@ -80,9 +102,7 @@ namespace ZSharp.Lang.DotNet
             if (Toolchain.IR.CompileExpression(loaded!, runtime).When(out var compiled).Error(out error))
                 return Result<object?>.Error(error);
 
-            var frame = FrameOf(document);
-
-            return Result<object?>.Ok(runtime.Evaluate(compiled!, (frame.Parameter, (object?)frame.Values(document))));
+            return Result<object?>.Ok(runtime.Evaluate(compiled!));
         }
 
         public HIR.Code.Expression Described(HIR.Code.Expression type)
@@ -90,12 +110,29 @@ namespace ZSharp.Lang.DotNet
 
         public Error? Load(HIR.Instance definition) => load(definition);
 
-        private Frame FrameOf(Package.ZSharp.Document document)
+        private DocumentFrame FrameOf(Package.ZSharp.Document document)
         {
             if (!frames.TryGetValue(document, out var frame))
-                frames[document] = frame = new(new LIR.Parameter(objects) { Name = "frame" });
+                frames[document] = frame = new(document);
 
             return frame;
+        }
+
+        /// <summary>
+        /// Code that gives the values of a frame, read when it runs.
+        /// </summary>
+        internal LIR.Expression Values(DocumentFrame frame)
+        {
+            if (values is null)
+            {
+                var signature = new LIR.Signature { ReturnType = objects };
+                signature.Parameters.Add(new(frameType) { Name = "frame" });
+
+                values = new(signature);
+                runtime.Map(values, typeof(DocumentFrame).GetMethod(nameof(DocumentFrame.Values))!);
+            }
+
+            return new LIR.Call(values, [new LIR.Constant(frameType, frame)]);
         }
 
         /// <summary>
@@ -134,25 +171,25 @@ namespace ZSharp.Lang.DotNet
             return handle;
         }
 
+    }
+
+    /// <summary>
+    /// The frame of a document: the values of its locals. The array is replaced when the
+    /// document gains locals, so code reads it through this each time it runs.
+    /// </summary>
+    public sealed class DocumentFrame(Package.ZSharp.Document document)
+    {
+        private object?[] values = [];
+
         /// <summary>
-        /// The frame of a document, and the parameter its statements take it through.
+        /// The values of the frame, with room for every local the document has.
         /// </summary>
-        internal sealed class Frame(LIR.Parameter parameter)
+        public object?[] Values()
         {
-            private object?[] values = [];
+            if (values.Length < document.Locals.Count)
+                Array.Resize(ref values, document.Locals.Count);
 
-            public LIR.Parameter Parameter { get; } = parameter;
-
-            /// <summary>
-            /// The values of the frame, with room for every local the document has.
-            /// </summary>
-            public object?[] Values(Package.ZSharp.Document document)
-            {
-                if (values.Length < document.Locals.Count)
-                    Array.Resize(ref values, document.Locals.Count);
-
-                return values;
-            }
+            return values;
         }
     }
 
@@ -162,7 +199,7 @@ namespace ZSharp.Lang.DotNet
     /// </summary>
     internal sealed class FrameSlot(
         DotNetDocuments documents,
-        DotNetDocuments.Frame frame,
+        DocumentFrame frame,
         int slot,
         CompilerObject type,
         CompilerObject? init
@@ -180,7 +217,7 @@ namespace ZSharp.Lang.DotNet
                 ? Result<LIR.Expression>.Error(error)
                 : Result<LIR.Expression>.Ok(new LIR.Call(
                     documents.Elements(compiled!).Get,
-                    new LIR.GetLocal(frame.Parameter),
+                    documents.Values(frame),
                     documents.Index(slot)
                 ));
 
@@ -197,7 +234,7 @@ namespace ZSharp.Lang.DotNet
 
             return Result<LIR.Statement>.Ok(new LIR.Evaluate(new LIR.Call(
                 documents.Elements(compiled!).Set,
-                new LIR.GetLocal(frame.Parameter),
+                documents.Values(frame),
                 documents.Index(slot),
                 result!
             )));

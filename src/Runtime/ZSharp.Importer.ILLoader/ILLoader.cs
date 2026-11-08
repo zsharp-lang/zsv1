@@ -8,7 +8,7 @@ namespace ZSharp.Importer.ILLoader
     /// handles, and the loaders registered by <see cref="Install"/> return COs
     /// primed with them. Members are discovered by those COs on demand.
     /// </summary>
-    public sealed class ILLoader(Platform.Runtime.Runtime runtime)
+    public sealed partial class ILLoader(Platform.Runtime.Runtime runtime)
     {
         private readonly Dictionary<Type, Package.DotNet.TypeReference> typeNodes = [];
         private readonly Dictionary<Package.DotNet.TypeReference, Type> nodeTypes = [];
@@ -73,6 +73,9 @@ namespace ZSharp.Importer.ILLoader
             loader.Definitions.Register<Package.DotNet.Module>(LoadModule);
 
             loader.Instances.Register<Package.DotNet.ExposedObject>(LoadExposed);
+            loader.Instances.Register<Package.DotNet.Field>(field => ModuleGlobal(field) is { } global
+                ? Result.Ok(global)
+                : Result.Error($"Field {field.Name} can only be reached through its class."));
             loader.Instances.Register<Package.DotNet.Parameter>(LoadVariable);
             loader.Instances.Register<HIR.Code.PositionalParameter>(LoadVariable);
             loader.Instances.Register<HIR.Code.NamedParameter>(LoadVariable);
@@ -309,15 +312,34 @@ namespace ZSharp.Importer.ILLoader
             if (moduleInfos.TryGetValue(node, out var module))
                 return Result.Ok(new Objects.Module(this, module));
 
-            if (node.Fields.Count > 0 || node.Properties.Count > 0 || node.Methods.Count > 0)
-                return Result.Error($"Module {node.Name} has members that can't be defined yet.");
+            // A module is defined once: its variables are its own, however often it is reached.
+            if (definedModules.TryGetValue(node, out var known))
+                return Result.Ok(known);
+
+            if (node.Properties.Count > 0)
+                return Result.Error($"Module {node.Name} has properties, which can't be defined yet.");
 
             if (node.Definitions.FirstOrDefault(definition => definition is not Package.DotNet.Class) is { } other)
                 return Result.Error($"Module {node.Name} has a {other.GetType().Name}, which can't be defined yet.");
 
-            return Define(node.Definitions.Cast<Package.DotNet.Class>()) is { } error
-                ? Result.Error(error)
-                : Result.Ok(new Objects.DefinedModule(this, node));
+            // The module's own members are declared and lowered along with its classes, so
+            // each can use the other.
+            var members = new LIR.Module(node.Name.Length > 0 ? node.Name : null);
+
+            if (Define(
+                node.Definitions.Cast<Package.DotNet.Class>(),
+                () => DeclareMembers(node, members),
+                () => LowerMembers(node, members)
+            ) is { } error)
+                return Result.Error(error);
+
+            if (LoadMembers(node, members) is { } invalid)
+                return Result.Error(invalid);
+
+            var defined = new Objects.DefinedModule(this, node);
+            definedModules[node] = defined;
+
+            return Result.Ok(defined);
         }
 
         /// <summary>
@@ -374,7 +396,9 @@ namespace ZSharp.Importer.ILLoader
         /// <summary>
         /// Loads classes together with those they reach, as they can refer to each other.
         /// </summary>
-        private Error? Define(IEnumerable<Package.DotNet.Class> roots)
+        /// <param name="declare">Declares more that the classes' code can reach, once they are declared.</param>
+        /// <param name="lower">Lowers the code of what was declared, once the classes' code is lowered.</param>
+        private Error? Define(IEnumerable<Package.DotNet.Class> roots, Func<Error?>? declare = null, Func<Error?>? lower = null)
         {
             var nodes = new List<Package.DotNet.Class>();
 
@@ -394,9 +418,15 @@ namespace ZSharp.Importer.ILLoader
                     if (Declare(inProgress[node]) is { } error)
                         return error;
 
+                if (declare?.Invoke() is { } undeclared)
+                    return undeclared;
+
                 foreach (var node in nodes)
                     if (Lower(inProgress[node]) is { } error)
                         return error;
+
+                if (lower?.Invoke() is { } unlowered)
+                    return unlowered;
 
                 var loaded = runtime.Load([.. nodes.Select(node => inProgress[node].Definition)]);
 
@@ -784,7 +814,9 @@ namespace ZSharp.Importer.ILLoader
         private IResult LoadMethod(Package.DotNet.Method node)
             => methodInfos.TryGetValue(node, out var method)
                 ? Result.Ok(new Objects.Method(this, method, null))
-                : Result.Error($"Method {node.Name} can only be reached through its class.");
+                : ModuleFunction(node) is { } function
+                    ? Result.Ok(function)
+                    : Result.Error($"Method {node.Name} can only be reached through its class.");
 
         private IResult LoadConstructor(Package.DotNet.Constructor node)
             => constructorInfos.TryGetValue(node, out var constructor)

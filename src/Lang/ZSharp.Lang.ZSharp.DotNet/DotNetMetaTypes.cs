@@ -23,7 +23,7 @@ namespace ZSharp.Lang.DotNet
             var container = new ContainerCompiler(language);
 
             var localFunction = il.Load(typeof(Package.DotNet.LocalFunction));
-            var body = new CodeBody(language, il, (compiler, node) => metaTypes.Compile(compiler, node, localFunction));
+            var body = new CodeBody(language, il, (compiler, node) => metaTypes.Compile(compiler, node, localFunction), expression => runner.EvaluateExpression(expression));
 
             var @class = il.Load(typeof(Package.DotNet.Class));
             var module = il.Load(typeof(Package.DotNet.Module));

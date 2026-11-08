@@ -38,7 +38,7 @@ namespace ZSharp.Lang.DotNet
             var previous = fork.Expression;
 
             fork.Expression = (current, expression) => expression is AST.LetExpression let
-                ? Field(current, let, self)
+                ? body.Field(current, let, self, nameof(Package.DotNet.Class.Fields), bind: false)
                 : previous(current, expression);
 
             var filled = container.Compile(
@@ -76,46 +76,6 @@ namespace ZSharp.Lang.DotNet
             return ReferenceEquals(member.UnderlyingType, il.Load(typeof(Package.DotNet.Constructor)))
                 ? nameof(Package.DotNet.Class.Constructors)
                 : nameof(Package.DotNet.Class.NestedDefinitions);
-        }
-
-        private IResult<Code.Expression, Error> Field(ASTCompiler compiler, AST.LetExpression let, Code.Local self)
-        {
-            if (let.Type is null)
-                return Result<Code.Expression>.Error($"Field {let.Name} needs a type.");
-
-            if (body.Described<HIR.Type>(compiler, let.Type).When(out var type).Error(out var error))
-                return Result<Code.Expression>.Error(error);
-
-            var fieldType = il.Load(typeof(Package.DotNet.Field));
-            var field = new Code.Local(let.Name, fieldType)
-            {
-                Init = CodeBody.Construct(fieldType, new Code.StringLiteral(let.Name), type!)
-            };
-            var block = new Code.Block();
-
-            block.Statements.Add(new Code.Declare(field));
-
-            if (let.Value is not null)
-            {
-                if (body.Reified(compiler, block, let.Value).When(out var value).Error(out error))
-                    return Result<Code.Expression>.Error(error);
-
-                block.Statements.Add(new Code.ExpressionStatement(new Code.Set
-                {
-                    Target = CodeBody.Member(field, nameof(Package.DotNet.Field.DefaultValue)),
-                    Value = value!
-                }));
-            }
-
-            block.Statements.Add(new Code.ExpressionStatement(
-                CodeBody.Add(self, nameof(Package.DotNet.Class.Fields), new Code.Get(field))
-            ));
-
-            return Result<Code.Expression>.Ok(new Code.BlockExpression
-            {
-                Statements = block.Statements,
-                Result = new Code.Get(field)
-            });
         }
     }
 }

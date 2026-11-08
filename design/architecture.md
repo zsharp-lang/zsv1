@@ -690,6 +690,41 @@ DLL no longer has the document it was compiled in, so nothing could refer to its
 variables. Code built in a document gets a document local's value from when it was
 built, capturing or not: a local function that reads one isn't capturing it.
 
+### Compile-time evaluation
+
+Some code runs while compiling: a document's statements, an `of`, a module's meta-types,
+a compile-time import source, and later anything marked `@ct`. All of it goes through one
+operation: the code is loaded into the runtime as a method and run.
+
+An expression is compile-time if it refers to no `HIR.Variable`: nothing whose value only
+exists while code that runs later is running. That is the boundary the reifier already
+draws, between what it encodes and what it places as it is, so the check is a walk over
+HIR with no MIR in it.
+
+The runtime can't load code by itself: it has to make a method. So what loaded code
+needs from its surroundings is put into its LIR as it is made. A document local reads
+and writes its document's frame, which its CO refers to as a constant: the frame is an
+object of the runtime, and the array of values behind it is read each time the code
+runs, since it is replaced when the document gains locals. So any code loaded to run
+now can use document locals, wherever it comes from: a document statement, an `of`, a
+compile-time import source. Document level is meant to work with the runtime, not as
+platform-agnostic structure, so tying it to the process is fine. A method compiled for
+keeps never refers to the frame, because code that is built gets a document local's
+value encoded instead.
+
+A binding that code needs to work can't be LIR metadata: metadata is optional, and a
+target must still produce working code if it ignores it. So what is needed goes in as
+a constant, and metadata is for what is optional.
+
+Source mapping is optional, so it is metadata: a CO attaches where its code came from to
+the LIR it makes, and the runtime turns it into debugging information. HIR
+has no source positions yet; to keep HIR pure, they would live beside it, keyed by node.
+
+Construction code itself only builds HIR and runs imports, so it can be compiled to a
+binary, as for precompiled libraries. Encoding a value needs only the mapper's rules,
+not the compiler. Exposed objects are the exception, but they are runtime nodes that
+only exist in the process that made them, and nothing precompiled contains them.
+
 ### Document level and modules
 
 Every definition is compiled by a meta-compiler, and the document is no exception: it
@@ -748,16 +783,30 @@ the first iteration defined is still defined, and a `let` in a loop is one local
 `break` or `continue` goes back to the document loop it names. A loop that is an
 expression is code inside a statement, so the host runs it whole.
 
-A document local is a variable of the code that builds a definition in the document, so
-code that is built gets the value it had then, like any value of building code: a
-method that reads one keeps that value when the local changes later. `HIR.Variable`
-marks a definition whose value exists while code runs, so the reifier encodes its value,
-whichever kind of variable it is.
+A document local isn't an `HIR.Variable`. A variable has no value until the code it
+belongs to runs, later than the code being compiled; a document runs statement by
+statement, so by the time anything after a document local is compiled, the local has a
+value. Code that is built gets the value it had then: the document side registers a
+reifier rule that encodes it, so a method that reads one keeps that value when the
+local changes later. It isn't captured by reference either, as document-level variables
+never are.
 
 `let` is a definition like any other, and each meta-compiler sees it in its own terms:
 a module sees a global, a CLR class a field, a method a local, and a document a local of
 the document. `let` and `var` are
-the two definitions that don't get to choose their meta-type. Its local holding the
+the two definitions that don't get to choose their meta-type.
+
+A CLR module's `let` is a variable of the module, and a `fun` in it a function of the
+module. Its functions reach both by name. On the CLR the module becomes an LIR module:
+its functions are LIR functions and its `let`s LIR globals, which the runtime makes
+static methods and static fields, and an initializer gives the globals their values
+once the module is loaded. Its functions and variables are declared along with its
+classes, and their code lowered along with theirs, so a class and a function of the
+module can use each other. A module is defined once, however often it is reached, so
+its variables are its own. A module can be an expression, with no name, as in
+`module { ... } as Module`, so a function can build one each time it runs. Z# can't
+yet load a module node it got as a value and use it as code, the reverse of casting a
+module to what describes it. Its local holding the
 definition is typed by what it defines, so name conflicts can be resolved by a rule for
 that type, much like the typed CG dispatcher.
 
@@ -1194,12 +1243,17 @@ The `as` cast marking such a definition is not settled.
   a value there. The same import directly in `bar`'s body is an error, since while
   `bar` is constructed `src` is its parameter, not a string. Each construction runs
   the import again.
-- What an import gives is only known once construction runs, so whatever the compiler
-  decides can't use it: a meta-type, a decorator, another import's source. At compile
-  time an imported name is only an `Instance`. Code that is built, such as a body, can
-  use it. The document hides this, since each statement runs before the next one is
-  compiled. Types in definitions are meant to be built code too, so that they can use
-  imported names; today a type is resolved while compiling, so they can't yet.
+- An import whose source is compile-time, as `Compile-time evaluation` defines it, is
+  run while compiling, and its names are bound to what it gave. They are then known
+  everywhere: to a meta-type, a decorator, another import's source, and the types of a
+  definition. Its arguments are compile-time too, which makes them real parameters of
+  the import: fine-grained imports through arguments. Running the source at compile
+  time moves its side effects there, as with `of`.
+- An import whose source refers to a variable, as in `import { a } from src` where
+  `src` is a parameter, can only run as the definition it is in is constructed. At
+  compile time its names are only an `Instance`, so only code that is built, such as a
+  body, can use them. Using one in a type needs a lookup on HIR structure while
+  constructing, which isn't there yet.
 - An import is a call of the function `import` stands for in `Language.Functions`,
   with the source, then the import's own arguments:
   `import(args..., kwargs...) { names } from source` calls `import(source, args...,
