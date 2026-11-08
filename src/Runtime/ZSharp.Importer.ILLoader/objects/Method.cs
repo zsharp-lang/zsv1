@@ -12,7 +12,38 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICompileIRReference<LIR.ICallable>
         , ISpecific
         , ICTGetIndex
+        , ICompileIRExpression
+        , ITyped
+        , ICTImplicitCastTo
+        , ICTCastTo
     {
+        // A method is a value only if it has a delegate type: a constructor or an open
+        // generic method isn't.
+        bool CompilerObject.Is<T>([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out T? result) where T : class
+            => (result = (typeof(T) == typeof(ITyped) || typeof(T) == typeof(ICompileIRExpression)) && Natural() is null ? null : this as T) is not null;
+
+        CompilerObject ITyped.Type => loader.Class(Natural()!);
+
+        /// <summary>
+        /// A method used as a value is a delegate of its own signature.
+        /// </summary>
+        public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
+            => new MethodValue(loader, (MethodInfo)method, receiver, Natural()!).CompileIRExpression(target);
+
+        /// <summary>
+        /// A method goes where a delegate of a type is expected if its signature fits.
+        /// </summary>
+        public IResult ImplicitCast(CompilerObject type)
+            => method is MethodInfo info && type.Is<IILType>(out var known) && MethodValue.Fits(info, known.GetILType())
+                ? Result.Ok(new MethodValue(loader, info, receiver, known.GetILType()))
+                : Result.Error(new UnsupportedError($"{method.Name} isn't a delegate of that type."));
+
+        public IResult Cast(CompilerObject targetType)
+            => ImplicitCast(targetType);
+
+        private Type? Natural()
+            => method is MethodInfo info ? MethodValue.Natural(info) : null;
+
         /// <summary>
         /// Giving a generic method its arguments, as in <c>f[Int32]</c>, instantiates it.
         /// </summary>

@@ -188,6 +188,26 @@ namespace ZSharp.Importer.ILLoader
 
         internal Platform.Runtime.Runtime Runtime => runtime;
 
+        private readonly Dictionary<(Type, MethodInfo), LIR.FunctionHandle> delegates = [];
+
+        /// <summary>
+        /// The function that makes a delegate of a type for a method, given the object it
+        /// is bound to.
+        /// </summary>
+        internal LIR.FunctionHandle Delegate(Type delegateType, MethodInfo method)
+        {
+            if (delegates.TryGetValue((delegateType, method), out var known))
+                return known;
+
+            var signature = new LIR.Signature { ReturnType = Handle(delegateType) };
+            signature.Parameters.Add(new(Handle(typeof(object))) { Name = "target" });
+
+            var handle = new LIR.FunctionHandle(signature);
+            runtime.MapDelegate(handle, delegateType, method);
+
+            return delegates[(delegateType, method)] = handle;
+        }
+
         /// <summary>
         /// A parameter of code being loaded, as the variable that code uses. A kind of
         /// parameter defined elsewhere registers this as its instance loader.

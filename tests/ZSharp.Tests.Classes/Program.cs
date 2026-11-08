@@ -116,7 +116,7 @@ document.Scope.Add("Boolean", new C.Get(il.Load(typeof(bool))));
 document.Scope.Add("Int32", new C.Get(il.Load(typeof(int))));
 document.Scope.Add("Keep2", new C.NamedMember { Target = probe, Name = "Keep2" });
 document.Scope.Add("Which", new C.NamedMember { Target = probe, Name = "Which" });
-foreach (var (name, member) in new[] { ("PairOf", "Pair"), ("GreetWith", "Greet"), ("NamedBy", "Named"), ("NextNumber", "Next"), ("Same", "Same") })
+foreach (var (name, member) in new[] { ("PairOf", "Pair"), ("GreetWith", "Greet"), ("NamedBy", "Named"), ("NextNumber", "Next"), ("Same", "Same"), ("Upper", "Upper"), ("ApplyTo", "ApplyTo") })
     document.Scope.Add(name, new C.NamedMember { Target = probe, Name = member });
 document.Scope.Add("Either", new C.NamedMember { Target = probe, Name = "Either" });
 
@@ -2145,6 +2145,70 @@ Try("an interface is described as an interface", () =>
     return Kept() is Package.DotNet.Interface { Name: "IShape128", Methods: [{ Name: "area" }] };
 });
 
+// ---- Methods as values
+
+Try("a method is a value of its own delegate type", () =>
+    Run("""
+        let upper131 = Upper;
+        Keep(upper131("x"));
+        """) is null && (string)Kept() == "X");
+
+Try("a method is a delegate of a type its signature fits", () =>
+    Run("""
+        import { Func } from "core:runtime";
+        let upper132: Func[String, Object] = Upper;
+        Keep(upper132("y"));
+        """) is null && (string)Kept() == "Y");
+
+Try("a method is passed where a delegate is expected", () =>
+    Run("""Keep(ApplyTo(Upper, "z"));""") is null && (string)Kept() == "Z");
+
+Try("an overload is chosen by the delegate type it is cast to", () =>
+    Run("""
+        import { Func } from "core:runtime";
+        let which133 = Which as Func[Boolean, String];
+        Keep(which133(true));
+        """) is null && (string)Kept() == "bool");
+
+Try("an overload is chosen by the delegate type it goes to", () =>
+    Run("""
+        import { Func } from "core:runtime";
+        let which134: Func[String, String] = Which;
+        Keep(which134("s"));
+        """) is null && (string)Kept() == "string");
+
+Try("an instance method is bound to its object", () =>
+    Run("""
+        import { List } from "core:runtime";
+        let xs135 = List[Int32]();
+        let add135 = xs135.Add;
+        add135(1);
+        add135(2);
+        Keep(xs135.Count);
+        """) is null && Kept() is 2);
+
+Try("a Z# method is a value", () =>
+    Run("""
+        class Twice136 { @static fun twice(text: String): String { return text + text; } }
+        let twice136 = Twice136.twice;
+        Keep(twice136("a"));
+        """) is null && (string)Kept() == "aa");
+
+Try("a virtual method as a value calls what the object overrides", () =>
+    Run("""
+        class Animal137 { @virtual fun sound(): String { return "..."; } }
+        class Dog137 : Animal137 { @override fun sound(): String { return "woof"; } }
+        let animal137: Animal137 = Dog137();
+        let sound137 = animal137.sound;
+        Keep(sound137());
+        """) is null && (string)Kept() == "woof");
+
+Try("a method that doesn't fit a delegate type is an error", () =>
+    Run("""
+        import { Func } from "core:runtime";
+        let wrong138: Func[Int32, String] = Upper;
+        """) is not null);
+
 // ---- Overloading
 
 Try("a CLR overload is chosen by its parameter types", () =>
@@ -2925,6 +2989,10 @@ public static class Probe
     public static string Pair(string first, string second) => first + second;
 
     public static T Same<T>(T value) => value;
+
+    public static string Upper(string value) => value.ToUpperInvariant();
+
+    public static string ApplyTo(Func<string, string> function, string value) => function(value);
 
     public static string Greet(string name, string greeting = "Hello") => $"{greeting}, {name}";
 

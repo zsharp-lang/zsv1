@@ -19,6 +19,25 @@ namespace ZSharp.Platform.Runtime
             => functionHandles[handle] = emit;
 
         /// <summary>
+        /// Maps a handle to code that makes a delegate of a method. Its argument is the
+        /// object the method is bound to, or null for a static method. A virtual method is
+        /// bound through the object, so the delegate calls what the object overrides.
+        /// </summary>
+        public void MapDelegate(LIR.FunctionHandle handle, Type delegateType, IL.MethodInfo method)
+            => Map(handle, il =>
+            {
+                if (method.IsVirtual && !method.IsStatic)
+                {
+                    il.Emit(Emit.OpCodes.Dup);
+                    il.Emit(Emit.OpCodes.Ldvirtftn, method);
+                }
+                else
+                    il.Emit(Emit.OpCodes.Ldftn, method);
+
+                il.Emit(Emit.OpCodes.Newobj, delegateType.GetConstructor([typeof(object), typeof(nint)])!);
+            });
+
+        /// <summary>
         /// Maps a handle to code that gives the type object of a type, which works for a
         /// type that is still being defined too.
         /// </summary>

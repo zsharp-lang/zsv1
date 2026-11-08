@@ -351,6 +351,16 @@ already exists, as one of the CLR's, isn't defined again. Calls on an instance a
 go through `callvirt`, so dispatch needs nothing more. Properties, explicit
 implementations and default interface methods aren't supported yet.
 
+A CLR method is a value: a delegate. With nothing asking for a type, it is a delegate of
+its own signature, a `Func` or an `Action`; where a delegate of another type is expected,
+or it is cast to one, it is a delegate of that type if its signature fits. Casting an
+overload group is applied to each candidate, so the delegate type picks the overload, as
+in `Which as Func[Boolean, String]`. A method reached through an object is bound to it,
+and a virtual one through the object, so the delegate calls what the object overrides.
+On the CLR, the runtime makes the delegate from the method's pointer. Methods of a class
+or module still being loaded, and local functions, aren't made this way yet: a local
+function still becomes a delegate through expression trees.
+
 ## Composition
 
 There is no pipeline and no platform as a concept.

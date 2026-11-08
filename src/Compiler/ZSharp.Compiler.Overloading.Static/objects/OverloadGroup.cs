@@ -10,6 +10,8 @@ namespace ZSharp.Compiler
         : CompilerObject
         , ICTCallable
         , ICTGetIndex
+        , ICTImplicitCastTo
+        , ICTCastTo
     {
         private readonly CompilerObject[] candidates;
 
@@ -32,5 +34,15 @@ namespace ZSharp.Compiler
         /// </summary>
         public IResult Index(Argument[] arguments)
             => Scope.Overloading.Apply(candidates, candidate => Scope.CG.Index(candidate, arguments));
+
+        /// <summary>
+        /// A group goes where one of its candidates does, as a group of methods goes where a
+        /// delegate is expected: casting it is applied to each candidate.
+        /// </summary>
+        public IResult ImplicitCast(CompilerObject type)
+            => Scope.Overloading.Apply(candidates, candidate => Scope.CG.ImplicitCast(candidate, type));
+
+        public IResult Cast(CompilerObject targetType)
+            => Scope.Overloading.Apply(candidates, candidate => Scope.CG.Cast(candidate, targetType));
     }
 }
