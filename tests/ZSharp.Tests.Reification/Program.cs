@@ -228,7 +228,7 @@ var mappedBinder = new ZSharp.Lang.MappedBinder(binder);
 mappedBinder.Apply();
 
 var language = new Language(binder);
-var document = new DocumentCompiler(language);
+var document = new DocumentCompiler(language, new CompileOnly());
 language.Install(mappedCompiler, IsUnderlying);
 
 var dotnetClass = il.Load(typeof(Package.DotNet.Class));
@@ -388,4 +388,20 @@ public static class Probe
     public static string Name(object value) => value.GetType().Name;
     public static void Keep(object value) => Kept.Add(value);
     public static ZSharp.HIR.Instance Make() { Made++; return Identity; }
+}
+
+/// <summary>
+/// These tests compile documents but never run them.
+/// </summary>
+sealed class CompileOnly : IDocumentHost
+{
+    public Error? Execute(Package.ZSharp.Document document, C.Statement statement) => new ErrorMessage("Nothing runs here.");
+
+    public IResult<object?, Error> Evaluate(Package.ZSharp.Document document, C.Expression expression) => Result<object?>.Error("Nothing runs here.");
+
+    public C.Expression Described(C.Expression type) => type;
+
+    public IResult<ZSharp.HIR.Instance, Error> Import(object? source) => Result<ZSharp.HIR.Instance>.Error("Nothing runs here.");
+
+    public Error? Load(ZSharp.HIR.Instance definition) => new ErrorMessage("Nothing runs here.");
 }

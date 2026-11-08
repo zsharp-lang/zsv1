@@ -68,7 +68,7 @@ namespace ZSharp.Compiler
             => Ok(get.Instance switch
             {
                 Code.Local local when declared.TryGetValue(local, out var holder) => Call("Get", new Code.Get(holder)),
-                Code.Local => Call("Encode", get),
+                HIR.Variable => Call("Encode", get),
                 _ => Call("Get", Constant(get.Instance))
             });
 

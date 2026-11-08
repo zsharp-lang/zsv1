@@ -72,7 +72,6 @@ var mappedBinder = new ZSharp.Lang.MappedBinder(binder);
 mappedBinder.Apply();
 
 var language = new Language(binder);
-var document = new DocumentCompiler(language);
 
 Core.ZSharp.ModuleScope.Compiler = compiler;
 DocumentCompiler.Install(mapped, Scope.HIRLoader);
@@ -82,15 +81,19 @@ core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
 
 var importer = new ZSharp.Importer.String.StringImporter();
-var documents = new DocumentImporter(language, compiler, runner);
-importer.Register("core", core);
-importer.DefaultImporter = documents;
-language.Install(mappedCompiler, IsUnderlying);
-Language.Install(
-    mappedRunner, runner,
+var host = new DotNetDocuments(
+    runtime, il,
     source => source is string text ? importer.Import(text) : Result<ZSharp.HIR.Instance>.Error("Only a string can be imported here."),
     instance => Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
 );
+host.Install(mapped);
+DocumentCompiler.Install(mappedBinder);
+
+var document = new DocumentCompiler(language, host);
+var documents = new DocumentImporter(language, compiler, host);
+importer.Register("core", core);
+importer.DefaultImporter = documents;
+language.Install(mappedCompiler, IsUnderlying);
 Core.ZSharp.ModuleScope.Importer = importer.Import;
 DotNetMetaTypes.Install(
     language, mappedCompiler, mappedBinder, runner, il,
@@ -131,7 +134,7 @@ string? Run(string source)
     {
         var statement = syntax.Document.ParseStatement(parser);
 
-        if (document.Run(compiler, runner, statement) is { } error)
+        if (document.Run(compiler, statement) is { } error)
             return error.ToString();
     }
 
@@ -1582,8 +1585,57 @@ Try("a context offers what its parent offers", () =>
         && ((ZSharp.Compiler.Context)inner).Is<ZSharp.Lang.INames>(out var found) && ReferenceEquals(found, inner);
 });
 
-Try("a let outside a block is an error", () =>
-    Run("""let loose = "x";""") is { } e && e.Contains("Nothing here compiles the let"));
+Try("a let with nothing that compiles it is an error", () =>
+    compiler.CompileStatement(ParseOne("""let loose = "x";""")) is { IsError: true } failure
+    && failure.UnwrapError().ToString()!.Contains("Nothing here compiles the let"));
+
+// ---- Document locals
+
+Try("a let in a document is a local of the document", () =>
+    Run("""let d1 = "a"; Keep(d1);""") is null
+    && (string)Kept() == "a"
+    && document.Document.Locals.Any(local => local.Name == "d1"));
+
+Try("a document local can be assigned", () =>
+    Run("""let d2 = "a"; d2 = "b"; Keep(d2);""") is null && (string)Kept() == "b");
+
+Try("a document local with a type", () =>
+    Run("""let d3: String = "typed"; Keep(d3);""") is null && (string)Kept() == "typed");
+
+Try("a document local's value must match its type", () =>
+    Run("""let d4: String = true;""") is { } e && e.Contains("doesn't match"));
+
+Try("a let in a document reuses a name", () =>
+    Run("""let d5 = "first"; let d5 = "second"; Keep(d5);""") is null && (string)Kept() == "second");
+
+Try("a document local of a value type", () =>
+    Run("""let d6: Boolean = true; d6 = false; Keep(d6);""") is null && Kept() is false);
+
+Try("a method gets the value a document local had when it was built", () =>
+{
+    if (Run("""
+        let d7 = "when built";
+        class Reads7 { @static fun get(): String { return d7; } }
+        d7 = "later";
+        Keep(Reads7.get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "when built";
+});
+
+Try("a document local in a nested block", () =>
+    Run("""if (true) { let inner8 = "nested"; Keep(inner8); }""") is null && (string)Kept() == "nested");
+
+Try("a document local in a block isn't seen after it", () =>
+    Run("""if (true) { let scoped9 = "x"; } Keep(scoped9);""") is { } e && e.Contains("scoped9"));
+
+Try("a nested statement is only compiled when it is reached", () =>
+    Run("""if (false) { Keep(neverDefined10); } Keep("reached");""") is null && (string)Kept() == "reached");
+
+Try("a condition sees the document locals", () =>
+    Run("""let d11: Boolean = false; if (d11) { Keep("then"); } else { Keep("else"); }""") is null
+    && (string)Kept() == "else");
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;

@@ -125,13 +125,17 @@ Core.ZSharp.ModuleScope.Compiler = compiler;
 Core.ZSharp.ModuleScope.Importer = importer.Import;
 DocumentCompiler.Install(loader, Scope.HIRLoader);
 language.Install(mappedCompiler, IsUnderlyingType);
-Language.Install(mappedRunner, runner, Import, instance =>
+DocumentCompiler.Install(mappedBinder);
+
+// Each document runs with a frame holding its locals.
+var host = new ZSharp.Lang.DotNet.DotNetDocuments(runtime, il, Import, instance =>
 {
     if (options.Contains("--dump-definitions"))
         Console.Error.WriteLine("definition:" + Environment.NewLine + ZSharp.Diagnostics.HIRPrinter.Print(instance) + Environment.NewLine);
 
     return Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null;
 });
+host.Install(loader);
 
 ZSharp.Lang.DotNet.DotNetMetaTypes.Install(
     language, mappedCompiler, mappedBinder, runner, il,
@@ -143,7 +147,7 @@ ZSharp.Lang.DotNet.DotNetMetaTypes.Install(
 #region Run
 
 // A source with no prefix is a document, and the document given to the CLI is the first.
-var documents = new DocumentImporter(language, compiler, runner);
+var documents = new DocumentImporter(language, compiler, host);
 importer.DefaultImporter = documents;
 
 if (documents.Run(files[0]).When(out _).Error(out var failure))

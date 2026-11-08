@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\ZSharp.HIR\ZSharp.HIR.csproj" />
+    <ProjectReference Include="..\..\HIR\ZSharp.HIR.Code\ZSharp.HIR.Code.csproj" />
   </ItemGroup>
 
 </Project>

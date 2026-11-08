@@ -632,22 +632,37 @@ often it is imported, and importing a document while it runs is an error. Loadin
 `Document` gives a CO whose members are its exports. The document given to the CLI is
 run the same way.
 
-Each statement of a document is meant to compile to a function that accepts the
-document's frame: an array of objects, one element per document local. That lets
-dynamic methods be used without creating many types, and lets the same compiled
-statements run with another frame. Document locals don't exist yet. The runner doesn't
-know about the frame: running the document is the document meta-compiler's own job, so
-it calls each statement's function with its frame itself, and runs its own statements
-(definitions and imports) itself.
+A `let` in a document is a local of the document: a `Package.ZSharp.DocumentLocal`, its
+own HIR type since it is its own concept, listed in the document's `Locals`. Its type is
+known before its statement runs, so a type written for it is evaluated then. The values
+of a document's locals are its frame: an array of objects, one element per local. Each
+statement compiles to a function that takes the frame, which lets dynamic methods be
+used without creating types for them, and lets the same compiled statements run with
+another frame. A document local is loaded as a CO that reads and writes its element.
+
+The runner doesn't know about the frame. Running a document is the document
+meta-compiler's own job: it runs its own statements (definitions and imports) and asks
+an `IDocumentHost` for the rest. The host runs a statement or evaluates an expression
+with the document's frame, and gives what is platform-specific: how a type is described
+as HIR, how a source is imported and how a definition is loaded. The CLR host is
+`DotNetDocuments`, which the CLI gives the document meta-compiler.
 
 Every nested statement runs one at a time too, since in the CLI Z# is a scripting
-language. So the document meta-compiler runs `if` and `while` itself: it evaluates the
+language. So the document meta-compiler runs blocks and `if` itself: it evaluates the
 condition, then compiles and runs each statement of the branch when it is reached. A
-loop's statements are compiled the first time they are reached and run on each
-iteration.
+statement that is never reached is never compiled. A block has its own names. `while`
+isn't compiled anywhere yet; once it is, a loop's statements are compiled the first
+time they are reached and run on each iteration.
+
+A document local is a variable of the code that builds a definition in the document, so
+code that is built gets the value it had then, like any value of building code: a
+method that reads one keeps that value when the local changes later. `HIR.Variable`
+marks a definition whose value exists while code runs, so the reifier encodes its value,
+whichever kind of variable it is.
 
 `let` is a definition like any other, and each meta-compiler sees it in its own terms:
-a module sees a global, a CLR class a field, and a method a local. `let` and `var` are
+a module sees a global, a CLR class a field, a method a local, and a document a local of
+the document. `let` and `var` are
 the two definitions that don't get to choose their meta-type. Its local holding the
 definition is typed by what it defines, so name conflicts can be resolved by a rule for
 that type, much like the typed CG dispatcher.

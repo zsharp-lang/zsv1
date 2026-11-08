@@ -8,7 +8,7 @@ namespace ZSharp.Lang
     /// Imports a Z# document by its path, which is relative to the document importing it.
     /// Each document runs once, and what it exports is what importing it gives.
     /// </summary>
-    public sealed class DocumentImporter(Language language, ASTCompiler compiler, HIRRunner runner)
+    public sealed class DocumentImporter(Language language, ASTCompiler compiler, IDocumentHost host)
         : IStringImporter
     {
         private readonly Dictionary<string, Package.ZSharp.Document> documents = [];
@@ -37,7 +37,7 @@ namespace ZSharp.Lang
                 if (!File.Exists(path))
                     return Result<Package.ZSharp.Document>.Error($"There is no document at {path}.");
 
-                var document = new DocumentCompiler(language, path);
+                var document = new DocumentCompiler(language, host, path);
 
                 using var stream = File.OpenText(path);
 
@@ -45,7 +45,7 @@ namespace ZSharp.Lang
                 var syntax = Syntax.Install(parser);
 
                 while (parser.HasTokens && !parser.Is(Text.TokenType.EOF))
-                    if (document.Run(compiler, runner, syntax.Document.ParseStatement(parser)) is { } error)
+                    if (document.Run(compiler, syntax.Document.ParseStatement(parser)) is { } error)
                         return Result<Package.ZSharp.Document>.Error(error);
 
                 return Result<Package.ZSharp.Document>.Ok(documents[path] = document.Document);

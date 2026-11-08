@@ -29,6 +29,34 @@ namespace ZSharp.Platform.Runtime
                 il.Emit(Emit.OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle))!);
             });
 
+        /// <summary>
+        /// Maps a handle to code that reads an element of an array of objects as a value
+        /// of a type. Its arguments are the array and the index.
+        /// </summary>
+        public void MapGetElement(LIR.FunctionHandle handle, LIR.Type type)
+            => Map(handle, il =>
+            {
+                var imported = ImportType(type);
+
+                il.Emit(Emit.OpCodes.Ldelem_Ref);
+                il.Emit(imported.IsValueType ? Emit.OpCodes.Unbox_Any : Emit.OpCodes.Castclass, imported);
+            });
+
+        /// <summary>
+        /// Maps a handle to code that writes a value of a type to an element of an array
+        /// of objects. Its arguments are the array, the index and the value.
+        /// </summary>
+        public void MapSetElement(LIR.FunctionHandle handle, LIR.Type type)
+            => Map(handle, il =>
+            {
+                var imported = ImportType(type);
+
+                if (imported.IsValueType)
+                    il.Emit(Emit.OpCodes.Box, imported);
+
+                il.Emit(Emit.OpCodes.Stelem_Ref);
+            });
+
         internal void EmitCall(Emit.ILGenerator il, LIR.ICallable callable)
         {
             switch (callable)

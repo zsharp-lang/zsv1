@@ -38,49 +38,6 @@ namespace ZSharp.Lang
             mapped.Statements.Register<AST.Return>(Compile);
         }
 
-        /// <param name="import">
-        /// Imports from the value an import source evaluates to. A source is an
-        /// expression, so that value can be anything.
-        /// </param>
-        /// <param name="load">
-        /// Loads a definition that was just built, returning why it could not be.
-        /// </param>
-        public static void Install(
-            MappedRunner mapped,
-            HIRRunner runner,
-            Func<object?, IResult<HIR.Instance, Error>> import,
-            Func<HIR.Instance, Error?> load
-        )
-        {
-            mapped.Register<Import>(statement =>
-            {
-                // These statements are always run, so what fails in them is a failure, not
-                // an unsupported statement.
-                if (runner.EvaluateExpression(statement.Source).When(out var source).Error(out var error))
-                    return new ErrorMessage($"{error}");
-
-                if (import(source).When(out var result).Error(out error))
-                    return new ErrorMessage($"{error}");
-
-                statement.Result.Value = result;
-
-                return null;
-            });
-
-            mapped.Register<Define>(statement =>
-            {
-                if (runner.EvaluateExpression(statement.Build).When(out var value).Error(out var error))
-                    return new ErrorMessage($"{error}");
-
-                if (value is not HIR.Instance instance)
-                    return new ErrorMessage($"A definition must produce an instance, but got {value?.GetType().Name ?? "null"}.");
-
-                statement.Result.Value = instance;
-
-                return load(instance) is { } failure ? new ErrorMessage($"{failure}") : null;
-            });
-        }
-
         /// <summary>
         /// The names of the context the compiler is in, if it has any.
         /// </summary>

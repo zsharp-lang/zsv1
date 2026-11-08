@@ -10,5 +10,10 @@ namespace Package.ZSharp
         public string Path { get; set; } = path;
 
         public Dictionary<string, global::ZSharp.HIR.Instance> Exports { get; } = [];
+
+        /// <summary>
+        /// The locals of the document, in the order they were defined.
+        /// </summary>
+        public List<DocumentLocal> Locals { get; } = [];
     }
 }
