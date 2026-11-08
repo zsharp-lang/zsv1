@@ -97,11 +97,6 @@ var importer = new StringImporter();
 importer.Register("std", std);
 importer.Register("core", core);
 
-IResult<ZSharp.HIR.Instance, Error> Import(object? source)
-    => source is string text
-        ? importer.Import(text)
-        : Result<ZSharp.HIR.Instance>.Error($"Can't import from {source?.GetType().Name ?? "null"}.");
-
 #endregion
 
 #region Language
@@ -128,8 +123,13 @@ DocumentCompiler.Install(loader, Scope.HIRLoader);
 language.Install(mappedCompiler, IsUnderlyingType);
 DocumentCompiler.Install(mappedBinder);
 
+// Operators and import are calls of functions the libraries provide.
+foreach (var library in new[] { typeof(Core.Runtime.ModuleScope), typeof(Core.ZSharp.ModuleScope) })
+    foreach (var (syntax, function) in il.Operators(library))
+        language.Add(syntax, function);
+
 // Each document runs with a frame holding its locals.
-var host = new ZSharp.Lang.DotNet.DotNetDocuments(runtime, il, Import, instance =>
+var host = new ZSharp.Lang.DotNet.DotNetDocuments(runtime, il, instance =>
 {
     if (options.Contains("--dump-definitions"))
         Console.Error.WriteLine("definition:" + Environment.NewLine + ZSharp.Diagnostics.HIRPrinter.Print(instance) + Environment.NewLine);
@@ -138,10 +138,7 @@ var host = new ZSharp.Lang.DotNet.DotNetDocuments(runtime, il, Import, instance 
 });
 host.Install(loader);
 
-ZSharp.Lang.DotNet.DotNetMetaTypes.Install(
-    language, mappedCompiler, mappedBinder, runner, il,
-    () => new ZSharp.HIR.Code.NamedMember { Target = new ZSharp.HIR.Code.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "import" }
-);
+ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
 
 #endregion
 

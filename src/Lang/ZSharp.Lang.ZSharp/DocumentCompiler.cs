@@ -29,11 +29,6 @@ namespace ZSharp.Lang
         public HIRExpression Described(HIRExpression type);
 
         /// <summary>
-        /// Imports from the value an import source evaluated to.
-        /// </summary>
-        public IResult<HIR.Instance, Error> Import(object? source);
-
-        /// <summary>
         /// Loads a definition that was just built, returning why it could not be.
         /// </summary>
         public Error? Load(HIR.Instance definition);
@@ -215,13 +210,13 @@ namespace ZSharp.Lang
                     return host.Load(instance);
 
                 case Import import:
-                    if (host.Evaluate(Document, import.Source).When(out var source).Error(out error))
+                    if (host.Evaluate(Document, import.Importing).When(out var imported).Error(out error))
                         return error;
 
-                    if (host.Import(source).When(out var imported).Error(out error))
-                        return error;
+                    if (imported is not HIR.Instance from)
+                        return new ErrorMessage($"An import must give an instance, but gave {imported?.GetType().Name ?? "null"}.");
 
-                    import.Result.Value = imported;
+                    import.Result.Value = from;
 
                     return null;
 
@@ -253,7 +248,7 @@ namespace ZSharp.Lang
 
         private IResult<HIRStatement, Error> Import(ASTCompiler compiler, AST.ImportStatement import)
         {
-            if (compiler.CompileExpression(import.Source).When(out var source).Error(out var error))
+            if (language.Importing(compiler, import).When(out var importing).Error(out var error))
                 return Result<HIRStatement>.Error(error);
 
             var result = new HIR.Code.Reference();
@@ -261,7 +256,7 @@ namespace ZSharp.Lang
             if (language.BindImported(compiler, import, () => new HIR.Code.Get(result)) is { } invalid)
                 return Result<HIRStatement>.Error(invalid);
 
-            return Result<HIRStatement>.Ok(new Import(source!, result));
+            return Result<HIRStatement>.Ok(new Import(importing!, result));
         }
 
         /// <summary>

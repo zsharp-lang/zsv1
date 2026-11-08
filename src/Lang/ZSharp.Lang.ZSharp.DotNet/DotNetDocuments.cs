@@ -17,7 +17,6 @@ namespace ZSharp.Lang.DotNet
     public sealed class DotNetDocuments(
         Platform.Runtime.Runtime runtime,
         ILLoader il,
-        Func<object?, IResult<HIR.Instance, Error>> import,
         Func<HIR.Instance, Error?> load
     )
         : IDocumentHost
@@ -88,8 +87,6 @@ namespace ZSharp.Lang.DotNet
 
         public HIR.Code.Expression Described(HIR.Code.Expression type)
             => new HIR.Code.Cast { Value = type, Type = new HIR.Code.Get(il.Load(typeof(HIR.Type))) };
-
-        public IResult<HIR.Instance, Error> Import(object? source) => import(source);
 
         public Error? Load(HIR.Instance definition) => load(definition);
 

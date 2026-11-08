@@ -8,8 +8,6 @@
 
         public List<ImportedName>? ImportedNames { get; set; }
 
-        public string? Alias { get; set; }
-
         public required Expression Source { get; set; }
     }
 }

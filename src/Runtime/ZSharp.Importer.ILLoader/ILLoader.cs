@@ -93,6 +93,12 @@ namespace ZSharp.Importer.ILLoader
             code.Expressions.Register<HIR.Code.BooleanLiteral>(literal =>
                 Result.Ok(new Objects.Literal(literal.Value, typeof(bool), this))
             );
+            code.Expressions.Register<HIR.Code.IntegerLiteral>(literal =>
+                Result.Ok(new Objects.Literal(literal.Value, typeof(int), this))
+            );
+            code.Expressions.Register<HIR.Code.DecimalLiteral>(literal =>
+                Result.Ok(new Objects.Literal(literal.Value, typeof(double), this))
+            );
 
             loadReturn = code.Statements.Register<HIR.Code.Return>(LoadReturn);
         }
@@ -158,6 +164,17 @@ namespace ZSharp.Importer.ILLoader
         }
 
         internal Platform.Runtime.Runtime Runtime => runtime;
+
+        /// <summary>
+        /// The functions the methods of a type say operators stand for.
+        /// </summary>
+        public IEnumerable<(string Operator, HIR.Instance Function)> Operators(Type type)
+            => type
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .SelectMany(method => method
+                    .GetCustomAttributes<OperatorAttribute>()
+                    .Select(attribute => (attribute.Operator, (HIR.Instance)Load(method)))
+                );
 
         public Package.DotNet.ExposedObject Expose(object value)
             => new(value, Load(value.GetType()));

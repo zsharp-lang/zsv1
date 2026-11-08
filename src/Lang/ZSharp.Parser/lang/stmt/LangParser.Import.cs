@@ -63,11 +63,6 @@ namespace ZSharp.Parser
 
             source = parser.Parse<Expression>();
 
-            string? alias = null;
-
-            if (parser.Is(Keywords.As, eat: true))
-                alias = parser.Eat(TokenType.Identifier).Value;
-
             var semicolon = parser.Eat(TokenType.Semicolon);
 
             return new(new()
@@ -76,7 +71,6 @@ namespace ZSharp.Parser
                 Semicolon = semicolon
             })
             {
-                Alias = alias,
                 Arguments = arguments,
                 ImportedNames = importedNames,
                 Source = source,

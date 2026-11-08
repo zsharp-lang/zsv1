@@ -9,6 +9,23 @@ namespace ZSharp.Lang
     {
         private Func<HIRExpression, HIR.Instance, bool> isUnderlyingType = null!;
 
+        /// <summary>
+        /// The functions that syntax compiles to calls of: an operator, such as <c>+</c>,
+        /// and <c>import</c>. Each is an overload group, so more overloads can be added.
+        /// </summary>
+        public Dictionary<string, HIR.Code.OverloadGroup> Functions { get; } = [];
+
+        /// <summary>
+        /// Adds an overload to the function a piece of syntax stands for.
+        /// </summary>
+        public void Add(string syntax, HIR.Instance function)
+        {
+            if (!Functions.TryGetValue(syntax, out var group))
+                Functions[syntax] = group = new();
+
+            group.Items.Add(function);
+        }
+
         /// <param name="isUnderlyingType">
         /// Whether code that evaluates to a type is the given definition type.
         /// </param>
@@ -66,6 +83,12 @@ namespace ZSharp.Lang
                 AST.LiteralType.String => Result<HIRExpression>.Ok(new HIR.Code.StringLiteral(literal.Value)),
                 AST.LiteralType.True => Result<HIRExpression>.Ok(new HIR.Code.BooleanLiteral(true)),
                 AST.LiteralType.False => Result<HIRExpression>.Ok(new HIR.Code.BooleanLiteral(false)),
+                AST.LiteralType.Number => int.TryParse(literal.Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var integer)
+                    ? Result<HIRExpression>.Ok(new HIR.Code.IntegerLiteral(integer))
+                    : Result<HIRExpression>.Error($"{literal.Value} is too large for an Int32."),
+                AST.LiteralType.Decimal => double.TryParse(literal.Value, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var number)
+                    ? Result<HIRExpression>.Ok(new HIR.Code.DecimalLiteral(number))
+                    : Result<HIRExpression>.Error($"{literal.Value} isn't a number."),
                 _ => Result<HIRExpression>.Error($"{literal.Type} literals are not supported yet.")
             };
 
@@ -91,7 +114,7 @@ namespace ZSharp.Lang
                 return Assign(compiler, binary);
 
             if (binary.Operator != ".")
-                return Result<HIRExpression>.Error($"Operator ({binary.Operator}) is not supported yet.");
+                return Operator(compiler, binary);
 
             if (binary.Right is not AST.IdentifierExpression member)
                 return Result<HIRExpression>.Error("Only an identifier can follow the (.) operator.");
@@ -100,6 +123,27 @@ namespace ZSharp.Lang
                 return Result<HIRExpression>.Error(error);
 
             return Result<HIRExpression>.Ok(new HIR.Code.NamedMember { Target = target!, Name = member.Name });
+        }
+
+        /// <summary>
+        /// An operator is a call of the function it stands for, with both operands.
+        /// </summary>
+        private IResult<HIRExpression, Error> Operator(ASTCompiler compiler, AST.BinaryExpression binary)
+        {
+            if (!Functions.TryGetValue(binary.Operator, out var function))
+                return Result<HIRExpression>.Error($"Operator ({binary.Operator}) is not defined.");
+
+            if (compiler.CompileExpression(binary.Left).When(out var left).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            if (compiler.CompileExpression(binary.Right).When(out var right).Error(out error))
+                return Result<HIRExpression>.Error(error);
+
+            return Result<HIRExpression>.Ok(new HIR.Code.Call
+            {
+                Callee = new HIR.Code.Get(function),
+                Arguments = [new() { Value = left! }, new() { Value = right! }]
+            });
         }
 
         private static IResult<HIRExpression, Error> Assign(ASTCompiler compiler, AST.BinaryExpression assignment)
@@ -301,15 +345,36 @@ namespace ZSharp.Lang
             => Result<HIRStatement>.Error("Nothing here compiles the import.");
 
         /// <summary>
+        /// The code an import runs: a call of the <c>import</c> function with the source,
+        /// then the import's own arguments, as in <c>import(args...) { names } from source</c>.
+        /// Where it runs, and what holds what it gives, is up to the meta-compiler.
+        /// </summary>
+        public IResult<HIRExpression, Error> Importing(ASTCompiler compiler, AST.ImportStatement import)
+        {
+            if (!Functions.TryGetValue("import", out var function))
+                return Result<HIRExpression>.Error("Nothing imports here.");
+
+            if (compiler.CompileExpression(import.Source).When(out var source).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            var arguments = new List<HIR.Code.Argument> { new() { Value = source! } };
+
+            foreach (var argument in import.Arguments ?? [])
+                if (compiler.CompileExpression(argument.Value).When(out var value).Error(out error))
+                    return Result<HIRExpression>.Error(error);
+                else
+                    arguments.Add(new() { Name = argument.Name, Value = value! });
+
+            return Result<HIRExpression>.Ok(new HIR.Code.Call { Callee = new HIR.Code.Get(function), Arguments = arguments });
+        }
+
+        /// <summary>
         /// Binds the names an import brings in to what holds the imported value, for
         /// meta-compilers that compile imports.
         /// </summary>
         /// <param name="imported">Code that gives the imported value, made once for each name.</param>
         public Error? BindImported(ASTCompiler compiler, AST.ImportStatement import, Func<HIRExpression> imported)
         {
-            if (import.Alias is not null && Bind(compiler, import.Alias, imported()) is { } invalid)
-                return invalid;
-
             foreach (var name in import.ImportedNames ?? [])
                 if (Bind(
                     compiler,

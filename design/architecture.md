@@ -729,7 +729,8 @@ The runner doesn't know about the frame. Running a document is the document
 meta-compiler's own job: it runs its own statements (definitions and imports) and asks
 an `IDocumentHost` for the rest. The host runs a statement or evaluates an expression
 with the document's frame, and gives what is platform-specific: how a type is described
-as HIR, how a source is imported and how a definition is loaded. The CLR host is
+as HIR and how a definition is loaded. An import is code like any other, a call of the
+`import` function, so the host evaluates it. The CLR host is
 `DotNetDocuments`, which the CLI gives the document meta-compiler.
 
 Every nested statement runs one at a time too, since in the CLI Z# is a scripting
@@ -934,10 +935,20 @@ so `this` isn't hardcoded.
 
 ### Operators
 
-Operators work through mappings in the source compiler, as in `zsv1`. A table maps an
-operator, as a string, to an HIR `Instance`, an `[Operator]` method in a C# library provides an entry,
-and a binary expression compiles to an ordinary call. An operator stands for many
-functions, so this depends on overloading.
+Some syntax compiles to a call of a function the language is given, as in `zsv1`.
+`Language.Functions` maps a piece of syntax to an HIR `OverloadGroup`: an operator such
+as `+` or `<`, and `import`. Each is a group so that more overloads can be added, and
+overloading chooses between them. `a + b` compiles to an ordinary call of the `+` group
+with both operands. `=`, `.`, `as` and `is` stay syntax, since they aren't calls.
+
+A C# method marked `[Operator("+")]` is an overload of what `+` stands for, and
+`ILLoader.Operators` finds them in a type. For now the CLI adds those of `core:runtime`
+and `core:zsharp` to one table for the whole language. Scoped tables can come later.
+`core:runtime` gives `+ - * / < == !=` on `Int32` and `Double`, `+ == !=` on `String`,
+and `or == !=` on `Boolean`.
+
+A whole number is an `Int32` and a number with a fraction is a `Double`, as in C#. They
+are `IntegerLiteral` and `DecimalLiteral` in HIR.
 
 ### Binding names
 
@@ -1104,8 +1115,15 @@ The `as` cast marking such a definition is not settled.
   use it. The document hides this, since each statement runs before the next one is
   compiled. Types in definitions are meant to be built code too, so that they can use
   imported names; today a type is resolved while compiling, so they can't yet.
-- Code that is built imports through `import` from `core:zsharp`, which calls the
-  importer the CLI gives it.
+- An import is a call of the function `import` stands for in `Language.Functions`,
+  with the source, then the import's own arguments:
+  `import(args..., kwargs...) { names } from source` calls `import(source, args...,
+  kwargs...)`. Whatever runs the import runs that call, so a body puts it in its
+  building code and the document evaluates it as its statement. `core:zsharp`'s
+  `import(String)` is the first overload, and adding overloads lets an import take
+  sources other than a string, or arguments. Keyword arguments need named arguments in
+  calls, which aren't supported yet. An import has no alias of its own: only the names
+  it brings in can be renamed, as in `{ a as b }`.
 - Importers route by prefix through the string importer.
 - Importers do nothing CO-related. They return real HIR, and imported names
   cross into MIR through the HIR -> MIR REI when used.

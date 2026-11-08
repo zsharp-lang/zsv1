@@ -29,6 +29,8 @@ namespace ZSharp.Compiler
             // A literal is a value, so it is encoded the way any value is.
             expressions.Register<Code.StringLiteral>(literal => Ok(Call("Encode", literal)));
             expressions.Register<Code.BooleanLiteral>(literal => Ok(Call("Encode", literal)));
+            expressions.Register<Code.IntegerLiteral>(literal => Ok(Call("Encode", literal)));
+            expressions.Register<Code.DecimalLiteral>(literal => Ok(Call("Encode", literal)));
             expressions.Register<Code.NamedMember>(Reify);
             expressions.Register<Code.PositionalMember>(Reify);
             expressions.Register<Code.Set>(Reify);
@@ -49,6 +51,8 @@ namespace ZSharp.Compiler
 
             values.Register<string>(value => Ok(new Code.StringLiteral(value)));
             values.Register<bool>(value => Ok(new Code.BooleanLiteral(value)));
+            values.Register<int>(value => Ok(new Code.IntegerLiteral(value)));
+            values.Register<double>(value => Ok(new Code.DecimalLiteral(value)));
             values.Register<HIR.Instance>(instance => Ok(new Code.Get(instance)));
 
             // A class's value is its type object, which stands for the class's own node.

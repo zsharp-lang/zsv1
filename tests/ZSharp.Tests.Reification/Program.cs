@@ -402,7 +402,6 @@ sealed class CompileOnly : IDocumentHost
 
     public C.Expression Described(C.Expression type) => type;
 
-    public IResult<ZSharp.HIR.Instance, Error> Import(object? source) => Result<ZSharp.HIR.Instance>.Error("Nothing runs here.");
 
     public Error? Load(ZSharp.HIR.Instance definition) => new ErrorMessage("Nothing runs here.");
 }

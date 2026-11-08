@@ -7,7 +7,7 @@ namespace Core.Runtime
     /// once it has created them.
     /// </summary>
     [ModuleScope]
-    public static class ModuleScope
+    public static partial class ModuleScope
     {
         [Alias("runtime")]
         public static ZSharp.Platform.Runtime.Runtime Runtime { get; set; } = null!;

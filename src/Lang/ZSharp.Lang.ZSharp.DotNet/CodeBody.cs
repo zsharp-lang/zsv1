@@ -11,12 +11,10 @@ namespace ZSharp.Lang.DotNet
     /// while the body is being built, so it is reified: the code doing the building
     /// constructs it as HIR.
     /// </summary>
-    /// <param name="importer">Code that gives what imports from a source.</param>
     /// <param name="function">Compiles a function defined directly in a body.</param>
     public sealed class CodeBody(
         Language language,
         ILLoader il,
-        Func<Code.Expression> importer,
         Func<ASTCompiler, AST.Definition, IResult<CompiledDefinition, Error>> function
     )
     {
@@ -157,10 +155,10 @@ namespace ZSharp.Lang.DotNet
         /// </summary>
         public IResult<Code.Local, Error> Imported(ASTCompiler compiler, AST.ImportStatement import)
         {
-            if (compiler.CompileExpression(import.Source).When(out var source).Error(out var error))
+            if (language.Importing(compiler, import).When(out var importing).Error(out var error))
                 return Result<Code.Local>.Error(error);
 
-            var holder = new Code.Local("import", HIR.Infer.Value) { Init = Call(importer(), source!) };
+            var holder = new Code.Local("import", HIR.Infer.Value) { Init = importing };
 
             return language.BindImported(compiler, import, () => new Code.Get(holder)) is { } invalid
                 ? Result<Code.Local>.Error(invalid)

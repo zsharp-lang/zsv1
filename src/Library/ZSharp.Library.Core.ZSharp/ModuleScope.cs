@@ -18,10 +18,11 @@ namespace Core.ZSharp
         public static Func<string, IResult<global::ZSharp.HIR.Instance, CommonZ.Error>> Importer { get; set; } = null!;
 
         /// <summary>
-        /// Imports from a source. This is what an import in code that is built does
-        /// when that code is constructed.
+        /// Imports from a source. An import statement is a call of this, with the source
+        /// and then the statement's own arguments.
         /// </summary>
         [Alias("import")]
+        [Operator("import")]
         public static global::ZSharp.HIR.Instance Import(string source)
             => Importer(source).When(out var imported).Error(out var error)
                 ? throw new InvalidOperationException(error.ToString())

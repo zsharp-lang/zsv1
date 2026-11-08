@@ -84,7 +84,6 @@ core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
 var importer = new ZSharp.Importer.String.StringImporter();
 var host = new DotNetDocuments(
     runtime, il,
-    source => source is string text ? importer.Import(text) : Result<ZSharp.HIR.Instance>.Error("Only a string can be imported here."),
     instance => Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
 );
 host.Install(mapped);
@@ -96,15 +95,17 @@ importer.Register("core", core);
 importer.DefaultImporter = documents;
 language.Install(mappedCompiler, IsUnderlying);
 Core.ZSharp.ModuleScope.Importer = importer.Import;
-DotNetMetaTypes.Install(
-    language, mappedCompiler, mappedBinder, runner, il,
-    () => new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "import" }
-);
+DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
+
+foreach (var library in new[] { typeof(Core.Runtime.ModuleScope), typeof(Core.ZSharp.ModuleScope) })
+    foreach (var (syntax, function) in il.Operators(library))
+        language.Add(syntax, function);
 
 var probe = new C.Get(il.Load(typeof(Probe)));
 document.Scope.Add("Keep", new C.NamedMember { Target = probe, Name = "Keep" });
 document.Scope.Add("String", new C.Get(il.Load(typeof(string))));
 document.Scope.Add("Boolean", new C.Get(il.Load(typeof(bool))));
+document.Scope.Add("Int32", new C.Get(il.Load(typeof(int))));
 document.Scope.Add("Keep2", new C.NamedMember { Target = probe, Name = "Keep2" });
 document.Scope.Add("Which", new C.NamedMember { Target = probe, Name = "Which" });
 document.Scope.Add("Either", new C.NamedMember { Target = probe, Name = "Either" });
@@ -1390,6 +1391,62 @@ Try("capturing a parameter isn't supported yet", () =>
         }
         """) is { } e && e.Contains("Capturing parameter p"));
 
+// ---- Numbers and operators
+
+Try("a whole number is an Int32", () => Run("Keep(42);") is null && Kept() is 42);
+
+Try("a number with a fraction is a Double", () => Run("Keep(1.5);") is null && Kept() is 1.5);
+
+Try("operators follow their precedence", () => Run("Keep(1 + 2 * 3);") is null && Kept() is 7);
+
+Try("subtraction and division", () => Run("Keep(10 - 4 / 2);") is null && Kept() is 8);
+
+Try("comparisons give booleans", () =>
+    Run("Keep(1 < 2); Keep(2 == 2); Keep(1 != 1);") is null && Probe.Kept is [true, true, false]);
+
+Try("strings concatenate", () => Run("""Keep("a" + "b");""") is null && (string)Kept() == "ab");
+
+Try("or", () => Run("Keep(false or true);") is null && Kept() is true);
+
+Try("an operator is chosen by the types of its operands", () =>
+    Run("""Keep(1.5 + 2.0); Keep("x" == "x");""") is null && Probe.Kept is [3.5, true]);
+
+Try("an operator with no overload for its operands is an error", () =>
+    Run("""Keep("a" - "b");""") is { } e && e.Contains("None of the 2 overloads applies"));
+
+Try("an operator nothing defines is an error", () =>
+    Run("Keep(2 ** 3);") is { } e && e.Contains("Operator (**) is not defined"));
+
+Try("operators and numbers in a method body", () =>
+{
+    if (Run("""
+        class Arithmetic {
+            @static fun area(width: Int32, height: Int32): Int32 { return width * height + 1; }
+        }
+        Keep(Arithmetic.area(3, 4));
+        """) is { } error)
+        throw new Exception(error);
+
+    return Kept() is 13;
+});
+
+Try("a number in a body that is built is encoded into it", () =>
+{
+    if (Run("""
+        class Numbers {
+            @static fun make(): DotNet_Class {
+                let n = 40;
+                return class Built { @static fun get(): Int32 { return n + 2; } } as DotNet_Class;
+            }
+        }
+        Keep(Numbers.make());
+        """) is { } error)
+        throw new Exception(error);
+
+    var type = (Type)runner.EvaluateExpression(new C.Get((Package.DotNet.Class)Kept())).Unwrap()!;
+    return type.GetMethod("get")!.Invoke(null, []) is 42;
+});
+
 // ---- Overloading
 
 Try("a CLR overload is chosen by its parameter types", () =>
@@ -1814,6 +1871,39 @@ Try("an import outside any meta-compiler that compiles it is an error", () =>
     compiler.CompileStatement(ParseOne("""import { a } from "x";""")) is { IsError: true } failure
     && failure.UnwrapError().ToString()!.Contains("Nothing here compiles the import"));
 
+Try("an import passes its arguments to the import function after the source", () =>
+{
+    var library = Library("Library96", "with arguments");
+    language.Add("import", il.Load(typeof(Probe).GetMethod(nameof(Probe.ImportWith))!));
+    Probe.ImportedWith.Clear();
+
+    return Run($$"""import("noted") { Library96 } from "{{library}}"; Keep(Library96.hello());""") is null
+        && (string)Kept() == "with arguments"
+        && Probe.ImportedWith is ["noted"];
+});
+
+Try("an import in a body passes its arguments too", () =>
+{
+    var library = Library("Library94b", "body");
+    Probe.ImportedWith.Clear();
+
+    if (Run($$"""
+        class Uses94 {
+            @static fun get(): String {
+                import("in a body") { Library94b } from "{{library}}";
+                return Library94b.hello();
+            }
+        }
+        Keep(Uses94.get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "body" && Probe.ImportedWith is ["in a body"];
+});
+
+Try("an import with arguments no overload takes is an error", () =>
+    Run($$"""import(true, false) { Library95 } from "{{Library("Library95", "x")}}";""") is { } e && e.Contains("None of the 2 overloads applies"));
+
 Try("an import in a body runs as the body is built", () =>
 {
     var library = Library("Library90", "built");
@@ -2037,6 +2127,17 @@ public static class Probe
     public static void Keep2(string value) => Kept.Add(value);
 
     public static readonly List<string> Order = [];
+
+    public static readonly List<string> ImportedWith = [];
+
+    /// <summary>
+    /// An overload of import that takes an argument after the source.
+    /// </summary>
+    public static ZSharp.HIR.Instance ImportWith(string source, string note)
+    {
+        ImportedWith.Add(note);
+        return Core.ZSharp.ModuleScope.Import(source);
+    }
 
     public static string PickString(string value) => "string";
 
