@@ -50,22 +50,28 @@ namespace ZSharp.Lang.DotNet
             if (filled.When(out var block).Error(out var error))
                 return Result<Code.Block>.Error(error);
 
-            if (definition.Bases is null or [])
-                return filled;
+            return Bases(compiler, definition, self, block!) is { } invalid ? Result<Code.Block>.Error(invalid) : filled;
+        }
 
-            if (definition.Bases is not [var @base])
-                return Result<Code.Block>.Error($"Class {definition.Name} has interfaces, which aren't supported yet.");
+        /// <summary>
+        /// Adds code that gives the definition its bases, before anything else, as they are
+        /// only known once they are built.
+        /// </summary>
+        public Error? Bases(ASTCompiler compiler, AST.TypeDefinition definition, Code.Local self, Code.Block block)
+        {
+            var index = 0;
 
-            if (body.Described<Package.DotNet.ClassReference>(compiler, @base).When(out var type).Error(out error))
-                return Result<Code.Block>.Error(error);
+            foreach (var @base in definition.Bases ?? [])
+                if (body.Described<Package.DotNet.TypeReference>(compiler, @base).When(out var type).Error(out var error))
+                    return error;
+                else
+                    block.Statements.Insert(index++, new Code.ExpressionStatement(new Code.Call
+                    {
+                        Callee = new Code.NamedMember { Target = new Code.Get(il.Load(typeof(Inheritance))), Name = nameof(Inheritance.Inherit) },
+                        Arguments = [new() { Value = new Code.Get(self) }, new() { Value = type! }]
+                    }));
 
-            block!.Statements.Insert(0, new Code.ExpressionStatement(new Code.Set
-            {
-                Target = CodeBody.Member(self, nameof(Package.DotNet.Class.Base)),
-                Value = type!
-            }));
-
-            return filled;
+            return null;
         }
 
         private string ListOf(CompiledDefinition member)

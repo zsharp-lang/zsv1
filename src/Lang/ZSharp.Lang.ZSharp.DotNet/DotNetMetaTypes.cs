@@ -30,7 +30,11 @@ namespace ZSharp.Lang.DotNet
             var method = il.Load(typeof(Package.DotNet.Method));
             var constructor = il.Load(typeof(Package.DotNet.Constructor));
 
-            metaTypes.Register(@class, new ClassMetaType(il, container, body, @class).Compile);
+            var classes = new ClassMetaType(il, container, body, @class);
+            var @interface = il.Load(typeof(Package.DotNet.Interface));
+
+            metaTypes.Register(@class, classes.Compile);
+            metaTypes.Register(@interface, new InterfaceMetaType(il, container, body, classes, @interface).Compile);
             metaTypes.Register(module, new ModuleMetaType(il, body, container, module).Compile);
             metaTypes.Register(method, new MethodMetaType(il, body, method).Compile);
             metaTypes.Register(constructor, new ConstructorMetaType(il, body, constructor).Compile);

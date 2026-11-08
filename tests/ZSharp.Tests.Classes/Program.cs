@@ -123,6 +123,8 @@ document.Scope.Add("Either", new C.NamedMember { Target = probe, Name = "Either"
 var coreRuntime = new C.Get(il.Load(typeof(Core.Runtime.ModuleScope).Module));
 document.Scope.Add("explicitThis", new C.NamedMember { Target = coreRuntime, Name = "explicitThis" });
 document.Scope.Add("static", new C.NamedMember { Target = coreRuntime, Name = "static" });
+foreach (var name in new[] { "virtual", "abstract", "override", "DotNet_Interface" })
+    document.Scope.Add(name, new C.NamedMember { Target = coreRuntime, Name = name });
 document.Scope.Add("export", new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "export" });
 foreach (var name in new[] { "ct", "load" })
     document.Scope.Add(name, new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = name });
@@ -253,7 +255,7 @@ Try("unsupported meta-type is an error", () => Run("class X of String {}") is { 
 Try("field without a type is an error", () => Run("""class X { let a = "x"; }""") is { } e && e.Contains("needs a type"));
 Try("unknown field type is an error", () => Run("class X { let a: Missing; }") is { } e && e.Contains("not defined"));
 Try("non-type field type is an error", () => Run("""class X { let a: "text"; }""") is not null);
-Try("two bases is an error for now", () => Run("class X : String, String {}") is { } e && e.Contains("interfaces"));
+Try("two base classes is an error", () => Run("class TwoBases129 : String, String {}") is { } e && e.Contains("one base class"));
 
 Try("a failed class leaves the name unusable, not half made", () =>
     Run("class Bad { let a: Missing; }") is not null && Run("Keep(Bad());")!.Contains("not defined"));
@@ -2071,6 +2073,77 @@ Try("a generic type given the wrong number of arguments is an error", () =>
 
 Try("a generic instance is described as its definition and arguments", () =>
     il.Load(typeof(List<int>)) is Package.DotNet.GenericInstance { Definition: Package.DotNet.Class { Name: "System.Collections.Generic.List`1" }, Arguments: [Package.DotNet.Struct { Name: "System.Int32" }] });
+
+// ---- Interfaces and virtual dispatch
+
+Try("a class implements an interface defined in Z#", () =>
+    Run("""
+        class IGreeter121 of DotNet_Interface { fun greet(): String; }
+        class English121 : IGreeter121 { fun greet(): String { return "hello"; } }
+        let greeter121: IGreeter121 = English121();
+        Keep(greeter121.greet());
+        """) is null && (string)Kept() == "hello");
+
+Try("a virtual method is overridden", () =>
+    Run("""
+        class Animal120 { @virtual fun sound(): String { return "..."; } }
+        class Dog120 : Animal120 { @override fun sound(): String { return "woof"; } }
+        let animal120: Animal120 = Dog120();
+        Keep(animal120.sound());
+        """) is null && (string)Kept() == "woof");
+
+Try("an abstract method is implemented by a derived class", () =>
+    Run("""
+        class Shape122 { @abstract fun area(): Int32; }
+        class Square122 : Shape122 { @override fun area(): Int32 { return 4; } }
+        let shape122: Shape122 = Square122();
+        Keep(shape122.area());
+        """) is null && Kept() is 4);
+
+Try("an interface extends another", () =>
+    Run("""
+        class INamed123 of DotNet_Interface { fun name(): String; }
+        class IPerson123 of DotNet_Interface : INamed123 { fun age(): Int32; }
+        class Person123 : IPerson123 {
+            fun name(): String { return "Ann"; }
+            fun age(): Int32 { return 30; }
+        }
+        let named123: INamed123 = Person123();
+        Keep(named123.name());
+        """) is null && (string)Kept() == "Ann");
+
+Try("a class has a base class and interfaces", () =>
+    Run("""
+        class IShout125 of DotNet_Interface { fun shout(): String; }
+        class Base125 { fun quiet(): String { return "shh"; } }
+        class Both125 : Base125, IShout125 { fun shout(): String { return "HEY"; } }
+        let both125 = Both125();
+        let shouter125: IShout125 = both125;
+        Keep(both125.quiet() + shouter125.shout());
+        """) is null && (string)Kept() == "shhHEY");
+
+Try("a CLR interface is implemented", () =>
+    Run("""
+        import { IDisposable } from "core:runtime";
+        class Closer126 : IDisposable { fun Dispose() { Keep("disposed"); } }
+        let closer126: IDisposable = Closer126();
+        closer126.Dispose();
+        """) is null && (string)Kept() == "disposed");
+
+Try("a class can have only one base class", () =>
+    Run("""
+        class One127 {}
+        class Two127 {}
+        class Three127 : One127, Two127 {}
+        """) is { } e && e.Contains("one base class"));
+
+Try("an interface is described as an interface", () =>
+{
+    if (Run("""Keep(class IShape128 of DotNet_Interface { fun area(): Int32; } as DotNet_Interface);""") is { } error)
+        throw new Exception(error);
+
+    return Kept() is Package.DotNet.Interface { Name: "IShape128", Methods: [{ Name: "area" }] };
+});
 
 // ---- Overloading
 

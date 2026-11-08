@@ -335,9 +335,21 @@ stand for. Types are only given explicitly so far; inferring them is for later.
 
 The standard definitions are written in pure Z#, so the CLR definitions come first:
 using CLR generics, then interfaces and virtual dispatch, then methods as values, and
-then defining generic CLR types and methods. An interface is a type definition with
-`of DotNet_Interface`, and `@virtual`, `@abstract` and `@override` come from
-`core:runtime`, as `@static` does, so methods aren't virtual unless marked.
+then defining generic CLR types and methods.
+
+An interface is a type definition with `of DotNet_Interface`, so it needs no keyword;
+one can be added later, in Z#. Its methods have no body, written `fun f(): T;`, and its
+bases are interfaces it extends. A class's bases are sorted as it is constructed, once
+they are built: an interface is one it implements, and anything else is its one base
+class. `@virtual`, `@abstract` and `@override` come from `core:runtime`, as `@static`
+does, so methods aren't virtual unless marked, as in C#. On the CLR, the IL loader
+defines an interface through a class-shaped view of it, which the class machinery
+handles, and maps the type back to the interface's node. A method that implements an
+interface method by its name is made virtual and final, as C# makes it, so the CLR maps
+it; interfaces are created before the classes that implement them. An interface that
+already exists, as one of the CLR's, isn't defined again. Calls on an instance already
+go through `callvirt`, so dispatch needs nothing more. Properties, explicit
+implementations and default interface methods aren't supported yet.
 
 ## Composition
 

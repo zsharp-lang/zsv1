@@ -20,7 +20,10 @@ namespace Package.DotNet
 
         public ClassReference? Base { get; set; }
 
-        public List<InterfaceReference> Interfaces { get; } = [];
+        /// <summary>
+        /// The interfaces it implements, which may be generic instances of interfaces.
+        /// </summary>
+        public List<TypeReference> Interfaces { get; } = [];
 
         public List<Constructor> Constructors { get; } = [];
 

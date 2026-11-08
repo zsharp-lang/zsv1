@@ -39,7 +39,8 @@ namespace ZSharp.Parser
             if (parser.Is(TokenType.Colon, eat: true))
                 returnType = parser.Parse<Expression>();
 
-            var body = ParseFunctionBody(parser);
+            // A method with no body, as an abstract or an interface's, ends with ;.
+            Statement? body = parser.Is(TokenType.Semicolon, eat: true) ? null : ParseFunctionBody(parser);
 
             return new(new()
             {

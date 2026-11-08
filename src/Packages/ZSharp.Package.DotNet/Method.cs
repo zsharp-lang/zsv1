@@ -9,6 +9,21 @@ namespace Package.DotNet
         public bool IsStatic { get; set; }
 
         /// <summary>
+        /// Whether a derived class can override it.
+        /// </summary>
+        public bool IsVirtual { get; set; }
+
+        /// <summary>
+        /// Whether it has no code of its own, so a derived class must override it.
+        /// </summary>
+        public bool IsAbstract { get; set; }
+
+        /// <summary>
+        /// Whether it overrides a virtual method of a base class.
+        /// </summary>
+        public bool IsOverride { get; set; }
+
+        /// <summary>
         /// The object an instance method runs on.
         /// </summary>
         public This This { get; } = new();

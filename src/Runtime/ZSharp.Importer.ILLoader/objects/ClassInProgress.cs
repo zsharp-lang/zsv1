@@ -42,7 +42,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// A class with no constructor gets one here, as loading doesn't change HIR.
         /// </summary>
         public List<Package.DotNet.Constructor> Constructors { get; }
-            = node.Constructors.Count == 0 ? [new() { Body = new() }] : node.Constructors;
+            = loader.IsInterface(node) ? [] : node.Constructors.Count == 0 ? [new() { Body = new() }] : node.Constructors;
 
         public Dictionary<Package.DotNet.Method, ClassMethod> Methods { get; } = [];
 

@@ -15,6 +15,7 @@ using ZSharp.Importer.ILLoader;
 [module: ImportType(typeof(float), Alias = "Single")]
 [module: ImportType(typeof(double), Alias = "Double")]
 [module: ImportType(typeof(Type), Alias = "Type")]
+[module: ImportType(typeof(IDisposable), Alias = "IDisposable")]
 
 [module: ImportType(typeof(System.Collections.Generic.List<>), Alias = "List")]
 [module: ImportType(typeof(System.Collections.Generic.Dictionary<,>), Alias = "Dictionary")]

@@ -6,7 +6,10 @@ namespace Package.DotNet
     {
         public string Name { get; set; } = name;
 
-        public List<InterfaceReference> Interfaces { get; } = [];
+        /// <summary>
+        /// The interfaces it extends, which may be generic instances of interfaces.
+        /// </summary>
+        public List<TypeReference> Interfaces { get; } = [];
 
         public List<Property> Properties { get; } = [];
 

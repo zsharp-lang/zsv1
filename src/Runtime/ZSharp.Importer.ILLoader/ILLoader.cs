@@ -14,6 +14,13 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<Package.DotNet.TypeReference, Type> nodeTypes = [];
         private readonly Dictionary<Type, LIR.TypeHandle> types = [];
         private readonly Dictionary<Package.DotNet.Class, Objects.ClassInProgress> inProgress = [];
+
+        /// <summary>
+        /// An interface is defined through a class-shaped view of it, which the class
+        /// machinery handles; its type is then the interface's.
+        /// </summary>
+        private readonly Dictionary<Package.DotNet.Interface, Package.DotNet.Class> views = [];
+        private readonly Dictionary<Package.DotNet.Class, Package.DotNet.Interface> viewed = [];
         private readonly Dictionary<HIR.Instance, CompilerObject> variables = [];
 
         /// <summary>
@@ -327,7 +334,7 @@ namespace ZSharp.Importer.ILLoader
             if (node.Properties.Count > 0)
                 return Result.Error($"Module {node.Name} has properties, which can't be defined yet.");
 
-            if (node.Definitions.FirstOrDefault(definition => definition is not Package.DotNet.Class) is { } other)
+            if (node.Definitions.FirstOrDefault(definition => definition is not (Package.DotNet.Class or Package.DotNet.Interface)) is { } other)
                 return Result.Error($"Module {node.Name} has a {other.GetType().Name}, which can't be defined yet.");
 
             // The module's own members are declared and lowered along with its classes, so
@@ -335,7 +342,7 @@ namespace ZSharp.Importer.ILLoader
             var members = new LIR.Module(node.Name.Length > 0 ? node.Name : null);
 
             if (Define(
-                node.Definitions.Cast<Package.DotNet.Class>(),
+                node.Definitions.Select(definition => definition as Package.DotNet.Class ?? View((Package.DotNet.Interface)definition)),
                 () => DeclareMembers(node, members),
                 () => LowerMembers(node, members)
             ) is { } error)
@@ -378,6 +385,28 @@ namespace ZSharp.Importer.ILLoader
                 _ => new Package.DotNet.Class(name),
             };
         }
+
+        /// <summary>
+        /// The class-shaped view an interface is defined through: its methods, and the
+        /// interfaces it extends. It has no constructors.
+        /// </summary>
+        private Package.DotNet.Class View(Package.DotNet.Interface node)
+        {
+            if (views.TryGetValue(node, out var known))
+                return known;
+
+            var view = new Package.DotNet.Class(node.Name);
+
+            view.Methods.AddRange(node.Methods);
+            view.Interfaces.AddRange(node.Interfaces);
+
+            views[node] = view;
+            viewed[view] = node;
+
+            return view;
+        }
+
+        internal bool IsInterface(Package.DotNet.Class node) => viewed.ContainsKey(node);
 
         /// <summary>
         /// A generic type given its arguments, made from the types its parts stand for.
@@ -428,6 +457,9 @@ namespace ZSharp.Importer.ILLoader
 
             if (node is Package.DotNet.GenericInstance instance)
                 return Instantiate(instance);
+
+            if (node is Package.DotNet.Interface @interface)
+                return Define(View(@interface));
 
             return node is Package.DotNet.Class definition
                 ? Define(definition)
@@ -490,6 +522,12 @@ namespace ZSharp.Importer.ILLoader
                     nodeTypes[node] = type;
                     typeNodes[type] = node;
 
+                    if (viewed.TryGetValue(node, out var @interface))
+                    {
+                        nodeTypes[@interface] = type;
+                        typeNodes[type] = @interface;
+                    }
+
                     var @class = inProgress[node];
 
                     foreach (var (method, declared) in @class.Methods)
@@ -520,6 +558,14 @@ namespace ZSharp.Importer.ILLoader
                     return error;
                 else
                     definition.Base = @base;
+
+            definition.IsInterface = viewed.ContainsKey(node);
+
+            foreach (var @interface in node.Interfaces)
+                if (CompileType(@interface).When(out var implemented).Error(out var error))
+                    return error;
+                else
+                    definition.Interfaces.Add(implemented!);
 
             foreach (var field in node.Fields)
                 if (CompileType(field.Type).When(out var type).Error(out var error))
@@ -566,7 +612,12 @@ namespace ZSharp.Importer.ILLoader
                     method.Name,
                     method.IsStatic,
                     new(signature) { Name = method.Name, Body = new() }
-                );
+                )
+                {
+                    IsVirtual = method.IsVirtual,
+                    IsAbstract = method.IsAbstract || definition.IsInterface,
+                    IsOverride = method.IsOverride
+                };
 
                 definition.Methods.Add(declared);
                 @class.Methods[method] = declared;
@@ -663,7 +714,9 @@ namespace ZSharp.Importer.ILLoader
             }
 
             foreach (var (method, declared) in @class.Methods)
-                if (method.Body is null)
+                if (declared.IsAbstract)
+                    continue;
+                else if (method.Body is null)
                     return new ErrorMessage($"Method {method.Name} has no body.");
                 else if (Lower(method.Body, declared.Function, method.ReturnType, method.Parameters) is { } error)
                     return error;
@@ -836,6 +889,10 @@ namespace ZSharp.Importer.ILLoader
             if (node.Base is Package.DotNet.Class @base)
                 Reach(@base, nodes);
 
+            // An interface that already exists, as one of the CLR's, isn't defined again.
+            foreach (var @interface in node.Interfaces.OfType<Package.DotNet.Interface>().Where(@interface => !nodeTypes.ContainsKey(@interface)))
+                Reach(View(@interface), nodes);
+
             foreach (var field in node.Fields)
                 if (field.Type is Package.DotNet.Class type)
                     Reach(type, nodes);
@@ -846,7 +903,7 @@ namespace ZSharp.Importer.ILLoader
             if (node.StaticConstructor is not null)
                 return new ErrorMessage($"Class {node.Name} has a static constructor, which can't be defined yet.");
 
-            if (node.Interfaces.Count > 0 || node.Properties.Count > 0 || node.NestedDefinitions.Count > 0)
+            if (node.Properties.Count > 0 || node.NestedDefinitions.Count > 0)
                 return new ErrorMessage($"Class {node.Name} has members that can't be defined yet.");
 
             if (node.Base is Package.DotNet.TypeReference known && nodeTypes.TryGetValue(known, out var type) && type.IsSealed)

@@ -56,6 +56,10 @@ namespace ZSharp.Lang.DotNet
                 }));
             }
 
+            // A method with no body has no code of its own: it is abstract, or an interface's.
+            if (function.Body is null)
+                return Result<Code.Block>.Ok(block);
+
             return body.Body(body.WithLocals(compiler, block, self, nameof(Package.DotNet.Method.Locals)), block, self, function.Body) is { } invalid
                 ? Result<Code.Block>.Error(invalid)
                 : Result<Code.Block>.Ok(block);

@@ -12,6 +12,17 @@ namespace ZSharp.Platform.Runtime
 
         public LIR.Type? Base { get; set; }
 
+        /// <summary>
+        /// Whether it is an interface: it has no base, fields or constructors, and its
+        /// methods are abstract.
+        /// </summary>
+        public bool IsInterface { get; set; }
+
+        /// <summary>
+        /// The interfaces it implements, or extends if it is one.
+        /// </summary>
+        public List<LIR.Type> Interfaces { get; } = [];
+
         public List<ClassField> Fields { get; } = [];
 
         public List<ClassConstructor> Constructors { get; } = [];
@@ -60,6 +71,18 @@ namespace ZSharp.Platform.Runtime
         public string Name { get; set; } = name;
 
         public bool IsStatic { get; } = isStatic;
+
+        public bool IsVirtual { get; set; }
+
+        /// <summary>
+        /// Whether it has no code, so a derived class must override it.
+        /// </summary>
+        public bool IsAbstract { get; set; }
+
+        /// <summary>
+        /// Whether it overrides a virtual method of the base, rather than starting a new one.
+        /// </summary>
+        public bool IsOverride { get; set; }
 
         public LIR.Function Function { get; } = function;
 

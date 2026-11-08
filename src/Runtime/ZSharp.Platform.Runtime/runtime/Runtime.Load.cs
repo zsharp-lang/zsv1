@@ -44,7 +44,10 @@ namespace ZSharp.Platform.Runtime
             foreach (var definition in definitions.Where(definition => !classes.ContainsKey(definition)))
                 classes[definition] = builders[definition] = module.DefineType(
                     classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name),
-                    IL.TypeAttributes.Public | IL.TypeAttributes.Class
+                    definition.IsInterface
+                        ? IL.TypeAttributes.Public | IL.TypeAttributes.Interface | IL.TypeAttributes.Abstract
+                        : IL.TypeAttributes.Public | IL.TypeAttributes.Class
+                            | (definition.Methods.Any(method => method.IsAbstract) ? IL.TypeAttributes.Abstract : 0)
                 );
 
             foreach (var (definition, builder) in builders)
@@ -64,7 +67,7 @@ namespace ZSharp.Platform.Runtime
                     new CodeEmitter(this, il, constructor.Function).EmitBody();
                 }
 
-                foreach (var method in definition.Methods)
+                foreach (var method in definition.Methods.Where(method => !method.IsAbstract && !definition.IsInterface))
                     new CodeEmitter(this, classMethods[method].GetILGenerator(), method.Function).EmitBody();
             }
 
@@ -76,7 +79,13 @@ namespace ZSharp.Platform.Runtime
 
         private void DeclareMembers(ClassDefinition definition, Emit.TypeBuilder builder)
         {
-            builder.SetParent(definition.Base is null ? typeof(object) : ImportType(definition.Base));
+            if (!definition.IsInterface)
+                builder.SetParent(definition.Base is null ? typeof(object) : ImportType(definition.Base));
+
+            foreach (var @interface in definition.Interfaces)
+                builder.AddInterfaceImplementation(ImportType(@interface));
+
+            var implemented = Implemented(definition);
 
             foreach (var field in definition.Fields)
                 classFields[field] = builder.DefineField(field.Name, ImportType(field.Type), IL.FieldAttributes.Public);
@@ -91,10 +100,56 @@ namespace ZSharp.Platform.Runtime
             foreach (var method in definition.Methods)
                 classMethods[method] = builder.DefineMethod(
                     method.Name,
-                    IL.MethodAttributes.Public | (method.IsStatic ? IL.MethodAttributes.Static : 0),
+                    Attributes(definition, method, implemented),
                     ImportType(method.Signature.ReturnType),
                     [.. method.Signature.Parameters.Skip(method.IsStatic ? 0 : 1).Select(parameter => ImportType(parameter.Type))]
                 );
+        }
+
+        /// <summary>
+        /// How a method is declared. A method that implements an interface method by its
+        /// name is virtual and final, as C# makes it, so the CLR maps it to the interface's.
+        /// </summary>
+        private static IL.MethodAttributes Attributes(ClassDefinition definition, ClassMethod method, HashSet<string> implemented)
+        {
+            var attributes = IL.MethodAttributes.Public | IL.MethodAttributes.HideBySig;
+
+            if (method.IsStatic)
+                return attributes | IL.MethodAttributes.Static;
+
+            if (definition.IsInterface || method.IsAbstract)
+                return attributes | IL.MethodAttributes.Abstract | IL.MethodAttributes.Virtual | IL.MethodAttributes.NewSlot;
+
+            if (method.IsOverride)
+                return attributes | IL.MethodAttributes.Virtual;
+
+            if (method.IsVirtual)
+                return attributes | IL.MethodAttributes.Virtual | IL.MethodAttributes.NewSlot;
+
+            return implemented.Contains(method.Name)
+                ? attributes | IL.MethodAttributes.Virtual | IL.MethodAttributes.NewSlot | IL.MethodAttributes.Final
+                : attributes;
+        }
+
+        /// <summary>
+        /// The names of the methods of the interfaces a class implements.
+        /// </summary>
+        private HashSet<string> Implemented(ClassDefinition definition)
+        {
+            var names = new HashSet<string>();
+
+            foreach (var @interface in definition.Interfaces)
+                if (@interface is ClassDefinition own)
+                    names.UnionWith([.. own.Methods.Select(method => method.Name), .. Implemented(own)]);
+                else
+                {
+                    var type = ImportType(@interface);
+
+                    foreach (var each in type.GetInterfaces().Append(type))
+                        names.UnionWith(each.GetMethods().Select(method => method.Name));
+                }
+
+            return names;
         }
 
         private IL.ConstructorInfo BaseConstructor(ClassDefinition definition, Type parent)
@@ -120,6 +175,9 @@ namespace ZSharp.Platform.Runtime
 
             if (definition.Base is ClassDefinition @base)
                 CreateClass(@base, builders);
+
+            foreach (var @interface in definition.Interfaces.OfType<ClassDefinition>())
+                CreateClass(@interface, builders);
 
             classes[definition] = builder.CreateType();
         }
