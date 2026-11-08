@@ -375,6 +375,44 @@ instantiates it as any CLR generic method.
 Constraints, boxing a value of a type parameter, inferring type arguments, and using a
 generic class or method while its class is still being loaded aren't supported yet.
 
+Any CLR entity is exposed as C# sees it, so the rest of the runtime integration follows
+C#'s rules rather than new ones:
+
+- A value type's instance methods take their receiver by address, as C# calls them, so
+  the runtime records which methods do and emits the receiver's address and a `call`. A
+  method a value type inherits from a class gets the receiver boxed, through
+  `CG.ImplicitCast`. Calling a value type with no arguments, where it has no such
+  constructor, is its default value.
+- A constant field, as an enum's member, is its value. A type's nested types are its
+  members. Static fields and properties can be assigned.
+- An indexer is called by indexing, as in `list[0]`. Its getters and setters are methods,
+  so overloading picks between indexers. Indexing gives an element that reads through the
+  getter and assigns through the setter with the same arguments.
+- An operator also stands for what the operands' CLR types define by the name C# gives
+  it, as `op_Addition` for `+`. `ILLoader.ClrOperators` gives a
+  `Package.DotNet.Operator` overload for each operator, which finds those methods when
+  called. So `String` compares with its own `==`, and `TimeSpan`s add.
+- Conversions are C#'s: a number converts implicitly to a numeric type that keeps its
+  value, as `Int32` to `Double`, and a cast converts to any numeric type, through function
+  handles mapped to `conv` instructions. A type's `op_Implicit` is an implicit conversion,
+  and its `op_Explicit` is one a cast also has. Overloading still picks the most specific
+  candidate, so `Math.Abs(1)` calls the `Int32` overload.
+- `null` is a `NullLiteral` in HIR. It has no type, and goes to any type that can be null,
+  as in C#. A cast also goes down, to a type that derives from the value's or between an
+  interface and a type that isn't sealed, and an object cast to a value type is unboxed.
+  A cast that fails throws as the code runs, as C#'s `(T)x` does.
+- `value is of T` is a `Match` in HIR, which stands for the `CG.Match` operation, with
+  the type as its pattern. A CLR type answers it through `IRTTypeMatch`: a reference is
+  checked as the code runs, so `null` is of no type, and a value of a value type is
+  known to be of a type or not.
+- The part between `is` and `of` is a pattern. Patterns will be several things,
+  deconstruction `{}`, arrays `[]`, tuples `()` and names, but only names exist so far,
+  and how they work isn't settled. For now `value is name of T` defines `name` as a local
+  of `T`, through whatever compiles a `let` where the match is, so it is a variable like
+  any other: it can be read and assigned after the match, in a document, a method or a
+  function. It is assigned the value, cast to `T`, only if the value matched, and the
+  value is evaluated once. `_` names nothing.
+
 ## Composition
 
 There is no pipeline and no platform as a concept.
@@ -1103,8 +1141,9 @@ with both operands. `=`, `.`, `as` and `is` stay syntax, since they aren't calls
 A C# method marked `[Operator("+")]` is an overload of what `+` stands for, and
 `ILLoader.Operators` finds them in a type. For now the CLI adds those of `core:runtime`
 and `core:zsharp` to one table for the whole language. Scoped tables can come later.
-`core:runtime` gives `+ - * / < == !=` on `Int32` and `Double`, `+ == !=` on `String`,
-and `or == !=` on `Boolean`.
+`core:runtime` gives `+ - * / < > <= >= == !=` on `Int32` and `Double`, `+` on `String`,
+and `or == !=` on `Boolean`. The operators CLR types define are overloads too, so
+`String`'s `==` is its own.
 
 A whole number is an `Int32` and a number with a fraction is a `Double`, as in C#. They
 are `IntegerLiteral` and `DecimalLiteral` in HIR.

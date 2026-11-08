@@ -109,11 +109,22 @@ foreach (var library in new[] { typeof(Core.Runtime.ModuleScope), typeof(Core.ZS
     foreach (var (syntax, function) in il.Operators(library))
         language.Add(syntax, function);
 
+foreach (var (syntax, function) in il.ClrOperators())
+    language.Add(syntax, function);
+
 var probe = new C.Get(il.Load(typeof(Probe)));
 document.Scope.Add("Keep", new C.NamedMember { Target = probe, Name = "Keep" });
 document.Scope.Add("String", new C.Get(il.Load(typeof(string))));
 document.Scope.Add("Boolean", new C.Get(il.Load(typeof(bool))));
 document.Scope.Add("Int32", new C.Get(il.Load(typeof(int))));
+
+// CLR types the runtime integration tests use.
+foreach (var (name, clr) in new (string, Type)[] {
+    ("TimeSpan", typeof(TimeSpan)), ("DateTime", typeof(DateTime)), ("Guid", typeof(Guid)), ("Double", typeof(double)),
+    ("DayOfWeek", typeof(DayOfWeek)), ("Environment", typeof(Environment)), ("Probe", typeof(Probe)),
+    ("Int64", typeof(long)), ("Decimal", typeof(decimal)), ("Math", typeof(Math)), ("Object", typeof(object)),
+    ("IDisposable154", typeof(IDisposable)) })
+    document.Scope.Add(name, new C.Get(il.Load(clr)));
 document.Scope.Add("Keep2", new C.NamedMember { Target = probe, Name = "Keep2" });
 document.Scope.Add("Which", new C.NamedMember { Target = probe, Name = "Which" });
 foreach (var (name, member) in new[] { ("PairOf", "Pair"), ("GreetWith", "Greet"), ("NamedBy", "Named"), ("NextNumber", "Next"), ("Same", "Same"), ("Upper", "Upper"), ("ApplyTo", "ApplyTo") })
@@ -1488,7 +1499,7 @@ Try("an operator is chosen by the types of its operands", () =>
     Run("""Keep(1.5 + 2.0); Keep("x" == "x");""") is null && Probe.Kept is [3.5, true]);
 
 Try("an operator with no overload for its operands is an error", () =>
-    Run("""Keep("a" - "b");""") is { } e && e.Contains("None of the 2 overloads applies"));
+    Run("""Keep("a" - "b");""") is { } e && e.Contains("None of the 3 overloads applies"));
 
 Try("an operator nothing defines is an error", () =>
     Run("Keep(2 ** 3);") is { } e && e.Contains("Operator (**) is not defined"));
@@ -2271,6 +2282,222 @@ Try("a type parameter is only known inside its class", () =>
         let outside142: T = 1;
         """) is not null);
 
+// ---- CLR members
+
+Try("an enum's member is its value", () =>
+    Run("Keep(DayOfWeek.Monday);") is null && Kept() is DayOfWeek.Monday);
+
+Try("a constant is its value", () =>
+    Run("Keep(Int32.MaxValue);") is null && Kept() is int.MaxValue);
+
+Try("a nested type is a member of its type", () =>
+    Run("Keep(Environment.SpecialFolder.Desktop);") is null && Kept() is Environment.SpecialFolder.Desktop);
+
+Try("a static field and a static property are set", () =>
+{
+    Probe.Shared = "";
+
+    return Run("""Probe.Shared = "set"; Probe.SharedProperty = "too"; Keep(Probe.Shared + Probe.SharedProperty);""") is null
+        && (string)Kept() == "settoo";
+});
+
+// ---- CLR indexers
+
+Try("an indexer is read", () =>
+    Run("""
+        import { List } from "core:runtime";
+        let xs148 = List[Int32]();
+        xs148.Add(4);
+        Keep(xs148[0]);
+        """) is null && Kept() is 4);
+
+Try("an indexer is assigned", () =>
+    Run("""
+        import { List } from "core:runtime";
+        let xs149 = List[Int32]();
+        xs149.Add(4);
+        xs149[0] = 5;
+        Keep(xs149[0]);
+        """) is null && Kept() is 5);
+
+Try("a string's characters are its indexer", () =>
+    Run("""Keep("abc"[1]);""") is null && Kept() is 'b');
+
+Try("a dictionary is indexed by its keys", () =>
+    Run("""
+        import { Dictionary } from "core:runtime";
+        let d150 = Dictionary[String, Int32]();
+        d150["one"] = 1;
+        Keep(d150["one"]);
+        """) is null && Kept() is 1);
+
+// ---- CLR operators
+
+Try("an operator a CLR type defines", () =>
+    Run("Keep((TimeSpan.FromSeconds(1.0) + TimeSpan.FromSeconds(2.0)).TotalSeconds);") is null && Kept() is 3.0);
+
+Try("a CLR type's equality operator", () =>
+    Run("Keep(TimeSpan.FromSeconds(1.0) == TimeSpan.FromSeconds(1.0));") is null && Kept() is true);
+
+Try("strings compare with the operator String defines", () =>
+    ResetKept() && Run("""Keep("a" == "a"); Keep("a" != "b");""") is null && Probe.Kept is [true, true]);
+
+Try("greater than, at most and at least", () =>
+    ResetKept() && Run("Keep(2 > 1); Keep(1 <= 1); Keep(1.5 >= 2.0);") is null && Probe.Kept is [true, true, false]);
+
+Try("a CLR comparison operator", () =>
+    Run("Keep(TimeSpan.FromSeconds(1.0) < TimeSpan.FromSeconds(2.0));") is null && Kept() is true);
+
+// ---- CLR conversions
+
+Try("an Int32 widens to the Double a method takes", () =>
+    Run("Keep(Math.Sqrt(16));") is null && Kept() is 4.0);
+
+Try("widening keeps the most specific overload", () =>
+    Run("Keep(Math.Abs(0 - 3));") is null && Kept() is 3);
+
+Try("an Int32 cast to Int64", () =>
+    Run("Keep(1 as Int64);") is null && Kept() is 1L);
+
+Try("a Double cast to Int32 loses its fraction", () =>
+    Run("Keep(2.7 as Int32);") is null && Kept() is 2);
+
+Try("a Double does not narrow implicitly", () =>
+    Run("""Keep("abc".Substring(1.5));""") is { } e && e.Contains("overloads applies"));
+
+Try("a conversion a type defines implicitly", () =>
+    Run("Keep(Decimal.Add(1, 2));") is null && Kept() is 3m);
+
+Try("a conversion a type defines explicitly, in a cast", () =>
+    Run("Keep(1.5 as Decimal);") is null && Kept() is 1.5m);
+
+Try("a conversion from a type that defines it explicitly", () =>
+    Run("""Keep(Decimal.Parse("7") as Int32);""") is null && Kept() is 7);
+
+// ---- null, downcasts and type tests
+
+Try("null goes to an object", () =>
+    Run("Keep(null);") is null && Kept() is null);
+
+Try("null in a local of a reference type", () =>
+    Run("let text150: String = null; Keep(text150 == null);") is null && Kept() is true);
+
+Try("null cast to a reference type", () =>
+    Run("Keep(null as String);") is null && Kept() is null);
+
+Try("null does not go to a value type", () =>
+    Run("let number151: Int32 = null;") is { } e && e.Contains("doesn't match the type"));
+
+Try("an object cast down to a string", () =>
+    Run("""let o152: Object = "text"; Keep((o152 as String).Length);""") is null && Kept() is 4);
+
+Try("an object cast to a value type is unboxed", () =>
+    Run("let o153: Object = 5; Keep((o153 as Int32) + 1);") is null && Kept() is 6);
+
+Try("a cast down to a type the value is not of fails as it runs", () =>
+{
+    try { Run("""let o154: Object = "text"; Keep(o154 as Int32);"""); return false; }
+    catch (Exception e) { return e is InvalidCastException || e.InnerException is InvalidCastException; }
+});
+
+Try("a sealed type is not cast to an interface it does not implement", () =>
+    Run("""Keep("text" as IDisposable154);""") is { } e && e.Contains("conversion"));
+
+Try("a type test", () =>
+    ResetKept() && Run("""let o155: Object = "x"; Keep(o155 is of String); Keep(o155 is of Int32);""") is null
+        && Probe.Kept is [true, false]);
+
+Try("null is of no type", () =>
+    Run("let o156: Object = null; Keep(o156 is of Object);") is null && Kept() is false);
+
+Try("a value is of a type it goes to", () =>
+    ResetKept() && Run("Keep(5 is of Object); Keep(5 is of String);") is null && Probe.Kept is [true, false]);
+
+Try("a type test and a cast in a method", () =>
+    Run("""
+        class Lengths157 {
+            @static fun of(value: Object): Int32 {
+                if (value is of String) return (value as String).Length;
+                return 0;
+            }
+        }
+        Keep(Lengths157.of("four") + Lengths157.of(4));
+        """) is null && Kept() is 4);
+
+Try("a name pattern is assigned what matched", () =>
+    Run("""let o158: Object = "four"; if (o158 is text158 of String) Keep(text158.Length);""") is null && Kept() is 4);
+
+Try("a name pattern is not assigned when the value does not match", () =>
+    ResetKept() && Run("""let o159: Object = 4; Keep(o159 is text159 of String); Keep(text159 == null);""") is null
+        && Probe.Kept is [false, true]);
+
+Try("a name pattern can be assigned", () =>
+    Run("""let o160: Object = "x"; o160 is text160 of String; text160 = "changed"; Keep(text160);""") is null
+        && (string)Kept() == "changed");
+
+Try("a name pattern of a value type unboxes", () =>
+    Run("let o161: Object = 41; if (o161 is number161 of Int32) Keep(number161 + 1);") is null && Kept() is 42);
+
+Try("the value a name pattern matches is evaluated once", () =>
+    ResetKept() && Run("Keep(NextNumber() is number162 of Int32); Keep(number162 + 1 == NextNumber());") is null
+        && Probe.Kept is [true, true]);
+
+Try("_ names nothing", () =>
+    Run("""let o163: Object = "x"; Keep(o163 is _ of String);""") is null && Kept() is true);
+
+Try("a name pattern in a method", () =>
+    Run("""
+        class Lengths164 {
+            @static fun of(value: Object): Int32 {
+                if (value is text of String) return text.Length;
+                return 0;
+            }
+        }
+        Keep(Lengths164.of("four") + Lengths164.of(4));
+        """) is null && Kept() is 4);
+
+Try("a name pattern in a module function", () =>
+    Run("""
+        module M165 {
+            fun of(value: Object): Int32 {
+                if (value is text of String) return text.Length;
+                return 0;
+            }
+        }
+        Keep(M165.of("three"));
+        """) is null && Kept() is 5);
+
+// ---- CLR value types
+
+Try("a struct's property is read from a struct a method returns", () =>
+    Run("Keep(TimeSpan.FromSeconds(90.0).TotalMinutes);") is null && Kept() is 1.5);
+
+Try("a struct's method is called on a struct", () =>
+    Run("Keep(TimeSpan.FromSeconds(1.0).Add(TimeSpan.FromSeconds(2.0)).TotalSeconds);") is null && Kept() is 3.0);
+
+Try("a struct's static property and then its instance property", () =>
+    Run("Keep(DateTime.Now.Year);") is null && Kept() is int year && year > 2000);
+
+Try("a struct with no arguments is its default value", () =>
+    Run("Keep(Guid().ToString());") is null && (string)Kept() == "00000000-0000-0000-0000-000000000000");
+
+Try("a struct calls a method it inherits from a class", () =>
+    Run("Keep(TimeSpan.FromSeconds(1.0).GetType());") is null && Kept() is Type type && type == typeof(TimeSpan));
+
+Try("a struct in a document local", () =>
+    Run("let span146 = TimeSpan.FromSeconds(5.0); Keep(span146.TotalSeconds);") is null && Kept() is 5.0);
+
+Try("a struct in a local of a method", () =>
+    Run("""
+        class Spans147 {
+            @static fun minutes(seconds: Double): Double {
+                let span = TimeSpan.FromSeconds(seconds);
+                return span.TotalMinutes;
+            }
+        }
+        Keep(Spans147.minutes(120.0));
+        """) is null && Kept() is 2.0);
+
 // ---- Overloading
 
 Try("a CLR overload is chosen by its parameter types", () =>
@@ -3051,6 +3278,10 @@ public static class Probe
     public static string Pair(string first, string second) => first + second;
 
     public static T Same<T>(T value) => value;
+
+    public static string Shared = "";
+
+    public static string SharedProperty { get; set; } = "";
 
     public static string Upper(string value) => value.ToUpperInvariant();
 

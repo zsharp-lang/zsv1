@@ -70,9 +70,18 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (Arguments.Match(Matching(), arguments) is not { } values)
                 return Result.Error($"{method.Name} can't be called with these arguments.");
 
+            CompilerObject[] bound = [];
+
+            if (receiver is not null)
+                if (method.DeclaringType is { IsValueType: false } owner
+                    && Core.Compiler.ModuleScope.CG.ImplicitCast(receiver, loader.Class(owner)).Ok(out var converted))
+                    bound = [converted];
+                else
+                    bound = [receiver];
+
             return Result.Ok(new Call(
                 loader.Handle(method),
-                [.. (receiver is null ? [] : new[] { receiver }), .. values],
+                [.. bound, .. values],
                 ILLoader.ReturnType(method) is { } type ? () => loader.Class(type) : null
             ));
         }

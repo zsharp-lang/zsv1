@@ -130,6 +130,9 @@ foreach (var library in new[] { typeof(Core.Runtime.ModuleScope), typeof(Core.ZS
     foreach (var (syntax, function) in il.Operators(library))
         language.Add(syntax, function);
 
+foreach (var (syntax, function) in il.ClrOperators())
+    language.Add(syntax, function);
+
 // Each document runs with a frame holding its locals.
 var host = new ZSharp.Lang.DotNet.DotNetDocuments(runtime, il, instance =>
 {

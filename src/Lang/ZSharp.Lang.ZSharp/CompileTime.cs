@@ -12,10 +12,11 @@ namespace ZSharp.Lang
             => expression switch
             {
                 HIR.Code.Get get => get.Instance is not HIR.Variable,
-                HIR.Code.StringLiteral or HIR.Code.BooleanLiteral or HIR.Code.IntegerLiteral or HIR.Code.DecimalLiteral => true,
+                HIR.Code.StringLiteral or HIR.Code.BooleanLiteral or HIR.Code.IntegerLiteral or HIR.Code.DecimalLiteral or HIR.Code.NullLiteral => true,
                 HIR.Code.NamedMember member => Is(member.Target),
                 HIR.Code.PositionalMember member => Is(member.Target),
                 HIR.Code.Cast cast => Is(cast.Value) && Is(cast.Type),
+                HIR.Code.Match match => Is(match.Value) && Is(match.Pattern),
                 HIR.Code.Call call => Is(call.Callee) && call.Arguments.All(argument => Is(argument.Value)),
                 HIR.Code.Index index => Is(index.Target) && index.Arguments.All(argument => Is(argument.Value)),
                 _ => false

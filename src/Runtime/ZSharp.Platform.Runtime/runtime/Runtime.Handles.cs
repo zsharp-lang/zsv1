@@ -5,11 +5,28 @@ namespace ZSharp.Platform.Runtime
         private readonly Dictionary<LIR.TypeHandle, Type> typeHandles = [];
         private readonly Dictionary<LIR.FunctionHandle, Action<Emit.ILGenerator>> functionHandles = [];
 
+        /// <summary>
+        /// Handles of instance methods of value types, which take their object by its address.
+        /// </summary>
+        private readonly HashSet<LIR.FunctionHandle> byAddress = [];
+
+        /// <summary>
+        /// Whether a call passes its first argument by its address, as an instance method of
+        /// a value type takes its object.
+        /// </summary>
+        internal bool TakesAddress(LIR.ICallable callable)
+            => callable is LIR.FunctionHandle handle && byAddress.Contains(handle);
+
         public void Map(LIR.TypeHandle handle, Type type)
             => typeHandles[handle] = type;
 
         public void Map(LIR.FunctionHandle handle, IL.MethodBase method)
-            => Map(handle, il => EmitCall(il, method));
+        {
+            if (!method.IsStatic && method is IL.MethodInfo && method.DeclaringType is { IsValueType: true })
+                byAddress.Add(handle);
+
+            Map(handle, il => EmitCall(il, method));
+        }
 
         /// <summary>
         /// Maps a handle to code that is emitted in place of a call. The arguments
@@ -109,8 +126,9 @@ namespace ZSharp.Platform.Runtime
                 case IL.ConstructorInfo constructor:
                     il.Emit(Emit.OpCodes.Newobj, constructor);
                     break;
+                // A value type's own method is called directly, on the address of its object.
                 case IL.MethodInfo info:
-                    il.Emit(info.IsStatic ? Emit.OpCodes.Call : Emit.OpCodes.Callvirt, info);
+                    il.Emit(info.IsStatic || info.DeclaringType is { IsValueType: true } ? Emit.OpCodes.Call : Emit.OpCodes.Callvirt, info);
                     break;
                 default:
                     throw new NotSupportedException($"Can't call a {method.GetType().Name}.");

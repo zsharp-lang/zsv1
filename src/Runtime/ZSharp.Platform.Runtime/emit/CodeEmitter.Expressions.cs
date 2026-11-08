@@ -84,8 +84,11 @@ namespace ZSharp.Platform.Runtime
 
         private void Call(LIR.Call node)
         {
-            foreach (var argument in node.Arguments)
-                Expression(argument);
+            foreach (var (argument, index) in node.Arguments.Select((argument, index) => (argument, index)))
+                if (index == 0 && runtime.TakesAddress(node.Callable))
+                    Address(argument);
+                else
+                    Expression(argument);
 
             runtime.EmitCall(il, node.Callable);
         }

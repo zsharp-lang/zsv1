@@ -36,10 +36,12 @@ namespace ZSharp.Compiler
             expressions.Register<Code.BooleanLiteral>(literal => Ok(Call("Encode", literal)));
             expressions.Register<Code.IntegerLiteral>(literal => Ok(Call("Encode", literal)));
             expressions.Register<Code.DecimalLiteral>(literal => Ok(Call("Encode", literal)));
+            expressions.Register<Code.NullLiteral>(_ => Ok(Call("Null")));
             expressions.Register<Code.NamedMember>(Reify);
             expressions.Register<Code.PositionalMember>(Reify);
             expressions.Register<Code.Set>(Reify);
             expressions.Register<Code.Cast>(Reify);
+            expressions.Register<Code.Match>(Reify);
             expressions.Register<Code.Unquote>(unquote => Ok(unquote.Code));
             expressions.Register<Code.Call>(Reify);
             expressions.Register<Code.Index>(Reify);
@@ -116,6 +118,16 @@ namespace ZSharp.Compiler
             return Expression(cast.Type).When(out var type).Error(out error)
                 ? Fail(error)
                 : Ok(Call("Cast", value!, type!));
+        }
+
+        private Reified Reify(Code.Match match)
+        {
+            if (Expression(match.Value).When(out var value).Error(out var error))
+                return Fail(error);
+
+            return Expression(match.Pattern).When(out var pattern).Error(out error)
+                ? Fail(error)
+                : Ok(Call("Match", value!, pattern!));
         }
 
         private Reified Reify(Code.Call call)

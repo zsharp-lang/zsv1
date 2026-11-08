@@ -42,6 +42,7 @@ namespace ZSharp.Lang
             mapped.Expressions.Register<AST.IndexExpression>(Compile);
             mapped.Expressions.Register<AST.BinaryExpression>(Compile);
             mapped.Expressions.Register<AST.CastExpression>(Compile);
+            mapped.Expressions.Register<AST.IsOfExpression>(Compile);
             mapped.Expressions.Register<AST.LetExpression>(Compile);
             mapped.Expressions.Register<AST.Function>(CompileDefinition);
             mapped.Expressions.Register<AST.TypeDefinition>(CompileDefinition);
@@ -86,6 +87,7 @@ namespace ZSharp.Lang
                 AST.LiteralType.String => Result<HIRExpression>.Ok(new HIR.Code.StringLiteral(literal.Value)),
                 AST.LiteralType.True => Result<HIRExpression>.Ok(new HIR.Code.BooleanLiteral(true)),
                 AST.LiteralType.False => Result<HIRExpression>.Ok(new HIR.Code.BooleanLiteral(false)),
+                AST.LiteralType.Null => Result<HIRExpression>.Ok(new HIR.Code.NullLiteral()),
                 AST.LiteralType.Number => int.TryParse(literal.Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var integer)
                     ? Result<HIRExpression>.Ok(new HIR.Code.IntegerLiteral(integer))
                     : Result<HIRExpression>.Error($"{literal.Value} is too large for an Int32."),
@@ -267,6 +269,65 @@ namespace ZSharp.Lang
                 return Result<HIRExpression>.Error(error);
 
             return Result<HIRExpression>.Ok(new HIR.Code.Cast { Value = value!, Type = type! });
+        }
+
+        /// <summary>
+        /// <c>value is of T</c> tests whether the value is of a type. The only pattern so
+        /// far is a name, as in <c>value is name of T</c>, which also defines a variable of
+        /// the type and assigns it what matched, cast to the type. <c>_</c> names nothing.
+        /// </summary>
+        private static IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.IsOfExpression match)
+        {
+            if (compiler.CompileExpression(match.Expression).When(out var value).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            if (compiler.CompileExpression(match.OfType).When(out var type).Error(out error))
+                return Result<HIRExpression>.Error(error);
+
+            if (match.Name is not { Length: > 0 } name || name == "_")
+                return Result<HIRExpression>.Ok(new HIR.Code.Match { Value = value!, Pattern = type! });
+
+            return Named(compiler, name, match.OfType, value!, type!);
+        }
+
+        /// <summary>
+        /// A name pattern is a local like any other, defined where the match is by whatever
+        /// defines locals there, so it can be read and assigned after it. It is assigned
+        /// only if the value matched. The value is evaluated once.
+        /// </summary>
+        private static IResult<HIRExpression, Error> Named(ASTCompiler compiler, string name, AST.Expression typeSyntax, HIRExpression value, HIRExpression type)
+        {
+            if (compiler.CompileExpression(new AST.LetExpression { Name = name, Type = typeSyntax }).When(out var defined).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            if (Names(compiler)?.Get(name) is not { } variable)
+                return Result<HIRExpression>.Error($"The pattern {name} didn't define a name.");
+
+            var matched = new HIR.Code.Local(string.Empty, HIR.Infer.Value) { Init = value };
+            var result = new HIR.Code.Local(string.Empty, HIR.Infer.Value)
+            {
+                Init = new HIR.Code.Match { Value = new HIR.Code.Get(matched), Pattern = type }
+            };
+
+            return Result<HIRExpression>.Ok(new HIR.Code.BlockExpression
+            {
+                Statements =
+                [
+                    new HIR.Code.ExpressionStatement(defined!),
+                    new HIR.Code.Declare(matched),
+                    new HIR.Code.Declare(result),
+                    new HIR.Code.IfStatement
+                    {
+                        Condition = new HIR.Code.Get(result),
+                        Then = new HIR.Code.ExpressionStatement(new HIR.Code.Set
+                        {
+                            Target = variable,
+                            Value = new HIR.Code.Cast { Value = new HIR.Code.Get(matched), Type = type }
+                        })
+                    }
+                ],
+                Result = new HIR.Code.Get(result)
+            });
         }
 
         private static IResult<HIRStatement, Error> Compile(ASTCompiler compiler, AST.ExpressionStatement statement)

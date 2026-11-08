@@ -86,6 +86,19 @@ namespace ZSharp.Compiler
                     : cg.Cast(value, type);
             });
 
+            expressions.Register<HIR.Code.Match>(match =>
+            {
+                if (code.LoadExpression(match.Value).Error(out var error, out var value))
+                    return Result.Error(error);
+
+                if (code.LoadExpression(match.Pattern).Error(out error, out var pattern))
+                    return Result.Error(error);
+
+                return cg.Match(value, pattern).When(out var result).Error(out error)
+                    ? Result.Error(error)
+                    : Result.Ok(result!.Match);
+            });
+
             expressions.Register<HIR.Code.BlockExpression>(block =>
             {
                 if (Block(block.Statements).Error(out var error, out var statements))

@@ -45,6 +45,11 @@ namespace ZSharp.Compiler
         public static Code.Cast Cast(Code.Expression value, Code.Expression type)
             => new() { Value = value, Type = type };
 
+        public static Code.Match Match(Code.Expression value, Code.Expression pattern)
+            => new() { Value = value, Pattern = pattern };
+
+        public static Code.NullLiteral Null() => new();
+
         public static Code.Call Call(Code.Expression callee) => new() { Callee = callee };
 
         public static Code.Call With(Code.Call call, Code.Expression value)

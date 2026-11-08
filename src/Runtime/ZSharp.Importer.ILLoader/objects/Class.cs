@@ -16,6 +16,10 @@ namespace ZSharp.Importer.ILLoader.Objects
         , IRTCallable
         , ICTGetIndex
         , IRTImplicitCastTo
+        , IRTGetIndex
+        , IRTSetIndex
+        , IRTCastTo
+        , IRTTypeMatch
         , IILType
         , IAssignableTo
         , ICompileIRExpression
@@ -46,10 +50,97 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// Calling a type constructs an instance of it.
         /// </summary>
         public IResult Call(Argument[] arguments)
-            => Core.Compiler.ModuleScope.CG.Call(
+            => IL.IsValueType && arguments.Length == 0 && IL.GetConstructor(Type.EmptyTypes) is null
+                ? Result.Ok(new Literal(null, IL, loader))
+                : Core.Compiler.ModuleScope.CG.Call(
                 OverloadGroup.Of(IL.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
                 arguments
             );
+
+        /// <summary>
+        /// Casting a value converts it as C# casts it: as it would implicitly, or with a
+        /// numeric conversion that can lose information, or with what a type defines as an
+        /// explicit conversion.
+        /// </summary>
+        public IResult Cast(CompilerObject @object, CompilerObject type)
+            => Converted(@object, type, implicitly: false)
+            ?? Result.Error(new UnsupportedError($"{IL.Name} has no conversion to that type."));
+
+        /// <summary>
+        /// A conversion of a value of this type to another, as C# has it: numeric ones, and
+        /// those either type defines. A cast also has the conversions that can lose a value.
+        /// </summary>
+        private IResult? Converted(CompilerObject @object, CompilerObject type, bool implicitly)
+        {
+            if (!type.Is<IILType>(out var known) || known.GetILType() is not { } to || to == IL)
+                return null;
+
+            if (Conversions.IsNumeric(IL) && Conversions.IsNumeric(to) && (!implicitly || Conversions.Widens(IL, to)))
+                return Result.Ok(new Call(loader.Convert(IL, to), [@object], () => type));
+
+            // A cast also goes down, as in C#: to a type that derives from this one, or
+            // between an interface and a type that isn't sealed, which might implement it.
+            if (!implicitly && !IL.IsValueType && (to.IsAssignableTo(IL) || (to.IsInterface && !IL.IsSealed) || (IL.IsInterface && !to.IsSealed)))
+                return Result.Ok(new Call(loader.Downcast(IL, to), [@object], () => type));
+
+            var defined = Conversions.Defined(IL, to, "op_Implicit") ?? (implicitly ? null : Conversions.Defined(IL, to, "op_Explicit"));
+
+            return defined is null ? null : Core.Compiler.ModuleScope.CG.Call(new Method(loader, defined, null), [new(@object)]);
+        }
+
+        /// <summary>
+        /// Whether a value of this type is of another type, as C# tells it with <c>is</c>.
+        /// A value type is known to be of a type or not; a reference is checked as the
+        /// code runs, and <c>null</c> is of no type.
+        /// </summary>
+        public IResult<MatchResult, Error> Match(CompilerObject value, CompilerObject pattern)
+        {
+            if (!pattern.Is<IILType>(out var known) || known.GetILType() is not { } type)
+                return Result<MatchResult>.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a CLR type."));
+
+            CompilerObject match = IL.IsValueType
+                ? new Literal(type.IsAssignableFrom(IL), typeof(bool), loader)
+                : new Call(loader.IsOf(IL, type), [value], () => loader.Class(typeof(bool)));
+
+            return Result<MatchResult>.Ok(new MatchResult { Match = match });
+        }
+
+        /// <summary>
+        /// Indexing a value calls its indexers, as in C#: their getters and setters are its
+        /// methods, so overloading picks between indexers as between any methods.
+        /// </summary>
+        public IResult Index(CompilerObject @object, Argument[] arguments)
+        {
+            var indexers = Indexers();
+
+            if (indexers.Length == 0)
+                return Result.Error(new UnsupportedError($"{IL.Name} has no indexer."));
+
+            var getters = indexers.Where(indexer => indexer.GetMethod is { IsPublic: true }).Select(indexer => (CompilerObject)new Method(loader, indexer.GetMethod!, @object)).ToArray();
+
+            if (getters.Length == 0)
+                return Result.Error($"The indexer of {IL.Name} can't be read.");
+
+            if (Core.Compiler.ModuleScope.CG.Call(OverloadGroup.Of(getters), arguments).When(out var read).Error(out var error))
+                return Result.Error(error);
+
+            return Result.Ok(new Indexed(read!, value => Index(@object, arguments, value)));
+        }
+
+        public IResult Index(CompilerObject @object, Argument[] arguments, CompilerObject value)
+        {
+            var setters = Indexers()
+                .Where(indexer => indexer.SetMethod is { IsPublic: true })
+                .Select(indexer => (CompilerObject)new Method(loader, indexer.SetMethod!, @object))
+                .ToArray();
+
+            return setters.Length == 0
+                ? Result.Error($"The indexer of {IL.Name} can't be assigned.")
+                : Core.Compiler.ModuleScope.CG.Call(OverloadGroup.Of(setters), [.. arguments, new Argument(value)]);
+        }
+
+        private PropertyInfo[] Indexers()
+            => [.. IL.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(property => property.GetIndexParameters().Length > 0)];
 
         /// <summary>
         /// Giving a generic type its arguments, as in <c>List[Int32]</c>, instantiates it.
@@ -101,7 +192,9 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// stays as it is.
         /// </summary>
         public IResult ImplicitCast(CompilerObject @object, CompilerObject type)
-            => IL.IsValueType
+            => Converted(@object, type, implicitly: true) is { } converted
+                ? converted
+                : IL.IsValueType
             && Core.Compiler.ModuleScope.TS.IsAssignableTo(type, this)
             && !Core.Compiler.ModuleScope.TS.IsAssignableTo(this, type)
                 ? Result.Ok(new Call(loader.Box(IL), [@object], () => type))
@@ -134,12 +227,18 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ));
 
             if (IL.GetFields(flags).FirstOrDefault(field => Named(field, member)) is { } field)
-                return Result.Ok(new Accessor(
-                    receiver,
-                    () => loader.Class(field.FieldType),
-                    loader.Handle(field, isSet: false),
-                    field.IsInitOnly ? null : loader.Handle(field, isSet: true)
-                ));
+                // A constant, as an enum's member is, has no storage: it is its value.
+                return field.IsLiteral
+                    ? Result.Ok(new Literal(field.GetRawConstantValue(), field.FieldType, loader))
+                    : Result.Ok(new Accessor(
+                        receiver,
+                        () => loader.Class(field.FieldType),
+                        loader.Handle(field, isSet: false),
+                        field.IsInitOnly ? null : loader.Handle(field, isSet: true)
+                    ));
+
+            if (receiver is null && IL.GetNestedType(member, BindingFlags.Public) is { } nested)
+                return Result.Ok(loader.Class(nested));
 
             return Result.Error(new UnsupportedError($"{IL.Name} has no member named {member}."));
         }

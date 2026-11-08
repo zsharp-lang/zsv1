@@ -65,6 +65,9 @@ namespace ZSharp.Lang
 
             expressionParser.InfixR("=", 10);
             expressionParser.InfixL("<", 20);
+            expressionParser.InfixL(">", 20);
+            expressionParser.InfixL("<=", 20);
+            expressionParser.InfixL(">=", 20);
             expressionParser.InfixL("+", 50);
             expressionParser.InfixL("-", 50);
             expressionParser.InfixL("*", 70);

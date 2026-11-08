@@ -13,6 +13,9 @@ namespace Core.Runtime
         [Operator("*")] public static int Multiply(int left, int right) => left * right;
         [Operator("/")] public static int Divide(int left, int right) => left / right;
         [Operator("<")] public static bool LessThan(int left, int right) => left < right;
+        [Operator(">")] public static bool GreaterThan(int left, int right) => left > right;
+        [Operator("<=")] public static bool AtMost(int left, int right) => left <= right;
+        [Operator(">=")] public static bool AtLeast(int left, int right) => left >= right;
         [Operator("==")] public static bool Equal(int left, int right) => left == right;
         [Operator("!=")] public static bool NotEqual(int left, int right) => left != right;
 
@@ -21,12 +24,13 @@ namespace Core.Runtime
         [Operator("*")] public static double Multiply(double left, double right) => left * right;
         [Operator("/")] public static double Divide(double left, double right) => left / right;
         [Operator("<")] public static bool LessThan(double left, double right) => left < right;
+        [Operator(">")] public static bool GreaterThan(double left, double right) => left > right;
+        [Operator("<=")] public static bool AtMost(double left, double right) => left <= right;
+        [Operator(">=")] public static bool AtLeast(double left, double right) => left >= right;
         [Operator("==")] public static bool Equal(double left, double right) => left == right;
         [Operator("!=")] public static bool NotEqual(double left, double right) => left != right;
 
         [Operator("+")] public static string Add(string left, string right) => left + right;
-        [Operator("==")] public static bool Equal(string left, string right) => left == right;
-        [Operator("!=")] public static bool NotEqual(string left, string right) => left != right;
 
         [Operator("or")] public static bool Or(bool left, bool right) => left || right;
         [Operator("==")] public static bool Equal(bool left, bool right) => left == right;

@@ -87,6 +87,7 @@ namespace ZSharp.Importer.ILLoader
             loader.Definitions.Register<Package.DotNet.Module>(LoadModule);
 
             loader.Instances.Register<Package.DotNet.ExposedObject>(LoadExposed);
+            loader.Instances.Register<Package.DotNet.Operator>(node => Result.Ok(new Objects.ClrOperator(this, node.Name)));
             loader.Instances.Register<Package.DotNet.Field>(field => ModuleGlobal(field) is { } global
                 ? Result.Ok(global)
                 : Result.Error($"Field {field.Name} can only be reached through its class."));
@@ -128,6 +129,7 @@ namespace ZSharp.Importer.ILLoader
             code.Expressions.Register<HIR.Code.DecimalLiteral>(literal =>
                 Result.Ok(new Objects.Literal(literal.Value, typeof(double), this))
             );
+            code.Expressions.Register<HIR.Code.NullLiteral>(_ => Result.Ok(new Objects.Null(this)));
 
             loadReturn = code.Statements.Register<HIR.Code.Return>(LoadReturn);
         }
@@ -194,6 +196,51 @@ namespace ZSharp.Importer.ILLoader
 
         internal Platform.Runtime.Runtime Runtime => runtime;
 
+        private readonly Dictionary<(string, Type, Type), LIR.FunctionHandle> instructions = [];
+
+        /// <summary>
+        /// A function of one value that the runtime maps to instructions, as a conversion is,
+        /// made once for each operation and pair of types.
+        /// </summary>
+        private LIR.FunctionHandle Instruction(string operation, Type from, Type to, Action<System.Reflection.Emit.ILGenerator> emit)
+        {
+            if (instructions.TryGetValue((operation, from, to), out var known))
+                return known;
+
+            var signature = new LIR.Signature { ReturnType = Handle(to) };
+            signature.Parameters.Add(new(Handle(from)) { Name = "value" });
+
+            var handle = new LIR.FunctionHandle(signature);
+            runtime.Map(handle, emit);
+
+            return instructions[(operation, from, to)] = handle;
+        }
+
+        /// <summary>
+        /// The function that converts a number from one numeric type to another.
+        /// </summary>
+        internal LIR.FunctionHandle Convert(Type from, Type to)
+            => Instruction("convert", from, to, il => Conversions.Emit(il, from, to));
+
+        /// <summary>
+        /// The function that casts a value to a type it might be of, which fails if it is
+        /// not: a reference is checked, and a value type is unboxed.
+        /// </summary>
+        internal LIR.FunctionHandle Downcast(Type from, Type to)
+            => Instruction("downcast", from, to, il =>
+                il.Emit(to.IsValueType ? System.Reflection.Emit.OpCodes.Unbox_Any : System.Reflection.Emit.OpCodes.Castclass, to));
+
+        /// <summary>
+        /// The function that tells whether a value is of a type. <c>null</c> is of none.
+        /// </summary>
+        internal LIR.FunctionHandle IsOf(Type from, Type to)
+            => Instruction($"is {to.AssemblyQualifiedName}", from, typeof(bool), il =>
+            {
+                il.Emit(System.Reflection.Emit.OpCodes.Isinst, to);
+                il.Emit(System.Reflection.Emit.OpCodes.Ldnull);
+                il.Emit(System.Reflection.Emit.OpCodes.Cgt_Un);
+            });
+
         private readonly Dictionary<(Type, MethodInfo), LIR.FunctionHandle> delegates = [];
 
         /// <summary>
@@ -226,6 +273,18 @@ namespace ZSharp.Importer.ILLoader
         /// </summary>
         internal List<HIR.Code.Parameter>? DefinedParameters(MethodBase method)
             => definedParameters.TryGetValue(method, out var parameters) ? parameters : null;
+
+        /// <summary>
+        /// The operators CLR types define, by the syntax each stands for, so an operator in
+        /// Z# applies to what its operands' types define, as in C#.
+        /// </summary>
+        public IEnumerable<(string Operator, HIR.Instance Function)> ClrOperators()
+            => new (string, string)[]
+            {
+                ("+", "op_Addition"), ("-", "op_Subtraction"), ("*", "op_Multiply"), ("/", "op_Division"),
+                ("<", "op_LessThan"), (">", "op_GreaterThan"), ("<=", "op_LessThanOrEqual"), (">=", "op_GreaterThanOrEqual"),
+                ("==", "op_Equality"), ("!=", "op_Inequality"),
+            }.Select(pair => (pair.Item1, (HIR.Instance)new Package.DotNet.Operator(pair.Item2)));
 
         /// <summary>
         /// The functions the methods of a type say operators stand for.
