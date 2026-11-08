@@ -46,7 +46,7 @@ namespace ZSharp.Lang.DotNet
                 () => container.Compile(
                     fork,
                     module.Body,
-                    (member, value) => new Code.ExpressionStatement(CodeBody.Add(
+                    (member, value) => new Code.ExpressionStatement(body.Register(
                         self,
                         ReferenceEquals(member.UnderlyingType, il.Load(typeof(Package.DotNet.Method)))
                             ? nameof(Package.DotNet.Module.Methods)

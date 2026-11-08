@@ -44,7 +44,7 @@ namespace ZSharp.Lang.DotNet
             var filled = container.Compile(
                 fork,
                 definition.Content?.Statements ?? [],
-                (member, value) => new Code.ExpressionStatement(CodeBody.Add(self, ListOf(member), value))
+                (member, value) => new Code.ExpressionStatement(body.Register(self, ListOf(member), value))
             );
 
             if (filled.When(out var block).Error(out var error))

@@ -9,6 +9,7 @@ namespace ZSharp.Compiler
     public sealed class OverloadGroup
         : CompilerObject
         , ICTCallable
+        , ICTGetIndex
     {
         private readonly CompilerObject[] candidates;
 
@@ -25,5 +26,11 @@ namespace ZSharp.Compiler
 
         public IResult Call(Argument[] arguments)
             => Scope.Overloading.Apply(candidates, candidate => Scope.CG.Call(candidate, arguments));
+
+        /// <summary>
+        /// Indexing a group, as giving generic arguments does, is applied to each candidate.
+        /// </summary>
+        public IResult Index(Argument[] arguments)
+            => Scope.Overloading.Apply(candidates, candidate => Scope.CG.Index(candidate, arguments));
     }
 }

@@ -118,6 +118,22 @@ namespace ZSharp.Compiler
                 return cg.Call(callee, [.. arguments]);
             });
 
+            expressions.Register<HIR.Code.Index>(index =>
+            {
+                if (code.LoadExpression(index.Target).Error(out var error, out var target))
+                    return Result.Error(error);
+
+                var arguments = new List<Argument>();
+
+                foreach (var argument in index.Arguments)
+                    if (code.LoadExpression(argument.Value).Error(out error, out var value))
+                        return Result.Error(error);
+                    else
+                        arguments.Add(new(argument.Name, value));
+
+                return cg.Index(target, [.. arguments]);
+            });
+
             expressions.Register<HIR.Code.Set>(set =>
             {
                 if (code.LoadExpression(set.Target).Error(out var error, out var target))

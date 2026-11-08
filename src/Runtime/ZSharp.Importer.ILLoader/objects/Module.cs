@@ -12,12 +12,16 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         public IResult Member(MemberName member)
         {
+            // Types imported under one name, such as the arities of a generic family, are
+            // its overloads: giving arguments picks the one they fit.
             var imported = il
                 .GetCustomAttributes<ImportTypeAttribute>()
-                .FirstOrDefault(attribute => (attribute.Alias ?? attribute.Type.Name) == member);
+                .Where(attribute => (attribute.Alias ?? attribute.Type.Name) == member)
+                .Select(attribute => (CompilerObject)loader.Class(attribute.Type))
+                .ToArray();
 
-            if (imported is not null)
-                return Result.Ok(loader.Class(imported.Type));
+            if (imported.Length > 0)
+                return Result.Ok(OverloadGroup.Of(imported));
 
             var types = il.GetTypes();
 

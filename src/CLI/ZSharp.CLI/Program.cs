@@ -118,6 +118,8 @@ mappedBinder.Apply();
 var language = new Language(binder);
 
 Core.ZSharp.ModuleScope.Compiler = compiler;
+Core.ZSharp.ModuleScope.Runner = statement => runner.RunStatement(statement);
+Core.ZSharp.ModuleScope.Evaluator = expression => runner.EvaluateExpression(expression);
 Core.ZSharp.ModuleScope.Importer = importer.Import;
 DocumentCompiler.Install(loader, Scope.HIRLoader);
 language.Install(mappedCompiler, IsUnderlyingType);

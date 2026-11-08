@@ -64,6 +64,9 @@ namespace ZSharp.Compiler
             values.Register<double>(value => Ok(new Code.DecimalLiteral(value)));
             values.Register<HIR.Instance>(instance => Ok(new Code.Get(instance)));
 
+            // Code that is a value is already in the form code takes, so it encodes to itself.
+            values.Register<Code.Expression>(expression => Ok(expression));
+
             // A class's value is its type object, which stands for the class's own node.
             values.Register<Type>(type => Ok(new Code.Get(il.Load(type))));
 

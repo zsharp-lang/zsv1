@@ -324,6 +324,21 @@ public types. `core:runtime`, `core:compiler` and `std:io` are all loaded this w
 That is how an import finds a library, not what a module is: a module defined in Z#
 reaches the CLR as a static class, through LIR.
 
+Generics on the CLR are written as in `zsv1`: a generic type gets its arguments by
+indexing it, as in `List[Int32]`, and so does a generic method, as in `f[Int32](x)`.
+Indexing a generic type definition instantiates it, and indexing an overload group
+applies to each candidate, so the arities a library imports under one name, as
+`core:runtime` does with `Func` and `Action`, are overloads that the arguments pick
+from. A constructed type is described in HIR as a `GenericInstance` of its definition
+and its arguments, and loading one instantiates the definition with what its arguments
+stand for. Types are only given explicitly so far; inferring them is for later.
+
+The standard definitions are written in pure Z#, so the CLR definitions come first:
+using CLR generics, then interfaces and virtual dispatch, then methods as values, and
+then defining generic CLR types and methods. An interface is a type definition with
+`of DotNet_Interface`, and `@virtual`, `@abstract` and `@override` come from
+`core:runtime`, as `@static` does, so methods aren't virtual unless marked.
+
 ## Composition
 
 There is no pipeline and no platform as a concept.
@@ -946,7 +961,12 @@ object, and each one after it receives the result of the one before. A decorator
 shouldn't go too deep, because definitions it refers to may not be filled entirely yet.
 
 For a definition, the result can be another definition. A definition gets the normal
-registration code, and anything else is emitted directly. A decoration is a call that
+registration code, and anything else is emitted directly. A container registers through
+an overloaded `Register`, so overloading decides by what the decorators gave: a
+definition goes in its list, and code is emitted, which registers nothing. So a
+definition decorated with `@ct` is loaded where it is and not registered, wherever it
+is: in a container, in a body, or in a document. A result that is neither, such as an
+`Export` in a module, matches no overload, so it is an error while compiling. A decoration is a call that
 runs during the construction of the containing definition, so emitting a result means
 handing it to that parent: in a reified body it goes into the body, and in plain code
 it runs.
@@ -954,8 +974,21 @@ it runs.
 A decorator is written `@expression` before a statement, where the expression is names,
 member accesses and calls, as in `@api.post("/login")`. Several decorators apply nearest
 first, so in `@a @b fun f()`, `b` receives the method and `a` receives what `b` returned.
-So far only definitions can be decorated. `core:runtime` supplies `@explicitThis` and
-`@static` for .NET methods and constructors.
+Definitions, statements and parameters can be decorated; expressions can't yet.
+`core:runtime` supplies `@explicitThis` and `@static` for .NET methods and constructors.
+
+A decorated statement that isn't a definition gives its decorators the statement as
+HIR: the code that builds its node, reified. An expression statement gives them its
+expression. In plain code, such as a document or a module's construction code, the
+statement is the call of its decorators, made as the code runs, and what they give is
+dropped. In a body, the call is made as the body is built, and the body gets what they
+gave in the statement's place: nothing for nothing, code as it is, and any other value
+is a statement with no effect, so it is dropped. So `@ct print("Hello")` in a body
+compiles to building code that adds what `ct(Call(print, ["Hello"]))` gives.
+
+A parameter's decorators get its node as it is built, and what they give is the
+parameter: it is what the function's parameters hold and what its name is bound to, so
+a decorator can turn a parameter into another kind, such as an injected one.
 
 A decorator can be defined in Z# as a static method that takes the definition's HIR
 node. A decorator that takes arguments, as in `@named("x")`, has to return something
@@ -963,10 +996,18 @@ callable that captures them, which needs function values and captures in Z#. Nei
 exists yet: a `fun` is always a method of a class. `@export("name")` works because its
 factory is C#.
 
-This means a decorator can act as a code transformer. `@ct` is one: it takes an HIR
-statement or expression and evaluates it when it is called, through the HIR
-interpreter. A result that is a value has to be represented as HIR as well. A constant
-is wrapped, a type object is reflected on, raw HIR is returned as it is, and so on.
+This means a decorator can act as a code transformer. `ct`, from `core:zsharp`, is an
+ordinary function: given an expression as HIR it evaluates it and gives the value, given
+a statement it runs it and gives nothing, and given a definition it loads it and gives
+code that refers to what it loaded: the encoding of its runtime object, a `Get` of it.
+`load(def)` is `ct(Get(def))`, which gives the runtime object itself.
+As a decorator it is the same function, called as the code around it is constructed;
+the decorator handler is what puts the result back into code. A result that is a value
+is encoded through the mapper: a constant is wrapped, a type object is reflected on,
+and code is its own encoding. More overloads can give code instead of running it, as a
+`ct(For)` could give the flattened loop; overloads are chosen by the static type of the
+node given, as for any call. Using `@ct` in a definition should be done with care,
+because what it reaches may not be filled yet.
 
 ### Members of a class
 
@@ -1053,7 +1094,8 @@ without HIR implementing it. There are three cases:
   in the parent.
 
 `MappedBinder` implements it with registered merge and shadow rules and a policy for
-conflicts nothing merges, which is an error by default. The language registers a rule
+conflicts nothing merges, which is an error by default. A name bound again to what it
+already stands for, as importing it again does, isn't a conflict. The language registers a rule
 that a `let` bound over another `let` overrides it, which is how `let` reuses a name.
 
 A definition compiles roughly to a block that declares the local holding its HIR, as
@@ -1176,7 +1218,10 @@ default can't use the other parameters yet.
 How a parameter gets its value is its own, so other kinds fit without changing calls.
 An injected parameter takes nothing from the stream and gives the value it is injected
 with, so it needs no default value standing in for "not given", and callers never see
-it. This generalizes default values and dependency injection. A parameter that takes
+it. This generalizes default values and dependency injection. A kind is written with a
+parameter decorator that gives one, as an `@inject` decorator gives an injected
+parameter; the IL loader's `LoadParameter` is what such a kind registers to be its
+variable in the code it belongs to. A parameter that takes
 the rest of the arguments, `...rest` or `{...rest}`, is another kind: it takes every
 positional or every named argument left. It isn't supported yet, because its values
 have to be gathered into a collection, which LIR can't build yet.
@@ -1250,7 +1295,9 @@ The `as` cast marking such a definition is not settled.
   the import: fine-grained imports through arguments. Running the source at compile
   time moves its side effects there, as with `of`.
 - An import whose source refers to a variable, as in `import { a } from src` where
-  `src` is a parameter, can only run as the definition it is in is constructed. At
+  `src` is a parameter, can only run as the definition it is in is constructed.
+- A document runs as it is compiled, so its imports always run while compiling, and
+  their names are bound to what they gave. At
   compile time its names are only an `Instance`, so only code that is built, such as a
   body, can use them. Using one in a type needs a lookup on HIR structure while
   constructing, which isn't there yet.

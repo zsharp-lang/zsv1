@@ -21,11 +21,11 @@ namespace ZSharp.Parser
                     VarKwArgs = varKwArgs,
                 };
 
-            if (parser.Is(TokenType.Identifier))
+            if (StartsParameter(parser))
             {
                 args = [ParseParameter(parser)];
 
-                while (parser.Is(TokenType.Comma, eat: true) && parser.Is(TokenType.Identifier))
+                while (parser.Is(TokenType.Comma, eat: true) && StartsParameter(parser))
 					args.Add(ParseParameter(parser));
 			}
 
@@ -38,11 +38,11 @@ namespace ZSharp.Parser
 
             if (parser.Is(TokenType.LCurly, eat: true))
             {
-                if (parser.Is(TokenType.Identifier))
+                if (StartsParameter(parser))
 				{
 					kwArgs = [ParseParameter(parser)];
 
-					while (parser.Is(TokenType.Comma, eat: true) && parser.Is(TokenType.Identifier))
+					while (parser.Is(TokenType.Comma, eat: true) && StartsParameter(parser))
 						kwArgs.Add(ParseParameter(parser));
 				}
 
@@ -61,8 +61,17 @@ namespace ZSharp.Parser
             };
 		}
 
+        private static bool StartsParameter(Parser parser)
+            => parser.Is(TokenType.Identifier) || parser.Is(Symbols.Decorator);
+
         public static Parameter ParseParameter(Parser parser)
         {
+            var decorators = new List<Expression>();
+
+            while (parser.Is(Symbols.Decorator, eat: true))
+                decorators.Add((parser.GetParserFor<Expression>() as ExpressionParser ?? throw new ParseError())
+                    .ParseExpression(parser, DecoratorBindingPower));
+
 			var name = parser.Eat(TokenType.Identifier);
 
             Token? alias = null;
@@ -89,6 +98,7 @@ namespace ZSharp.Parser
                 Name = name.Value,
                 Type = type,
 				Initializer = initializer,
+                Decorators = decorators,
 			};
 		}
     }

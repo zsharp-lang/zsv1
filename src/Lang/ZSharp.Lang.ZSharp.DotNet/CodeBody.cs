@@ -79,6 +79,21 @@ namespace ZSharp.Lang.DotNet
                         Value = initializer!
                     }));
 
+            // A parameter's decorators get it as it is built, and what they give is the
+            // parameter: it may be of another kind, as an injected one is.
+            if (parameter.Decorators.Count > 0)
+            {
+                if (Language.CompileDecorators(compiler, parameter.Decorators).When(out var decorators).Error(out var error))
+                    return error;
+
+                local = new Code.Local(local.Name, il.Load(typeof(Code.Parameter)))
+                {
+                    Init = Language.Decorate(new Code.Get(local), decorators!)
+                };
+
+                block.Statements.Add(new Code.Declare(local));
+            }
+
             block.Statements.Add(new Code.ExpressionStatement(Add(owner, list, new Code.Get(local))));
 
             return language.Bind(compiler, parameter.Alias ?? parameter.Name, new Code.Get(local));
@@ -193,11 +208,21 @@ namespace ZSharp.Lang.DotNet
 
             // The import runs in the code that builds the body, so nothing of it is left
             // in the body.
-            fork.Statement = (current, statement) => statement is AST.ImportStatement import
-                ? Imported(current, import).When(out var holder).Error(out var error)
+            fork.Statement = (current, statement) => statement switch
+            {
+                AST.ImportStatement import => Imported(current, import).When(out var holder).Error(out var error)
                     ? Result<Code.Statement>.Error(error)
-                    : holder is null ? Result<Code.Statement>.Ok(new Code.Block()) : Declared(block, holder)
-                : statements(current, statement);
+                    : holder is null ? Result<Code.Statement>.Ok(new Code.Block()) : Declared(block, holder),
+
+                // A decorated statement's decorators are called as the body is built, and the
+                // body gets what they gave in its place.
+                AST.DecoratedStatement decorated when Language.Undecorate(decorated, out var decorators) is not AST.DefinitionStatement
+                    => Language.Decorated(current, Language.Undecorate(decorated, out _), decorators).When(out var call).Error(out var failure)
+                        ? Result<Code.Statement>.Error(failure)
+                        : Result<Code.Statement>.Ok(new Code.UnquoteStatement(Node(nameof(Nodes.Place), call!))),
+
+                _ => statements(current, statement)
+            };
 
             return fork;
         }
@@ -316,6 +341,12 @@ namespace ZSharp.Lang.DotNet
 
         public static Code.Call Add(Code.Local owner, string list, Code.Expression value)
             => Call(new Code.NamedMember { Target = Member(owner, list), Name = "Add" }, value);
+
+        /// <summary>
+        /// Code that registers what a definition's decorators gave in one of the owner's lists.
+        /// </summary>
+        public Code.Call Register(Code.Local owner, string list, Code.Expression value)
+            => Call(new Code.NamedMember { Target = new Code.Get(il.Load(typeof(Registration))), Name = nameof(Registration.Register) }, Member(owner, list), value);
 
         public static Code.NamedMember Member(Code.Local owner, string name)
             => new() { Target = new Code.Get(owner), Name = name };

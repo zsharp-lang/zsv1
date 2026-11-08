@@ -29,6 +29,7 @@ namespace ZSharp.Lang.DotNet
         private readonly HIR.Instance capture = il.Load(typeof(Code.Capture));
         private readonly HIR.Instance positional = il.Load(typeof(Code.PositionalParameter));
         private readonly HIR.Instance named = il.Load(typeof(Code.NamedParameter));
+        private readonly HIR.Instance decorated = il.Load(typeof(Code.Parameter));
 
         public IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition node, Code.Local self)
         {
@@ -136,7 +137,8 @@ namespace ZSharp.Lang.DotNet
 
                 if (!ReferenceEquals(holder.Type, owner.local)
                     && !ReferenceEquals(holder.Type, owner.positional)
-                    && !ReferenceEquals(holder.Type, owner.named))
+                    && !ReferenceEquals(holder.Type, owner.named)
+                    && !ReferenceEquals(holder.Type, owner.decorated))
                     return resolved;
 
                 if (Binding(name, holder) is not { } scope)

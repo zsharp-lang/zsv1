@@ -14,6 +14,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
         , IRTCallable
+        , ICTGetIndex
         , IRTImplicitCastTo
         , IILType
         , IAssignableTo
@@ -49,6 +50,30 @@ namespace ZSharp.Importer.ILLoader.Objects
                 OverloadGroup.Of(IL.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
                 arguments
             );
+
+        /// <summary>
+        /// Giving a generic type its arguments, as in <c>List[Int32]</c>, instantiates it.
+        /// </summary>
+        public IResult Index(Argument[] arguments)
+        {
+            if (!IL.IsGenericTypeDefinition)
+                return Result.Error(new UnsupportedError($"{IL.Name} is not generic."));
+
+            if (loader.Types(arguments) is not { } types)
+                return Result.Error($"The arguments of {IL.Name} must be types.");
+
+            if (types.Length != IL.GetGenericArguments().Length)
+                return Result.Error($"{IL.Name} takes {IL.GetGenericArguments().Length} type arguments, not {types.Length}.");
+
+            try
+            {
+                return Result.Ok(loader.Class(IL.MakeGenericType(types)));
+            }
+            catch (ArgumentException exception)
+            {
+                return Result.Error(exception.Message);
+            }
+        }
 
         /// <summary>
         /// A value of a delegate type is called through its <c>Invoke</c> method, as in C#.

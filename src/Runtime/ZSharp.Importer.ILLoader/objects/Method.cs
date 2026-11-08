@@ -11,7 +11,29 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTCallable
         , ICompileIRReference<LIR.ICallable>
         , ISpecific
+        , ICTGetIndex
     {
+        /// <summary>
+        /// Giving a generic method its arguments, as in <c>f[Int32]</c>, instantiates it.
+        /// </summary>
+        public IResult Index(Argument[] arguments)
+        {
+            if (method is not MethodInfo { IsGenericMethodDefinition: true } generic)
+                return Result.Error(new UnsupportedError($"{method.Name} is not generic."));
+
+            if (loader.Types(arguments) is not { } types || types.Length != generic.GetGenericArguments().Length)
+                return Result.Error($"{method.Name} takes {generic.GetGenericArguments().Length} type arguments.");
+
+            try
+            {
+                return Result.Ok(new Method(loader, generic.MakeGenericMethod(types), receiver));
+            }
+            catch (ArgumentException exception)
+            {
+                return Result.Error(exception.Message);
+            }
+        }
+
         public IResult Call(Argument[] arguments)
         {
             if (Arguments.Match(Matching(), arguments) is not { } values)

@@ -39,6 +39,7 @@ namespace ZSharp.Lang
             mapped.Expressions.Register<AST.IdentifierExpression>(Compile);
             mapped.Expressions.Register<AST.LiteralExpression>(Compile);
             mapped.Expressions.Register<AST.CallExpression>(Compile);
+            mapped.Expressions.Register<AST.IndexExpression>(Compile);
             mapped.Expressions.Register<AST.BinaryExpression>(Compile);
             mapped.Expressions.Register<AST.CastExpression>(Compile);
             mapped.Expressions.Register<AST.LetExpression>(Compile);
@@ -108,6 +109,22 @@ namespace ZSharp.Lang
                     arguments.Add(new() { Name = argument.Name, Value = value! });
 
             return Result<HIRExpression>.Ok(new HIR.Code.Call { Callee = callee!, Arguments = arguments });
+        }
+
+        private IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.IndexExpression index)
+        {
+            if (compiler.CompileExpression(index.Target).When(out var target).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            var arguments = new List<HIR.Code.Argument>();
+
+            foreach (var argument in index.Arguments)
+                if (compiler.CompileExpression(argument.Value).When(out var value).Error(out error))
+                    return Result<HIRExpression>.Error(error);
+                else
+                    arguments.Add(new() { Name = argument.Name, Value = value! });
+
+            return Result<HIRExpression>.Ok(new HIR.Code.Index { Target = target!, Arguments = arguments });
         }
 
         private IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.BinaryExpression binary)
@@ -265,10 +282,46 @@ namespace ZSharp.Lang
         private IResult<HIRStatement, Error> Compile(ASTCompiler compiler, AST.DefinitionStatement statement)
             => Compile(compiler, statement, []);
 
+        /// <summary>
+        /// A decorated statement that isn't a definition is, in plain code, a call of its
+        /// decorators on the statement as HIR, made as the code runs. What they give is
+        /// dropped. A meta-compiler whose code is built, as a body is, places it instead.
+        /// </summary>
         private IResult<HIRStatement, Error> Compile(ASTCompiler compiler, AST.DecoratedStatement statement)
-            => Undecorate(statement, out var decorators) is AST.DefinitionStatement definition
-                ? Compile(compiler, definition, decorators)
-                : Result<HIRStatement>.Error("Only a definition can be decorated so far.");
+        {
+            if (Undecorate(statement, out var decorators) is AST.DefinitionStatement definition)
+                return Compile(compiler, definition, decorators);
+
+            return Decorated(compiler, Undecorate(statement, out _), decorators).When(out var call).Error(out var error)
+                ? Result<HIRStatement>.Error(error)
+                : Result<HIRStatement>.Ok(new HIR.Code.ExpressionStatement(call!));
+        }
+
+        /// <summary>
+        /// The call of decorators on a statement, which they are given as HIR: the code
+        /// that builds the statement's node. An expression statement gives them its
+        /// expression, so <c>@ct print("x")</c> calls <c>ct</c> with the call of <c>print</c>.
+        /// </summary>
+        public static IResult<HIRExpression, Error> Decorated(ASTCompiler compiler, AST.Statement statement, List<AST.Expression> decorators)
+        {
+            if (CompileDecorators(compiler, decorators).When(out var compiledDecorators).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            IResult<HIRExpression, Error> reified;
+
+            if (statement is AST.ExpressionStatement { Expression: var expression })
+                reified = compiler.CompileExpression(expression).When(out var compiled).Error(out error)
+                    ? Result<HIRExpression>.Error(error)
+                    : Core.Compiler.ModuleScope.HIRReifier.ReifyExpression(compiled!);
+            else
+                reified = compiler.CompileStatement(statement).When(out var compiled).Error(out error)
+                    ? Result<HIRExpression>.Error(error)
+                    : Core.Compiler.ModuleScope.HIRReifier.ReifyStatement(compiled!);
+
+            return reified.When(out var node).Error(out error)
+                ? Result<HIRExpression>.Error(error)
+                : Result<HIRExpression>.Ok(Decorate(node!, compiledDecorators!));
+        }
 
         private IResult<HIRStatement, Error> Compile(ASTCompiler compiler, AST.DefinitionStatement statement, List<AST.Expression> decorators)
         {

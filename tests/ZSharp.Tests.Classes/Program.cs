@@ -45,6 +45,11 @@ new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).
 CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
 il.Install(mapped, mappedCode);
 
+// A kind of parameter defined outside the toolchain: it is injected, so a call gives it
+// nothing, and the code it belongs to uses it as any parameter.
+mapped.Definitions.Register<Injected>(parameter => Result<ZSharp.MIR.CompilerObject>.Ok(new InjectedMatch(parameter.Value)));
+mapped.Instances.Register<Injected>(parameter => il.LoadParameter(parameter));
+
 var reifier = new MappedReifier(Scope.HIRReifier);
 reifier.Apply();
 new CodeReifiers(Scope.HIRReifier, il).Register(reifier);
@@ -75,6 +80,8 @@ mappedBinder.Apply();
 var language = new Language(binder);
 
 Core.ZSharp.ModuleScope.Compiler = compiler;
+Core.ZSharp.ModuleScope.Runner = statement => runner.RunStatement(statement);
+Core.ZSharp.ModuleScope.Evaluator = expression => runner.EvaluateExpression(expression);
 DocumentCompiler.Install(mapped, Scope.HIRLoader);
 
 var core = new ZSharp.Importer.String.LibraryImporter("core");
@@ -109,7 +116,7 @@ document.Scope.Add("Boolean", new C.Get(il.Load(typeof(bool))));
 document.Scope.Add("Int32", new C.Get(il.Load(typeof(int))));
 document.Scope.Add("Keep2", new C.NamedMember { Target = probe, Name = "Keep2" });
 document.Scope.Add("Which", new C.NamedMember { Target = probe, Name = "Which" });
-foreach (var (name, member) in new[] { ("PairOf", "Pair"), ("GreetWith", "Greet"), ("NamedBy", "Named"), ("NextNumber", "Next") })
+foreach (var (name, member) in new[] { ("PairOf", "Pair"), ("GreetWith", "Greet"), ("NamedBy", "Named"), ("NextNumber", "Next"), ("Same", "Same") })
     document.Scope.Add(name, new C.NamedMember { Target = probe, Name = member });
 document.Scope.Add("Either", new C.NamedMember { Target = probe, Name = "Either" });
 
@@ -117,8 +124,10 @@ var coreRuntime = new C.Get(il.Load(typeof(Core.Runtime.ModuleScope).Module));
 document.Scope.Add("explicitThis", new C.NamedMember { Target = coreRuntime, Name = "explicitThis" });
 document.Scope.Add("static", new C.NamedMember { Target = coreRuntime, Name = "static" });
 document.Scope.Add("export", new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "export" });
+foreach (var name in new[] { "ct", "load" })
+    document.Scope.Add(name, new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = name });
 
-foreach (var decorator in new[] { "first", "second", "mark", "markMethod" })
+foreach (var decorator in new[] { "first", "second", "mark", "markMethod", "seen", "twice", "inject" })
     document.Scope.Add(decorator, new C.NamedMember { Target = probe, Name = decorator });
 document.Scope.Add("Object", new C.Get(il.Load(typeof(object))));
 document.Scope.Add("DotNet_Class", new C.Get(il.Load(typeof(Package.DotNet.Class))));
@@ -1013,8 +1022,8 @@ Try("a decorator can be defined in Z#", () =>
 Try("a decorator is type checked", () =>
     Run("@markMethod class NotAMethod {}") is { } e && e.Contains("can't be called with these arguments"));
 
-Try("only a definition can be decorated", () =>
-    Run("""@mark Keep("x");""") is { } e && e.Contains("Only a definition"));
+Try("a decorator that doesn't take a statement can't decorate one", () =>
+    Run("""@mark Keep("x");""") is { } e && e.Contains("can't be called with these arguments"));
 
 // ---- Binding names
 
@@ -1924,6 +1933,145 @@ Try("a function builds a module that imports, has a let and a function, and the 
     return (string)Kept() == "Hello, Z#";
 });
 
+// ---- ct and statement decorators
+
+Try("ct evaluates an expression given as HIR", () =>
+    Core.ZSharp.ModuleScope.CT(new C.StringLiteral("given")) is "given");
+
+Try("load gives a definition's runtime object", () =>
+    Run("""
+        let made107 = class LoadMe107 {} as DotNet_Class;
+        Keep(load(made107));
+        """) is null && Kept() is Type { Name: "LoadMe107" });
+
+Try("a decorator on a statement gets the statement as HIR, and the statement doesn't run", () =>
+{
+    Probe.Seen.Clear();
+
+    return ResetKept()
+        && Run("""@seen Keep("not run");""") is null
+        && Probe.Kept is []
+        && Probe.Seen is [C.Call];
+});
+
+Try("@ct runs a statement as the code around it runs", () =>
+    Run("""@ct Keep("ran");""") is null && (string)Kept() == "ran");
+
+Try("@ct in a body runs as the body is built, and leaves nothing in it", () =>
+    ResetKept()
+    && Run("""
+        class CtBody108 {
+            @static fun f(): String {
+                @ct Keep("while building");
+                return "called";
+            }
+        }
+        """) is null
+    && Probe.Kept is ["while building"]
+    && ResetKept()
+    && Run("Keep(CtBody108.f());") is null
+    && Probe.Kept is ["called"]);
+
+Try("a decorator in a body places the code it gives", () =>
+    ResetKept()
+    && Run("""
+        class Twice109 {
+            @static fun f() { @twice Keep("again"); }
+        }
+        Twice109.f();
+        """) is null
+    && Probe.Kept is ["again", "again"]);
+
+Try("@ct on a definition in a module loads it as the module is built, and doesn't register it", () =>
+{
+    if (Run("""
+        module M112 {
+            @ct class Loaded112 {}
+            class Registered112 {}
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    var module = (Package.DotNet.Module)((C.Reference)((C.Get)document.Scope.Get("M112")!).Instance).Value!;
+    return module.Definitions.Select(definition => ((Package.DotNet.Class)definition).Name).SequenceEqual(["Registered112"])
+        && Probe.LastType("Loaded112") is not null;
+});
+
+Try("@ct on a definition in a document loads it", () =>
+    Run("@ct class Loaded113 {}") is null && Probe.LastType("Loaded113") is not null);
+
+Try("@ct on a definition in a body loads it as the body is built", () =>
+    Run("""
+        class Holder114 {
+            @static fun f() { @ct class Loaded114 {}; }
+        }
+        """) is null && Probe.LastType("Loaded114") is not null);
+
+// ---- Parameter decorators
+
+Try("a decorator makes a parameter injected, so a call leaves it out", () =>
+    Run("""
+        class Inject110 {
+            @static fun greet(name: String, @inject greeting: String): String { return greeting + ", " + name; }
+        }
+        Keep(Inject110.greet("Ann"));
+        """) is null && (string)Kept() == "injected, Ann");
+
+Try("an injected parameter can't be given by a call", () =>
+    Run("""Keep(Inject110.greet("Ann", "hello"));""") is { } e && e.Contains("can't be called with these arguments"));
+
+Try("a parameter decorator must give a parameter", () =>
+    Run("""class Inject111 { @static fun f(@mark x: String) { } }""") is not null);
+
+// ---- CLR generics
+
+Try("a generic CLR type given its arguments is a type", () =>
+    Run("""
+        import { List } from "core:runtime";
+        let xs116 = List[Int32]();
+        xs116.Add(1);
+        xs116.Add(2);
+        Keep(xs116.Count);
+        """) is null && Kept() is 2);
+
+Try("a generic CLR type with two arguments", () =>
+    Run("""
+        import { Dictionary } from "core:runtime";
+        let d117 = Dictionary[String, Int32]();
+        d117.Add("a", 1);
+        Keep(d117.Count);
+        """) is null && Kept() is 1);
+
+Try("an instantiated generic type in a type position", () =>
+    Run("""
+        import { List } from "core:runtime";
+        class Generic118 {
+            let items: List[String];
+            @static fun count(xs: List[String]): Int32 { return xs.Count; }
+        }
+        let names118 = List[String]();
+        names118.Add("a");
+        Keep(Generic118.count(names118));
+        """) is null && Kept() is 1);
+
+Try("a generic CLR method given its arguments", () =>
+    Run("""Keep(Same[String]("same"));""") is null && (string)Kept() == "same");
+
+Try("the arities of a generic family are its overloads", () =>
+    Run("""
+        import { Func } from "core:runtime";
+        Keep(Func[Int32, String]);
+        """) is null && Kept() is Type { } func && func == typeof(Func<int, string>));
+
+Try("a generic type given the wrong number of arguments is an error", () =>
+    Run("""
+        import { List } from "core:runtime";
+        let wrong119 = List[Int32, Int32]();
+        """) is { } e && e.Contains("type arguments"));
+
+Try("a generic instance is described as its definition and arguments", () =>
+    il.Load(typeof(List<int>)) is Package.DotNet.GenericInstance { Definition: Package.DotNet.Class { Name: "System.Collections.Generic.List`1" }, Arguments: [Package.DotNet.Struct { Name: "System.Int32" }] });
+
 // ---- Overloading
 
 Try("a CLR overload is chosen by its parameter types", () =>
@@ -2233,7 +2381,7 @@ Try("a document doesn't export what isn't marked", () =>
 // A module doesn't know Export, so registering what @export returns is a type error:
 // the module's Add doesn't take it.
 Try("only a definition in a document can be exported", () =>
-    Run("module M80 { @export class Inner80 {} }") is { } e && e.Contains("Add can't be called with these arguments"));
+    Run("module M80 { @export class Inner80 {} }") is { } e && e.Contains("None of the 4 overloads applies"));
 
 Try("an export with an alias exports under the alias", () =>
     Run("""@export("Aliased81") class Original81 {}""") is null
@@ -2703,6 +2851,8 @@ public static class Probe
 
     public static string Pair(string first, string second) => first + second;
 
+    public static T Same<T>(T value) => value;
+
     public static string Greet(string name, string greeting = "Hello") => $"{greeting}, {name}";
 
     public static string Named(string text) => "text";
@@ -2729,9 +2879,48 @@ public static class Probe
 
     public static readonly List<string> Marked = [];
 
+    public static readonly List<ZSharp.HIR.Code.Expression> Seen = [];
+
+    [ZSharp.Importer.ILLoader.Alias("seen")]
+    public static object? See(ZSharp.HIR.Code.Expression expression) { Seen.Add(expression); return null; }
+
+    [ZSharp.Importer.ILLoader.Alias("twice")]
+    public static ZSharp.HIR.Code.Statement Twice(ZSharp.HIR.Code.Expression expression)
+        => new ZSharp.HIR.Code.Block(new ZSharp.HIR.Code.ExpressionStatement(expression), new ZSharp.HIR.Code.ExpressionStatement(expression));
+
+    [ZSharp.Importer.ILLoader.Alias("inject")]
+    public static ZSharp.HIR.Code.Parameter Inject(ZSharp.HIR.Code.PositionalParameter parameter)
+        => new Injected(parameter.Name, parameter.Type, "injected");
+
     [ZSharp.Importer.ILLoader.Alias("mark")]
     public static Package.DotNet.Class Mark(Package.DotNet.Class node) { Marked.Add(node.Name); return node; }
 
     [ZSharp.Importer.ILLoader.Alias("markMethod")]
     public static Package.DotNet.Method MarkMethod(Package.DotNet.Method node) { Marked.Add(node.Name); return node; }
+}
+
+/// <summary>
+/// A parameter whose value is injected rather than given by a call.
+/// </summary>
+public sealed class Injected(string name, ZSharp.HIR.Type? type, string value)
+    : ZSharp.HIR.Code.Parameter
+{
+    public string Name => name;
+
+    public ZSharp.HIR.Type? Type => type;
+
+    public bool IsCaptured { get; set; }
+
+    public string Value => value;
+}
+
+/// <summary>
+/// An injected parameter takes nothing from the call's arguments.
+/// </summary>
+sealed class InjectedMatch(string value)
+    : ZSharp.MIR.CompilerObject
+    , ICTMatchParameter
+{
+    public IResult<ZSharp.MIR.CompilerObject, Error> Match(ArgumentStream arguments)
+        => Scope.HIRCodeLoader.LoadExpression(new C.StringLiteral(value));
 }

@@ -16,6 +16,11 @@
 
         public Expression? Initializer { get; set; }
 
+        /// <summary>
+        /// The decorators of the parameter, in source order.
+        /// </summary>
+        public List<Expression> Decorators { get; set; } = [];
+
         public override string ToString()
             => $"{Name}" +
             $"{(Type is null ? string.Empty : $": {Type}")}" +

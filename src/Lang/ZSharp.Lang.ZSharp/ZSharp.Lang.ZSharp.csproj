@@ -9,6 +9,7 @@
     <ProjectReference Include="..\ZSharp.Compiler.AST.Mapped\ZSharp.Compiler.AST.Mapped.csproj" />
     <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.HIRRunner.Mapped\ZSharp.HIRRunner.Mapped.csproj" />
+    <ProjectReference Include="..\..\Library\ZSharp.Library.Core.Compiler\ZSharp.Library.Core.Compiler.csproj" />
   </ItemGroup>
 
 </Project>

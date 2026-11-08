@@ -90,6 +90,19 @@ namespace ZSharp.Compiler
 
         public static Code.ExpressionStatement Statement(Code.Expression expression) => new(expression);
 
+        /// <summary>
+        /// What a decorated statement in code that is built becomes: what its decorators
+        /// gave. Nothing gives nothing, code is placed as it is, and any other value is a
+        /// statement with no effect, so it is dropped.
+        /// </summary>
+        public static Code.Statement Place(object? result)
+            => result switch
+            {
+                Code.Statement statement => statement,
+                Code.Expression expression => new Code.ExpressionStatement(expression),
+                _ => new Code.Block()
+            };
+
         public static Code.Return Return() => new();
 
         public static Code.Return Return(Code.Expression value) => new() { Value = value };

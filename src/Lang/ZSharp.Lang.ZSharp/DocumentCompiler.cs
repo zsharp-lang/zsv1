@@ -115,12 +115,26 @@ namespace ZSharp.Lang
         /// a let reuses a name.
         /// </summary>
         public static void Install(MappedBinder binding)
-            => binding.Merges.Add((existing, value) =>
+        {
+            binding.Merges.Add((existing, value) =>
                 existing is HIR.Code.Get { Instance: Package.ZSharp.DocumentLocal }
                 && value is HIR.Code.Get { Instance: Package.ZSharp.DocumentLocal }
                     ? value
                     : null
             );
+
+            // A name bound again to what it already stands for, as importing it again does,
+            // isn't a conflict.
+            binding.Merges.Add((existing, value) => Same(existing, value) ? existing : null);
+        }
+
+        private static bool Same(HIRExpression a, HIRExpression b)
+            => (a, b) switch
+            {
+                (HIR.Code.Get first, HIR.Code.Get second) => ReferenceEquals(first.Instance, second.Instance),
+                (HIR.Code.NamedMember first, HIR.Code.NamedMember second) => first.Name == second.Name && Same(first.Target, second.Target),
+                _ => false
+            };
 
         private Error? Run(ASTCompiler compiler, AST.Statement statement, Scope names)
         {
@@ -333,6 +347,10 @@ namespace ZSharp.Lang
                     if (host.Evaluate(Document, define.Build).When(out var value).Error(out var error))
                         return error;
 
+                    // Code, as ct gives for a definition it loaded, has nothing to register.
+                    if (value is HIR.Code.Expression)
+                        return null;
+
                     if (value is Export export)
                     {
                         if ((export.Alias ?? define.Name) is not { Length: > 0 } name)
@@ -390,6 +408,21 @@ namespace ZSharp.Lang
         {
             if (language.Importing(compiler, import).When(out var importing).Error(out var error))
                 return Result<HIRStatement>.Error(error);
+
+            // The document is running, so an import that can run now does, and its names are
+            // bound to what it gave, as anywhere else an import can run while compiling.
+            if (CompileTime.Is(importing!))
+            {
+                if (host.Evaluate(Document, importing!).When(out var value).Error(out error))
+                    return Result<HIRStatement>.Error(error);
+
+                if (value is not HIR.Instance imported)
+                    return Result<HIRStatement>.Error($"An import must give an instance, but gave {value?.GetType().Name ?? "null"}.");
+
+                return language.BindImported(compiler, import, () => new HIR.Code.Get(imported)) is { } conflict
+                    ? Result<HIRStatement>.Error(conflict)
+                    : Result<HIRStatement>.Ok(new HIR.Code.Block());
+            }
 
             var result = new HIR.Code.Reference();
 

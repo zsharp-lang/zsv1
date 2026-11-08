@@ -64,6 +64,7 @@ namespace ZSharp.Importer.ILLoader
             RegisterType<Package.DotNet.Interface>(loader);
             RegisterType<Package.DotNet.ArrayType>(loader);
             RegisterType<Package.DotNet.RefType>(loader);
+            RegisterType<Package.DotNet.GenericInstance>(loader);
 
             loader.Definitions.Register<Package.DotNet.Class>(LoadType);
             loader.Definitions.Register<Package.DotNet.Struct>(LoadType);
@@ -179,6 +180,13 @@ namespace ZSharp.Importer.ILLoader
         }
 
         internal Platform.Runtime.Runtime Runtime => runtime;
+
+        /// <summary>
+        /// A parameter of code being loaded, as the variable that code uses. A kind of
+        /// parameter defined elsewhere registers this as its instance loader.
+        /// </summary>
+        public IResult LoadParameter(HIR.Code.Parameter parameter)
+            => LoadVariable(parameter);
 
         /// <summary>
         /// The parameters a method was defined with from HIR, if it was.
@@ -352,6 +360,15 @@ namespace ZSharp.Importer.ILLoader
         {
             var name = type.FullName ?? type.Name;
 
+            if (type.IsConstructedGenericType)
+            {
+                var instance = new Package.DotNet.GenericInstance(Load(type.GetGenericTypeDefinition()));
+
+                instance.Arguments.AddRange(type.GetGenericArguments().Select(Load));
+
+                return instance;
+            }
+
             return type switch
             {
                 { IsArray: true } => new Package.DotNet.ArrayType(Load(type.GetElementType()!)),
@@ -360,6 +377,41 @@ namespace ZSharp.Importer.ILLoader
                 { IsValueType: true } => new Package.DotNet.Struct(name),
                 _ => new Package.DotNet.Class(name),
             };
+        }
+
+        /// <summary>
+        /// A generic type given its arguments, made from the types its parts stand for.
+        /// </summary>
+        private IResult Instantiate(Package.DotNet.GenericInstance node)
+        {
+            if (LoadType(node.Definition).When(out var definition).Error(out var error))
+                return Result.Error(error);
+
+            var arguments = new List<CompilerObject>();
+
+            foreach (var argument in node.Arguments)
+                if (LoadType(argument).When(out var loaded).Error(out error))
+                    return Result.Error(error);
+                else
+                    arguments.Add(loaded!);
+
+            return Core.Compiler.ModuleScope.CG.Index(definition!, [.. arguments.Select(argument => new Argument(argument))]);
+        }
+
+        /// <summary>
+        /// The CLR types arguments stand for, if each is a type that exists.
+        /// </summary>
+        internal Type[]? Types(Argument[] arguments)
+        {
+            var types = new List<Type>();
+
+            foreach (var argument in arguments)
+                if (argument.Name is null && argument.Object.Is<IILType>(out var known))
+                    types.Add(known.GetILType());
+                else
+                    return null;
+
+            return [.. types];
         }
 
         private void RegisterType<T>(MappedLoader loader)
@@ -373,6 +425,9 @@ namespace ZSharp.Importer.ILLoader
         {
             if (nodeTypes.TryGetValue(node, out var type))
                 return Result.Ok(Class(type));
+
+            if (node is Package.DotNet.GenericInstance instance)
+                return Instantiate(instance);
 
             return node is Package.DotNet.Class definition
                 ? Define(definition)
