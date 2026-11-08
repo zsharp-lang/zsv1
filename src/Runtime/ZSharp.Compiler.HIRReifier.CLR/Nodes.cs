@@ -99,5 +99,39 @@ namespace ZSharp.Compiler
 
         public static Code.IfStatement If(Code.Expression condition, Code.Statement then, Code.Statement otherwise)
             => new() { Condition = condition, Then = then, Else = otherwise };
+
+        /// <summary>
+        /// A loop, made before its body so that a break in the body can name it.
+        /// </summary>
+        public static Code.While While() => new();
+
+        public static Code.WhileExpression WhileExpression() => new();
+
+        public static Code.While Loop(Code.While loop, Code.Expression condition, Code.Statement body)
+        {
+            loop.Condition = condition;
+            loop.Body = body;
+            return loop;
+        }
+
+        public static Code.While Loop(Code.While loop, Code.Expression condition, Code.Statement body, Code.Statement otherwise)
+        {
+            loop.Else = otherwise;
+            return Loop(loop, condition, body);
+        }
+
+        public static Code.WhileExpression Loop(Code.WhileExpression loop, Code.Expression condition, Code.Statement body, Code.Expression otherwise)
+        {
+            loop.Condition = condition;
+            loop.Body = body;
+            loop.Else = otherwise;
+            return loop;
+        }
+
+        public static Code.Break Break(Code.Loop loop) => new(loop);
+
+        public static Code.Break Break(Code.Loop loop, Code.Expression value) => new(loop) { Value = value };
+
+        public static Code.Continue Continue(Code.Loop loop) => new(loop);
     }
 }

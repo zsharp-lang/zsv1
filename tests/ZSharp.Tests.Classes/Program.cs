@@ -1447,6 +1447,220 @@ Try("a number in a body that is built is encoded into it", () =>
     return type.GetMethod("get")!.Invoke(null, []) is 42;
 });
 
+// ---- Loops
+
+
+object Looped(string source)
+{
+    if (Run(source) is { } error)
+        throw new Exception(error);
+
+    return Kept();
+}
+
+Try("a document loop runs while its condition holds", () => Looped("""
+    let i1 = 0;
+    let total1 = 0;
+    while (i1 < 5) { total1 = total1 + i1; i1 = i1 + 1; }
+    Keep(total1);
+    """) is 10);
+
+Try("a loop's else runs when its condition stops holding", () => Looped("""
+    let i2 = 0;
+    while (i2 < 2) { i2 = i2 + 1; } else { Keep("done"); }
+    """) is "done");
+
+Try("a break skips the else", () =>
+    Run("""
+        let i3 = 0;
+        while (true) { i3 = i3 + 1; if (i3 == 3) { break; } } else { Keep("else"); }
+        Keep(i3);
+        """) is null && Probe.Kept is [3] && Kept() is 3);
+
+Try("a continue starts the next iteration", () => Looped("""
+    let i4 = 0;
+    let counted4 = 0;
+    while (i4 < 6) {
+        i4 = i4 + 1;
+        if (i4 == 2 or i4 == 4) { continue; }
+        counted4 = counted4 + 1;
+    }
+    Keep(counted4);
+    """) is 4);
+
+Try("a break from a named loop leaves it", () => Looped("""
+    let i5 = 0;
+    let n5 = 0;
+    while outer5 (i5 < 3) {
+        i5 = i5 + 1;
+        let j5 = 0;
+        while (j5 < 3) {
+            j5 = j5 + 1;
+            n5 = n5 + 1;
+            if (j5 == 2) { break from outer5; }
+        }
+    }
+    Keep(n5);
+    """) is 2);
+
+Try("a continue from a named loop continues it", () => Looped("""
+    let i6 = 0;
+    let n6 = 0;
+    while outer6 (i6 < 3) {
+        i6 = i6 + 1;
+        let j6 = 0;
+        while (j6 < 3) {
+            j6 = j6 + 1;
+            if (j6 == 2) { continue from outer6; }
+            n6 = n6 + 1;
+        }
+    }
+    Keep(n6);
+    """) is 3);
+
+Try("a statement in a document loop is compiled once", () =>
+    Looped("""
+        let i7 = 0;
+        while (i7 < 3) { let once7 = i7; i7 = i7 + 1; }
+        Keep(i7);
+        """) is 3
+    && document.Document.Locals.Count(local => local.Name == "once7") == 1);
+
+Try("a break from a loop that isn't there is an error", () =>
+    Run("while (true) { break from nowhere8; }") is { } e && e.Contains("no loop named nowhere8"));
+
+Try("a loop expression gives the value it is left with", () => Looped("""
+    let i9 = 0;
+    let found9 = while (i9 < 10) { i9 = i9 + 1; if (i9 * i9 == 16) { break i9; } } else 0;
+    Keep(found9);
+    """) is 4);
+
+Try("a loop expression gives its else when its condition stops holding", () => Looped("""
+    let found10 = while (false) { break 1; } else 7;
+    Keep(found10);
+    """) is 7);
+
+Try("a loop expression needs an else", () =>
+    Run("let v11 = while (true) { break 1; };") is { } e && e.Contains("needs an else"));
+
+Try("leaving a loop expression needs a value", () =>
+    Run("let v12 = while (true) { break; } else 1;") is { } e && e.Contains("needs a value"));
+
+Try("a loop statement can't be left with a value", () =>
+    Run("""class L13 { @static fun f() { while (true) { break 1; } } }""") is { } e && e.Contains("Only a loop that is an expression"));
+
+Try("a loop in a method", () => Looped("""
+    class L14 {
+        @static fun sum(n: Int32): Int32 {
+            let i = 0;
+            let total = 0;
+            while (i < n) { total = total + i; i = i + 1; }
+            return total;
+        }
+    }
+    Keep(L14.sum(5));
+    """) is 10);
+
+Try("a loop in a method has an else, and break and continue", () => Looped("""
+    class L15 {
+        @static fun count(): Int32 {
+            let i = 0;
+            let n = 0;
+            while (i < 6) {
+                i = i + 1;
+                if (i == 2) { continue; }
+                if (i == 5) { break; }
+                n = n + 1;
+            } else {
+                n = 100;
+            }
+            return n;
+        }
+    }
+    Keep(L15.count());
+    """) is 3);
+
+Try("a loop's else runs in a method when its condition stops holding", () => Looped("""
+    class L16 {
+        @static fun count(): Int32 {
+            let n = 0;
+            while (n < 2) { n = n + 1; } else { n = n + 10; }
+            return n;
+        }
+    }
+    Keep(L16.count());
+    """) is 12);
+
+Try("named loops in a method", () => Looped("""
+    class L17 {
+        @static fun count(): Int32 {
+            let i = 0;
+            let n = 0;
+            while outer (i < 3) {
+                i = i + 1;
+                let j = 0;
+                while (j < 3) {
+                    j = j + 1;
+                    if (j == 2) { continue from outer; }
+                    if (i == 3) { break from outer; }
+                    n = n + 1;
+                }
+            }
+            return n;
+        }
+    }
+    Keep(L17.count());
+    """) is 2);
+
+Try("a loop expression in a method", () => Looped("""
+    class L18 {
+        @static fun find(): Int32 {
+            let i = 0;
+            return while (i < 10) { i = i + 1; if (i * i == 16) { break i; } } else 0;
+        }
+    }
+    Keep(L18.find());
+    """) is 4);
+
+Try("a loop in a body that is built", () =>
+{
+    if (Run("""
+        class L19 {
+            @static fun make(): DotNet_Class {
+                return class Built19 {
+                    @static fun get(): Int32 {
+                        let i = 0;
+                        while outer (true) { i = i + 1; if (i == 4) { break from outer; } }
+                        return i;
+                    }
+                } as DotNet_Class;
+            }
+        }
+        Keep(L19.make());
+        """) is { } error)
+        throw new Exception(error);
+
+    var type = (Type)runner.EvaluateExpression(new C.Get((Package.DotNet.Class)Kept())).Unwrap()!;
+    return type.GetMethod("get")!.Invoke(null, []) is 4;
+});
+
+Try("code from before a capture in a loop shares the captured variable", () => Looped("""
+    class L20 {
+        @static fun run(): Int32 {
+            let n = 0;
+            let i = 0;
+            while (i < 3) {
+                n = n + 1;
+                fun add() { n = n + 10; }
+                add();
+                i = i + 1;
+            }
+            return n;
+        }
+    }
+    Keep(L20.run());
+    """) is 33);
+
 // ---- Overloading
 
 Try("a CLR overload is chosen by its parameter types", () =>

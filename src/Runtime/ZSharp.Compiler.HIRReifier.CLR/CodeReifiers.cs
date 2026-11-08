@@ -16,6 +16,11 @@ namespace ZSharp.Compiler
         private readonly Dictionary<Code.Local, Code.Local> declared = [];
 
         /// <summary>
+        /// The variable of the building code that holds each loop being reified.
+        /// </summary>
+        private readonly Dictionary<Code.Loop, Code.Local> loops = new(ReferenceEqualityComparer.Instance);
+
+        /// <summary>
         /// Where the building code declares the variables of the blocks being reified.
         /// </summary>
         private readonly Stack<List<Code.Statement>> variables = [];
@@ -39,12 +44,16 @@ namespace ZSharp.Compiler
             expressions.Register<Code.Call>(Reify);
             expressions.Register<Code.Index>(Reify);
             expressions.Register<Code.BlockExpression>(Reify);
+            expressions.Register<Code.WhileExpression>(Reify);
 
             statements.Register<Code.ExpressionStatement>(Reify);
             statements.Register<Code.Block>(Reify);
             statements.Register<Code.IfStatement>(Reify);
             statements.Register<Code.Return>(Reify);
             statements.Register<Code.Declare>(Reify);
+            statements.Register<Code.While>(Reify);
+            statements.Register<Code.Break>(Reify);
+            statements.Register<Code.Continue>(Reify);
             statements.Register<Code.UnquoteStatement>(unquote => Ok(unquote.Code));
 
             var values = mapped.Values;
@@ -242,6 +251,77 @@ namespace ZSharp.Compiler
                 ? Fail(error)
                 : Ok(Call("If", condition!, then!, otherwise!));
         }
+
+        /// <summary>
+        /// A loop is made by the building code before its body is built, in a variable of
+        /// that code, so a break or continue in the body can name it.
+        /// </summary>
+        private Reified Reify(Code.While loop)
+        {
+            if (variables.Count == 0)
+                return WithVariables(() => Reify(loop));
+
+            var holder = Holder(loop, typeof(Code.While), "While");
+
+            if (Expression(loop.Condition).When(out var condition).Error(out var error))
+                return Fail(error);
+
+            if (reifier.ReifyStatement(loop.Body).When(out var body).Error(out error))
+                return Fail(error);
+
+            if (loop.Else is null)
+                return Ok(Call("Loop", new Code.Get(holder), condition!, body!));
+
+            return reifier.ReifyStatement(loop.Else).When(out var otherwise).Error(out error)
+                ? Fail(error)
+                : Ok(Call("Loop", new Code.Get(holder), condition!, body!, otherwise!));
+        }
+
+        private Reified Reify(Code.WhileExpression loop)
+        {
+            if (variables.Count == 0)
+                return WithVariables(() => Reify(loop));
+
+            var holder = Holder(loop, typeof(Code.WhileExpression), "WhileExpression");
+
+            if (Expression(loop.Condition).When(out var condition).Error(out var error))
+                return Fail(error);
+
+            if (reifier.ReifyStatement(loop.Body).When(out var body).Error(out error))
+                return Fail(error);
+
+            return Expression(loop.Else).When(out var otherwise).Error(out error)
+                ? Fail(error)
+                : Ok(Call("Loop", new Code.Get(holder), condition!, body!, otherwise!));
+        }
+
+        private Code.Local Holder(Code.Loop loop, Type type, string make)
+        {
+            var holder = new Code.Local("loop", il.Load(type)) { Init = Call(make) };
+
+            loops[loop] = holder;
+            variables.Peek().Add(new Code.Declare(holder));
+
+            return holder;
+        }
+
+        private Reified Reify(Code.Break leave)
+        {
+            if (!loops.TryGetValue(leave.Loop, out var holder))
+                return Fail(new ErrorMessage("A break leaves a loop outside the code being reified."));
+
+            if (leave.Value is null)
+                return Ok(Call("Break", new Code.Get(holder)));
+
+            return Expression(leave.Value).When(out var value).Error(out var error)
+                ? Fail(error)
+                : Ok(Call("Break", new Code.Get(holder), value!));
+        }
+
+        private Reified Reify(Code.Continue next)
+            => loops.TryGetValue(next.Loop, out var holder)
+                ? Ok(Call("Continue", new Code.Get(holder)))
+                : Fail(new ErrorMessage("A continue names a loop outside the code being reified."));
 
         private Reified With(Code.Expression target, List<Code.Argument> arguments)
         {

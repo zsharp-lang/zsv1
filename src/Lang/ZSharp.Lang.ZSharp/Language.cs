@@ -5,7 +5,7 @@ namespace ZSharp.Lang
     /// is registered here. It keeps no context of its own: each handler compiles with the
     /// compiler it runs in, and asks that compiler's contexts for what it needs.
     /// </summary>
-    public sealed class Language(Binder binder)
+    public sealed partial class Language(Binder binder)
     {
         private Func<HIRExpression, HIR.Instance, bool> isUnderlyingType = null!;
 
@@ -53,6 +53,8 @@ namespace ZSharp.Lang
             mapped.Statements.Register<AST.IfStatement>(Compile);
             mapped.Statements.Register<AST.ImportStatement>(Compile);
             mapped.Statements.Register<AST.Return>(Compile);
+
+            InstallLoops(mapped);
         }
 
         /// <summary>
@@ -251,7 +253,9 @@ namespace ZSharp.Lang
         }
 
         private static IResult<HIRStatement, Error> Compile(ASTCompiler compiler, AST.ExpressionStatement statement)
-            => compiler.CompileExpression(statement.Expression).When(out var expression).Error(out var error)
+            => statement.Expression is AST.WhileExpression<AST.Statement> loop
+                ? Loop(compiler, loop)
+                : compiler.CompileExpression(statement.Expression).When(out var expression).Error(out var error)
                 ? Result<HIRStatement>.Error(error)
                 : Result<HIRStatement>.Ok(new HIR.Code.ExpressionStatement(expression!));
 

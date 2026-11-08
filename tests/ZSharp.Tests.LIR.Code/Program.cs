@@ -75,9 +75,9 @@ body.Block.Statements.Add(new SetLocal(first, new Allocate(new New(node, new Con
 body.Block.Statements.Add(new SetField(new GetLocal(first), parent, new GetLocal(first)));
 body.Block.Statements.Add(new SetLocal(fn, new GetFunction(helper)));
 body.Block.Statements.Add(new Evaluate(new CallIndirect(new GetLocal(fn), callback.Signature)));
-body.Block.Statements.Add(new Loop(new Block(
-    new If(new Call(less, new GetLocal(count)), new Break(), new Continue())
-)));
+var loop = new Loop(new Block());
+loop.Body = new Block(new If(new Call(less, new GetLocal(count)), new Break(loop), new Continue(loop)));
+body.Block.Statements.Add(loop);
 body.Block.Statements.Add(new Return());
 main.Body = body;
 module.Functions.Add(main);

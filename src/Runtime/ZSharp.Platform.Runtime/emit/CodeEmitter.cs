@@ -6,7 +6,7 @@ namespace ZSharp.Platform.Runtime
     internal sealed partial class CodeEmitter(Runtime runtime, Emit.ILGenerator il, LIR.Function function)
     {
         private readonly Dictionary<LIR.Local, Emit.LocalBuilder> locals = [];
-        private readonly Stack<(Emit.Label Start, Emit.Label End)> loops = [];
+        private readonly Dictionary<LIR.Loop, (Emit.Label Start, Emit.Label End)> loops = [];
 
         private LIR.Signature Signature => function.Signature;
 

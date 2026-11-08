@@ -94,6 +94,10 @@ namespace ZSharp.Parser
                 LangParser.Keywords.Break,
                 LangParser.ParseBreakStatement
             );
+            Loop.AddKeywordParser(
+                LangParser.Keywords.Continue,
+                LangParser.ParseContinueStatement
+            );
         }
     }
 }

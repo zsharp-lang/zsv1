@@ -85,6 +85,7 @@ namespace ZSharp.Lang
             expressionParser.Separator(TokenType.Semicolon);
 
             expressionParser.Separator(LangParser.Keywords.In); // until it's an operator
+            expressionParser.Separator(LangParser.Keywords.From); // as in break value from loop
 
             expressionParser.AddKeywordParser(
                 LangParser.Keywords.While,
@@ -116,6 +117,11 @@ namespace ZSharp.Lang
                 LangParser.ParseIfStatement
             );
 
+            zsharpParser.Document.AddKeywordParser(
+                LangParser.Keywords.While,
+                Utils.ExpressionStatement(LangParser.ParseWhileExpression<ZSharp.AST.Statement>, semicolon: false)
+            );
+
             // A function can be defined in code. What it is depends on the code it is in.
             statementParser.AddKeywordParser(
                 LangParser.Keywords.Function,
@@ -142,6 +148,11 @@ namespace ZSharp.Lang
             Imports(zsharpParser.Function);
             Imports(zsharpParser.Statement);
 
+            // A loop at the start of a statement is a loop statement, not an expression.
+            Loops(zsharpParser.Class.Method);
+            Loops(zsharpParser.Class.Constructor);
+            Loops(zsharpParser.Function);
+
             zsharpParser.RegisterParsers(target);
 
             return zsharpParser;
@@ -150,6 +161,13 @@ namespace ZSharp.Lang
         private static void Imports<T>(ContextParser<T, ZSharp.AST.Statement> parser)
             where T : ZSharp.AST.Node
             => parser.AddKeywordParser(LangParser.Keywords.Import, LangParser.ParseImportStatement);
+
+        private static void Loops<T>(ContextParser<T, ZSharp.AST.Statement> parser)
+            where T : ZSharp.AST.Node
+            => parser.AddKeywordParser(
+                LangParser.Keywords.While,
+                Utils.ExpressionStatement(LangParser.ParseWhileExpression<ZSharp.AST.Statement>, semicolon: false)
+            );
 
         private static void Decorated<T>(ContextParser<T, ZSharp.AST.Statement> parser)
             where T : ZSharp.AST.Node

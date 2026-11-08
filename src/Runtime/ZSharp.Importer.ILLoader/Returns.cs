@@ -5,7 +5,8 @@ namespace ZSharp.Importer.ILLoader
     /// <summary>
     /// Checks a body's returns against whether it returns a value. It sees only the
     /// statements of <c>ZSharp.HIR.Code</c>, so one added by an extension is treated
-    /// as not returning.
+    /// as not returning. A loop is never taken to always return, since its body may not
+    /// run.
     /// </summary>
     internal static class Returns
     {
@@ -31,6 +32,9 @@ namespace ZSharp.Importer.ILLoader
                 Code.IfStatement @if
                     => Mismatch(@if.Then, returnsValue)
                     ?? (@if.Else is null ? null : Mismatch(@if.Else, returnsValue)),
+                Code.While loop
+                    => Mismatch(loop.Body, returnsValue)
+                    ?? (loop.Else is null ? null : Mismatch(loop.Else, returnsValue)),
                 _ => null
             };
 

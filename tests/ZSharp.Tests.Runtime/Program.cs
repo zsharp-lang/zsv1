@@ -63,12 +63,14 @@ var sum = Fn(main, "sum", sumSig, code =>
     var total = new L.Local(i32) { Name = "total" };
     code.Block.Locals.Add(i);
     code.Block.Locals.Add(total);
-    code.Block.Statements.Add(new L.Loop(new L.Block(
-        new L.If(new L.Call(less, new L.GetLocal(i), new L.GetLocal(sumSig.Parameters[0])), new L.Block(), new L.Break()),
+    var loop = new L.Loop(new L.Block());
+    loop.Body = new L.Block(
+        new L.If(new L.Call(less, new L.GetLocal(i), new L.GetLocal(sumSig.Parameters[0])), new L.Block(), new L.Break(loop)),
         new L.SetLocal(total, new L.Call(add, new L.GetLocal(total), new L.GetLocal(i))),
         new L.SetLocal(i, new L.Call(add, new L.GetLocal(i), I(1))),
-        new L.Continue()
-    )));
+        new L.Continue(loop)
+    );
+    code.Block.Statements.Add(loop);
     code.Block.Statements.Add(new L.Return(new L.GetLocal(total)));
 });
 

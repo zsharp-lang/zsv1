@@ -145,6 +145,77 @@ namespace ZSharp.Compiler
                     : Result.Ok(new Objects.If(condition, then, otherwise));
             });
 
+            // A break or continue names its loop, which is loaded before the loop's body.
+            var loops = new Dictionary<HIR.Code.Loop, Objects.Loop>(ReferenceEqualityComparer.Instance);
+
+            mapped.Statements.Register<HIR.Code.While>(loop =>
+            {
+                var loaded = new Objects.WhileLoop();
+                loops[loop] = loaded;
+
+                if (code.LoadExpression(loop.Condition).Error(out var error, out var condition))
+                    return Result.Error(error);
+
+                if (code.LoadStatement(loop.Body).Error(out error, out var body))
+                    return Result.Error(error);
+
+                if (loop.Else is not null)
+                    if (code.LoadStatement(loop.Else).Error(out error, out var otherwise))
+                        return Result.Error(error);
+                    else
+                        loaded.Else = otherwise;
+
+                loaded.Condition = condition;
+                loaded.Body = body;
+
+                return Result.Ok(loaded);
+            });
+
+            // The else part is loaded first, as it gives the loop its type.
+            expressions.Register<HIR.Code.WhileExpression>(loop =>
+            {
+                if (code.LoadExpression(loop.Condition).Error(out var error, out var condition))
+                    return Result.Error(error);
+
+                if (code.LoadExpression(loop.Else).Error(out error, out var otherwise))
+                    return Result.Error(error);
+
+                if (Core.Compiler.ModuleScope.TS.TypeOf(otherwise).Error(out _, out var type))
+                    return Result.Error("The else part of a loop that is an expression has no type to give the loop.");
+
+                var loaded = new Objects.WhileValue(type) { Condition = condition, Else = otherwise };
+                loops[loop] = loaded;
+
+                if (code.LoadStatement(loop.Body).Error(out error, out var body))
+                    return Result.Error(error);
+
+                loaded.Body = body;
+
+                return Result.Ok(loaded);
+            });
+
+            mapped.Statements.Register<HIR.Code.Break>(leave =>
+            {
+                if (!loops.TryGetValue(leave.Loop, out var loop))
+                    return Result.Error("A break leaves a loop that isn't loaded.");
+
+                if (leave.Value is null)
+                    return Result.Ok(new Objects.Break(loop, null));
+
+                if (code.LoadExpression(leave.Value).Error(out var error, out var value))
+                    return Result.Error(error);
+
+                return cg.ImplicitCast(value, ((ITyped)loop).Type).Error(out error, out var converted)
+                    ? Result.Error("The value a break leaves with doesn't match the type of the loop.")
+                    : Result.Ok(new Objects.Break(loop, converted));
+            });
+
+            mapped.Statements.Register<HIR.Code.Continue>(next =>
+                loops.TryGetValue(next.Loop, out var loop)
+                    ? Result.Ok(new Objects.Continue(loop))
+                    : Result.Error("A continue names a loop that isn't loaded.")
+            );
+
             mapped.Statements.Register<HIR.Code.Return>(statement =>
             {
                 if (statement.Value is null)

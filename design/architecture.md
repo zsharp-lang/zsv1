@@ -140,8 +140,10 @@ To be designed. Settled so far:
   it wants, but that has nothing to do with LIR itself.
 - Control flow is structured: `Block`, `If`, `Loop`, `Break`, `Continue` and
   `Return`. Python, JS and WebAssembly have no general jumps, and structured code
-  turns into jumps easily, while the reverse is hard. `Break` and `Continue` act
-  on the innermost loop.
+  turns into jumps easily, while the reverse is hard. `Break` and `Continue` name
+  the `Loop` they act on, which need not be the innermost one, so named loops keep
+  their structure. WebAssembly branches by depth, JS has labels and the CLR jumps; a
+  target with only innermost breaks, such as Python, lowers them with flags.
 - Code is an expression tree, and child expressions are evaluated in order. A
   stack machine would suit only the CLR and WebAssembly. A tree is simple for
   every target, and a CO lowers to one node holding its children's nodes.
@@ -734,11 +736,14 @@ as HIR and how a definition is loaded. An import is code like any other, a call 
 `DotNetDocuments`, which the CLI gives the document meta-compiler.
 
 Every nested statement runs one at a time too, since in the CLI Z# is a scripting
-language. So the document meta-compiler runs blocks and `if` itself: it evaluates the
-condition, then compiles and runs each statement of the branch when it is reached. A
-statement that is never reached is never compiled. A block has its own names. `while`
-isn't compiled anywhere yet; once it is, a loop's statements are compiled the first
-time they are reached and run on each iteration.
+language. So the document meta-compiler runs blocks, `if` and `while` itself: it
+evaluates the condition, then compiles and runs each statement of the branch when it is
+reached. A statement that is never reached is never compiled. A block has its own names.
+A loop's statements are compiled the first time they are reached and run on each
+iteration after that, and a block in a loop keeps its names across iterations, so what
+the first iteration defined is still defined, and a `let` in a loop is one local. A
+`break` or `continue` goes back to the document loop it names. A loop that is an
+expression is code inside a statement, so the host runs it whole.
 
 A document local is a variable of the code that builds a definition in the document, so
 code that is built gets the value it had then, like any value of building code: a
@@ -932,6 +937,31 @@ A constructor call and a base call use the same call syntax, which covers both
 `new Foo()` and `base()` in C#. A base call passes the constructor's first parameter
 explicitly. The constructor's call handler checks whether that parameter was passed,
 so `this` isn't hardcoded.
+
+### Loops
+
+A loop can be named, as in `while outer (condition) { ... }`. `break` and `continue`
+act on the innermost loop, or on the one they name with `from`: `break from outer;`,
+`continue from outer;`. A loop's `else` runs when its condition stops holding, but not
+when a `break` leaves it.
+
+A loop can be a statement or an expression. A loop statement's `else` is optional and
+its `break` has no value. A loop expression must have an `else`, which gives its value
+when its condition stops holding, and every `break` of it has a value, as in
+`break value;` or `break value from outer;`. Its type is that of its `else`, and each
+`break` value has to convert to it. This holds for `for` as well, once it exists; `for`
+needs an iteration protocol, which is still to be designed.
+
+In HIR, `While` is a statement and `WhileExpression` an expression, and both are a
+`Loop`. `Break` and `Continue` refer to their loop's node, so the frontend resolves the
+names and HIR never has to. A loop is reified by building its node first, in a variable
+of the building code, so a `break` in its body can refer to it. It lowers to
+`loop { if (condition) body else { else-part; break } }`, so a `continue` checks the
+condition again and a `break` skips the `else`. A loop expression puts that in a
+sequence with a local that a `break` or the `else` sets before leaving.
+
+A break or continue can only reach loops of the code it is in: a loop outside the
+function it is in is out of reach.
 
 ### Operators
 

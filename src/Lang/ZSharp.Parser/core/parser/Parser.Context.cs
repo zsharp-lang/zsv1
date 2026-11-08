@@ -30,8 +30,9 @@ namespace ZSharp.Parser
         public ContextManager Stack<T>(Parser<T> parser)
             where T : Node
         {
+            // With no stack yet, the parser in place is what the stack falls back to.
             if (GetParserFor<T>() is not StackedParser<T> stacked)
-                throw new();
+                return NewStack(parser, GetParserFor<T>());
 
             stacked.Push(parser);
 
