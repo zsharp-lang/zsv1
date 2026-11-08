@@ -132,6 +132,17 @@ namespace ZSharp.Platform.Runtime
                 ? method
                 : throw new InvalidOperationException($"Function {function.Name} is not loaded.");
 
+        /// <summary>
+        /// Gets the method of a function, loading its module first if nothing has.
+        /// </summary>
+        public IL.MethodInfo LoadMethod(LIR.Function function)
+        {
+            if (!(functions.TryGetValue(function, out var method) && method is not Emit.MethodBuilder))
+                Load(function.Module ?? throw new InvalidOperationException($"Function {function.Name} has no module."));
+
+            return GetMethod(function);
+        }
+
         private Emit.TypeBuilder Holder(LIR.Module? owner)
         {
             if (owner is null)

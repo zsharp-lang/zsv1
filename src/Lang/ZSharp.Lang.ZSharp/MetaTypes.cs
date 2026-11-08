@@ -48,11 +48,19 @@ namespace ZSharp.Lang
         }
 
         private IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition definition)
-        {
-            if (MetaType(compiler, definition).When(out var metaType).Error(out var error))
-                return Result<CompiledDefinition>.Error(error);
+            => MetaType(compiler, definition).When(out var metaType).Error(out var error)
+                ? Result<CompiledDefinition>.Error(error)
+                : Compile(compiler, definition, metaType!);
 
-            if (!compilers.TryGetValue(metaType!, out var metaCompiler))
+        /// <summary>
+        /// Compiles a definition with the given meta-type, whatever its own would be. A
+        /// meta-compiler that owns where a definition is can choose its meta-type this way.
+        /// </summary>
+        public IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition definition, HIR.Instance metaType)
+        {
+            Error? error;
+
+            if (!compilers.TryGetValue(metaType, out var metaCompiler))
                 return Result<CompiledDefinition>.Error($"No meta-compiler is registered for the meta-type of {NameOf(definition)}.");
 
             if (metaType is not HIR.Type type)

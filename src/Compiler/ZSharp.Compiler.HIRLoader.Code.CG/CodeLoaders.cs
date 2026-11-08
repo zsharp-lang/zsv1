@@ -5,6 +5,12 @@ namespace ZSharp.Compiler
     /// </summary>
     public static class CodeLoaders
     {
+        /// <summary>
+        /// A captured local lives where the functions that capture it can share it.
+        /// </summary>
+        private static CompilerObject Local(HIR.Code.Local local, CompilerObject type, CompilerObject? init)
+            => local.IsCaptured ? new Objects.CellLocal(type, init) : new Objects.Local(type, init);
+
         public static void Register(MappedCodeLoader mapped, MappedLoader instances, HIRCodeLoader code, HIRLoader loader, CG cg)
         {
             var expressions = mapped.Expressions;
@@ -40,15 +46,18 @@ namespace ZSharp.Compiler
                 if (local.Type is not HIR.Infer)
                     return loader.LoadType(local.Type).Error(out error, out var declared)
                         ? Result.Error(error)
-                        : Result.Ok(new Objects.Local(declared, init));
+                        : Result.Ok(Local(local, declared, init));
 
                 if (init is null)
                     return Result.Error($"Local {local.Name} has no initial value to infer its type from.");
 
                 return Core.Compiler.ModuleScope.TS.TypeOf(init).Error(out _, out var inferred)
                     ? Result.Error($"The type of local {local.Name} can't be inferred from its initial value.")
-                    : Result.Ok(new Objects.Local(inferred, init));
+                    : Result.Ok(Local(local, inferred, init));
             });
+
+            // Outside the functions that capture it, a capture is what it captures.
+            instances.Instances.Register<HIR.Code.Capture>(capture => loader.LoadDefinition(capture.Captured));
             instances.Instances.Register<HIR.Code.Local>(local => loader.LoadDefinition(local));
 
             expressions.Register<HIR.Code.Get>(get => loader.LoadInstance(get.Instance));

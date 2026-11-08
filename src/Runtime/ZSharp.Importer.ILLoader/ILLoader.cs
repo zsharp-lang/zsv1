@@ -16,6 +16,16 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<Package.DotNet.Class, Objects.ClassInProgress> inProgress = [];
         private readonly Dictionary<HIR.Instance, Objects.Variable> variables = [];
 
+        /// <summary>
+        /// The local functions lowered so far.
+        /// </summary>
+        private readonly Dictionary<Package.DotNet.LocalFunction, LIR.Function> localFunctions = [];
+
+        /// <summary>
+        /// What each capture is inside the local function being lowered, innermost first.
+        /// </summary>
+        private readonly Stack<Dictionary<HIR.Code.Capture, CompilerObject>> captures = [];
+
         private readonly Dictionary<Module, Package.DotNet.Module> modules = [];
         private readonly Dictionary<Package.DotNet.Module, Module> moduleInfos = [];
 
@@ -58,6 +68,23 @@ namespace ZSharp.Importer.ILLoader
 
             loader.Instances.Register<Package.DotNet.ExposedObject>(LoadExposed);
             loader.Instances.Register<Package.DotNet.Parameter>(LoadVariable);
+
+            loader.Definitions.Register<Package.DotNet.LocalFunction>(node => Result.Ok(new Objects.LocalFunction(this, node)));
+            loader.Instances.Register<Package.DotNet.LocalFunction>(node => Core.Compiler.ModuleScope.HIRLoader.LoadDefinition(node));
+
+            // Inside a function that captures it, a capture is the cell it was given.
+            var outside = loader.Instances.Register<HIR.Code.Capture>(capture =>
+                captures.TryPeek(out var inside) && inside.TryGetValue(capture, out var cell)
+                    ? Result.Ok(cell)
+                    : Result.Error(new UnsupportedError("A capture is only known to the functions that capture it."))
+            );
+
+            if (outside is not null)
+                loader.Instances.Register<HIR.Code.Capture>(capture =>
+                    captures.TryPeek(out var inside) && inside.TryGetValue(capture, out var cell)
+                        ? Result.Ok(cell)
+                        : outside(capture)
+                );
             loader.Instances.Register<Package.DotNet.This>(LoadVariable);
 
             code.Expressions.Register<HIR.Code.StringLiteral>(literal =>
@@ -129,6 +156,8 @@ namespace ZSharp.Importer.ILLoader
 
             return result;
         }
+
+        internal Platform.Runtime.Runtime Runtime => runtime;
 
         public Package.DotNet.ExposedObject Expose(object value)
             => new(value, Load(value.GetType()));
@@ -571,6 +600,71 @@ namespace ZSharp.Importer.ILLoader
             finally
             {
                 returnType = outer;
+            }
+        }
+
+        /// <summary>
+        /// Lowers a local function to a function of its own, once. It takes the cell of
+        /// each variable it captures, then its own parameters.
+        /// </summary>
+        internal IResult<LIR.Function, Error> Lower(Package.DotNet.LocalFunction node)
+        {
+            if (localFunctions.TryGetValue(node, out var known))
+                return Result<LIR.Function>.Ok(known);
+
+            if (node.Body is null)
+                return Result<LIR.Function>.Error($"Function {node.Name} has no body.");
+
+            var signature = new LIR.Signature();
+            var cells = new Dictionary<HIR.Code.Capture, CompilerObject>(ReferenceEqualityComparer.Instance);
+
+            foreach (var capture in node.Captures)
+            {
+                if (Core.Compiler.ModuleScope.HIRLoader.LoadDefinition(capture.Captured).When(out var captured).Error(out var error))
+                    return Result<LIR.Function>.Error(error);
+
+                if (Core.Compiler.ModuleScope.TS.TypeOf(captured!).When(out var type).Error(out error))
+                    return Result<LIR.Function>.Error(error);
+
+                if (Core.Compiler.ModuleScope.IR.CompileType(type!, runtime).When(out var compiled).Error(out error))
+                    return Result<LIR.Function>.Error(error);
+
+                var parameter = new LIR.Parameter(new LIR.Reference(compiled!)) { Name = "capture" };
+
+                signature.Parameters.Add(parameter);
+                cells[capture] = new Objects.Cell(parameter, type!);
+            }
+
+            if (Parameters(node.Parameters, signature) is { } invalid)
+                return Result<LIR.Function>.Error(invalid);
+
+            if (node.ReturnType is not null)
+                if (CompileType(node.ReturnType).When(out var type).Error(out var error))
+                    return Result<LIR.Function>.Error(error);
+                else
+                    signature.ReturnType = type;
+
+            var function = new LIR.Function(signature) { Name = node.Name, Body = new() };
+
+            new LIR.Module().Functions.Add(function);
+
+            // Known before its body is lowered, so it can call itself.
+            localFunctions[node] = function;
+            captures.Push(cells);
+
+            try
+            {
+                if (Lower(node.Body, function, node.ReturnType) is { } error)
+                {
+                    localFunctions.Remove(node);
+                    return Result<LIR.Function>.Error(error);
+                }
+
+                return Result<LIR.Function>.Ok(function);
+            }
+            finally
+            {
+                captures.Pop();
             }
         }
 

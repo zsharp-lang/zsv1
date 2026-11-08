@@ -39,13 +39,25 @@ namespace ZSharp.Lang
     }
 
     /// <summary>
+    /// A context whose code is built by a block, which is where code that has to run
+    /// before it, while it is built, goes.
+    /// </summary>
+    public interface IBuildingCode
+    {
+        public HIR.Code.Block Block { get; }
+    }
+
+    /// <summary>
     /// Code built by a block, as a body is built by the code of the definition it
     /// belongs to, or a container's members by the container.
     /// </summary>
     public sealed class BuildContext(Context? parent, HIR.Code.Block block)
         : ChildContext(parent)
         , IBuildsDefinitions
+        , IBuildingCode
     {
+        public HIR.Code.Block Block => block;
+
         public IResult<HIRExpression, Error> Build(CompiledDefinition definition, List<HIRExpression> decorators)
         {
             if (definition.Fill().When(out var fill).Error(out var error))

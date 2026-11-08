@@ -600,6 +600,91 @@ parameter doesn't exist when the definition is built.
 `zsv1`'s separate script, module and class compilers do not carry over. Project
 discovery belongs in a library that `build.zs` calls.
 
+### Captures
+
+A function defined inside the code of a method can use the variables around it, by
+reference, as in C#. A body's meta-compiler makes a `fun` written directly in it a
+`Package.DotNet.LocalFunction`, an HIR type of its own whose node holds its `Capture`s; a
+method of a class defined in the body is still a method. Z# functions will have a
+`Closure` meta-type of their own, so they can capture with different semantics.
+
+A `Capture` (`HIR.Code`) is a variable that holds the variable it captures. The local
+function's meta-compiler resolves a name bound inside the function as usual. Any other
+name is resolved as the code around the function resolves it, and if that is a
+variable of that code, the function captures it:
+
+- The code around gets a capture of the variable, bound over the variable's name in the
+  scope it was bound in, so it and the function both refer to the capture from then on.
+  Nothing already compiled is rewritten.
+- The variable's node is marked captured (`Local.IsCaptured`), because code compiled
+  before the capture still refers to the variable, and may run after it.
+- A capture found that way is shared: a second function that uses the name finds the
+  capture and adds it to its own list. A variable is captured once.
+- Resolving through the code around is what makes nesting work. A function two levels
+  in asks the middle function, which captures the variable first, and then shares the
+  middle function's capture.
+
+Only variables are captured, as `HIR.Variable` marks them. A definition or any other
+instance is referred to as it is. Capturing a parameter isn't supported yet.
+
+The same `Capture` loads differently in each place. Outside the functions that capture
+it, it is what it captures, so in the capturee it is the variable's own CO: one
+definition gives one CO, and that CO stores the variable so it can be shared because it
+is marked. Code from before and after the capture uses the same storage, so a capture in
+a branch needs no special handling. Inside a function that captures it, it is what that
+function was given. How a captured variable is stored is up to the platform. On the CLR:
+
+- A marked local lives in a cell, an `LIR.Allocate`d reference made when its declaration
+  runs.
+- A local function is a function of its own, which takes the cell of each capture as a
+  hidden parameter before its own. Calling it passes the cells as the caller has them, so
+  calling it from another local function passes on what that one was given.
+- A local function used as a value is a delegate bound to the current run's cells, made
+  by a runtime helper with expression trees. Its delegate type comes from its CLR types,
+  so a function whose types aren't CLR types yet can be called but isn't a value.
+
+A cast definition doesn't capture: its purpose is code generation, so values are
+encoded directly into what it builds. That needs no code of its own. A cast definition's
+code is reified, and the reifier encodes every variable of the building code by its
+value. A capture is a variable, and in the building code, which is the capturee, it
+loads as the variable it captures. So a cast definition reading a captured variable
+gets the value it had when the definition was built, on that run. A local function is a
+variable too, since its value exists only while the capturee runs, so a cast definition
+that uses one encodes the delegate bound to that run's cells, as an exposed object.
+Calling it calls the local function, which still sees the variable by reference:
+
+```zs
+class Cap17 {
+    @static fun make(): DotNet_Class {
+        let x = "before";
+        fun read(): String { return x; }
+        let made = class Made17 {
+            @static fun direct(): String { return x; }      // "before"
+            @static fun through(): String { return read(); } // "after"
+        } as DotNet_Class;
+        x = "after";
+        return made;
+    }
+}
+```
+
+In general, a cast between meta-types succeeds if the target can represent the source.
+Casting a capturing function to one that doesn't capture means its captures become
+values, which works only where the captured variables have values: in the code that
+builds a cast definition. A closure reflected from a delegate captures variables of a
+method that isn't building anything, so casting it to a function that doesn't capture
+fails, as using a variable outside its code does. There is no syntax for a cast function
+yet (`fun() { ... } as Function`), so this is shown with a cast class.
+
+A captured variable stays marked even when only a cast definition reads it through the
+capture. That costs only an indirection, and removing the mark is an optimization for
+later.
+
+Document-level variables are never captured by reference. A module compiled to a .NET
+DLL no longer has the document it was compiled in, so nothing could refer to its
+variables. Code built in a document gets a document local's value from when it was
+built, capturing or not: a local function that reads one isn't capturing it.
+
 ### Document level and modules
 
 Every definition is compiled by a meta-compiler, and the document is no exception: it

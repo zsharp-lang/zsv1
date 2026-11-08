@@ -1139,6 +1139,257 @@ Try("an overload group with no match is an error", () =>
     return runner.EvaluateExpression(call).IsError;
 });
 
+// ---- Captures
+
+string Captured(string source)
+{
+    if (Run(source) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept();
+}
+
+Try("a local function reads a variable around it by reference", () => Captured("""
+    class Cap1 {
+        @static fun run(): String {
+            let x = "before";
+            fun read(): String { return x; }
+            x = "after";
+            return read();
+        }
+    }
+    Keep(Cap1.run());
+    """) == "after");
+
+Try("a local function assigns a variable around it", () => Captured("""
+    class Cap2 {
+        @static fun run(): String {
+            let x = "before";
+            fun change() { x = "changed"; }
+            change();
+            return x;
+        }
+    }
+    Keep(Cap2.run());
+    """) == "changed");
+
+Try("local functions share a capture", () => Captured("""
+    class Cap3 {
+        @static fun run(): String {
+            let x = "start";
+            fun set() { x = "set"; }
+            fun get(): String { return x; }
+            set();
+            return get();
+        }
+    }
+    Keep(Cap3.run());
+    """) == "set");
+
+Try("code from before a capture uses the captured variable", () => Captured("""
+    class Cap4 {
+        @static fun run(): String {
+            let x = "before";
+            let y = x;
+            fun change() { x = "changed"; }
+            change();
+            return x;
+        }
+    }
+    Keep(Cap4.run());
+    """) == "changed");
+
+Try("a capture made in a branch is the variable after the branch", () => Captured("""
+    class Cap12 {
+        @static fun run(): String {
+            let x = "before";
+            if (true) {
+                fun change() { x = "changed"; }
+                change();
+            }
+            return x;
+        }
+    }
+    Keep(Cap12.run());
+    """) == "changed");
+
+Try("a capture made in a branch not taken leaves the variable as it is", () => Captured("""
+    class Cap13 {
+        @static fun run(): String {
+            let x = "before";
+            if (false) {
+                fun change() { x = "changed"; }
+                change();
+            }
+            return x;
+        }
+    }
+    Keep(Cap13.run());
+    """) == "before");
+
+Try("a function captures through the function it is in", () => Captured("""
+    class Cap5 {
+        @static fun run(): String {
+            let x = "before";
+            fun middle() {
+                fun inner() { x = "deep"; }
+                inner();
+            }
+            middle();
+            return x;
+        }
+    }
+    Keep(Cap5.run());
+    """) == "deep");
+
+Try("a local function captures a local of the function it is in", () => Captured("""
+    class Cap6 {
+        @static fun run(): String {
+            fun middle(): String {
+                let y = "middle";
+                fun inner() { y = "inner"; }
+                inner();
+                return y;
+            }
+            return middle();
+        }
+    }
+    Keep(Cap6.run());
+    """) == "inner");
+
+Try("a local function's own names aren't captured", () => Captured("""
+    class Cap7 {
+        @static fun run(): String {
+            fun own(y: String): String { let z = y; return z; }
+            return own("own");
+        }
+    }
+    Keep(Cap7.run());
+    """) == "own");
+
+Try("a captured local is marked, and an uncaptured one isn't", () =>
+{
+    if (Run("""
+        Keep(class Cap8 {
+            @static fun run(): String {
+                let x = "x";
+                let y = "y";
+                fun read(): String { return x; }
+                return read();
+            }
+        } as DotNet_Class);
+        """) is { } error)
+        throw new Exception(error);
+
+    var locals = ((Package.DotNet.Class)Kept()).Methods.First(method => method.Name == "run").Locals;
+    return locals.First(local => local.Name == "x").IsCaptured && !locals.First(local => local.Name == "y").IsCaptured;
+});
+
+Try("a local function gets a document local's value from when it was built", () => Captured("""
+    let doc9 = "built";
+    class Cap9 {
+        @static fun run(): String {
+            fun read(): String { return doc9; }
+            return read();
+        }
+    }
+    doc9 = "later";
+    Keep(Cap9.run());
+    """) == "built");
+
+Try("a method of a class in a body is still a method", () => Captured("""
+    class Cap10 {
+        @static fun run(): String {
+            let made = class Inner10 { @static fun get(): String { return "method"; } } as DotNet_Class;
+            return "ok";
+        }
+    }
+    Keep(Cap10.run());
+    """) == "ok");
+
+string BuiltGet(string source)
+{
+    if (Run(source) is { } error)
+        throw new Exception(error);
+
+    var node = (Package.DotNet.Class)Kept();
+    var type = runner.EvaluateExpression(new C.Get(node)).Unwrap()!;
+    return (string)((Type)type).GetMethod("get")!.Invoke(null, [])!;
+}
+
+Try("a cast definition gets a captured variable's value from when it was built", () => BuiltGet("""
+    class Cap14 {
+        @static fun make(): DotNet_Class {
+            let x = "before";
+            fun read(): String { return x; }
+            let made = class Made14 { @static fun get(): String { return x; } } as DotNet_Class;
+            x = "after";
+            return made;
+        }
+    }
+    Keep(Cap14.make());
+    """) == "before");
+
+Try("a cast definition calls a local function bound to the run it was built in", () => BuiltGet("""
+    class Cap15 {
+        @static fun make(): DotNet_Class {
+            let x = "before";
+            fun read(): String { return x; }
+            let made = class Made15 { @static fun get(): String { return read(); } } as DotNet_Class;
+            x = "after";
+            return made;
+        }
+    }
+    Keep(Cap15.make());
+    """) == "after");
+
+Try("a local function is a delegate bound to the run of the code around it", () => Captured("""
+    class Cap16 {
+        @static fun run(): String {
+            let x = "before";
+            fun read(): String { return x; }
+            let f = read;
+            x = "after";
+            return f();
+        }
+    }
+    Keep(Cap16.run());
+    """) == "after");
+
+Try("a cast definition sees a variable by value and a local function sees it by reference", () =>
+{
+    if (Run("""
+        class Cap17 {
+            @static fun make(): DotNet_Class {
+                let x = "before";
+                fun read(): String { return x; }
+                let made = class Made17 {
+                    @static fun direct(): String { return x; }
+                    @static fun through(): String { return read(); }
+                } as DotNet_Class;
+                x = "after";
+                return made;
+            }
+        }
+        Keep(Cap17.make());
+        """) is { } error)
+        throw new Exception(error);
+
+    var type = (Type)runner.EvaluateExpression(new C.Get((Package.DotNet.Class)Kept())).Unwrap()!;
+    return (string?)type.GetMethod("direct")!.Invoke(null, []) == "before"
+        && (string?)type.GetMethod("through")!.Invoke(null, []) == "after";
+});
+
+Try("capturing a parameter isn't supported yet", () =>
+    Run("""
+        class Cap11 {
+            @static fun run(p: String): String {
+                fun read(): String { return p; }
+                return read();
+            }
+        }
+        """) is { } e && e.Contains("Capturing parameter p"));
+
 // ---- Overloading
 
 Try("a CLR overload is chosen by its parameter types", () =>

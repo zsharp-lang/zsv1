@@ -116,6 +116,12 @@ namespace ZSharp.Lang
                 LangParser.ParseIfStatement
             );
 
+            // A function can be defined in code. What it is depends on the code it is in.
+            statementParser.AddKeywordParser(
+                LangParser.Keywords.Function,
+                Utils.DefinitionStatement(zsharpParser.Function.Parse)
+            );
+
             //zsharpParser.Function.AddKeywordParser(
             //    LangParser.Keywords.While,
             //    Utils.ExpressionStatement(LangParser.ParseWhileExpression, semicolon: false)

@@ -23,7 +23,8 @@ namespace ZSharp.Lang.DotNet
             var metaTypes = new MetaTypes(language, of => Resolve(of, runner, il));
             var container = new ContainerCompiler(language);
 
-            var body = new CodeBody(language, il, importer);
+            var localFunction = il.Load(typeof(Package.DotNet.LocalFunction));
+            var body = new CodeBody(language, il, importer, (compiler, node) => metaTypes.Compile(compiler, node, localFunction));
 
             var @class = il.Load(typeof(Package.DotNet.Class));
             var module = il.Load(typeof(Package.DotNet.Module));
@@ -34,6 +35,7 @@ namespace ZSharp.Lang.DotNet
             metaTypes.Register(module, new ModuleMetaType(il, body, container, module).Compile);
             metaTypes.Register(method, new MethodMetaType(il, body, method).Compile);
             metaTypes.Register(constructor, new ConstructorMetaType(il, body, constructor).Compile);
+            metaTypes.Register(localFunction, new LocalFunctionMetaType(language, il, body, localFunction).Compile);
 
             metaTypes.Default<AST.TypeDefinition>(@class);
             metaTypes.Default<AST.Module>(module);
@@ -49,6 +51,17 @@ namespace ZSharp.Lang.DotNet
             binding.Merges.Add((existing, value) =>
                 existing is Code.Get { Instance: Code.Local { Type: var before } } && ReferenceEquals(before, local)
                 && value is Code.Get { Instance: Code.Local { Type: var after } } && ReferenceEquals(after, local)
+                    ? value
+                    : null
+            );
+
+            // A capture of a local is bound over the local, so the code around a function
+            // that captures it refers to the capture from then on.
+            var capture = il.Load(typeof(Code.Capture));
+
+            binding.Merges.Add((existing, value) =>
+                existing is Code.Get { Instance: Code.Local { Type: var before } } && ReferenceEquals(before, local)
+                && value is Code.Get { Instance: Code.Local { Type: var after } } && ReferenceEquals(after, capture)
                     ? value
                     : null
             );

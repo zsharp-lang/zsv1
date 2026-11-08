@@ -12,10 +12,12 @@ namespace ZSharp.Lang.DotNet
     /// constructs it as HIR.
     /// </summary>
     /// <param name="importer">Code that gives what imports from a source.</param>
+    /// <param name="function">Compiles a function defined directly in a body.</param>
     public sealed class CodeBody(
         Language language,
         ILLoader il,
-        Func<Code.Expression> importer
+        Func<Code.Expression> importer,
+        Func<ASTCompiler, AST.Definition, IResult<CompiledDefinition, Error>> function
     )
     {
         /// <summary>
@@ -105,6 +107,15 @@ namespace ZSharp.Lang.DotNet
             var fork = compiler.Fork();
             var expressions = fork.Expression;
             var statements = fork.Statement;
+            var definitions = fork.Definition;
+            var definition = Definition(compiler.Contexts.Current);
+
+            // A function defined directly in the body is a function of the body, not a
+            // method. A definition inside another one, such as a method of a class defined
+            // in the body, isn't the body's.
+            fork.Definition = (current, node) => node is AST.Function && Definition(current.Contexts.Current) == definition
+                ? function(current, node)
+                : definitions(current, node);
 
             fork.Expression = (current, expression) => expression is AST.LetExpression let
                 ? Local(current, block, owner, list, let)
@@ -120,6 +131,17 @@ namespace ZSharp.Lang.DotNet
                 : statements(current, statement);
 
             return fork;
+        }
+
+        /// <summary>
+        /// The context of the definition that code in a context belongs to.
+        /// </summary>
+        private static Context? Definition(Context? context)
+        {
+            while (context is ChildContext child and not DefinitionContext)
+                context = child.Parent;
+
+            return context;
         }
 
         private static IResult<Code.Statement, Error> Declared(Code.Block block, Code.Local holder)
