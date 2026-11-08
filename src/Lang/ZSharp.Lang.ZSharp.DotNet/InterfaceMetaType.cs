@@ -34,7 +34,7 @@ namespace ZSharp.Lang.DotNet
         private IResult<Code.Block, Error> Fill(ASTCompiler compiler, AST.TypeDefinition definition, Code.Local self)
         {
             var filled = container.Compile(
-                compiler,
+                body.WithMethods(compiler),
                 definition.Content?.Statements ?? [],
                 (member, value) => new Code.ExpressionStatement(body.Register(self, nameof(Package.DotNet.Interface.Methods), value))
             );

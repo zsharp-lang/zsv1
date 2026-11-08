@@ -7,7 +7,7 @@
             public const string As          = "as";
             public const string Break       = "break";
             public const string Case        = "case";
-            public const string Class       = "class";
+            public const string Def         = "def";
             public const string Continue    = "continue";
             public const string Else        = "else";
             public const string For         = "for";

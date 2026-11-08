@@ -55,7 +55,7 @@ namespace ZSharp.Parser
             where T : Node
         {
             parser.AddKeywordParser(
-                LangParser.Keywords.Class,
+                LangParser.Keywords.Def,
                 Utils.DefinitionStatement(Class)
             );
             parser.AddKeywordParser(

@@ -11,7 +11,7 @@ namespace ZSharp.Lang.DotNet
     /// </summary>
     public static class DotNetMetaTypes
     {
-        public static void Install(
+        public static MetaTypes Install(
             Language language,
             MappedASTCompiler mapped,
             MappedBinder binding,
@@ -23,11 +23,18 @@ namespace ZSharp.Lang.DotNet
             var container = new ContainerCompiler(language);
 
             var localFunction = il.Load(typeof(Package.DotNet.LocalFunction));
-            var body = new CodeBody(language, il, (compiler, node) => metaTypes.Compile(compiler, node, localFunction), expression => runner.EvaluateExpression(expression));
+            var method = il.Load(typeof(Package.DotNet.Method));
+            var body = new CodeBody(
+                language,
+                il,
+                (compiler, node) => metaTypes.Compile(compiler, node, localFunction),
+                (compiler, node) => metaTypes.Compile(compiler, node, method),
+                expression => runner.EvaluateExpression(expression)
+            );
+            Core.ZSharp.ModuleScope.Bodies = body.Bodies;
 
             var @class = il.Load(typeof(Package.DotNet.Class));
             var module = il.Load(typeof(Package.DotNet.Module));
-            var method = il.Load(typeof(Package.DotNet.Method));
             var constructor = il.Load(typeof(Package.DotNet.Constructor));
 
             var classes = new ClassMetaType(language, il, container, body, @class);
@@ -75,6 +82,8 @@ namespace ZSharp.Lang.DotNet
                     ? new Code.Get(Group([.. before, .. after]))
                     : null
             );
+
+            return metaTypes;
         }
 
         /// <summary>

@@ -85,6 +85,25 @@ namespace ZSharp.Platform.Runtime
 
         private void Call(LIR.Call node)
         {
+            // A built type calls a standalone function through its delegate, which goes
+            // under the arguments.
+            if (node.Callable is LIR.Function { Module: null } callee && !standalone)
+            {
+                var (index, type) = runtime.StandaloneDelegate(callee);
+
+                il.Emit(Emit.OpCodes.Ldc_I4, index);
+                il.Emit(Emit.OpCodes.Call, typeof(ExposedObjects).GetMethod(nameof(ExposedObjects.Get))!);
+                il.Emit(Emit.OpCodes.Castclass, typeof(Standalone));
+                il.Emit(Emit.OpCodes.Callvirt, typeof(Standalone).GetProperty(nameof(Standalone.Delegate))!.GetMethod!);
+                il.Emit(Emit.OpCodes.Castclass, type);
+
+                foreach (var argument in node.Arguments)
+                    Expression(argument);
+
+                il.Emit(Emit.OpCodes.Callvirt, type.GetMethod("Invoke")!);
+                return;
+            }
+
             foreach (var (argument, index) in node.Arguments.Select((argument, index) => (argument, index)))
                 if (index == 0 && runtime.TakesAddress(node.Callable))
                     Address(argument);

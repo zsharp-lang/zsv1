@@ -24,8 +24,9 @@ namespace ZSharp.Lang.DotNet
             if (node is not AST.Module module)
                 return Result<CompiledDefinition>.Error($"A {node.GetType().Name} is not a module.");
 
-            // In a module, an import runs as the module is constructed, unless it can run now.
-            var fork = compiler.Fork();
+            // In a module, an import runs as the module is constructed, unless it can run now,
+            // and a fun is a function of the module.
+            var fork = body.WithMethods(compiler);
             var statements = fork.Statement;
             var expressions = fork.Expression;
 

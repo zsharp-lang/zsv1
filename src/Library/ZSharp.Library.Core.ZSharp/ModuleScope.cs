@@ -13,6 +13,20 @@ namespace Core.ZSharp
         public static global::ZSharp.Compiler.ASTCompiler Compiler { get; set; } = null!;
 
         /// <summary>
+        /// The meta-types definitions are compiled by, which Z# registers its own with and
+        /// makes the default of a kind of definition.
+        /// </summary>
+        [Alias("metaTypes")]
+        public static global::ZSharp.Lang.MetaTypes MetaTypes { get; set; } = null!;
+
+        /// <summary>
+        /// What meta-compilers of definitions with code share: code that builds their
+        /// parameters, locals and bodies.
+        /// </summary>
+        [Alias("bodies")]
+        public static global::ZSharp.Lang.Bodies Bodies { get; set; } = null!;
+
+        /// <summary>
         /// What imports from a source, giving the imported value or why it can't.
         /// </summary>
         public static Func<string, IResult<global::ZSharp.HIR.Instance, CommonZ.Error>> Importer { get; set; } = null!;

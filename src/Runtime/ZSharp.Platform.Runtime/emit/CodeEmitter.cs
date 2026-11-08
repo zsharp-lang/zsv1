@@ -3,7 +3,10 @@ namespace ZSharp.Platform.Runtime
     /// <summary>
     /// Emits the body of one function.
     /// </summary>
-    internal sealed partial class CodeEmitter(Runtime runtime, Emit.ILGenerator il, LIR.Function function)
+    /// <param name="standalone">
+    /// Whether the body is a <c>DynamicMethod</c>'s, which can call another one directly.
+    /// </param>
+    internal sealed partial class CodeEmitter(Runtime runtime, Emit.ILGenerator il, LIR.Function function, bool standalone = false)
     {
         private readonly Dictionary<LIR.Local, Emit.LocalBuilder> locals = [];
         private readonly Dictionary<LIR.Loop, (Emit.Label Start, Emit.Label End)> loops = [];

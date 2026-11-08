@@ -33,6 +33,8 @@ Core.Runtime.ModuleScope.ILLoader = il;
 
 var mapped = new MappedLoader(Scope.HIRLoader);
 var mappedCode = new MappedCodeLoader(Scope.HIRCodeLoader);
+Scope.MappedLoader = mapped;
+Scope.MappedCodeLoader = mappedCode;
 mapped.Apply();
 mappedCode.Apply();
 
@@ -92,6 +94,10 @@ DocumentCompiler.Install(mapped, Scope.HIRLoader);
 var core = new ZSharp.Importer.String.LibraryImporter("core");
 core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
+core.Add("compiler", il.Load(typeof(Scope).Module));
+
+foreach (var (name, module) in ToolchainModules.All())
+    core.Add(name, il.Load(module));
 
 var importer = new ZSharp.Importer.String.StringImporter();
 var host = new DotNetDocuments(
@@ -108,7 +114,7 @@ importer.Register("core", core);
 importer.DefaultImporter = documents;
 language.Install(mappedCompiler, IsUnderlying);
 Core.ZSharp.ModuleScope.Importer = importer.Import;
-DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
+Core.ZSharp.ModuleScope.MetaTypes = DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
 
 foreach (var library in new[] { typeof(Core.Runtime.ModuleScope), typeof(Core.ZSharp.ModuleScope) })
     foreach (var (syntax, function) in il.Operators(library))
@@ -189,8 +195,8 @@ object Kept()
 }
 
 Try("class compiles and runs", () => Run("""
-    class Animal { let name: String; }
-    class Dog : Animal { let friend: Dog; }
+    def Animal { let name: String; }
+    def Dog : Animal { let friend: Dog; }
     Keep(Dog());
     """) is null);
 
@@ -228,7 +234,7 @@ Try("members are reached like any class", () =>
 
 Try("cast is structure, with no type loaded", () =>
 {
-    if (Run("Keep(class Plan { let note: String; let self: Plan; } as DotNet_Class);") is { } error)
+    if (Run("Keep(def Plan { let note: String; let self: Plan; } as DotNet_Class);") is { } error)
         throw new Exception(error);
 
     return Kept() is Package.DotNet.Class { Name: "Plan", Fields: [{ Name: "note" }, { Name: "self" }] } plan
@@ -238,7 +244,7 @@ Try("cast is structure, with no type loaded", () =>
 
 Try("structure loads only when asked", () =>
 {
-    Run("Keep(class Later { let self: Later; } as DotNet_Class);");
+    Run("Keep(def Later { let self: Later; } as DotNet_Class);");
     var node = (Package.DotNet.Class)Kept();
     var loaded = Scope.HIRLoader.LoadType(node).Unwrap();
     return Scope.IR.CompileType(loaded, runtime).IsOk
@@ -247,7 +253,7 @@ Try("structure loads only when asked", () =>
 
 Try("expression definition has identity but binds no name outside", () =>
 {
-    if (Run("Keep(class Temp {}());") is { } error)
+    if (Run("Keep(def Temp {}());") is { } error)
         throw new Exception(error);
 
     return Kept().GetType().Name == "Temp" && Run("Keep(Temp());")!.Contains("not defined");
@@ -255,7 +261,7 @@ Try("expression definition has identity but binds no name outside", () =>
 
 Try("expression definition binds its name inside itself", () =>
 {
-    if (Run("Keep(class Node { let next: Node; }());") is { } error)
+    if (Run("Keep(def Node { let next: Node; }());") is { } error)
         throw new Exception(error);
 
     var node = Kept().GetType();
@@ -263,28 +269,28 @@ Try("expression definition binds its name inside itself", () =>
 });
 
 Try("of with the CLR class meta-type", () =>
-    Run("class Explicit of DotNet_Class {}") is null && Run("Keep(Explicit());") is null && Kept().GetType().Name == "Explicit");
+    Run("def Explicit of DotNet_Class {}") is null && Run("Keep(Explicit());") is null && Kept().GetType().Name == "Explicit");
 
 Try("two classes can share a name", () =>
 {
-    Run("Keep(class Twin {}());");
+    Run("Keep(def Twin {}());");
     var first = Kept().GetType();
-    Run("Keep(class Twin {}());");
+    Run("Keep(def Twin {}());");
     return Kept().GetType() != first;
 });
 
-Try("unsupported meta-type is an error", () => Run("class X of String {}") is { } e && e.Contains("meta-type"));
-Try("field without a type is an error", () => Run("""class X { let a = "x"; }""") is { } e && e.Contains("needs a type"));
-Try("unknown field type is an error", () => Run("class X { let a: Missing; }") is { } e && e.Contains("not defined"));
-Try("non-type field type is an error", () => Run("""class X { let a: "text"; }""") is not null);
-Try("two base classes is an error", () => Run("class TwoBases129 : String, String {}") is { } e && e.Contains("one base class"));
+Try("unsupported meta-type is an error", () => Run("def X of String {}") is { } e && e.Contains("meta-type"));
+Try("field without a type is an error", () => Run("""def X { let a = "x"; }""") is { } e && e.Contains("needs a type"));
+Try("unknown field type is an error", () => Run("def X { let a: Missing; }") is { } e && e.Contains("not defined"));
+Try("non-type field type is an error", () => Run("""def X { let a: "text"; }""") is not null);
+Try("two base classes is an error", () => Run("def TwoBases129 : String, String {}") is { } e && e.Contains("one base class"));
 
 Try("a failed class leaves the name unusable, not half made", () =>
-    Run("class Bad { let a: Missing; }") is not null && Run("Keep(Bad());")!.Contains("not defined"));
+    Run("def Bad { let a: Missing; }") is not null && Run("Keep(Bad());")!.Contains("not defined"));
 
 Try("build code reifies into a body", () =>
 {
-    var definition = (ZSharp.AST.Definition)((ZSharp.AST.DefinitionStatement)ParseOne("class Made { let self: Made; let s: String; }")).Definition;
+    var definition = (ZSharp.AST.Definition)((ZSharp.AST.DefinitionStatement)ParseOne("def Made { let self: Made; let s: String; }")).Definition;
     var compiled = document.Within(compiler, () => compiler.CompileDefinition(definition)).Unwrap();
     var reified = Scope.HIRReifier.ReifyExpression(compiled.Build().Unwrap()).Unwrap();
     var code = (C.Expression)runner.EvaluateExpression(reified).Unwrap()!;
@@ -304,8 +310,8 @@ Try("forward references between classes", () =>
 {
     if (Run("""
         module M1 {
-            class A { let b: B; }
-            class B { let a: A; }
+            def A { let b: B; }
+            def B { let a: A; }
         }
         Keep(M1.A());
         """) is { } error)
@@ -320,8 +326,8 @@ Try("forward base class", () =>
 {
     if (Run("""
         module M2 {
-            class C : D {}
-            class D { let tag: String; }
+            def C : D {}
+            def D { let tag: String; }
         }
         Keep(M2.C());
         """) is { } error)
@@ -336,7 +342,7 @@ Try("module code runs while the module is built", () =>
     Probe.Kept.Clear();
     if (Run("""
         module M3 {
-            class Foo {}
+            def Foo {}
             Keep((Foo as DotNet_Class).Name);
         }
         """) is { } error)
@@ -350,7 +356,7 @@ Try("a statement sees definitions constructed but not filled", () =>
     Probe.Counts.Clear();
     if (Run("""
         module M4 {
-            class F { let x: String; let y: String; }
+            def F { let x: String; let y: String; }
             FieldCount(F as DotNet_Class);
         }
         """) is { } error)
@@ -363,8 +369,8 @@ Try("the module holds its filled definitions", () =>
 {
     if (Run("""
         module M5 {
-            class F { let x: String; }
-            Keep(class Inner {});
+            def F { let x: String; }
+            Keep(def Inner {});
         }
         """) is { } error)
         throw new Exception(error);
@@ -376,14 +382,14 @@ Try("a statement can't use a later definition", () =>
     Run("""
         module M6 {
             Keep(Later);
-            class Later {}
+            def Later {}
         }
         """) is { } e && e.Contains("not defined"));
 
 Try("a definition can't be called in its own module", () =>
     Run("""
         module M7 {
-            class Z {}
+            def Z {}
             Keep(Z());
         }
         """) is not null);
@@ -391,13 +397,13 @@ Try("a definition can't be called in its own module", () =>
 Try("a definition can't be a meta-type in its own module", () =>
     Run("""
         module M8 {
-            class Meta {}
-            class Y of Meta {}
+            def Meta {}
+            def Y of Meta {}
         }
         """) is { } e && e.Contains("own module"));
 
 Try("module members stay inside the module", () =>
-    Run("module M9 { class OnlyInside {} }") is null && Run("Keep(OnlyInside());") is { } e && e.Contains("not defined"));
+    Run("module M9 { def OnlyInside {} }") is null && Run("Keep(OnlyInside());") is { } e && e.Contains("not defined"));
 
 Try("a missing module member is an error", () =>
     Run("Keep(M9.Nothing());") is { } e && e.Contains("no member"));
@@ -406,7 +412,7 @@ Try("a whole file module", () =>
 {
     if (Run("""
         module M10;
-        class Whole { let self: Whole; }
+        def Whole { let self: Whole; }
         """) is { } error)
         throw new Exception(error);
 
@@ -416,12 +422,12 @@ Try("a whole file module", () =>
 Try("class level code runs while the class is built", () =>
 {
     Probe.Kept.Clear();
-    return Run("""class Cl { Keep("at class"); let s: String; }""") is null && (string)Kept() == "at class";
+    return Run("""def Cl { Keep("at class"); let s: String; }""") is null && (string)Kept() == "at class";
 });
 
 Try("an identity definition in class code is plain", () =>
 {
-    if (Run("""class Cm { Keep(class Nested {}); }""") is { } error)
+    if (Run("""def Cm { Keep(def Nested {}); }""") is { } error)
         throw new Exception(error);
 
     return Kept() is Package.DotNet.Class { Name: "Nested" };
@@ -430,8 +436,8 @@ Try("an identity definition in class code is plain", () =>
 Try("a module can use earlier classes", () =>
 {
     if (Run("""
-        class Outside {}
-        module M11 { class Uses : Outside { let o: Outside; } }
+        def Outside {}
+        module M11 { def Uses : Outside { let o: Outside; } }
         Keep(M11.Uses());
         """) is { } error)
         throw new Exception(error);
@@ -441,24 +447,24 @@ Try("a module can use earlier classes", () =>
 
 Try("document level has no forward references", () =>
     Run("""
-        class Early { let l: Latecomer; }
-        class Latecomer {}
+        def Early { let l: Latecomer; }
+        def Latecomer {}
         """) is { } e && e.Contains("not defined"));
 
 Try("base cycle is an error", () =>
     Run("""
         module M12 {
-            class P : Q {}
-            class Q : P {}
+            def P : Q {}
+            def Q : P {}
         }
         """) is { } e && e.Contains("derives from itself"));
 
 Try("sealed base is an error", () =>
-    Run("class S1 : String {}") is { } e && e.Contains("sealed"));
+    Run("def S1 : String {}") is { } e && e.Contains("sealed"));
 
 Try("module cast is structure", () =>
 {
-    var module = (ZSharp.AST.Definition)((ZSharp.AST.DefinitionStatement)ParseOne("module M13 { class V {} }")).Definition;
+    var module = (ZSharp.AST.Definition)((ZSharp.AST.DefinitionStatement)ParseOne("module M13 { def V {} }")).Definition;
     var cast = (ZSharp.AST.CastExpression)((ZSharp.AST.ExpressionStatement)ParseOne("\"x\" as DotNet_Module;")).Expression;
     cast.Expression = module;
 
@@ -476,7 +482,7 @@ object? Call(object target, string method, params object?[] arguments)
 Try("instance method", () =>
 {
     if (Run("""
-        class Greeter {
+        def Greeter {
             let name: String;
 
             @explicitThis new(this, name: String) { this.name = name; }
@@ -496,7 +502,7 @@ Try("z# calls its own method", () =>
 Try("static method", () =>
 {
     if (Run("""
-        class Maker {
+        def Maker {
             @static fun make(text: String): String { return text; }
         }
         Keep(Maker.make("static"));
@@ -516,7 +522,7 @@ Try("a method is a real CLR method", () =>
 Try("methods call each other forward", () =>
 {
     if (Run("""
-        class Chain {
+        def Chain {
             @explicitThis fun first(this): String { return this.second("end"); }
             @explicitThis fun second(this, text: String): String { return text; }
         }
@@ -530,8 +536,8 @@ Try("methods call each other forward", () =>
 Try("a method reads an inherited field", () =>
 {
     if (Run("""
-        class Parent { let tag: String; @explicitThis new(this) { this.tag = "inherited"; } }
-        class Child : Parent {
+        def Parent { let tag: String; @explicitThis new(this) { this.tag = "inherited"; } }
+        def Child : Parent {
             @explicitThis fun read(this): String { return this.tag; }
         }
         Keep(Child().read());
@@ -544,7 +550,7 @@ Try("a method reads an inherited field", () =>
 Try("a method constructs its own class", () =>
 {
     if (Run("""
-        class Self {
+        def Self {
             let text: String;
             @explicitThis new(this, text: String) { this.text = text; }
             @explicitThis fun copy(this): Self { return Self(this.text); }
@@ -560,10 +566,10 @@ Try("classes in a module call each other", () =>
 {
     if (Run("""
         module Pair {
-            class Left {
+            def Left {
                 @explicitThis fun other(this): Right { return Right(); }
             }
-            class Right {
+            def Right {
                 @explicitThis fun name(this): String { return "right"; }
                 @explicitThis fun back(this): Left { return Left(); }
             }
@@ -578,7 +584,7 @@ Try("classes in a module call each other", () =>
 Try("field default value", () =>
 {
     if (Run("""
-        class Defaulted {
+        def Defaulted {
             let label: String = "default";
         }
         Keep(Defaulted().label);
@@ -591,7 +597,7 @@ Try("field default value", () =>
 Try("field default with a constructor", () =>
 {
     if (Run("""
-        class Both {
+        def Both {
             let label: String = "first";
             let other: String;
             @explicitThis new(this) { this.other = this.label; }
@@ -606,7 +612,7 @@ Try("field default with a constructor", () =>
 Try("locals and control flow", () =>
 {
     if (Run("""
-        class Flow {
+        def Flow {
             @explicitThis fun pick(this, yes: Boolean): String {
                 let result: String = "no";
 
@@ -627,7 +633,7 @@ Try("locals and control flow", () =>
 Try("a parameter can be assigned", () =>
 {
     if (Run("""
-        class Assign {
+        def Assign {
             @static fun change(text: String): String {
                 text = "changed";
                 return text;
@@ -643,9 +649,9 @@ Try("a parameter can be assigned", () =>
 Try("cast definition in a body builds a new object each call", () =>
 {
     if (Run("""
-        class Factory {
+        def Factory {
             @explicitThis fun make(this): DotNet_Class {
-                return class Made2 { let x: String; } as DotNet_Class;
+                return def Made2 { let x: String; } as DotNet_Class;
             }
         }
         Keep(Factory());
@@ -661,8 +667,8 @@ Try("cast definition in a body builds a new object each call", () =>
 Try("identity definition in a body is built once, with the method", () =>
 {
     if (Run("""
-        class Holder {
-            @explicitThis fun make(this): Object { return class Once {}(); }
+        def Holder {
+            @explicitThis fun make(this): Object { return def Once {}(); }
         }
         Keep(Holder());
         """) is { } error)
@@ -676,9 +682,9 @@ Try("identity definition in a body is built once, with the method", () =>
 Try("a definition in a body captures a parameter by being cast", () =>
 {
     if (Run("""
-        class Capture {
+        def Capture {
             @static fun make(name: String): DotNet_Class {
-                return class Holder2 {
+                return def Holder2 {
                     @explicitThis fun get(this): String { return name; }
                 } as DotNet_Class;
             }
@@ -693,17 +699,17 @@ Try("a definition in a body captures a parameter by being cast", () =>
 });
 
 Try("a value return with no return type is an error", () =>
-    Run("""class E1 { @explicitThis fun f(this) { return "x"; } }""") is { } e && e.Contains("nothing is returned"));
+    Run("""def E1 { @explicitThis fun f(this) { return "x"; } }""") is { } e && e.Contains("nothing is returned"));
 Try("a missing return is an error", () =>
-    Run("class E2 { @explicitThis fun f(this): String { } }") is { } e && e.Contains("every path"));
+    Run("def E2 { @explicitThis fun f(this): String { } }") is { } e && e.Contains("every path"));
 Try("an empty return with a type is an error", () =>
-    Run("class E3 { @explicitThis fun f(this): String { return; } }") is { } e && e.Contains("needs a value"));
+    Run("def E3 { @explicitThis fun f(this): String { return; } }") is { } e && e.Contains("needs a value"));
 Try("an untyped parameter is an error", () =>
-    Run("class E4 { @explicitThis fun f(this, x) { } }") is { } e && e.Contains("needs a type"));
+    Run("def E4 { @explicitThis fun f(this, x) { } }") is { } e && e.Contains("needs a type"));
 Try("a missing method is an error", () =>
-    Run("class E6 { @explicitThis fun f(this) { this.nope(); } } ") is { } e && e.Contains("no member"));
+    Run("def E6 { @explicitThis fun f(this) { this.nope(); } } ") is { } e && e.Contains("no member"));
 Try("a bare method name is an error", () =>
-    Run("class E7 { @explicitThis fun f(this) { g(); } @explicitThis fun g(this) { } }") is not null);
+    Run("def E7 { @explicitThis fun f(this) { g(); } @explicitThis fun g(this) { } }") is not null);
 Try("a function outside a class is an error", () =>
     Run("fun loose() { }") is not null);
 
@@ -712,8 +718,8 @@ Try("a function outside a class is an error", () =>
 Try("a definition in a field default is built once", () =>
 {
     if (Run("""
-        class Defaulted2 {
-            let value: Object = class Once2 {}();
+        def Defaulted2 {
+            let value: Object = def Once2 {}();
         }
         Keep(Defaulted2().value);
         """) is { } error)
@@ -726,14 +732,14 @@ Try("a definition in a field default is built once", () =>
 });
 
 Try("a definition at document level runs before its statement", () =>
-    Run("""Keep(class First {}());""") is null && Kept().GetType().Name == "First");
+    Run("""Keep(def First {}());""") is null && Kept().GetType().Name == "First");
 
 Try("a definition in a document block", () =>
 {
     if (Run("""
         if (true) {
             Keep("x");
-            Keep(class InBlock {}());
+            Keep(def InBlock {}());
         }
         """) is { } error)
         throw new Exception(error);
@@ -746,8 +752,8 @@ Try("a definition in a module statement runs before it", () =>
     Probe.Kept.Clear();
     if (Run("""
         module M20 {
-            Keep(class Early2 {});
-            class Other2 {}
+            Keep(def Early2 {});
+            def Other2 {}
         }
         """) is { } error)
         throw new Exception(error);
@@ -760,7 +766,7 @@ Try("a definition in a module statement runs before it", () =>
 Try("a local infers its type", () =>
 {
     if (Run("""
-        class Inferred {
+        def Inferred {
             @explicitThis fun get(this): String {
                 let text = "inferred";
                 let same = text;
@@ -777,7 +783,7 @@ Try("a local infers its type", () =>
 Try("a local infers its type from a call", () =>
 {
     if (Run("""
-        class InferredCall {
+        def InferredCall {
             @explicitThis fun make(this): InferredCall { return InferredCall(); }
             @explicitThis fun get(this): String {
                 let other = this.make();
@@ -793,40 +799,40 @@ Try("a local infers its type from a call", () =>
 });
 
 Try("an inferred local keeps its type", () =>
-    Run("""class I2 { @explicitThis fun f(this) { let text = "a"; text = true; } }""") is { } e && e.Contains("doesn't match"));
+    Run("""def I2 { @explicitThis fun f(this) { let text = "a"; text = true; } }""") is { } e && e.Contains("doesn't match"));
 
 Try("a wrong argument is an error", () =>
-    Run("""class T1 { @explicitThis fun take(this, text: String) { } @explicitThis fun f(this) { this.take(true); } }""") is { } e && e.Contains("can't be called with these arguments"));
+    Run("""def T1 { @explicitThis fun take(this, text: String) { } @explicitThis fun f(this) { this.take(true); } }""") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a wrong constructor argument is an error", () =>
-    Run("""class T2 { @explicitThis new(this, text: String) { } @explicitThis fun f(this) { T2(true); } }""") is { } e && e.Contains("can't be called with these arguments"));
+    Run("""def T2 { @explicitThis new(this, text: String) { } @explicitThis fun f(this) { T2(true); } }""") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a wrong argument to an imported method is an error", () =>
-    Run("""class T3 { @explicitThis fun f(this) { Keep2(true); } }""") is { } e && e.Contains("can't be called with these arguments"));
+    Run("""def T3 { @explicitThis fun f(this) { Keep2(true); } }""") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a wrong return value is an error", () =>
-    Run("""class T4 { @explicitThis fun f(this): String { return true; } }""") is { } e && e.Contains("doesn't match"));
+    Run("""def T4 { @explicitThis fun f(this): String { return true; } }""") is { } e && e.Contains("doesn't match"));
 
 Try("a wrong field value is an error", () =>
-    Run("""class T5 { let text: String; @explicitThis fun f(this) { this.text = true; } }""") is { } e && e.Contains("doesn't match"));
+    Run("""def T5 { let text: String; @explicitThis fun f(this) { this.text = true; } }""") is { } e && e.Contains("doesn't match"));
 
 Try("a wrong field default is an error", () =>
-    Run("""class T6 { let text: String = true; }""") is { } e && e.Contains("doesn't match"));
+    Run("""def T6 { let text: String = true; }""") is { } e && e.Contains("doesn't match"));
 
 Try("a wrong parameter assignment is an error", () =>
-    Run("""class T7 { @static fun f(text: String) { text = true; } }""") is { } e && e.Contains("doesn't match"));
+    Run("""def T7 { @static fun f(text: String) { text = true; } }""") is { } e && e.Contains("doesn't match"));
 
 Try("a derived class goes where its base is expected", () =>
 {
     if (Run("""
         module M30 {
-            class Base1 {
+            def Base1 {
                 @explicitThis fun name(this): String { return "base"; }
             }
-            class Derived1 : Base1 {
+            def Derived1 : Base1 {
                 @explicitThis fun use(this): String { return Helper().read(this); }
             }
-            class Helper {
+            def Helper {
                 @explicitThis fun read(this, value: Base1): String { return value.name(); }
             }
         }
@@ -840,16 +846,16 @@ Try("a derived class goes where its base is expected", () =>
 Try("a base class doesn't go where a derived one is expected", () =>
     Run("""
         module M31 {
-            class Base2 { @explicitThis fun use(this) { Helper2().read(this); } }
-            class Derived2 : Base2 { }
-            class Helper2 { @explicitThis fun read(this, value: Derived2) { } }
+            def Base2 { @explicitThis fun use(this) { Helper2().read(this); } }
+            def Derived2 : Base2 { }
+            def Helper2 { @explicitThis fun read(this, value: Derived2) { } }
         }
         """) is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a class in progress goes where Object is expected", () =>
 {
     if (Run("""
-        class AsObject {
+        def AsObject {
             @explicitThis fun self(this): Object { return this; }
         }
         Keep(AsObject().self());
@@ -862,7 +868,7 @@ Try("a class in progress goes where Object is expected", () =>
 Try("a value type is boxed as an argument", () =>
 {
     if (Run("""
-        class Boxes {
+        def Boxes {
             @static fun id(value: Object): Object { return value; }
         }
         Keep(Boxes.id(true));
@@ -878,7 +884,7 @@ Try("a value type is boxed for an imported method", () =>
 Try("a value type is boxed when returned", () =>
 {
     if (Run("""
-        class Boxes2 {
+        def Boxes2 {
             @explicitThis fun get(this): Object { return true; }
         }
         Keep(Boxes2().get());
@@ -891,7 +897,7 @@ Try("a value type is boxed when returned", () =>
 Try("a value type is boxed when assigned", () =>
 {
     if (Run("""
-        class Boxes3 {
+        def Boxes3 {
             let value: Object;
             @explicitThis new(this) { this.value = false; }
         }
@@ -905,9 +911,9 @@ Try("a value type is boxed when assigned", () =>
 Try("a value type parameter in a cast definition", () =>
 {
     if (Run("""
-        class Maker2 {
+        def Maker2 {
             @static fun make(flag: Boolean): DotNet_Class {
-                return class Flagged {
+                return def Flagged {
                     @explicitThis fun get(this): Boolean { return flag; }
                 } as DotNet_Class;
             }
@@ -924,7 +930,7 @@ Try("a value type parameter in a cast definition", () =>
 Try("a method reaches a member of an imported base", () =>
 {
     if (Run("""
-        class Named {
+        def Named {
             @explicitThis fun name(this): String { return this.ToString(); }
         }
         Keep(Named().name());
@@ -939,7 +945,7 @@ Try("a method reaches a member of an imported base", () =>
 Try("a method is an instance method by default", () =>
 {
     if (Run("""
-        class Implicit {
+        def Implicit {
             fun get(): String { return "implicit"; }
         }
         Keep(Implicit().get());
@@ -950,12 +956,12 @@ Try("a method is an instance method by default", () =>
 });
 
 Try("this is not a special name", () =>
-    Run("class NotThis { fun f(this) { } }") is { } e && e.Contains("needs a type"));
+    Run("def NotThis { fun f(this) { } }") is { } e && e.Contains("needs a type"));
 
 Try("an explicit this can have any name", () =>
 {
     if (Run("""
-        class Named2 {
+        def Named2 {
             let value: String = "named";
             @explicitThis fun get(self): String { return self.value; }
         }
@@ -969,7 +975,7 @@ Try("an explicit this can have any name", () =>
 Try("an explicit this in a constructor", () =>
 {
     if (Run("""
-        class Built {
+        def Built {
             let text: String;
             @explicitThis new(me, text: String) { me.text = text; }
         }
@@ -983,7 +989,7 @@ Try("an explicit this in a constructor", () =>
 Try("a decorator makes a method static", () =>
 {
     if (Run("""
-        class Statics {
+        def Statics {
             @static fun make(): String { return "static"; }
         }
         Keep(Statics.make());
@@ -994,21 +1000,21 @@ Try("a decorator makes a method static", () =>
 });
 
 Try("a static method has no explicit this", () =>
-    Run("class S2 { @static @explicitThis fun f(self) { } }") is { } e && e.Contains("no this"));
+    Run("def S2 { @static @explicitThis fun f(self) { } }") is { } e && e.Contains("no this"));
 
 Try("an explicit this needs a parameter", () =>
-    Run("class S3 { @explicitThis fun f() { } }") is { } e && e.Contains("needs a parameter"));
+    Run("def S3 { @explicitThis fun f() { } }") is { } e && e.Contains("needs a parameter"));
 
 Try("decorators apply nearest first", () =>
 {
     Probe.Order.Clear();
-    return Run("class Ordered { @first @second fun f() { } }") is null && Probe.Order is ["second", "first"];
+    return Run("def Ordered { @first @second fun f() { } }") is null && Probe.Order is ["second", "first"];
 });
 
 Try("a decorated class at document level", () =>
 {
     Probe.Marked.Clear();
-    return Run("@mark class Marked1 {}") is null
+    return Run("@mark def Marked1 {}") is null
         && Probe.Marked is ["Marked1"]
         && Run("Keep(Marked1());") is null
         && Kept().GetType().Name == "Marked1";
@@ -1017,7 +1023,7 @@ Try("a decorated class at document level", () =>
 Try("a decorated class in a module", () =>
 {
     Probe.Marked.Clear();
-    return Run("module M40 { @mark class Inner40 {} }") is null
+    return Run("module M40 { @mark def Inner40 {} }") is null
         && Probe.Marked is ["Inner40"]
         && Run("Keep(M40.Inner40());") is null
         && Kept().GetType().Name == "Inner40";
@@ -1026,16 +1032,16 @@ Try("a decorated class in a module", () =>
 Try("a decorator runs after the fill", () =>
 {
     Probe.Marked.Clear();
-    return Run("class Filled { @markMethod fun later() { } }") is null && Probe.Marked is ["later"];
+    return Run("def Filled { @markMethod fun later() { } }") is null && Probe.Marked is ["later"];
 });
 
 Try("a decorator can be defined in Z#", () =>
 {
     if (Run("""
-        class Decorators {
+        def Decorators {
             @static fun named(node: DotNet_Class): DotNet_Class { Keep(node); return node; }
         }
-        @Decorators.named class DecoratedInZ {}
+        @Decorators.named def DecoratedInZ {}
         Keep(DecoratedInZ());
         """) is { } error)
         throw new Exception(error);
@@ -1044,7 +1050,7 @@ Try("a decorator can be defined in Z#", () =>
 });
 
 Try("a decorator is type checked", () =>
-    Run("@markMethod class NotAMethod {}") is { } e && e.Contains("can't be called with these arguments"));
+    Run("@markMethod def NotAMethod {}") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a decorator that doesn't take a statement can't decorate one", () =>
     Run("""@mark Keep("x");""") is { } e && e.Contains("can't be called with these arguments"));
@@ -1105,18 +1111,18 @@ Try("a local that isn't a let doesn't override", () =>
 });
 
 Try("two definitions with one name in a module are an error", () =>
-    Run("module M50 { class Twice {} class Twice {} }") is { } e && e.Contains("already defined"));
+    Run("module M50 { def Twice {} def Twice {} }") is { } e && e.Contains("already defined"));
 
 Try("two methods with one name in a class merge", () =>
-    Run("""class Overloaded { fun f() { } fun f(text: String) { } }""") is null);
+    Run("""def Overloaded { fun f() { } fun f(text: String) { } }""") is null);
 
 Try("a let can hide a definition from an outer scope", () =>
-    Run("""class LetOverDefinition { fun f() { let LetOverDefinition = "x"; } }""") is null);
+    Run("""def LetOverDefinition { fun f() { let LetOverDefinition = "x"; } }""") is null);
 
 Try("let reuses a name in the same block", () =>
 {
     if (Run("""
-        class Reuse {
+        def Reuse {
             fun get(): String {
                 let text = "first";
                 let text = text;
@@ -1132,7 +1138,7 @@ Try("let reuses a name in the same block", () =>
 });
 
 Try("a let can hide a name from an outer scope", () =>
-    Run("""class Clash { fun f() { let Keep = "x"; } }""") is null);
+    Run("""def Clash { fun f() { let Keep = "x"; } }""") is null);
 
 Try("a name in an inner scope sees what it shadows", () =>
 {
@@ -1185,7 +1191,7 @@ string Captured(string source)
 }
 
 Try("a local function reads a variable around it by reference", () => Captured("""
-    class Cap1 {
+    def Cap1 {
         @static fun run(): String {
             let x = "before";
             fun read(): String { return x; }
@@ -1197,7 +1203,7 @@ Try("a local function reads a variable around it by reference", () => Captured("
     """) == "after");
 
 Try("a local function assigns a variable around it", () => Captured("""
-    class Cap2 {
+    def Cap2 {
         @static fun run(): String {
             let x = "before";
             fun change() { x = "changed"; }
@@ -1209,7 +1215,7 @@ Try("a local function assigns a variable around it", () => Captured("""
     """) == "changed");
 
 Try("local functions share a capture", () => Captured("""
-    class Cap3 {
+    def Cap3 {
         @static fun run(): String {
             let x = "start";
             fun set() { x = "set"; }
@@ -1222,7 +1228,7 @@ Try("local functions share a capture", () => Captured("""
     """) == "set");
 
 Try("code from before a capture uses the captured variable", () => Captured("""
-    class Cap4 {
+    def Cap4 {
         @static fun run(): String {
             let x = "before";
             let y = x;
@@ -1235,7 +1241,7 @@ Try("code from before a capture uses the captured variable", () => Captured("""
     """) == "changed");
 
 Try("a capture made in a branch is the variable after the branch", () => Captured("""
-    class Cap12 {
+    def Cap12 {
         @static fun run(): String {
             let x = "before";
             if (true) {
@@ -1249,7 +1255,7 @@ Try("a capture made in a branch is the variable after the branch", () => Capture
     """) == "changed");
 
 Try("a capture made in a branch not taken leaves the variable as it is", () => Captured("""
-    class Cap13 {
+    def Cap13 {
         @static fun run(): String {
             let x = "before";
             if (false) {
@@ -1263,7 +1269,7 @@ Try("a capture made in a branch not taken leaves the variable as it is", () => C
     """) == "before");
 
 Try("a function captures through the function it is in", () => Captured("""
-    class Cap5 {
+    def Cap5 {
         @static fun run(): String {
             let x = "before";
             fun middle() {
@@ -1278,7 +1284,7 @@ Try("a function captures through the function it is in", () => Captured("""
     """) == "deep");
 
 Try("a local function captures a local of the function it is in", () => Captured("""
-    class Cap6 {
+    def Cap6 {
         @static fun run(): String {
             fun middle(): String {
                 let y = "middle";
@@ -1293,7 +1299,7 @@ Try("a local function captures a local of the function it is in", () => Captured
     """) == "inner");
 
 Try("a local function's own names aren't captured", () => Captured("""
-    class Cap7 {
+    def Cap7 {
         @static fun run(): String {
             fun own(y: String): String { let z = y; return z; }
             return own("own");
@@ -1305,7 +1311,7 @@ Try("a local function's own names aren't captured", () => Captured("""
 Try("a captured local is marked, and an uncaptured one isn't", () =>
 {
     if (Run("""
-        Keep(class Cap8 {
+        Keep(def Cap8 {
             @static fun run(): String {
                 let x = "x";
                 let y = "y";
@@ -1322,7 +1328,7 @@ Try("a captured local is marked, and an uncaptured one isn't", () =>
 
 Try("a local function gets a document local's value from when it was built", () => Captured("""
     let doc9 = "built";
-    class Cap9 {
+    def Cap9 {
         @static fun run(): String {
             fun read(): String { return doc9; }
             return read();
@@ -1333,9 +1339,9 @@ Try("a local function gets a document local's value from when it was built", () 
     """) == "built");
 
 Try("a method of a class in a body is still a method", () => Captured("""
-    class Cap10 {
+    def Cap10 {
         @static fun run(): String {
-            let made = class Inner10 { @static fun get(): String { return "method"; } } as DotNet_Class;
+            let made = def Inner10 { @static fun get(): String { return "method"; } } as DotNet_Class;
             return "ok";
         }
     }
@@ -1353,11 +1359,11 @@ string BuiltGet(string source)
 }
 
 Try("a cast definition gets a captured variable's value from when it was built", () => BuiltGet("""
-    class Cap14 {
+    def Cap14 {
         @static fun make(): DotNet_Class {
             let x = "before";
             fun read(): String { return x; }
-            let made = class Made14 { @static fun get(): String { return x; } } as DotNet_Class;
+            let made = def Made14 { @static fun get(): String { return x; } } as DotNet_Class;
             x = "after";
             return made;
         }
@@ -1366,11 +1372,11 @@ Try("a cast definition gets a captured variable's value from when it was built",
     """) == "before");
 
 Try("a cast definition calls a local function bound to the run it was built in", () => BuiltGet("""
-    class Cap15 {
+    def Cap15 {
         @static fun make(): DotNet_Class {
             let x = "before";
             fun read(): String { return x; }
-            let made = class Made15 { @static fun get(): String { return read(); } } as DotNet_Class;
+            let made = def Made15 { @static fun get(): String { return read(); } } as DotNet_Class;
             x = "after";
             return made;
         }
@@ -1379,7 +1385,7 @@ Try("a cast definition calls a local function bound to the run it was built in",
     """) == "after");
 
 Try("a local function is a delegate bound to the run of the code around it", () => Captured("""
-    class Cap16 {
+    def Cap16 {
         @static fun run(): String {
             let x = "before";
             fun read(): String { return x; }
@@ -1394,11 +1400,11 @@ Try("a local function is a delegate bound to the run of the code around it", () 
 Try("a cast definition sees a variable by value and a local function sees it by reference", () =>
 {
     if (Run("""
-        class Cap17 {
+        def Cap17 {
             @static fun make(): DotNet_Class {
                 let x = "before";
                 fun read(): String { return x; }
-                let made = class Made17 {
+                let made = def Made17 {
                     @static fun direct(): String { return x; }
                     @static fun through(): String { return read(); }
                 } as DotNet_Class;
@@ -1416,7 +1422,7 @@ Try("a cast definition sees a variable by value and a local function sees it by 
 });
 
 Try("a local function captures a parameter by reference", () => Captured2("""
-    class CapP1 {
+    def CapP1 {
         @static fun run(n: Int32): Int32 {
             fun add() { n = n + 1; }
             add();
@@ -1428,7 +1434,7 @@ Try("a local function captures a parameter by reference", () => Captured2("""
     """) is 7);
 
 Try("a local function sees a parameter assigned after it is defined", () => Captured2("""
-    class CapP2 {
+    def CapP2 {
         @static fun run(s: String): String {
             fun read(): String { return s; }
             s = s + "!";
@@ -1439,7 +1445,7 @@ Try("a local function sees a parameter assigned after it is defined", () => Capt
     """) is "a!");
 
 Try("a named parameter can be captured", () => Captured2("""
-    class CapP3 {
+    def CapP3 {
         @static fun run({n: Int32}): Int32 {
             fun twice(): Int32 { return n * 2; }
             return twice();
@@ -1449,7 +1455,7 @@ Try("a named parameter can be captured", () => Captured2("""
     """) is 42);
 
 Try("a local function captures a parameter of the local function it is in", () => Captured2("""
-    class CapP4 {
+    def CapP4 {
         @static fun run(): String {
             fun outer(text: String): String {
                 fun inner() { text = text + "!"; }
@@ -1465,7 +1471,7 @@ Try("a local function captures a parameter of the local function it is in", () =
 Try("a captured parameter is marked", () =>
 {
     if (Run("""
-        Keep(class CapP5 {
+        Keep(def CapP5 {
             @static fun run(a: String, b: String): String {
                 fun read(): String { return a; }
                 return read();
@@ -1518,7 +1524,7 @@ Try("an operator nothing defines is an error", () =>
 Try("operators and numbers in a method body", () =>
 {
     if (Run("""
-        class Arithmetic {
+        def Arithmetic {
             @static fun area(width: Int32, height: Int32): Int32 { return width * height + 1; }
         }
         Keep(Arithmetic.area(3, 4));
@@ -1531,10 +1537,10 @@ Try("operators and numbers in a method body", () =>
 Try("a number in a body that is built is encoded into it", () =>
 {
     if (Run("""
-        class Numbers {
+        def Numbers {
             @static fun make(): DotNet_Class {
                 let n = 40;
-                return class Built { @static fun get(): Int32 { return n + 2; } } as DotNet_Class;
+                return def Built { @static fun get(): Int32 { return n + 2; } } as DotNet_Class;
             }
         }
         Keep(Numbers.make());
@@ -1645,10 +1651,10 @@ Try("leaving a loop expression needs a value", () =>
     Run("let v12 = while (true) { break; } else 1;") is { } e && e.Contains("needs a value"));
 
 Try("a loop statement can't be left with a value", () =>
-    Run("""class L13 { @static fun f() { while (true) { break 1; } } }""") is { } e && e.Contains("Only a loop that is an expression"));
+    Run("""def L13 { @static fun f() { while (true) { break 1; } } }""") is { } e && e.Contains("Only a loop that is an expression"));
 
 Try("a loop in a method", () => Looped("""
-    class L14 {
+    def L14 {
         @static fun sum(n: Int32): Int32 {
             let i = 0;
             let total = 0;
@@ -1660,7 +1666,7 @@ Try("a loop in a method", () => Looped("""
     """) is 10);
 
 Try("a loop in a method has an else, and break and continue", () => Looped("""
-    class L15 {
+    def L15 {
         @static fun count(): Int32 {
             let i = 0;
             let n = 0;
@@ -1679,7 +1685,7 @@ Try("a loop in a method has an else, and break and continue", () => Looped("""
     """) is 3);
 
 Try("a loop's else runs in a method when its condition stops holding", () => Looped("""
-    class L16 {
+    def L16 {
         @static fun count(): Int32 {
             let n = 0;
             while (n < 2) { n = n + 1; } else { n = n + 10; }
@@ -1690,7 +1696,7 @@ Try("a loop's else runs in a method when its condition stops holding", () => Loo
     """) is 12);
 
 Try("named loops in a method", () => Looped("""
-    class L17 {
+    def L17 {
         @static fun count(): Int32 {
             let i = 0;
             let n = 0;
@@ -1711,7 +1717,7 @@ Try("named loops in a method", () => Looped("""
     """) is 2);
 
 Try("a loop expression in a method", () => Looped("""
-    class L18 {
+    def L18 {
         @static fun find(): Int32 {
             let i = 0;
             return while (i < 10) { i = i + 1; if (i * i == 16) { break i; } } else 0;
@@ -1723,9 +1729,9 @@ Try("a loop expression in a method", () => Looped("""
 Try("a loop in a body that is built", () =>
 {
     if (Run("""
-        class L19 {
+        def L19 {
             @static fun make(): DotNet_Class {
-                return class Built19 {
+                return def Built19 {
                     @static fun get(): Int32 {
                         let i = 0;
                         while outer (true) { i = i + 1; if (i == 4) { break from outer; } }
@@ -1743,7 +1749,7 @@ Try("a loop in a body that is built", () =>
 });
 
 Try("code from before a capture in a loop shares the captured variable", () => Looped("""
-    class L20 {
+    def L20 {
         @static fun run(): Int32 {
             let n = 0;
             let i = 0;
@@ -1791,7 +1797,7 @@ Try("overloads are chosen by the names of the arguments", () =>
 Try("a Z# method takes positional and named parameters, with default values", () =>
     ResetKept() &&
     Run("""
-        class Named1 {
+        def Named1 {
             @static fun greet(name: String, {greeting: String = "Hello"}): String { return greeting + ", " + name; }
         }
         Keep(Named1.greet("Ann"));
@@ -1801,7 +1807,7 @@ Try("a Z# method takes positional and named parameters, with default values", ()
 Try("a Z# constructor takes named arguments and default values", () =>
     ResetKept() &&
     Run("""
-        class WithDefaultTag {
+        def WithDefaultTag {
             let tag: String;
             @explicitThis new(this, {tag: String = "default"}) { this.tag = tag; }
         }
@@ -1811,7 +1817,7 @@ Try("a Z# constructor takes named arguments and default values", () =>
 
 Try("a Z# positional parameter takes only a positional argument", () =>
     Run("""
-        class Named5 {
+        def Named5 {
             @static fun join(a: String, {b: String}): String { return a + b; }
         }
         Keep(Named5.join(a: "A", b: "B"));
@@ -1825,7 +1831,7 @@ Try("arguments to a Z# method can come in any order", () =>
 
 Try("a parameter is named outside by its external name and inside by its alias", () =>
     Run("""
-        class Named6 {
+        def Named6 {
             @static fun label(value as v: String, {text as t: String = "none"}): String { return v + "/" + t; }
         }
         Keep(Named6.label("a", text: "b"));
@@ -1835,11 +1841,11 @@ Try("a named argument names the external name, not the alias", () =>
     Run("""Keep(Named6.label("a", t: "b"));""") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("parameters that take the rest of the arguments aren't supported yet", () =>
-    Run("""class Named7 { @static fun all(...rest: String) { } }""") is { } e && e.Contains("take the rest"));
+    Run("""def Named7 { @static fun all(...rest: String) { } }""") is { } e && e.Contains("take the rest"));
 
 Try("a local function takes named arguments and default values", () =>
     Run("""
-        class Named3 {
+        def Named3 {
             @static fun run(): String {
                 fun join(a: String, {b: String = "!"}): String { return a + b; }
                 return join("x") + join(b: "?", "y");
@@ -1854,7 +1860,7 @@ Try("a default value is code that runs at each call", () =>
     Probe.Kept.Clear();
 
     return Run("""
-        class Named4 {
+        def Named4 {
             @static fun next(n: Int32 = NextNumber()): Int32 { return n; }
         }
         Keep(Named4.next());
@@ -1907,7 +1913,7 @@ Try("a class in a module calls the module's functions and reads its lets", () =>
             let suffix: String = "!";
             fun shout(text: String): String { return text + suffix; }
 
-            class Speaker105 {
+            def Speaker105 {
                 @static fun speak(): String { return shout("hey"); }
             }
         }
@@ -1919,7 +1925,7 @@ Try("a module's functions and its classes use each other", () =>
         module M106 {
             fun greet(name: String): String { return "hello " + name; }
 
-            class Greeter106 {
+            def Greeter106 {
                 let name: String;
                 @explicitThis new(this, name: String) { this.name = name; }
                 @explicitThis fun greeting(this): String { return greet(this.name); }
@@ -1933,7 +1939,7 @@ Try("a module's functions and its classes use each other", () =>
 Try("a function builds a module that imports, has a let and a function, and the module runs", () =>
 {
     if (Run("""
-        class Factory104 {
+        def Factory104 {
             @static fun make(): DotNet_Module {
                 return module {
                     import { String } from "core:runtime";
@@ -1964,7 +1970,7 @@ Try("ct evaluates an expression given as HIR", () =>
 
 Try("load gives a definition's runtime object", () =>
     Run("""
-        let made107 = class LoadMe107 {} as DotNet_Class;
+        let made107 = def LoadMe107 {} as DotNet_Class;
         Keep(load(made107));
         """) is null && Kept() is Type { Name: "LoadMe107" });
 
@@ -1984,7 +1990,7 @@ Try("@ct runs a statement as the code around it runs", () =>
 Try("@ct in a body runs as the body is built, and leaves nothing in it", () =>
     ResetKept()
     && Run("""
-        class CtBody108 {
+        def CtBody108 {
             @static fun f(): String {
                 @ct Keep("while building");
                 return "called";
@@ -1999,7 +2005,7 @@ Try("@ct in a body runs as the body is built, and leaves nothing in it", () =>
 Try("a decorator in a body places the code it gives", () =>
     ResetKept()
     && Run("""
-        class Twice109 {
+        def Twice109 {
             @static fun f() { @twice Keep("again"); }
         }
         Twice109.f();
@@ -2010,8 +2016,8 @@ Try("@ct on a definition in a module loads it as the module is built, and doesn'
 {
     if (Run("""
         module M112 {
-            @ct class Loaded112 {}
-            class Registered112 {}
+            @ct def Loaded112 {}
+            def Registered112 {}
         }
         """) is { } error)
         throw new Exception(error);
@@ -2022,12 +2028,12 @@ Try("@ct on a definition in a module loads it as the module is built, and doesn'
 });
 
 Try("@ct on a definition in a document loads it", () =>
-    Run("@ct class Loaded113 {}") is null && Probe.LastType("Loaded113") is not null);
+    Run("@ct def Loaded113 {}") is null && Probe.LastType("Loaded113") is not null);
 
 Try("@ct on a definition in a body loads it as the body is built", () =>
     Run("""
-        class Holder114 {
-            @static fun f() { @ct class Loaded114 {}; }
+        def Holder114 {
+            @static fun f() { @ct def Loaded114 {}; }
         }
         """) is null && Probe.LastType("Loaded114") is not null);
 
@@ -2035,7 +2041,7 @@ Try("@ct on a definition in a body loads it as the body is built", () =>
 
 Try("a decorator makes a parameter injected, so a call leaves it out", () =>
     Run("""
-        class Inject110 {
+        def Inject110 {
             @static fun greet(name: String, @inject greeting: String): String { return greeting + ", " + name; }
         }
         Keep(Inject110.greet("Ann"));
@@ -2045,7 +2051,7 @@ Try("an injected parameter can't be given by a call", () =>
     Run("""Keep(Inject110.greet("Ann", "hello"));""") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a parameter decorator must give a parameter", () =>
-    Run("""class Inject111 { @static fun f(@mark x: String) { } }""") is not null);
+    Run("""def Inject111 { @static fun f(@mark x: String) { } }""") is not null);
 
 // ---- CLR generics
 
@@ -2069,7 +2075,7 @@ Try("a generic CLR type with two arguments", () =>
 Try("an instantiated generic type in a type position", () =>
     Run("""
         import { List } from "core:runtime";
-        class Generic118 {
+        def Generic118 {
             let items: List[String];
             @static fun count(xs: List[String]): Int32 { return xs.Count; }
         }
@@ -2100,33 +2106,33 @@ Try("a generic instance is described as its definition and arguments", () =>
 
 Try("a class implements an interface defined in Z#", () =>
     Run("""
-        class IGreeter121 of DotNet_Interface { fun greet(): String; }
-        class English121 : IGreeter121 { fun greet(): String { return "hello"; } }
+        def IGreeter121 of DotNet_Interface { fun greet(): String; }
+        def English121 : IGreeter121 { fun greet(): String { return "hello"; } }
         let greeter121: IGreeter121 = English121();
         Keep(greeter121.greet());
         """) is null && (string)Kept() == "hello");
 
 Try("a virtual method is overridden", () =>
     Run("""
-        class Animal120 { @virtual fun sound(): String { return "..."; } }
-        class Dog120 : Animal120 { @override fun sound(): String { return "woof"; } }
+        def Animal120 { @virtual fun sound(): String { return "..."; } }
+        def Dog120 : Animal120 { @override fun sound(): String { return "woof"; } }
         let animal120: Animal120 = Dog120();
         Keep(animal120.sound());
         """) is null && (string)Kept() == "woof");
 
 Try("an abstract method is implemented by a derived class", () =>
     Run("""
-        class Shape122 { @abstract fun area(): Int32; }
-        class Square122 : Shape122 { @override fun area(): Int32 { return 4; } }
+        def Shape122 { @abstract fun area(): Int32; }
+        def Square122 : Shape122 { @override fun area(): Int32 { return 4; } }
         let shape122: Shape122 = Square122();
         Keep(shape122.area());
         """) is null && Kept() is 4);
 
 Try("an interface extends another", () =>
     Run("""
-        class INamed123 of DotNet_Interface { fun name(): String; }
-        class IPerson123 of DotNet_Interface : INamed123 { fun age(): Int32; }
-        class Person123 : IPerson123 {
+        def INamed123 of DotNet_Interface { fun name(): String; }
+        def IPerson123 of DotNet_Interface : INamed123 { fun age(): Int32; }
+        def Person123 : IPerson123 {
             fun name(): String { return "Ann"; }
             fun age(): Int32 { return 30; }
         }
@@ -2136,9 +2142,9 @@ Try("an interface extends another", () =>
 
 Try("a class has a base class and interfaces", () =>
     Run("""
-        class IShout125 of DotNet_Interface { fun shout(): String; }
-        class Base125 { fun quiet(): String { return "shh"; } }
-        class Both125 : Base125, IShout125 { fun shout(): String { return "HEY"; } }
+        def IShout125 of DotNet_Interface { fun shout(): String; }
+        def Base125 { fun quiet(): String { return "shh"; } }
+        def Both125 : Base125, IShout125 { fun shout(): String { return "HEY"; } }
         let both125 = Both125();
         let shouter125: IShout125 = both125;
         Keep(both125.quiet() + shouter125.shout());
@@ -2147,21 +2153,21 @@ Try("a class has a base class and interfaces", () =>
 Try("a CLR interface is implemented", () =>
     Run("""
         import { IDisposable } from "core:runtime";
-        class Closer126 : IDisposable { fun Dispose() { Keep("disposed"); } }
+        def Closer126 : IDisposable { fun Dispose() { Keep("disposed"); } }
         let closer126: IDisposable = Closer126();
         closer126.Dispose();
         """) is null && (string)Kept() == "disposed");
 
 Try("a class can have only one base class", () =>
     Run("""
-        class One127 {}
-        class Two127 {}
-        class Three127 : One127, Two127 {}
+        def One127 {}
+        def Two127 {}
+        def Three127 : One127, Two127 {}
         """) is { } e && e.Contains("one base class"));
 
 Try("an interface is described as an interface", () =>
 {
-    if (Run("""Keep(class IShape128 of DotNet_Interface { fun area(): Int32; } as DotNet_Interface);""") is { } error)
+    if (Run("""Keep(def IShape128 of DotNet_Interface { fun area(): Int32; } as DotNet_Interface);""") is { } error)
         throw new Exception(error);
 
     return Kept() is Package.DotNet.Interface { Name: "IShape128", Methods: [{ Name: "area" }] };
@@ -2211,15 +2217,15 @@ Try("an instance method is bound to its object", () =>
 
 Try("a Z# method is a value", () =>
     Run("""
-        class Twice136 { @static fun twice(text: String): String { return text + text; } }
+        def Twice136 { @static fun twice(text: String): String { return text + text; } }
         let twice136 = Twice136.twice;
         Keep(twice136("a"));
         """) is null && (string)Kept() == "aa");
 
 Try("a virtual method as a value calls what the object overrides", () =>
     Run("""
-        class Animal137 { @virtual fun sound(): String { return "..."; } }
-        class Dog137 : Animal137 { @override fun sound(): String { return "woof"; } }
+        def Animal137 { @virtual fun sound(): String { return "..."; } }
+        def Dog137 : Animal137 { @override fun sound(): String { return "woof"; } }
         let animal137: Animal137 = Dog137();
         let sound137 = animal137.sound;
         Keep(sound137());
@@ -2236,7 +2242,7 @@ Try("a method that doesn't fit a delegate type is an error", () =>
 Try("a generic class is defined and instantiated", () =>
     ResetKept()
     && Run("""
-        class Box139[T] {
+        def Box139[T] {
             let value: T;
             @explicitThis new(this, value: T) { this.value = value; }
             @explicitThis fun get(this): T { return this.value; }
@@ -2248,7 +2254,7 @@ Try("a generic class is defined and instantiated", () =>
 
 Try("a generic class has two type parameters", () =>
     Run("""
-        class Pair140[A, B] {
+        def Pair140[A, B] {
             let first: A;
             let second: B;
             @explicitThis new(this, first: A, second: B) { this.first = first; this.second = second; }
@@ -2258,14 +2264,14 @@ Try("a generic class has two type parameters", () =>
         """) is null && Kept() is 1);
 
 Try("a generic class is a CLR generic type definition", () =>
-    Run("class Generic141[T] { let item: T; }") is null
+    Run("def Generic141[T] { let item: T; }") is null
     && Probe.LastType("Generic141") is { IsGenericTypeDefinition: true } type
     && type.GetField("item")!.FieldType.IsGenericParameter);
 
 Try("a generic method is defined and given its arguments", () =>
     ResetKept()
     && Run("""
-        class Ids143 { @static fun id[T](value: T): T { return value; } }
+        def Ids143 { @static fun id[T](value: T): T { return value; } }
         Keep(Ids143.id[Int32](7));
         Keep(Ids143.id[String]("seven"));
         """) is null
@@ -2273,7 +2279,7 @@ Try("a generic method is defined and given its arguments", () =>
 
 Try("a generic class has a generic method", () =>
     Run("""
-        class Holder144[T] {
+        def Holder144[T] {
             let held: T;
             @explicitThis new(this, held: T) { this.held = held; }
             @explicitThis fun with[U](this, other: U): U { return other; }
@@ -2282,14 +2288,14 @@ Try("a generic class has a generic method", () =>
         """) is null && (string)Kept() == "other");
 
 Try("a generic method's type parameter is a CLR method type parameter", () =>
-    Run("class Ids145 { @static fun id[T](value: T): T { return value; } }") is null
+    Run("def Ids145 { @static fun id[T](value: T): T { return value; } }") is null
     && Probe.LastType("Ids145") is { } type
     && type.GetMethod("id") is { IsGenericMethodDefinition: true } method
     && method.ReturnType.IsGenericMethodParameter);
 
 Try("a type parameter is only known inside its class", () =>
     Run("""
-        class Inside142[T] { let item: T; }
+        def Inside142[T] { let item: T; }
         let outside142: T = 1;
         """) is not null);
 
@@ -2426,7 +2432,7 @@ Try("a value is of a type it goes to", () =>
 
 Try("a type test and a cast in a method", () =>
     Run("""
-        class Lengths157 {
+        def Lengths157 {
             @static fun of(value: Object): Int32 {
                 if (value is of String) return (value as String).Length;
                 return 0;
@@ -2458,7 +2464,7 @@ Try("_ names nothing", () =>
 
 Try("a name pattern in a method", () =>
     Run("""
-        class Lengths164 {
+        def Lengths164 {
             @static fun of(value: Object): Int32 {
                 if (value is text of String) return text.Length;
                 return 0;
@@ -2501,7 +2507,7 @@ Try("an out argument is assigned by the call", () =>
 
 Try("ref arguments are read and assigned", () =>
     Run("""
-        class Swaps167 {
+        def Swaps167 {
             @static fun swapped(): Int32 {
                 let left: Int32 = 1;
                 let right: Int32 = 2;
@@ -2514,7 +2520,7 @@ Try("ref arguments are read and assigned", () =>
 
 Try("a parameter passed by reference", () =>
     Run("""
-        class Halves168 {
+        def Halves168 {
             @static fun halved(value: Int32, half: Int32): Int32 {
                 Probe.Halve(value, half);
                 return half;
@@ -2551,7 +2557,7 @@ Try("a handler added to a static event runs when it is raised, until it is remov
 
 Try("a local function handles an instance event and captures a local", () =>
     Run("""
-        class Rings171 {
+        def Rings171 {
             @static fun count(): Int32 {
                 let bell = Bell();
                 let rings = 0;
@@ -2589,7 +2595,7 @@ Try("a type argument is inferred through a reference", () =>
 
 Try("type arguments are inferred from a local function", () =>
     Run("""
-        class Twice173 {
+        def Twice173 {
             @static fun total(): Int32 {
                 fun twice(value: Int32): Int32 { return value * 2; }
                 return Enumerable.Sum(Enumerable.Select(Probe.Numbers(), twice));
@@ -2639,7 +2645,7 @@ Try("a task waited on", () =>
 
 Try("a local function runs as a task", () =>
     Run("""
-        class Work179 {
+        def Work179 {
             @static fun run(): Int32 {
                 let base = 40;
                 fun work(): Int32 { return base + 2; }
@@ -2690,7 +2696,7 @@ Try("an import of a name the module has no member for fails at the import", () =
 
 Try("generic extension methods infer from the value and a local function", () =>
     Run("""
-        class Linq183 {
+        def Linq183 {
             @static fun run(): Int32 {
                 fun odd(value: Int32): Boolean { return value == 1 or value == 3; }
                 fun twice(value: Int32): Int32 { return value * 2; }
@@ -2777,7 +2783,7 @@ Try("a let in a document is an out argument", () =>
 
 Try("a let in a method is an out argument", () =>
     Run("""
-        class Parse196 {
+        def Parse196 {
             @static fun number(text: String): Int32 {
                 if (Int32.TryParse(text, let parsed: Int32)) return parsed;
                 return 0 - 1;
@@ -2790,7 +2796,7 @@ Try("a let in a method is an out argument", () =>
 
 Try("an Out parameter is assigned through", () =>
     ResetKept() && Run("""
-        class Halves197 {
+        def Halves197 {
             @static fun halve(value: Int32, half: Out[Int32]): Boolean {
                 half = value / 2;
                 return value == half * 2;
@@ -2802,7 +2808,7 @@ Try("an Out parameter is assigned through", () =>
 
 Try("a Ref parameter is read and assigned through", () =>
     Run("""
-        class Bumps198 {
+        def Bumps198 {
             @static fun bump(counter: Ref[Int32]) { counter = counter + 1; }
         }
         let counter198: Int32 = 1;
@@ -2813,7 +2819,7 @@ Try("a Ref parameter is read and assigned through", () =>
 
 Try("a Ref parameter passed on passes the reference it holds", () =>
     ResetKept() && Run("""
-        class Increments199 {
+        def Increments199 {
             @static fun increment(counter: Ref[Int32]): Int32 { return Interlocked.Increment(counter); }
         }
         let counter199: Int32 = 5;
@@ -2823,7 +2829,7 @@ Try("a Ref parameter passed on passes the reference it holds", () =>
 
 Try("a Ref parameter is a reference on the CLR", () =>
     Run("""
-        class Signature200 {
+        def Signature200 {
             @static fun take(value: Ref[Int32]) { }
         }
         Keep(Signature200);
@@ -2832,7 +2838,7 @@ Try("a Ref parameter is a reference on the CLR", () =>
 
 Try("a call with an identifier among its arguments, in a condition in a class", () =>
     Run("""
-        class Parsing201 {
+        def Parsing201 {
             @static fun same(word: String): Int32 {
                 let other = "a";
                 if (String.Equals(word, other)) return 1;
@@ -2892,6 +2898,42 @@ Try("an indexer's argument given by its name", () =>
 Try("an array of several dimensions is indexed by an index for each", () =>
     Run("let grid211 = Int32[2, 3]; grid211[1, 2] = 7; Keep(grid211[1, 2] + grid211[0, 0]);") is null && Kept() is 7);
 
+// ---- the toolchain from Z#
+
+Try("the toolchain's types are imported from its modules", () =>
+    ResetKept() && Run("""
+        module M212 {
+            import { Instance } from "core:hir";
+            import { Function } from "core:ast";
+            import { CompilerObject } from "core:mir";
+            import { Result } from "core:common";
+            import { String } from "core:runtime";
+        }
+        """) is null);
+
+Try("a generic type of a module is found by its name, every arity of it", () =>
+    Run("""
+        module M213 {
+            import { Result, Error } from "core:common";
+            import { String, Type } from "core:runtime";
+            let kind: Type = Result[String, Error];
+        }
+        Keep(M213.kind);
+        """) is null && Kept() is Type type && type == typeof(CommonZ.Result<string, CommonZ.Error>));
+
+Try("Z# reaches the meta-types and the mapped loaders", () =>
+    ResetKept() && Run("""
+        module M214 {
+            import { metaTypes } from "core:zsharp";
+            import { mappedLoader } from "core:compiler";
+            import { Object } from "core:runtime";
+            let types: Object = metaTypes;
+            let loader: Object = mappedLoader;
+        }
+        Keep(M214.types);
+        Keep(M214.loader);
+        """) is null && Probe.Kept is [ZSharp.Lang.MetaTypes, ZSharp.Compiler.MappedLoader]);
+
 // ---- CLR value types
 
 Try("a struct's property is read from a struct a method returns", () =>
@@ -2914,7 +2956,7 @@ Try("a struct in a document local", () =>
 
 Try("a struct in a local of a method", () =>
     Run("""
-        class Spans147 {
+        def Spans147 {
             @static fun minutes(seconds: Double): Double {
                 let span = TimeSpan.FromSeconds(seconds);
                 return span.TotalMinutes;
@@ -2940,7 +2982,7 @@ Try("CLR overloads that are as specific as each other are ambiguous", () =>
 Try("the most specific Z# method is chosen", () =>
 {
     if (Run("""
-        class Over1 {
+        def Over1 {
             @static fun pick(x: Object): String { return "object"; }
             @static fun pick(x: String): String { return "string"; }
         }
@@ -2955,7 +2997,7 @@ Try("the most specific Z# method is chosen", () =>
 Try("Z# methods are chosen inside the class too", () =>
 {
     if (Run("""
-        class Over2 {
+        def Over2 {
             @static fun pick(x: String): String { return "string"; }
             @static fun pick(x: Boolean): String { return "bool"; }
             @static fun get(): String { return Over2.pick(true); }
@@ -2969,7 +3011,7 @@ Try("Z# methods are chosen inside the class too", () =>
 
 Try("Z# methods that are as specific as each other are ambiguous", () =>
     Run("""
-        class Over3 {
+        def Over3 {
             @static fun two(a: Object, b: String): String { return "first"; }
             @static fun two(a: String, b: Object): String { return "second"; }
         }
@@ -2979,7 +3021,7 @@ Try("Z# methods that are as specific as each other are ambiguous", () =>
 Try("a Z# constructor is chosen by its parameter types", () =>
 {
     if (Run("""
-        class Over4 {
+        def Over4 {
             let tag: String;
             @explicitThis new(this, x: Object) { this.tag = "object"; }
             @explicitThis new(this, x: String) { this.tag = "string"; }
@@ -3005,12 +3047,12 @@ Try("a value is encoded by its type", () =>
     && Scope.HIRReifier.EncodeValue(new List<int>()).Unwrap() is C.Get { Instance: Package.DotNet.ExposedObject });
 
 Try("a class used as a value is its type object", () =>
-    Run("class ClassValue {} Keep(ClassValue);") is null && Kept() is Type { Name: "ClassValue" });
+    Run("def ClassValue {} Keep(ClassValue);") is null && Kept() is Type { Name: "ClassValue" });
 
 Try("a class still loading used as a value is its type object", () =>
 {
     if (Run("""
-        class SelfValue {
+        def SelfValue {
             fun get(): Object { return SelfValue; }
         }
         Keep(SelfValue());
@@ -3025,13 +3067,13 @@ Try("a definition used by a cast definition inside a body", () =>
 {
     if (Run("""
         module M60 {
-            class Bar60 {
+            def Bar60 {
                 @static fun name(): String { return "bar"; }
             }
 
-            class Maker60 {
+            def Maker60 {
                 @static fun make(): DotNet_Class {
-                    return class Made60 {
+                    return def Made60 {
                         fun get(): String { return Bar60.name(); }
                     } as DotNet_Class;
                 }
@@ -3049,9 +3091,9 @@ Try("a definition used by a cast definition inside a body", () =>
 Try("a captured string is encoded as a literal", () =>
 {
     if (Run("""
-        class Maker61 {
+        def Maker61 {
             @static fun make(text: String): DotNet_Class {
-                return class Made61 {
+                return def Made61 {
                     fun get(): String { return text; }
                 } as DotNet_Class;
             }
@@ -3068,15 +3110,15 @@ Try("three levels of generation", () =>
 {
     if (Run("""
         module M70 {
-            class Bar70 {
+            def Bar70 {
                 @static fun name(): String { return "bar"; }
             }
 
-            class Maker70 {
+            def Maker70 {
                 @static fun make(outer: String): DotNet_Class {
-                    return class Middle70 {
+                    return def Middle70 {
                         fun make(inner: String): DotNet_Class {
-                            return class Leaf70 {
+                            return def Leaf70 {
                                 fun getBar(): String { return Bar70.name(); }
                                 fun getOuter(): String { return outer; }
                                 fun getInner(): String { return inner; }
@@ -3106,7 +3148,7 @@ Try("three levels of generation", () =>
 Try("a let is a local of the method", () =>
 {
     if (Run("""
-        class LocalsOf {
+        def LocalsOf {
             fun get(): String {
                 let first = "a";
                 let second: String = first;
@@ -3124,7 +3166,7 @@ Try("a let starts where it is", () =>
 {
     Probe.Kept.Clear();
     if (Run("""
-        class Ordered2 {
+        def Ordered2 {
             fun run() {
                 Keep("before");
                 let a = "a";
@@ -3141,7 +3183,7 @@ Try("a let starts where it is", () =>
 Try("a let nested in a block", () =>
 {
     if (Run("""
-        class Nested3 {
+        def Nested3 {
             fun pick(yes: Boolean): String {
                 let result = "no";
                 if (yes) {
@@ -3161,7 +3203,7 @@ Try("a let nested in a block", () =>
 Try("a method lists its locals", () =>
 {
     if (Run("""
-        class Listed {
+        def Listed {
             fun get(): String {
                 let a = "a";
                 if (true) { let b = "b"; }
@@ -3178,9 +3220,9 @@ Try("a method lists its locals", () =>
 Try("a let in a cast definition inside a body", () =>
 {
     if (Run("""
-        class Maker72 {
+        def Maker72 {
             @static fun make(text: String): DotNet_Class {
-                return class Made72 {
+                return def Made72 {
                     fun get(): String {
                         let copy = text;
                         return copy;
@@ -3224,36 +3266,36 @@ const string Header = """
     """;
 
 Try("a document exports what is marked", () =>
-    Run("@export class Exported1 {}") is null && document.Document.Exports.ContainsKey("Exported1"));
+    Run("@export def Exported1 {}") is null && document.Document.Exports.ContainsKey("Exported1"));
 
 Try("a document doesn't export what isn't marked", () =>
-    Run("class NotExported1 {}") is null && !document.Document.Exports.ContainsKey("NotExported1"));
+    Run("def NotExported1 {}") is null && !document.Document.Exports.ContainsKey("NotExported1"));
 
 // A module doesn't know Export, so registering what @export returns is a type error:
 // the module's Add doesn't take it.
 Try("only a definition in a document can be exported", () =>
-    Run("module M80 { @export class Inner80 {} }") is { } e && e.Contains("None of the 4 overloads applies"));
+    Run("module M80 { @export def Inner80 {} }") is { } e && e.Contains("None of the 4 overloads applies"));
 
 Try("an export with an alias exports under the alias", () =>
-    Run("""@export("Aliased81") class Original81 {}""") is null
+    Run("""@export("Aliased81") def Original81 {}""") is null
     && document.Document.Exports.ContainsKey("Aliased81")
     && !document.Document.Exports.ContainsKey("Original81"));
 
 Try("an exported definition keeps its own name in the document", () =>
-    Run("""@export("Aliased82") class Original82 { @static fun name(): String { return "own"; } } Keep(Original82.name());""") is null
+    Run("""@export("Aliased82") def Original82 { @static fun name(): String { return "own"; } } Keep(Original82.name());""") is null
     && (string)Kept() == "own");
 
 Try("an export comes after the decorators nearer the definition", () =>
 {
     Probe.Marked.Clear();
 
-    return Run("""@export @mark class Marked83 {}""") is null
+    return Run("""@export @mark def Marked83 {}""") is null
         && Probe.Marked is ["Marked83"]
         && document.Document.Exports.ContainsKey("Marked83");
 });
 
 Try("an export goes to no decorator but the document", () =>
-    Run("""@mark @export class Marked84 {}""") is { } e && e.Contains("can't be called with these arguments"));
+    Run("""@mark @export def Marked84 {}""") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a CLR delegate can be called", () =>
     Run("""Keep(export("Called85")(DotNet_Class as Object));""") is not { } failure
@@ -3264,7 +3306,7 @@ Try("importing a document gives what it exports", () =>
 {
     var library = WriteDocument("library1.zs", Header + """
         @export
-        class Library1 {
+        def Library1 {
             @static fun hello(): String { return "imported"; }
         }
         """);
@@ -3277,7 +3319,7 @@ Try("importing a document gives what it exports under an alias", () =>
 {
     var library = WriteDocument("library86.zs", Header + """
         @export("Public86")
-        class Private86 {
+        def Private86 {
             @static fun hello(): String { return "aliased"; }
         }
         """);
@@ -3288,14 +3330,14 @@ Try("importing a document gives what it exports under an alias", () =>
 
 Try("a name a document doesn't export can't be imported", () =>
 {
-    var library = WriteDocument("library2.zs", Header + "class Hidden2 {}");
+    var library = WriteDocument("library2.zs", Header + "def Hidden2 {}");
 
     return Run($$"""import { Hidden2 } from "{{library}}"; Keep(Hidden2);""") is { } e && e.Contains("exports nothing named Hidden2");
 });
 
 Try("a document runs once however often it is imported", () =>
 {
-    var library = WriteDocument("library3.zs", Header + "@export class Once3 {}");
+    var library = WriteDocument("library3.zs", Header + "@export def Once3 {}");
 
     return Run($$"""import { Once3 } from "{{library}}";""") is null
         && Run($$"""import { Once3 as Again3 } from "{{library}}"; Keep(Once3 as DotNet_Class); Keep(Again3 as DotNet_Class);""") is null
@@ -3306,7 +3348,7 @@ Try("a document imports another relative to itself", () =>
 {
     WriteDocument("inner4.zs", Header + """
         @export
-        class Inner4 {
+        def Inner4 {
             @static fun name(): String { return "relative"; }
         }
         """);
@@ -3314,7 +3356,7 @@ Try("a document imports another relative to itself", () =>
         import { Inner4 } from "inner4.zs";
 
         @export
-        class Outer4 {
+        def Outer4 {
             @static fun name(): String { return Inner4.name(); }
         }
         """);
@@ -3338,7 +3380,7 @@ Try("a missing document is an error", () =>
 
 string Library(string name, string text) => WriteDocument(name + ".zs", Header + $$"""
     @export
-    class {{name}} {
+    def {{name}} {
         @static fun hello(): String { return "{{text}}"; }
     }
     """);
@@ -3374,7 +3416,7 @@ Try("an import in a body passes its arguments too", () =>
     Probe.ImportedWith.Clear();
 
     if (Run($$"""
-        class Uses94 {
+        def Uses94 {
             @static fun get(): String {
                 import("in a body") { Library94b } from "{{library}}";
                 return Library94b.hello();
@@ -3395,9 +3437,9 @@ Try("an import in a body runs as the body is built", () =>
     var library = Library("Library90", "built");
 
     if (Run("""
-        class Maker90 {
+        def Maker90 {
             @static fun make(src: String): DotNet_Class {
-                return class Made90 {
+                return def Made90 {
                     fun get(): String {
                         import { Library90 as L } from src;
                         return L.hello();
@@ -3424,16 +3466,16 @@ Try("an import in a body runs as the body is built", () =>
 Try("each construction of a body runs its import again", () =>
 {
     var first = WriteDocument("Again91a.zs", Header + """
-        @export class Shared91 { @static fun hello(): String { return "one"; } }
+        @export def Shared91 { @static fun hello(): String { return "one"; } }
         """);
     var second = WriteDocument("Again91b.zs", Header + """
-        @export class Shared91 { @static fun hello(): String { return "two"; } }
+        @export def Shared91 { @static fun hello(): String { return "two"; } }
         """);
 
     if (Run("""
-        class Maker91 {
+        def Maker91 {
             @static fun make(src: String): DotNet_Class {
-                return class Made91 {
+                return def Made91 {
                     fun get(): String {
                         import { Shared91 } from src;
                         return Shared91.hello();
@@ -3461,7 +3503,7 @@ Try("an import in a body can't use what the body is given", () =>
     var library = Library("Library92", "x");
 
     return Run("""
-        class Uses92 {
+        def Uses92 {
             @static fun use(src: String): String {
                 import { Library92 } from src;
                 return Library92.hello();
@@ -3478,7 +3520,7 @@ Try("an import in a module runs as the module is constructed", () =>
         module M93 {
             import { Library93 } from "{{library}}";
 
-            class C93 {
+            def C93 {
                 @static fun get(): String { return Library93.hello(); }
             }
         }
@@ -3496,7 +3538,7 @@ Try("a module can use what it imports from a compile-time source while it is com
         import { export } from "core:zsharp";
 
         @export
-        class Library94 {
+        def Library94 {
             @static fun mark(definition: DotNet_Class): DotNet_Class { return definition; }
         }
         """);
@@ -3506,7 +3548,7 @@ Try("a module can use what it imports from a compile-time source while it is com
             import { Library94 } from "{{library}}";
 
             @Library94.mark
-            class C94 {}
+            def C94 {}
         }
         Keep(M94.C94());
         """) is null && Kept().GetType().Name == "C94";
@@ -3520,7 +3562,7 @@ Try("a module's definitions can use what it imports as types", () =>
         module M98 {
             import { Library98 } from "{{library}}";
 
-            class Holder98 {
+            def Holder98 {
                 let held: Library98;
                 @static fun take(value: Library98): Library98 { return value; }
                 @static fun hello(): String { return Library98.hello(); }
@@ -3539,7 +3581,7 @@ Try("an import with a compile-time source runs once, while compiling", () =>
     Probe.ImportedWith.Clear();
 
     if (Run($$"""
-        class Uses99 {
+        def Uses99 {
             @static fun get(): String {
                 import("compiled") { Library99 } from "{{library}}";
                 return Library99.hello();
@@ -3563,7 +3605,7 @@ Try("an import from a document local is a compile-time import", () =>
 
     if (Run($$"""
         let source100 = "{{library}}";
-        class Uses100 {
+        def Uses100 {
             @static fun get(): String {
                 import("from a local") { Library100 } from source100;
                 return Library100.hello();
@@ -3639,7 +3681,7 @@ Try("a method gets the value a document local had when it was built", () =>
 {
     if (Run("""
         let d7 = "when built";
-        class Reads7 { @static fun get(): String { return d7; } }
+        def Reads7 { @static fun get(): String { return d7; } }
         d7 = "later";
         Keep(Reads7.get());
         """) is { } error)
@@ -3660,6 +3702,91 @@ Try("a nested statement is only compiled when it is reached", () =>
 Try("a condition sees the document locals", () =>
     Run("""let d11: Boolean = false; if (d11) { Keep("then"); } else { Keep("else"); }""") is null
     && (string)Kept() == "else");
+
+// ---- std:functions: Z#'s own functions, defined in Z#. Installing it makes every fun
+// that nothing else compiles a Z# function, so these come last.
+
+string StandardLibrary(string path)
+{
+    for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+        if (File.Exists(Path.Combine(directory.FullName, "std", path)))
+            return Path.Combine(directory.FullName, "std", path).Replace("\\", "/");
+
+    throw new FileNotFoundException(path);
+}
+
+Try("std:functions installs", () =>
+    Run($$"""import { Function } from "{{StandardLibrary("functions/functions.zs")}}";""") is null);
+
+Try("a fun in a document is a Z# function", () =>
+    Run("""
+        fun twice215(value: Int32): Int32 { return value * 2; }
+        Keep(twice215(21));
+        """) is null && Kept() is 42);
+
+Try("a Z# function has named parameters with default values", () =>
+    ResetKept() && Run("""
+        fun greet218(name: String, {punctuation: String = "!"}): String { return "Hi " + name + punctuation; }
+        Keep(greet218("Z"));
+        Keep(greet218("Z", punctuation: "?"));
+        """) is null && Probe.Kept is ["Hi Z!", "Hi Z?"]);
+
+Try("a Z# function calls itself", () =>
+    Run("""
+        fun factorial219(n: Int32): Int32 {
+            if (n < 2) return 1;
+            return n * factorial219(n - 1);
+        }
+        Keep(factorial219(5));
+        """) is null && Kept() is 120);
+
+Try("a Z# function has locals and loops", () =>
+    Run("""
+        fun total220(n: Int32): Int32 {
+            let total = 0;
+            let index = 0;
+            while (index < n) {
+                total = total + index;
+                index = index + 1;
+            }
+            return total;
+        }
+        Keep(total220(5));
+        """) is null && Kept() is 10);
+
+Try("a Z# function that returns nothing", () =>
+    Run("""
+        fun hello221() { Keep("hello221"); }
+        hello221();
+        """) is null && (string)Kept() == "hello221");
+
+Try("a Z# function calls another", () =>
+    Run("""
+        fun inner222(value: Int32): Int32 { return value + 1; }
+        fun outer222(value: Int32): Int32 { return inner222(value) * 10; }
+        Keep(outer222(4));
+        """) is null && Kept() is 50);
+
+Try("a CLR method calls a Z# function", () =>
+    Run("""
+        def Uses223 { @static fun run(): Int32 { return twice215(5); } }
+        Keep(Uses223.run());
+        """) is null && Kept() is 10);
+
+Try("a fun in a CLR module is still a function of the module", () =>
+    Run("""
+        module M224 { fun one(): Int32 { return twice215(3) + 1; } }
+        Keep(M224.one());
+        """) is null && Kept() is 7);
+
+Try("a Z# function given too many arguments is an error", () =>
+    Run("Keep(twice215(1, 2));") is { } e && e.Contains("too many arguments"));
+
+Try("a Z# function given too few arguments is an error", () =>
+    Run("Keep(twice215());") is { } e && e.Contains("No argument is given for parameter value"));
+
+Try("a positional parameter isn't given by name", () =>
+    Run("Keep(twice215(value: 1));") is { } e && e.Length > 0);
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;

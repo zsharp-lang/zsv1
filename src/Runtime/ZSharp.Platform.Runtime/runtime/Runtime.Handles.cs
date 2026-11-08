@@ -36,6 +36,19 @@ namespace ZSharp.Platform.Runtime
             => functionHandles[handle] = emit;
 
         /// <summary>
+        /// Maps a handle to code that casts a value down to a type it might be of, which
+        /// fails if it isn't. The type may be one the runtime is still building, so it is
+        /// found as the code is emitted.
+        /// </summary>
+        public void MapDowncast(LIR.FunctionHandle handle, LIR.Type type)
+            => Map(handle, il =>
+            {
+                var imported = ImportType(type);
+
+                il.Emit(imported.IsValueType ? Emit.OpCodes.Unbox_Any : Emit.OpCodes.Castclass, imported);
+            });
+
+        /// <summary>
         /// Maps a handle to code that makes a delegate of a method. Its argument is the
         /// object the method is bound to, or null for a static method. A virtual method is
         /// bound through the object, so the delegate calls what the object overrides.

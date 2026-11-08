@@ -30,10 +30,12 @@ namespace ZSharp.Importer.ILLoader.Objects
             => Result<LIR.Expression>.Ok(new LIR.Call(loader.TypeOf(Definition), []));
 
         /// <summary>
-        /// A class still loading goes to itself, and wherever its base goes.
+        /// A class still loading goes to itself, to the interfaces it implements, and
+        /// wherever its base goes.
         /// </summary>
         public bool IsAssignableTo(CompilerObject target)
             => target.Is<IDefinedClass>(out var defined) && defined.Node == Node
+            || node.Interfaces.Any(@interface => Scope.HIRLoader.LoadType(@interface).Ok(out var loaded) && Scope.TS.IsAssignableTo(target, loaded))
             || Base is { } @base && Scope.TS.IsAssignableTo(target, @base);
 
         public ClassDefinition Definition { get; } = definition;

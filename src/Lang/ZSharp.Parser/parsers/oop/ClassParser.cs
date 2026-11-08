@@ -32,7 +32,7 @@ namespace ZSharp.Parser
 
         public override TypeDefinition Parse(Parser parser)
         {
-            var type = parser.Eat(LangParser.Keywords.Class);
+            var type = parser.Eat(LangParser.Keywords.Def);
 
             Token? name = null;
             if (parser.Is(TokenType.Identifier))

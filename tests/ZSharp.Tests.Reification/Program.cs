@@ -256,7 +256,7 @@ A.Statement Parse(string source)
     return Syntax.Install(parser).Document.ParseStatement(parser);
 }
 
-A.Definition Definition() => (A.Definition)((A.DefinitionStatement)Parse("class A {}")).Definition;
+A.Definition Definition() => (A.Definition)((A.DefinitionStatement)Parse("def A {}")).Definition;
 
 A.CastExpression Cast(A.Expression value, string type)
 {
@@ -268,7 +268,7 @@ A.CastExpression Cast(A.Expression value, string type)
 C.Expression Compile(A.Expression expression) => document.Within(compiler, () => compiler.CompileExpression(expression)).Unwrap();
 
 Try("definition statement stays a statement", () =>
-    document.Compile(compiler, Parse("class A {}")).Unwrap() is C.Block { Statements: [Define, C.Block] });
+    document.Compile(compiler, Parse("def A {}")).Unwrap() is C.Block { Statements: [Define, C.Block] });
 
 A.ExpressionStatement CastStatement(string type)
 {
@@ -278,7 +278,7 @@ A.ExpressionStatement CastStatement(string type)
 }
 
 Try("uncast definition runs before its statement", () =>
-    document.Compile(compiler, Parse("(class A {}).x;")).Unwrap() is C.Block
+    document.Compile(compiler, Parse("(def A {}).x;")).Unwrap() is C.Block
     {
         Statements: [Define, C.ExpressionStatement { Expression: C.NamedMember { Target: C.Get } }]
     });

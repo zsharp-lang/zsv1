@@ -41,12 +41,6 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<Module, Package.DotNet.Module> modules = [];
         private readonly Dictionary<Package.DotNet.Module, Module> moduleInfos = [];
 
-        /// <summary>
-        /// What the code being lowered returns, if it returns anything.
-        /// </summary>
-        private CompilerObject? returnType;
-
-        private Loader<HIR.Code.Return>? loadReturn;
 
         private readonly Dictionary<MethodInfo, Package.DotNet.Method> methods = [];
         private readonly Dictionary<Package.DotNet.Method, MethodInfo> methodInfos = [];
@@ -134,23 +128,6 @@ namespace ZSharp.Importer.ILLoader
             code.Expressions.Register<HIR.Code.NullLiteral>(_ => Result.Ok(new Objects.Null(this)));
             code.Expressions.Register<HIR.Code.ArrayLiteral>(LoadArray);
 
-            loadReturn = code.Statements.Register<HIR.Code.Return>(LoadReturn);
-        }
-
-        /// <summary>
-        /// A return converts its value to what the code being lowered returns.
-        /// </summary>
-        private IResult LoadReturn(HIR.Code.Return statement)
-        {
-            if (statement.Value is null || returnType is null)
-                return loadReturn!(statement);
-
-            if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadExpression(statement.Value).When(out var value).Error(out var error))
-                return Result.Error(error);
-
-            return Core.Compiler.ModuleScope.CG.ImplicitCast(value!, returnType).Ok(out var converted)
-                ? Result.Ok(new Objects.Return(converted))
-                : Result.Error("A return value doesn't match what is returned.");
         }
 
         public Package.DotNet.Module Load(Module module)
@@ -240,6 +217,26 @@ namespace ZSharp.Importer.ILLoader
         internal LIR.FunctionHandle Downcast(Type from, Type to)
             => Instruction("downcast", from, to, il =>
                 il.Emit(to.IsValueType ? System.Reflection.Emit.OpCodes.Unbox_Any : System.Reflection.Emit.OpCodes.Castclass, to));
+
+        private readonly Dictionary<(Type, LIR.Type), LIR.FunctionHandle> downcasts = [];
+
+        /// <summary>
+        /// The function that casts a value down to a type that may not exist yet, as a
+        /// class being loaded with it.
+        /// </summary>
+        internal LIR.FunctionHandle Downcast(Type from, LIR.Type to)
+        {
+            if (downcasts.TryGetValue((from, to), out var known))
+                return known;
+
+            var signature = new LIR.Signature { ReturnType = to };
+            signature.Parameters.Add(new(Handle(from)) { Name = "value" });
+
+            var handle = new LIR.FunctionHandle(signature);
+            runtime.MapDowncast(handle, to);
+
+            return downcasts[(from, to)] = handle;
+        }
 
         /// <summary>
         /// The function that tells whether a value is of a type. <c>null</c> is of none.
@@ -1074,6 +1071,18 @@ namespace ZSharp.Importer.ILLoader
             return null;
         }
 
+        /// <summary>
+        /// Lowers code into a function on the CLR: it checks that the code returns what the
+        /// function returns, and a return converts its value to that. The function's
+        /// parameters are the lowerer's, so its code reaches them as the lowerer loads them.
+        /// </summary>
+        public Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned)
+        {
+            function.Body ??= new LIR.Code();
+
+            return Lower(body, function, returned, []);
+        }
+
         private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned, List<HIR.Code.Parameter> parameters)
         {
             if (Returns.Check(body.Block, returned is not null) is { } invalid)
@@ -1082,15 +1091,15 @@ namespace ZSharp.Importer.ILLoader
             if (Cells(parameters, function) is { } failed)
                 return failed;
 
-            var outer = returnType;
+            var outer = CodeLoaders.Returns;
 
-            returnType = null;
+            CodeLoaders.Returns = null;
 
             if (returned is not null)
                 if (Core.Compiler.ModuleScope.HIRLoader.LoadType(returned).When(out var type).Error(out var failure))
                     return failure;
                 else
-                    returnType = type;
+                    CodeLoaders.Returns = type;
 
             try
             {
@@ -1106,7 +1115,7 @@ namespace ZSharp.Importer.ILLoader
             }
             finally
             {
-                returnType = outer;
+                CodeLoaders.Returns = outer;
             }
         }
 

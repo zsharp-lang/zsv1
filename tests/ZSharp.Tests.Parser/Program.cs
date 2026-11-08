@@ -48,7 +48,7 @@ using (StreamReader stream = File.OpenText(filePath))
         LangParser.ParseLetExpression
     );
     expressionParser.Nud(
-        LangParser.Keywords.Class,
+        LangParser.Keywords.Def,
         zsharpParser.Class.Parse
     );
 

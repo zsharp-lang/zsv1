@@ -105,7 +105,7 @@ namespace ZSharp.Importer.ILLoader
         /// A function of a module that is defined, if the method is one.
         /// </summary>
         internal CompilerObject? ModuleFunction(Package.DotNet.Method node)
-            => moduleFunctions.TryGetValue(node, out var function) ? new Objects.ModuleFunction(node, function) : null;
+            => moduleFunctions.TryGetValue(node, out var function) ? new Objects.ModuleFunction(this, node, function) : null;
 
         /// <summary>
         /// A <c>let</c> of a module that is defined, if the field is one.

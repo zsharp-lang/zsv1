@@ -2,7 +2,7 @@ import { print } from "std:io";
 import { String, explicitThis, static } from "core:runtime";
 
 module Program {
-    class Greeter {
+    def Greeter {
         let name: String;
         let friend: Other;
 
@@ -23,7 +23,7 @@ module Program {
         }
     }
 
-    class Other {
+    def Other {
         fun greet(name: String): String {
             return name;
         }

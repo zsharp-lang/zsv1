@@ -27,6 +27,19 @@ namespace Core.Compiler
         [Alias("hirCodeLoader")]
         public static ZSharp.Compiler.HIRCodeLoader HIRCodeLoader { get; set; } = new();
 
+        /// <summary>
+        /// What loads HIR nodes by their type, which Z# registers the loaders of its own
+        /// nodes with. The host sets it once it has made it.
+        /// </summary>
+        [Alias("mappedLoader")]
+        public static ZSharp.Compiler.MappedLoader MappedLoader { get; set; } = null!;
+
+        /// <summary>
+        /// What loads HIR code by the type of its nodes.
+        /// </summary>
+        [Alias("mappedCodeLoader")]
+        public static ZSharp.Compiler.MappedCodeLoader MappedCodeLoader { get; set; } = null!;
+
         [Alias("hirReifier")]
         public static ZSharp.Compiler.HIRReifier HIRReifier { get; set; } = new();
     }

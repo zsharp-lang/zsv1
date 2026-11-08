@@ -1,0 +1,304 @@
+// std:functions — Z#'s own functions, defined in Z#.
+//
+// A Z# function is a function of its own, not a method of anything. This document
+// defines its HIR node, the meta-compiler that compiles `fun` to it, and the loader that
+// makes it a CO, and makes it what `fun` is wherever nothing else compiles one.
+
+import { String, Object, Boolean, Int32, List, explicitThis } from "core:runtime";
+import { Instance, Definition, Variable, Type } from "core:hir";
+import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral } from "core:hir/code";
+import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "core:ast";
+import { CompilerObject } from "core:mir";
+import { Error, Result, IResult } from "core:common";
+import { Argument, ArgumentStream } from "core:compiler/cg";
+import { ICTCallable, ICTMatchParameter } from "core:compiler/cg/direct";
+import { ICompileIRExpression } from "core:compiler/ir";
+import { ITyped } from "core:compiler/ts";
+import { ASTCompiler, CompiledDefinition } from "core:compiler/ast";
+import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode } from "core:lir";
+import { Bodies } from "core:lang";
+import { CodeLoaders } from "core:compiler/code";
+import { metaTypes, bodies, export } from "core:zsharp";
+import { cg, ir, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
+
+// ---- The HIR
+
+// A Z# function. Its meta-compiler fills it through bodies, by these names.
+@export
+def Function : Instance, Definition {
+    let Name: String;
+    let Parameters: List[Definition];
+    let Locals: List[Local];
+    let ReturnType: Type;
+    let Body: Code;
+
+    @explicitThis new(this, name: String) {
+        this.Name = name;
+        this.Parameters = List[Definition]();
+        this.Locals = List[Local]();
+    }
+}
+
+// A parameter that a positional argument fills, or else its default value.
+def Positional : Instance, Definition, Variable {
+    let Name: String;
+    let Type: Type;
+    let DefaultValue: Expression;
+
+    @explicitThis new(this, name: String) { this.Name = name; }
+    @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
+}
+
+// A parameter that an argument with its name fills, or else its default value.
+def Named : Instance, Definition, Variable {
+    let Name: String;
+    let Type: Type;
+    let DefaultValue: Expression;
+
+    @explicitThis new(this, name: String) { this.Name = name; }
+    @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
+}
+
+// ---- The COs
+
+module Objects {
+    // A parameter, as a call matches an argument to it and as its function's code uses
+    // it. One CO is both, and it owns the LIR parameter the signature holds.
+    def ParameterObject : CompilerObject, ICTMatchParameter, ICompileIRExpression, ITyped {
+        let name: String;
+        let named: Boolean;
+        let type: Type;
+        let defaultValue: Expression;
+        let lowered: LIRParameter;
+
+        @explicitThis new(this, name: String, named: Boolean, type: Type, defaultValue: Expression) {
+            this.name = name;
+            this.named = named;
+            this.type = type;
+            this.defaultValue = defaultValue;
+        }
+
+        @explicitThis fun get_Type(this): CompilerObject {
+            return hirLoader.LoadType(this.type).Unwrap();
+        }
+
+        @explicitThis fun parameter(this): LIRParameter {
+            if (this.lowered == null) {
+                this.lowered = LIRParameter(ir.CompileType(this.get_Type(), null).Unwrap());
+                this.lowered.Name = this.name;
+            }
+
+            return this.lowered;
+        }
+
+        @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+            return Result[LIRExpression].Ok(GetLocal(this.parameter()));
+        }
+
+        // The argument with its name, or the next positional one, or else the default.
+        @explicitThis fun Match(this, arguments: ArgumentStream): IResult[CompilerObject, Error] {
+            let argument: CompilerObject = null;
+
+            if (this.named) argument = arguments.Pop(this.name);
+            else argument = arguments.Pop();
+
+            if (argument == null) {
+                if (this.defaultValue == null) return Result[CompilerObject].Error("No argument is given for parameter " + this.name + ".");
+                argument = hirCodeLoader.LoadExpression(this.defaultValue).Unwrap();
+            }
+
+            return cg.ImplicitCast(argument, this.get_Type());
+        }
+    }
+
+    // A Z# function as a CO: calling it matches the arguments to its parameters, and it
+    // is lowered once, to an LIR function of its own.
+    def FunctionObject : CompilerObject, ICTCallable {
+        let node: Function;
+        let lowered: LIRFunction;
+
+        @explicitThis new(this, node: Function) { this.node = node; }
+
+        @explicitThis fun parameter(this, index: Int32): ParameterObject {
+            return hirLoader.LoadDefinition(this.node.Parameters[index]).Unwrap() as ParameterObject;
+        }
+
+        @explicitThis fun returnType(this): CompilerObject {
+            if (this.node.ReturnType == null) return null;
+            return hirLoader.LoadType(this.node.ReturnType).Unwrap();
+        }
+
+        @explicitThis fun function(this): LIRFunction {
+            if (this.lowered != null) return this.lowered;
+
+            let signature = Signature();
+            let returned = this.returnType();
+
+            if (returned != null) signature.ReturnType = ir.CompileType(returned, null).Unwrap();
+
+            let index = 0;
+            while (index < this.node.Parameters.Count) {
+                signature.Parameters.Add(this.parameter(index).parameter());
+                index = index + 1;
+            }
+
+            // It is known before its code is lowered, so its code can call it.
+            this.lowered = LIRFunction(signature);
+            this.lowered.Name = this.node.Name;
+
+            // Its code is loaded knowing what it returns, so a return converts its value to
+            // that, and compiled into the function.
+            let outer = CodeLoaders.Returns;
+            CodeLoaders.Returns = returned;
+            let loaded = hirCodeLoader.LoadStatement(this.node.Body.Block);
+            CodeLoaders.Returns = outer;
+
+            if (loaded.IsError) {
+                this.lowered = null;
+                return null;
+            }
+
+            let statement = ir.CompileStatement(loaded.Unwrap(), null);
+            if (statement.IsError) {
+                this.lowered = null;
+                return null;
+            }
+
+            this.lowered.Body = LIRCode();
+            this.lowered.Body.Block.Statements.Add(statement.Unwrap());
+
+            return this.lowered;
+        }
+
+        @explicitThis fun Call(this, arguments: Argument[]): IResult[CompilerObject, Error] {
+            let stream = ArgumentStream(arguments);
+            let values = List[CompilerObject]();
+
+            let index = 0;
+            while (index < this.node.Parameters.Count) {
+                let value = cg.MatchParameter(this.parameter(index), stream);
+                if (value.IsError) return value;
+                values.Add(value.Unwrap());
+                index = index + 1;
+            }
+
+            if (stream.HasArguments) return Result[CompilerObject].Error(this.node.Name + " is given too many arguments.");
+
+            return Result[CompilerObject].Ok(FunctionCall(this, values));
+        }
+    }
+
+    // A call of a Z# function.
+    def FunctionCall : CompilerObject, ICompileIRExpression, ITyped {
+        let callee: FunctionObject;
+        let arguments: List[CompilerObject];
+
+        @explicitThis new(this, callee: FunctionObject, arguments: List[CompilerObject]) {
+            this.callee = callee;
+            this.arguments = arguments;
+        }
+
+        @explicitThis fun get_Type(this): CompilerObject { return this.callee.returnType(); }
+
+        @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+            let function = this.callee.function();
+            if (function == null) return Result[LIRExpression].Error("The code of " + this.callee.node.Name + " can't be lowered.");
+
+            let values = List[LIRExpression]();
+
+            let index = 0;
+            while (index < this.arguments.Count) {
+                let value = ir.CompileExpression(this.arguments[index], target);
+                if (value.IsError) return Result[LIRExpression].Error(value.UnwrapError());
+                values.Add(value.Unwrap());
+                index = index + 1;
+            }
+
+            return Result[LIRExpression].Ok(LIRCall(function, values));
+        }
+    }
+}
+
+// ---- The meta-compiler
+
+// What fills a function as it is built: its parameters, what it returns, and its code.
+def Filler {
+    let compiler: ASTCompiler;
+    let function: FunctionSyntax;
+    let self: Local;
+
+    @explicitThis new(this, compiler: ASTCompiler, function: FunctionSyntax, self: Local) {
+        this.compiler = compiler;
+        this.function = function;
+        this.self = self;
+    }
+
+    @explicitThis fun fill(this): IResult[Block, Error] {
+        let block = Block([]);
+
+        let invalid = bodies.Parameters(this.compiler, block, this.self, "Parameters", this.function.Signature, Positional as Instance, Named as Instance);
+        if (invalid != null) return Result[Block].Error(invalid);
+
+        if (this.function.ReturnType != null) {
+            let type = bodies.Described[Type](this.compiler, this.function.ReturnType);
+            if (type.IsError) return Result[Block].Error(type.UnwrapError());
+
+            let set = Set();
+            set.Target = Bodies.Member(this.self, "ReturnType");
+            set.Value = type.Unwrap();
+            block.Statements.Add(ExpressionStatement(set));
+        }
+
+        let failed = bodies.Body(bodies.WithLocals(this.compiler, block, this.self, "Locals", null), block, this.self, this.function.Body);
+        if (failed != null) return Result[Block].Error(failed);
+
+        return Result[Block].Ok(block);
+    }
+}
+
+module Meta {
+    fun compile(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
+        if (definition is function of FunctionSyntax) {
+            let filler = Filler(compiler, function, self);
+
+            return Result[CompiledDefinition].Ok(CompiledDefinition(
+                self,
+                Bodies.Construct(Function as Instance, StringLiteral(function.Name)),
+                Function as Instance,
+                filler.fill,
+                null
+            ));
+        }
+
+        return Result[CompiledDefinition].Error("A Z# function is compiled from a fun.");
+    }
+
+    fun loadFunction(node: Function): IResult[CompilerObject, Error] {
+        return Result[CompilerObject].Ok(Objects.FunctionObject(node));
+    }
+
+    fun loadPositional(node: Positional): IResult[CompilerObject, Error] {
+        return Result[CompilerObject].Ok(Objects.ParameterObject(node.Name, false, node.Type, node.DefaultValue));
+    }
+
+    fun loadNamed(node: Named): IResult[CompilerObject, Error] {
+        return Result[CompilerObject].Ok(Objects.ParameterObject(node.Name, true, node.Type, node.DefaultValue));
+    }
+
+    // A node used as an instance is the one CO its definition gives.
+    fun instanceOfFunction(node: Function): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
+    fun instanceOfPositional(node: Positional): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
+    fun instanceOfNamed(node: Named): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
+}
+
+// ---- Installing it
+
+mappedLoader.Definitions.Register[Function](Meta.loadFunction);
+mappedLoader.Definitions.Register[Positional](Meta.loadPositional);
+mappedLoader.Definitions.Register[Named](Meta.loadNamed);
+mappedLoader.Instances.Register[Function](Meta.instanceOfFunction);
+mappedLoader.Instances.Register[Positional](Meta.instanceOfPositional);
+mappedLoader.Instances.Register[Named](Meta.instanceOfNamed);
+
+metaTypes.Register(Function as Instance, Meta.compile);
+metaTypes.Default[FunctionSyntax](Function as Instance);

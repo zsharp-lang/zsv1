@@ -37,6 +37,8 @@ Core.Runtime.ModuleScope.ILLoader = il;
 
 var loader = new MappedLoader(Scope.HIRLoader);
 var codeLoader = new MappedCodeLoader(Scope.HIRCodeLoader);
+Scope.MappedLoader = loader;
+Scope.MappedCodeLoader = codeLoader;
 loader.Apply();
 codeLoader.Apply();
 
@@ -98,6 +100,9 @@ core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 core.Add("diagnostics", il.Load(typeof(ZSharp.Diagnostics.ModuleScope).Module));
 core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
 
+foreach (var (name, module) in ZSharp.Lang.DotNet.ToolchainModules.All())
+    core.Add(name, il.Load(module));
+
 var importer = new StringImporter();
 importer.Register("std", std);
 importer.Register("core", core);
@@ -152,7 +157,7 @@ var host = new ZSharp.Lang.DotNet.DotNetDocuments(runtime, il, instance =>
 host.Install(loader);
 host.Install(reifier);
 
-ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
+Core.ZSharp.ModuleScope.MetaTypes = ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
 
 #endregion
 

@@ -44,6 +44,7 @@ namespace ZSharp.Platform.Runtime
                 body();
 
             Complete();
+            Finish();
         }
 
         /// <summary>
@@ -96,6 +97,8 @@ namespace ZSharp.Platform.Runtime
 
             foreach (var definition in builders.Keys)
                 CreateClass(definition, builders);
+
+            Finish();
 
             return [.. definitions.Select(definition => classes[definition])];
         }
@@ -267,8 +270,17 @@ namespace ZSharp.Platform.Runtime
         /// </summary>
         public IL.MethodInfo LoadMethod(LIR.Function function)
         {
+            if (function.Module is null)
+            {
+                var standalone = ImportFunction(function);
+
+                Finish();
+
+                return standalone;
+            }
+
             if (!(functions.TryGetValue(function, out var method) && method is not Emit.MethodBuilder))
-                Load(function.Module ?? throw new InvalidOperationException($"Function {function.Name} has no module."));
+                Load(function.Module);
 
             return GetMethod(function);
         }
@@ -325,6 +337,9 @@ namespace ZSharp.Platform.Runtime
 
         private IL.MethodInfo DeclareFunction(LIR.Function function)
         {
+            if (function.Module is null)
+                return DeclareStandalone(function);
+
             var method = Holder(function.Module).DefineMethod(
                 Unique(function.Name),
                 IL.MethodAttributes.Public | IL.MethodAttributes.Static,

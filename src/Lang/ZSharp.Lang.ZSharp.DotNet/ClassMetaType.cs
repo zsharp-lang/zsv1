@@ -39,8 +39,8 @@ namespace ZSharp.Lang.DotNet
             if (body.TypeParameters(compiler, definition.GenericParameters, self, nameof(Package.DotNet.Class.GenericParameters)).When(out var parameters).Error(out var invalid))
                 return Result<Code.Block>.Error(invalid);
 
-            // In a class, a let is a field.
-            var fork = compiler.Fork();
+            // In a class, a let is a field and a fun a method.
+            var fork = body.WithMethods(compiler);
             var previous = fork.Expression;
 
             fork.Expression = (current, expression) => expression is AST.LetExpression let

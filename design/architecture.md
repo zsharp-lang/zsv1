@@ -361,7 +361,7 @@ On the CLR, the runtime makes the delegate from the method's pointer. Methods of
 or module still being loaded, and local functions, aren't made this way yet: a local
 function still becomes a delegate through expression trees.
 
-A generic CLR class is written `class Box[T] { let value: T; }`. Its type parameters are
+A generic CLR class is written `def Box[T] { let value: T; }`. Its type parameters are
 `Package.DotNet.GenericParameter`s, bound inside the class before its members are
 compiled, so they are types like any other there, and unknown outside it. On the CLR,
 the class's type builder defines them, and the class's own code refers to its members
@@ -584,7 +584,7 @@ compiling it to HIR that evaluates to the HIR representing the original definiti
 A `fun` inside a CLR class is special only because that meta-type handles it, so
 the AST compiler needs no context-dependent handlers.
 
-`ZSharp.Lang.ZSharp.DotNet` holds the CLR class meta-type, the default for `class`.
+`ZSharp.Lang.ZSharp.DotNet` holds the CLR class meta-type, the default for `def`.
 A definition statement runs its build code once, so a name means one object, and
 the object is loaded right after. Casting a type to what describes it, as in
 `String as Type` with the HIR marker, is reflection. It gives the type's node, which
@@ -593,9 +593,94 @@ is how a field's type gets into the HIR being built.
 The `std:` libraries are written separately in Z#, as a proof of concept, and are
 compiled to DLLs or a custom file format that the CLI loads dynamically.
 
+A type definition is written with `def`, which replaced `class`: `def Point { … }`. Its
+default meta-type is the CLR class for now, and becomes Z#'s own class once that exists,
+as `std/fs` already assumes.
+
+#### Z# definitions
+
+Z#'s own definitions are written in Z#, starting with a function that captures nothing,
+in `std:functions`; `Closure` comes after it, and casting a `Closure` to a `Function`
+strips its captures. `std/fs` is a sketch of what the standard library needs from them:
+`def` with Z#'s class as its default, named constructors as `new cwd() {}`, an `Enum`
+meta-type whose members are constructors, operators given as members through a
+decorator on an anonymous function, `@operator((/)) fun(other: ItemName): Item`, and a
+module made of several files, which `compile()` from `core:project` includes where it is
+called. Syntax such as `not` and string interpolation can be written in Z# too.
+
+A Z# definition is its own concept, on a different domain from any CLR entity, so its
+HIR node is never translated into `Package.DotNet` HIR, and the standard definitions use
+nothing of the CLR's: each has its own path, from its HIR through its own COs to LIR,
+which any platform realizes, and that is what makes other targets possible. The one CLR
+part is the vehicle: a node or CO class is a CLR class written in Z#, because that is how
+a custom type gets into the language to be used as a meta-type.
+
+- The `Function` node is defined in Z#, as a CLR class that implements `HIR.Instance`,
+  so `std:functions` also shows whether the parser and the AST compiler can be extended
+  from Z#. So are its meta-compiler, which compiles `AST.Function`, and its loader, whose
+  CO is a Z# class that implements `CompilerObject` and the protocols it takes part in.
+- Z# reaches the toolchain's types through the modules of its assemblies, since a CLR
+  module's public types are its members, and reaches the AST compiler and the meta-types
+  through `core:zsharp`, which lets it register a meta-type and make it the default.
+- Once `std:functions` is in, a `fun` that no other meta-compiler handles, as one in a
+  document, is a Z# `Function`. A `fun` in a CLR class, module or body is still theirs.
+- On the CLR, a `Function` lowers to an LIR function that belongs to no module, which the
+  runtime loads as a `DynamicMethod`, as `zsv1` loaded a free function, a module or code.
+  Code in a type the runtime builds can't call a `DynamicMethod` directly, since it has
+  no metadata token, so the runtime calls one through a delegate there. A generic one
+  goes in a type of its own, since a `DynamicMethod` can't be generic. Precompiling is
+  another platform, on Mono.Cecil, so it doesn't constrain this one.
+- Z#'s object model isn't designed yet, but some of it is settled. A Z# class has no
+  inheritance, and implements interfaces. It has named constructors, and static methods
+  and fields as well as class methods and fields. Its value is a type object, as in
+  Python, and class methods are polymorphic through it, so an interface can declare
+  class methods: an interface gives the shape of a class, not only of its objects.
+- `std/functions/functions.zs` is the first of these, and works: importing it registers
+  its meta-type and loaders and makes it the default for `fun`, after which a `fun` in a
+  document is a Z# function, with positional and named parameters, default values,
+  recursion, locals and loops, callable from CLR methods. It defines its `Function`,
+  `Positional` and `Named` nodes as CLR classes written in Z#, and compiles `fun` through
+  `bodies`, with its own parameter kinds. It lowers a function itself: it loads the code
+  through the HIR code loader and compiles it with IR into an LIR function, with no
+  platform as the target. Nothing imports it for you: a document that wants Z# functions
+  imports it. A `fun` inside a Z# function's code is whatever `fun` is there, and a Z#
+  function doesn't capture yet: that is `Closure`.
+- `Bodies`, in the language, is what meta-compilers of definitions with code share:
+  code that builds parameters of the kinds a definition gives, locals, imports and a
+  body, and reifies the body. It reaches the host's node types through a function it is
+  given, as building code runs on the host. The CLR's `CodeBody` adds the CLR's rules to
+  it, for fields, type parameters, members of a container, and a `fun` in a body being a
+  local function.
+- A return converts its value to what the code being loaded returns, which is
+  `CodeLoaders.Returns`: whatever lowers a function's code sets it while it loads that
+  code and puts it back after, the IL loader as `std:functions` does.
+- Z# reaches the toolchain through `core:` modules made of its assemblies, as
+  `core:hir`, `core:hir/code`, `core:mir`, `core:lir`, `core:ast`, `core:common`,
+  `core:compiler/cg`, `core:compiler/ir`, `core:compiler/ts`, `core:compiler/code` and
+  `core:lang`, listed once in `ToolchainModules`. A module's generic types are found by
+  their name without their arity, all arities as overloads. `core:zsharp` gives
+  `metaTypes` and `bodies`, and `core:compiler` gives `mappedLoader` and
+  `mappedCodeLoader`.
+- A CLR class, interface or module compiles a `fun` written directly in it as a CLR
+  method, through `CodeBody.WithMethods`, whatever the default for `fun` is: the meta-type
+  of its members is the container's to choose.
+- Writing it showed what CLR definitions written in Z# need, which are general: a class
+  still being loaded goes to the interfaces it implements, and can be cast down to, the
+  cast being resolved as the code is emitted, and a function of a module defined in Z# is
+  a delegate where one is expected, once its module is loaded.
+- On the runtime, a standalone function's body is emitted once whatever is being loaded
+  is complete, since a `DynamicMethod` can only call a method of a type that exists.
+- A `Function`'s parameters are nodes of its own, so `std:functions` registers their
+  loader. A parameter is both a definition and an instance, and both routes give the
+  one CO the definition cache holds for it: the instance loader loads it as a definition.
+  That CO is what a call matches an argument to and what the body uses as the variable,
+  and it owns its `LIR.Parameter`, which the lowerer asks it for to build the signature,
+  as a local's CO owns its `LIR.Local`. So the parameters of the code a lowerer lowers
+  need no map: the IL loader keeps one only for the parameter types it owns.
+
 ### Definitions
 
-`class`, `module` and `fun` are all definitions sent to a builder, so there is one
+`def`, `module` and `fun` are all definitions sent to a builder, so there is one
 path for them. Every `AST.Definition` compiles to code that produces the definition
 object as HIR.
 
@@ -643,10 +728,10 @@ reifies once, so further casts do nothing.
 ```text
 module Program; // whole file
 
-class Foo of Class { let x: I32; }
+def Foo of Class { let x: I32; }
 
 fun foo() {
-    class Bar : Foo {}
+    def Bar : Foo {}
 
     return fun bar(): Bar {} as Function;
 }
@@ -691,7 +776,7 @@ An identity definition inside an expression is loaded along with that expression
 but binds no name outside itself:
 
 ```text
-let x: Foo /* not ok */ = class Foo { let parent: Foo?; /* ok */ }();
+let x: Foo /* not ok */ = def Foo { let parent: Foo?; /* ok */ }();
 ```
 
 So reification takes HIR code and produces HIR code that builds it, and it works on
@@ -831,11 +916,11 @@ that uses one encodes the delegate bound to that run's cells, as an exposed obje
 Calling it calls the local function, which still sees the variable by reference:
 
 ```zs
-class Cap17 {
+def Cap17 {
     @static fun make(): DotNet_Class {
         let x = "before";
         fun read(): String { return x; }
-        let made = class Made17 {
+        let made = def Made17 {
             @static fun direct(): String { return x; }      // "before"
             @static fun through(): String { return read(); } // "after"
         } as DotNet_Class;
@@ -998,7 +1083,7 @@ being built, which is also when `Foo` is built:
 ```text
 module Program {
 
-    class Foo {}
+    def Foo {}
 
     print((Foo as Class).name);
 }
@@ -1103,7 +1188,7 @@ a rule while it constructs the CO, such as giving a `this` parameter its owner's
 parameter missing a type is otherwise inferred or an error. Complete doesn't mean fully
 resolved: `NamedMember` is an HIR node that stands for the `CG.Member` operation.
 
-Default meta-types are what let `class` and `fun` be Z# terms and not .NET terms once Z#
+Default meta-types are what let `def` and `fun` be Z# terms and not .NET terms once Z#
 is defined in Z#. A default applies in a context, and an explicit `of` always overrides
 it there.
 
@@ -1418,7 +1503,7 @@ every call:
 
 ```text
 fun foo(base: Type) {
-    let cls = class A of Class : base {
+    let cls = def A of Class : base {
         let parent: A?; // ok, references itself
     } as Class;
 

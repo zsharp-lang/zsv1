@@ -6,6 +6,13 @@ namespace ZSharp.Compiler
     public static class CodeLoaders
     {
         /// <summary>
+        /// What the code being loaded returns, if it returns anything: a return converts its
+        /// value to it. Whatever lowers a function's code sets it while it loads that code,
+        /// and puts back what it was after, since one function's code can load another's.
+        /// </summary>
+        public static CompilerObject? Returns { get; set; }
+
+        /// <summary>
         /// A captured local lives where the functions that capture it can share it.
         /// </summary>
         private static CompilerObject Local(HIR.Code.Local local, CompilerObject type, CompilerObject? init)
@@ -261,9 +268,15 @@ namespace ZSharp.Compiler
                 if (statement.Value is null)
                     return Result.Ok(new Objects.Return(null));
 
-                return code.LoadExpression(statement.Value).Error(out var error, out var value)
-                    ? Result.Error(error)
-                    : Result.Ok(new Objects.Return(value));
+                if (code.LoadExpression(statement.Value).Error(out var error, out var value))
+                    return Result.Error(error);
+
+                if (Returns is null)
+                    return Result.Ok(new Objects.Return(value));
+
+                return cg.ImplicitCast(value, Returns).Ok(out var converted)
+                    ? Result.Ok(new Objects.Return(converted))
+                    : Result.Error("A return value doesn't match what is returned.");
             });
 
             static IResult Unquoted()

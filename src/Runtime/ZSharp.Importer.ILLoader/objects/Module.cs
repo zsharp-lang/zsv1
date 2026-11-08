@@ -44,8 +44,12 @@ namespace ZSharp.Importer.ILLoader.Objects
                     return result;
             }
 
-            if (types.FirstOrDefault(type => type.IsPublic && type.Name == member) is { } found)
-                return Result.Ok(Imported(found));
+            // A public type is found by its name, and a generic one by its name without its
+            // arity, so the arities of a name are its overloads, as imported ones are.
+            var found = types.Where(type => type.IsPublic && (type.Name.Split('`')[0]) == member).ToArray();
+
+            if (found.Length > 0)
+                return Result.Ok(OverloadGroup.Of(found.Select(Imported)));
 
             return Result.Error(new UnsupportedError($"Module {il.Name} has no member named {member}."));
         }

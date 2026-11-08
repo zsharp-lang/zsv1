@@ -55,7 +55,7 @@ namespace ZSharp.Lang
                 LangParser.ParseLetExpression
             );
             expressionParser.Nud(
-                LangParser.Keywords.Class,
+                LangParser.Keywords.Def,
                 zsharpParser.Class.Parse
             );
             expressionParser.Nud(

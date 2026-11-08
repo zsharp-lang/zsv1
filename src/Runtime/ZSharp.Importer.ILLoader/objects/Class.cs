@@ -76,6 +76,13 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// </summary>
         private IResult? Converted(CompilerObject @object, CompilerObject type, bool implicitly)
         {
+            // A cast also goes down to a type that isn't a CLR type yet, as a class being
+            // loaded with the code, if that type goes to this one.
+            if (!implicitly && !IL.IsValueType && !type.Is<IILType>(out _)
+                && Core.Compiler.ModuleScope.TS.IsAssignableTo(this, type)
+                && Core.Compiler.ModuleScope.IR.CompileType(type, loader.Runtime).Ok(out var lowered))
+                return Result.Ok(new Call(loader.Downcast(IL, lowered), [@object], () => type));
+
             if (!type.Is<IILType>(out var known) || known.GetILType() is not { } to || to == IL)
                 return null;
 

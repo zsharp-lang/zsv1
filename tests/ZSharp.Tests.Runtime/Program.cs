@@ -207,6 +207,32 @@ var reuse = Fn(later, "reuse", Sig(i32), code =>
 runtime.Load(later);
 Report("later module uses loaded function and structure", (int)Run(reuse)! == 6);
 
+// A function that belongs to no module is a method of its own, and calls itself.
+var subtract = new L.FunctionHandle(Sig(i32, i32, i32));
+runtime.Map(subtract, il => il.Emit(OpCodes.Sub));
+
+var triangleSig = Sig(i32, i32);
+var triangle = new L.Function(triangleSig) { Name = "triangle", Body = new L.Code() };
+triangle.Body.Block.Statements.Add(new L.If(
+    new L.Call(less, new L.GetLocal(triangleSig.Parameters[0]), I(1)),
+    new L.Return(I(0)),
+    new L.Return(new L.Call(add,
+        new L.GetLocal(triangleSig.Parameters[0]),
+        new L.Call(triangle, new L.Call(subtract, new L.GetLocal(triangleSig.Parameters[0]), I(1)))))
+));
+Report("a standalone function calls itself", (int)runtime.LoadMethod(triangle).Invoke(null, [4])! == 10);
+
+// A module function calls it through its delegate, and it calls a module function.
+var callers = new L.Module("Callers");
+var callsStandalone = Fn(callers, "callsStandalone", Sig(i32), code =>
+    code.Block.Statements.Add(new L.Return(new L.Call(add, new L.Call(triangle, I(3)), I(1)))));
+runtime.Load(callers);
+Report("a module function calls a standalone function", (int)Run(callsStandalone)! == 7);
+
+var callsModule = new L.Function(Sig(i32)) { Name = "callsModule", Body = new L.Code() };
+callsModule.Body.Block.Statements.Add(new L.Return(new L.Call(sum, I(4))));
+Report("a standalone function calls a module function", (int)runtime.LoadMethod(callsModule).Invoke(null, [])! == 6);
+
 var unmapped = new L.Module("Unmapped");
 var missing = new L.FunctionHandle(Sig(null));
 Fn(unmapped, "bad", Sig(null), code => code.Block.Statements.Add(new L.Evaluate(new L.Call(missing))));
