@@ -26,8 +26,15 @@ namespace ZSharp.Compiler
         public static CompilerObject Of(IEnumerable<CompilerObject> candidates)
             => candidates.ToArray() is var all && all is [var single] ? single : new OverloadGroup(all);
 
+        /// <summary>
+        /// A call first infers what the candidates that can infer type arguments take, so
+        /// those compete as they would be called.
+        /// </summary>
         public IResult Call(Argument[] arguments)
-            => Scope.Overloading.Apply(candidates, candidate => Scope.CG.Call(candidate, arguments));
+            => Scope.Overloading.Apply(
+                [.. candidates.Select(candidate => candidate.Is<IInferable>(out var inferable) ? inferable.Infer(arguments) ?? candidate : candidate)],
+                candidate => Scope.CG.Call(candidate, arguments)
+            );
 
         /// <summary>
         /// Indexing a group, as giving generic arguments does, is applied to each candidate.

@@ -18,15 +18,23 @@ namespace ZSharp.Importer.ILLoader
         {
             var method = binding.Function.Runtime.LoadMethod(binding.Function.Lowered);
             var parameters = method.GetParameters();
-            var arguments = parameters
-                .Skip(binding.Cells.Length)
+
+            // The delegate takes what its type says, which goes to what the function takes.
+            var arguments = binding.Function.Type.GetMethod("Invoke")!
+                .GetParameters()
                 .Select(parameter => Expression.Parameter(parameter.ParameterType, parameter.Name))
                 .ToArray();
+            var passed = arguments.Select((argument, index) =>
+            {
+                var type = parameters[binding.Cells.Length + index].ParameterType;
+
+                return argument.Type == type ? (Expression)argument : Expression.Convert(argument, type);
+            });
             var cells = binding.Cells.Select((cell, index) => Expression.Constant(cell, parameters[index].ParameterType));
 
             return Expression.Lambda(
                 binding.Function.Type,
-                Expression.Call(method, [.. cells, .. arguments]),
+                Expression.Call(method, [.. cells, .. passed]),
                 arguments
             ).Compile();
         }

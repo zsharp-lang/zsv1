@@ -13,16 +13,46 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTCallable
         , ICompileIRExpression
         , ITyped
+        , ICTImplicitCastTo
+        , ICTCastTo
     {
         CompilerObject ITyped.Type => loader.Class(DelegateType() ?? typeof(Delegate));
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
+            => DelegateType() is { } type
+                ? Value(type, target)
+                : Result<LIR.Expression>.Error($"Function {node.Name} can only be a value when its types are CLR types.");
+
+        /// <summary>
+        /// A local function goes where a delegate of a type is expected if its signature
+        /// fits, as a method does.
+        /// </summary>
+        public IResult ImplicitCast(CompilerObject type)
+            => type.Is<IILType>(out var known) && Signature() is var (parameters, returnType) && MethodValue.Fits(parameters, returnType, known.GetILType())
+                ? Result.Ok(new AsDelegate(this, known.GetILType(), type))
+                : Result.Error(new UnsupportedError($"{node.Name} isn't a delegate of that type."));
+
+        public IResult Cast(CompilerObject type)
+            => ImplicitCast(type);
+
+        /// <summary>
+        /// The function as a delegate of a type that fits it.
+        /// </summary>
+        private sealed class AsDelegate(LocalFunction function, Type type, CompilerObject delegateType)
+            : CompilerObject
+            , ICompileIRExpression
+            , ITyped
+        {
+            CompilerObject ITyped.Type => delegateType;
+
+            public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
+                => function.Value(type, target);
+        }
+
+        private IResult<LIR.Expression, Error> Value(Type type, object? target)
         {
             if (loader.Lower(node).When(out var function).Error(out var error))
                 return Result<LIR.Expression>.Error(error);
-
-            if (DelegateType() is not { } type)
-                return Result<LIR.Expression>.Error($"Function {node.Name} can only be a value when its types are CLR types.");
 
             LIR.Expression value = new LIR.Call(
                 loader.Handle(typeof(Closures).GetMethod(nameof(Closures.Bind))!),
@@ -47,6 +77,15 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// The delegate type of the function's values, if its types are CLR types.
         /// </summary>
         private Type? DelegateType()
+            => Signature() is var (parameters, returnType)
+                ? System.Linq.Expressions.Expression.GetDelegateType([.. parameters, returnType])
+                : null;
+
+        /// <summary>
+        /// The CLR types of the function's parameters and of what it returns, if its types
+        /// are CLR types.
+        /// </summary>
+        private (Type[] Parameters, Type ReturnType)? Signature()
         {
             var types = new List<Type>();
 
@@ -57,13 +96,11 @@ namespace ZSharp.Importer.ILLoader.Objects
                     return null;
 
             if (node.ReturnType is null)
-                types.Add(typeof(void));
-            else if (Scope.HIRLoader.LoadType(node.ReturnType).Ok(out var returned) && returned.Is<IILType>(out var known))
-                types.Add(known.GetILType());
-            else
-                return null;
+                return ([.. types], typeof(void));
 
-            return System.Linq.Expressions.Expression.GetDelegateType([.. types]);
+            return Scope.HIRLoader.LoadType(node.ReturnType).Ok(out var returned) && returned.Is<IILType>(out var result)
+                ? ([.. types], result.GetILType())
+                : null;
         }
 
         public IResult Call(Argument[] arguments)

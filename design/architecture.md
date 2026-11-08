@@ -391,7 +391,10 @@ C#'s rules rather than new ones:
 - An operator also stands for what the operands' CLR types define by the name C# gives
   it, as `op_Addition` for `+`. `ILLoader.ClrOperators` gives a
   `Package.DotNet.Operator` overload for each operator, which finds those methods when
-  called. So `String` compares with its own `==`, and `TimeSpan`s add.
+  called. So `String` compares with its own `==`, and `TimeSpan`s add. It also has the
+  comparisons C# predefines for types that define none: enums compare by their values,
+  and references are `==` if they are one object, which applies only to references and
+  `null`, never to a boxed value. What a type defines is more specific than either.
 - Conversions are C#'s: a number converts implicitly to a numeric type that keeps its
   value, as `Int32` to `Double`, and a cast converts to any numeric type, through function
   handles mapped to `conv` instructions. A type's `op_Implicit` is an implicit conversion,
@@ -412,6 +415,86 @@ C#'s rules rather than new ones:
   any other: it can be read and assigned after the match, in a document, a method or a
   function. It is assigned the value, cast to `T`, only if the value matched, and the
   value is evaluated once. `_` names nothing.
+- A `params` parameter takes the rest of the positional arguments, through the argument
+  stream as any parameter takes what it needs: one argument that is already an array of
+  its type is the array, as C#'s normal form has it, and otherwise each is converted to an
+  element, and an array of them is made through a function handle mapped to `newarr`.
+- `Ref[T]` and `Out[T]` are the types of references to variables of `T`, which `ref` and
+  `out` parameters take. They look like generic types but aren't: `Ref` and `Out` are
+  `Package.DotNet.RefFamily` nodes, which `core:runtime` exports, and indexing one gives a
+  `RefType`, which the CLR has as `T&` either way. A static readonly field of a library's
+  module scope that holds HIR is exported as that HIR, which is how `core:runtime` gives
+  them.
+- A variable of exactly `T` goes to `Ref[T]` or `Out[T]`, so nothing marks an argument
+  passed by reference. A local, parameter, global, field or captured variable is passed by
+  its address, through `AddressOf`, a node of the runtime. One with no address, as a
+  document local or a property, is passed through a temporary that the call assigns back
+  to it once it returns, as VB passes a property by reference. A value that isn't a
+  variable isn't passed by reference. A block that ends in a variable, as a `let` does,
+  is that variable once its statements have run, so `Int32.TryParse(text, let n: Int32)`
+  declares `n` and passes it, in a document as in a method.
+- A CLR method written in Z# takes a reference with a parameter of type `Ref[T]` or
+  `Out[T]`, which describes itself as a `RefType`, as a class describes itself as its
+  node. To the method's code such a parameter is a variable of `T`: reading it reads what
+  the reference refers to and assigning it assigns that, through function handles mapped
+  to `ldobj` and `stobj`, and passing it on by reference passes the reference it holds.
+  `Ref` and `Out` exist only for the CLR. The runtime doesn't mark parameters `[Out]` yet,
+  so to C# an `Out` parameter looks like a `ref` one; the signature is the same.
+- An event is what the CLR describes it as, its accessors: `obj.Changed.add(handler)`
+  subscribes and `remove` unsubscribes, as in F#. The handler goes to the event's delegate
+  type as any argument does, and a local function, like a method, is a delegate of any
+  type its signature fits. Raising an event belongs to the type that declares it. C#'s
+  `+=` can be written in Z# once there is compound assignment.
+- A generic method infers its type arguments from the types of the call's arguments,
+  through arrays, references and the constructed types an argument's type is or derives
+  from, so `Enumerable.Count(numbers)` and `Task.Run(work)` need none. Overloading has an
+  `IInferable` protocol for it: before a call's candidates compete, each that can infer
+  its type arguments is replaced by its instantiation, so they compete as they would be
+  called, as in C#. One that can't infer them doesn't apply, and a method that isn't
+  generic is more specific than a generic one that takes the same.
+- A nullable value type is `Nullable[T]`, from `core:runtime`. It needs nothing of its
+  own: a value goes to it through the `op_Implicit` it defines, a cast to `T` through its
+  `op_Explicit`, `null` goes to it, and it boxes to its value or to `null`.
+- Every operator is lifted to nullable operands, as C# lifts them, by one more overload
+  of it: a `Package.DotNet.LiftedOperator` that holds the operator it lifts and how it is
+  lifted. It applies only when an operand is nullable. It keeps the operands, and if
+  they all have a value it calls the operator on their values; if not, an arithmetic
+  operator gives `null`, `==` and `!=` compare whether each has a value, and a comparison
+  gives `false`. A `null` operand goes to the other's type, so `n == null` works.
+  `ILLoader.LiftedOperators` gives them for the operators a language has, and since each
+  calls the operator again, what a type defines, as `TimeSpan`'s `+`, is lifted too.
+- `[1, 2, 3]` is an `ArrayLiteral` in HIR, which has no type of its own, as a collection
+  expression has none in C#: it goes to a CLR array of a type every value goes to, or to
+  an interface such an array implements, as `IEnumerable[T]`, so it goes to a `params`
+  array as well. Indexing a type says what it is given: nothing, as in `Int32[]`, is the
+  type of its arrays; types, as in `List[Int32]`, instantiate a generic type; and values,
+  as in `Int32[4]` or `Int32[2, 3]`, make an array of those lengths. That is what a CLR
+  type makes of `CG.Index`, which has no single meaning: another type defines it however
+  it wants. The array is made by the constructor the CLR gives its array type, and
+  indexing an array reads and writes an element through the `Get` and `Set` methods the
+  CLR gives it, so an array of several dimensions is indexed as `grid[1, 2]`. An array
+  type isn't called, though it has those constructors, so an array is made one way.
+- An index takes arguments as a call does, so what indexes them matches them as a call
+  matches its parameters: an indexer's by their names, as `list[index: 0]`, and a generic
+  type's or method's by its type parameters' names, in any order, as
+  `Dictionary[TValue: Int32, TKey: String]`. The CLR gives an array's constructors and
+  `Get` and `Set` no names, so an array's are positional.
+- Extension methods are members from outside a type, which a CG dispatcher of its own
+  gives: `ZSharp.Compiler.CG.External` wraps member access and, only when an object has no
+  member of its own by the name, asks the providers added to it through
+  `IExternalMembers`. So a type's own members come first, as in C#, and what every
+  provider gives is one overload group, so extension methods of several classes compete
+  as overloads. Traits are meant to be another provider of the same dispatcher. The IL
+  loader's provider, `ExtensionMethods`, has the extension methods of the classes added
+  to it, as members of the values their first parameter takes, and a call passes the
+  value as the first argument, so a generic one infers from it too:
+  `numbers.Where(odd).Select(twice).Sum()`. A class is added when an import reaches it, as
+  C#'s `using static` brings a class's extension methods, and a host can add one
+  directly. A dispatcher belongs to the whole toolchain, so what is added is seen by
+  everything compiled after it, not only by a scope.
+- A `Task` is used as any CLR object: waited on, its `Result` read, or run from a local
+  function. Defining asynchronous functions, as C#'s `async` and `await` do, is a feature
+  of Z# definitions, not of using the CLR, and isn't designed yet.
 
 ## Composition
 
@@ -1141,9 +1224,12 @@ with both operands. `=`, `.`, `as` and `is` stay syntax, since they aren't calls
 A C# method marked `[Operator("+")]` is an overload of what `+` stands for, and
 `ILLoader.Operators` finds them in a type. For now the CLI adds those of `core:runtime`
 and `core:zsharp` to one table for the whole language. Scoped tables can come later.
-`core:runtime` gives `+ - * / < > <= >= == !=` on `Int32` and `Double`, `+` on `String`,
-and `or == !=` on `Boolean`. The operators CLR types define are overloads too, so
-`String`'s `==` is its own.
+`core:runtime` gives the operators C# predefines: `+ - * / < > <= >= == !=` on `Int32`,
+`UInt32`, `Int64`, `UInt64`, `Single` and `Double`, `+` on `String` and between a `String`
+and any value, and `or == !=` on `Boolean`. Smaller integers have none of their own and
+widen to `Int32`, and mixed operands widen to the most specific overload both go to, so
+an `Int32` and an `Int64` add as `Int64`, as C# promotes them. The operators CLR types
+define are overloads too, so `String`'s `==` is its own.
 
 A whole number is an `Int32` and a number with a fraction is a `Double`, as in C#. They
 are `IntegerLiteral` and `DecimalLiteral` in HIR.
@@ -1387,9 +1473,15 @@ The `as` cast marking such a definition is not settled.
   renamed, as in `{ a as b }`.
 - Importers route by prefix through the string importer.
 - Importers do nothing CO-related. They return real HIR, and imported names
-  cross into MIR through the HIR -> MIR REI when used.
+  cross into MIR through the HIR -> MIR REI.
 - Libraries are supplied by a `pkg:` importer written purely in Z#.
-- Checking imported names at the import needs care and is not decided.
+- An import that runs while compiling reaches each of its names' members as it runs,
+  since that is what importing them means: whatever comes with a member comes then, as
+  a class's extension methods do, and a name the imported value has no member for is an
+  error of the import, not of its first use. The names are still bound to the member
+  as code, `value.name`, so what they stand for is reached again where they are used. An
+  import that runs only as a definition is constructed has nothing to reach yet, so its
+  names are checked when they are used.
 
 ## Project layout
 

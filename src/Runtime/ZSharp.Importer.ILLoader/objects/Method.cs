@@ -11,6 +11,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTCallable
         , ICompileIRReference<LIR.ICallable>
         , ISpecific
+        , IInferable
         , ICTGetIndex
         , ICompileIRExpression
         , ITyped
@@ -52,7 +53,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (method is not MethodInfo { IsGenericMethodDefinition: true } generic)
                 return Result.Error(new UnsupportedError($"{method.Name} is not generic."));
 
-            if (loader.Types(arguments) is not { } types || types.Length != generic.GetGenericArguments().Length)
+            if (loader.Types(arguments, generic.GetGenericArguments()) is not { } types)
                 return Result.Error($"{method.Name} takes {generic.GetGenericArguments().Length} type arguments.");
 
             try
@@ -65,8 +66,33 @@ namespace ZSharp.Importer.ILLoader.Objects
             }
         }
 
+        /// <summary>
+        /// A generic method called without its type arguments infers them from the call's
+        /// arguments, as in C#.
+        /// </summary>
+        public CompilerObject? Infer(Argument[] arguments)
+        {
+            if (method is not MethodInfo { IsGenericMethodDefinition: true } generic || Inference.Infer(generic, arguments) is not { } types)
+                return null;
+
+            try
+            {
+                return new Method(loader, generic.MakeGenericMethod(types), receiver);
+            }
+            catch (ArgumentException)
+            {
+                // The inferred types don't meet the method's constraints.
+                return null;
+            }
+        }
+
         public IResult Call(Argument[] arguments)
         {
+            if (method is MethodInfo { IsGenericMethodDefinition: true })
+                return Infer(arguments) is { } inferred
+                    ? Core.Compiler.ModuleScope.CG.Call(inferred, arguments)
+                    : Result.Error($"The type arguments of {method.Name} can't be inferred from these arguments.");
+
             if (Arguments.Match(Matching(), arguments) is not { } values)
                 return Result.Error($"{method.Name} can't be called with these arguments.");
 
@@ -89,11 +115,21 @@ namespace ZSharp.Importer.ILLoader.Objects
         public IResult<LIR.ICallable, Error> CompileIRReference(object? target)
             => Result<LIR.ICallable>.Ok(loader.Handle(method));
 
+        /// <summary>
+        /// A method is as specific as another if the other takes whatever it takes. Between
+        /// two that take the same, one that isn't generic is the more specific, as in C#.
+        /// </summary>
         public bool IsAsSpecificAs(CompilerObject other)
+            => ZSharp.Compiler.Parameters.AreAsSpecificAs(Parameters(), other)
+            && !(method.IsGenericMethod && other is Method { IsGeneric: false } plain && plain.TakesWhat(this));
+
+        private bool IsGeneric => method.IsGenericMethod;
+
+        private bool TakesWhat(Method other)
             => ZSharp.Compiler.Parameters.AreAsSpecificAs(Parameters(), other);
 
         private CompilerObject[] Parameters()
-            => [.. method.GetParameters().Select(parameter => loader.Class(parameter.ParameterType))];
+            => [.. method.GetParameters().Select(loader.ParameterType)];
 
         /// <summary>
         /// The parameters as they match arguments. A method defined from HIR has them as

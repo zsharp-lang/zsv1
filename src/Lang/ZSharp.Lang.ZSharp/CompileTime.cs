@@ -17,6 +17,7 @@ namespace ZSharp.Lang
                 HIR.Code.PositionalMember member => Is(member.Target),
                 HIR.Code.Cast cast => Is(cast.Value) && Is(cast.Type),
                 HIR.Code.Match match => Is(match.Value) && Is(match.Pattern),
+                HIR.Code.ArrayLiteral array => array.Items.All(Is),
                 HIR.Code.Call call => Is(call.Callee) && call.Arguments.All(argument => Is(argument.Value)),
                 HIR.Code.Index index => Is(index.Target) && index.Arguments.All(argument => Is(argument.Value)),
                 _ => false

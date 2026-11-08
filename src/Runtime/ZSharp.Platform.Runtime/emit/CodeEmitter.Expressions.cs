@@ -17,6 +17,7 @@ namespace ZSharp.Platform.Runtime
                 case LIR.Allocate node: Allocate(node); break;
                 case LIR.Load node: Load(node); break;
                 case LIR.Sequence node: Statement(node.Block); Expression(node.Result); break;
+                case AddressOf node: Address(node.Variable); break;
                 default: throw new NotSupportedException($"Can't emit a {expression.GetType().Name}.");
             }
         }
@@ -175,6 +176,14 @@ namespace ZSharp.Platform.Runtime
                 case LIR.GetField node:
                     FieldOwnerAddress(node.Target);
                     il.Emit(Emit.OpCodes.Ldflda, runtime.ImportField(StructureOf(node.Target), node.Field));
+                    break;
+                case LIR.Load node:
+                    Expression(node.Reference);
+                    il.Emit(Emit.OpCodes.Ldflda, Runtime.BoxValue(runtime.ImportType(TypeOf(node.Reference))));
+                    break;
+                case LIR.Sequence node when AddressOf.Has(node.Result):
+                    Statement(node.Block);
+                    Address(node.Result);
                     break;
                 default:
                     var temporary = il.DeclareLocal(runtime.ImportType(TypeOf(expression)));

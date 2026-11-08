@@ -32,11 +32,28 @@ namespace ZSharp.Parser
 
                 alive = false;
 
-                if (!Committing)
-                    foreach (var token in cache)
-                        tokenStream.cache.Enqueue(token);
+                var popped = tokenStream.lookAheads.Pop();
+                System.Diagnostics.Debug.Assert(ReferenceEquals(popped, this));
 
-                System.Diagnostics.Debug.Assert(ReferenceEquals(tokenStream.lookAheads.Pop(), this));
+                if (Committing)
+                {
+                    // The tokens were read under the enclosing look-ahead too, so it can
+                    // still give them back.
+                    if (tokenStream.CurrentLookAhead is { } outer)
+                        foreach (var token in cache)
+                            outer.cache.Enqueue(token);
+
+                    return;
+                }
+
+                // The tokens go back before any the stream already holds, since they were
+                // read before those.
+                var remaining = tokenStream.cache.ToArray();
+
+                tokenStream.cache.Clear();
+
+                foreach (var token in cache.Concat(remaining))
+                    tokenStream.cache.Enqueue(token);
             }
         }
 

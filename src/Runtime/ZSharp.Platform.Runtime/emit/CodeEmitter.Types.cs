@@ -20,6 +20,7 @@ namespace ZSharp.Platform.Runtime
                 LIR.Allocate node => new LIR.Reference(TypeOf(node.Value) ?? NoValue(node)),
                 LIR.Load node => TargetOf(node.Reference),
                 LIR.Sequence node => TypeOf(node.Result),
+                AddressOf node => node.Type,
                 _ => throw new NotSupportedException($"Can't type a {expression.GetType().Name}.")
             };
 

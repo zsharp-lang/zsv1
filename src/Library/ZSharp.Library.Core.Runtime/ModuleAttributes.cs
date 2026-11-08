@@ -17,6 +17,8 @@ using ZSharp.Importer.ILLoader;
 [module: ImportType(typeof(Type), Alias = "Type")]
 [module: ImportType(typeof(IDisposable), Alias = "IDisposable")]
 
+[module: ImportType(typeof(Nullable<>), Alias = "Nullable")]
+[module: ImportType(typeof(System.Linq.Enumerable), Alias = "Enumerable")]
 [module: ImportType(typeof(System.Collections.Generic.List<>), Alias = "List")]
 [module: ImportType(typeof(System.Collections.Generic.Dictionary<,>), Alias = "Dictionary")]
 [module: ImportType(typeof(System.Collections.Generic.HashSet<>), Alias = "HashSet")]

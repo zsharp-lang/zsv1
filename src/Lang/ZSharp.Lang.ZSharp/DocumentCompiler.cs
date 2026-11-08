@@ -419,7 +419,7 @@ namespace ZSharp.Lang
                 if (value is not HIR.Instance imported)
                     return Result<HIRStatement>.Error($"An import must give an instance, but gave {value?.GetType().Name ?? "null"}.");
 
-                return language.BindImported(compiler, import, () => new HIR.Code.Get(imported)) is { } conflict
+                return language.BindImported(compiler, import, imported) is { } conflict
                     ? Result<HIRStatement>.Error(conflict)
                     : Result<HIRStatement>.Ok(new HIR.Code.Block());
             }

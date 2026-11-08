@@ -42,6 +42,11 @@ codeLoader.Apply();
 
 new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(Scope.CG).Apply();
 new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(Scope.CG, Scope.TS).Apply();
+
+// Members from outside an object's own, as extension methods, come after its own.
+var external = new ZSharp.Compiler.CGDispatchers.External.Dispatcher(Scope.CG);
+external.Apply();
+external.Add(il.Extensions);
 new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(Scope.TS).Apply();
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
@@ -131,6 +136,9 @@ foreach (var library in new[] { typeof(Core.Runtime.ModuleScope), typeof(Core.ZS
         language.Add(syntax, function);
 
 foreach (var (syntax, function) in il.ClrOperators())
+    language.Add(syntax, function);
+
+foreach (var (syntax, function) in il.LiftedOperators(language.Functions))
     language.Add(syntax, function);
 
 // Each document runs with a frame holding its locals.

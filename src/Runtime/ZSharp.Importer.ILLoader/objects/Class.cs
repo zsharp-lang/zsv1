@@ -47,10 +47,14 @@ namespace ZSharp.Importer.ILLoader.Objects
             => Result<LIR.Type>.Ok(loader.Handle(IL));
 
         /// <summary>
-        /// Calling a type constructs an instance of it.
+        /// Calling a type constructs an instance of it. An array is made by indexing the
+        /// type of its elements with its length instead, though the CLR gives array types
+        /// constructors.
         /// </summary>
         public IResult Call(Argument[] arguments)
-            => IL.IsValueType && arguments.Length == 0 && IL.GetConstructor(Type.EmptyTypes) is null
+            => IL.IsArray
+                ? Result.Error($"An array of {IL.GetElementType()!.Name} is made by giving {IL.GetElementType()!.Name} its length, as in {IL.GetElementType()!.Name}[4].")
+                : IL.IsValueType && arguments.Length == 0 && IL.GetConstructor(Type.EmptyTypes) is null
                 ? Result.Ok(new Literal(null, IL, loader))
                 : Core.Compiler.ModuleScope.CG.Call(
                 OverloadGroup.Of(IL.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
@@ -111,6 +115,9 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// </summary>
         public IResult Index(CompilerObject @object, Argument[] arguments)
         {
+            if (IL.IsArray)
+                return Element(@object, arguments);
+
             var indexers = Indexers();
 
             if (indexers.Length == 0)
@@ -129,6 +136,11 @@ namespace ZSharp.Importer.ILLoader.Objects
 
         public IResult Index(CompilerObject @object, Argument[] arguments, CompilerObject value)
         {
+            if (IL.IsArray)
+                return Element(@object, arguments) is var element && element.Ok(out var indexed)
+                    ? Core.Compiler.ModuleScope.CG.Set(indexed, value)
+                    : element;
+
             var setters = Indexers()
                 .Where(indexer => indexer.SetMethod is { IsPublic: true })
                 .Select(indexer => (CompilerObject)new Method(loader, indexer.SetMethod!, @object))
@@ -139,19 +151,57 @@ namespace ZSharp.Importer.ILLoader.Objects
                 : Core.Compiler.ModuleScope.CG.Call(OverloadGroup.Of(setters), [.. arguments, new Argument(value)]);
         }
 
+        /// <summary>
+        /// An element of an array, read and written by the <c>Get</c> and <c>Set</c> methods
+        /// the CLR gives every array type, so its indices are matched as a call's arguments
+        /// are, and an array of several dimensions takes one for each.
+        /// </summary>
+        private IResult Element(CompilerObject array, Argument[] arguments)
+        {
+            if (Core.Compiler.ModuleScope.CG.Call(new Method(loader, IL.GetMethod("Get")!, array), arguments).When(out var read).Error(out var error))
+                return Result.Error(error);
+
+            return Result.Ok(new Indexed(read!, value =>
+                Core.Compiler.ModuleScope.CG.Call(new Method(loader, IL.GetMethod("Set")!, array), [.. arguments, new Argument(value)])));
+        }
+
         private PropertyInfo[] Indexers()
             => [.. IL.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(property => property.GetIndexParameters().Length > 0)];
 
         /// <summary>
+        /// Giving a type values, as in <c>Int32[4]</c>, makes an array of that length, with
+        /// a dimension for each value, as in <c>Int32[2, 3]</c>, through the constructor the
+        /// CLR gives the array type, so the values are matched as a call's arguments are.
+        /// Each element is the default value of the type.
+        /// </summary>
+        private IResult NewArray(Argument[] arguments)
+        {
+            if (IL.ContainsGenericParameters)
+                return Result.Error($"{IL.Name} takes type arguments, not lengths.");
+
+            var array = arguments.Length == 1 ? IL.MakeArrayType() : IL.MakeArrayType(arguments.Length);
+
+            return Core.Compiler.ModuleScope.CG.Call(
+                OverloadGroup.Of(array.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
+                arguments
+            );
+        }
+
+        /// <summary>
         /// Giving a generic type its arguments, as in <c>List[Int32]</c>, instantiates it.
+        /// A type given nothing, as in <c>Int32[]</c>, is the type of its arrays, as C#
+        /// writes it.
         /// </summary>
         public IResult Index(Argument[] arguments)
         {
+            if (arguments.Length == 0)
+                return Result.Ok(loader.Class(IL.MakeArrayType()));
+
+            if (loader.Types(arguments, IL.IsGenericTypeDefinition ? IL.GetGenericArguments() : []) is not { } types)
+                return NewArray(arguments);
+
             if (!IL.IsGenericTypeDefinition)
                 return Result.Error(new UnsupportedError($"{IL.Name} is not generic."));
-
-            if (loader.Types(arguments) is not { } types)
-                return Result.Error($"The arguments of {IL.Name} must be types.");
 
             if (types.Length != IL.GetGenericArguments().Length)
                 return Result.Error($"{IL.Name} takes {IL.GetGenericArguments().Length} type arguments, not {types.Length}.");
@@ -226,6 +276,9 @@ namespace ZSharp.Importer.ILLoader.Objects
                     found.SetMethod is { IsPublic: true } setter ? loader.Handle(setter) : null
                 ));
 
+            if (IL.GetEvents(flags).FirstOrDefault(@event => Named(@event, member)) is { } @event)
+                return Result.Ok(new Event(loader, @event, receiver));
+
             if (IL.GetFields(flags).FirstOrDefault(field => Named(field, member)) is { } field)
                 // A constant, as an enum's member is, has no storage: it is its value.
                 return field.IsLiteral
@@ -234,7 +287,8 @@ namespace ZSharp.Importer.ILLoader.Objects
                         receiver,
                         () => loader.Class(field.FieldType),
                         loader.Handle(field, isSet: false),
-                        field.IsInitOnly ? null : loader.Handle(field, isSet: true)
+                        field.IsInitOnly ? null : loader.Handle(field, isSet: true),
+                        field.IsInitOnly || (!field.IsStatic && IL.IsValueType) ? null : loader.FieldAddress(field)
                     ));
 
             if (receiver is null && IL.GetNestedType(member, BindingFlags.Public) is { } nested)

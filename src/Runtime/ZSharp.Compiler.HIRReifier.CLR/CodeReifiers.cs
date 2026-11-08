@@ -42,6 +42,7 @@ namespace ZSharp.Compiler
             expressions.Register<Code.Set>(Reify);
             expressions.Register<Code.Cast>(Reify);
             expressions.Register<Code.Match>(Reify);
+            expressions.Register<Code.ArrayLiteral>(Reify);
             expressions.Register<Code.Unquote>(unquote => Ok(unquote.Code));
             expressions.Register<Code.Call>(Reify);
             expressions.Register<Code.Index>(Reify);
@@ -118,6 +119,19 @@ namespace ZSharp.Compiler
             return Expression(cast.Type).When(out var type).Error(out error)
                 ? Fail(error)
                 : Ok(Call("Cast", value!, type!));
+        }
+
+        private Reified Reify(Code.ArrayLiteral array)
+        {
+            Code.Expression built = Call("Array");
+
+            foreach (var item in array.Items)
+                if (Expression(item).When(out var value).Error(out var error))
+                    return Fail(error);
+                else
+                    built = Call("With", built, value!);
+
+            return Ok(built);
         }
 
         private Reified Reify(Code.Match match)

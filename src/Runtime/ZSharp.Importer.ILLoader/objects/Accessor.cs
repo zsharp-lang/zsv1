@@ -1,18 +1,21 @@
 namespace ZSharp.Importer.ILLoader.Objects
 {
     /// <summary>
-    /// A property or field, optionally on an object.
+    /// A property or field, optionally on an object. A field that can be assigned also has
+    /// an address, so it can be passed by reference as it is.
     /// </summary>
     internal sealed class Accessor(
         CompilerObject? receiver,
         Func<CompilerObject> type,
         LIR.ICallable? getter,
-        LIR.ICallable? setter
+        LIR.ICallable? setter,
+        LIR.ICallable? address = null
     )
         : CompilerObject
         , ICompileIRExpression
         , ICTSet
         , ITyped
+        , IHasAddress
     {
         CompilerObject ITyped.Type => type();
 
@@ -30,6 +33,12 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? Result.Ok(new Call(setter, [.. Receiver(), converted], null))
                 : Result.Error("The value doesn't match the type of this member.");
         }
+
+        /// <summary>
+        /// The code that gives the address of the field, through the function that does.
+        /// </summary>
+        public IResult<LIR.Expression, Error>? AddressOf(object? target)
+            => address is null ? null : new Call(address, [.. Receiver()], null).CompileIRExpression(target);
 
         private IEnumerable<CompilerObject> Receiver()
             => receiver is null ? [] : [receiver];

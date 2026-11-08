@@ -72,19 +72,50 @@ namespace ZSharp.Importer.ILLoader.Objects
     }
 
     /// <summary>
-    /// A parameter of a CLR method, with the default value its metadata gives.
+    /// A parameter of a CLR method, with the default value its metadata gives. A
+    /// <c>params</c> array takes the rest of the positional arguments, as in C#: one that is
+    /// already an array of its type is the array, and otherwise each is an element.
     /// </summary>
     internal sealed class ClrParameter(ParameterInfo parameter, ILLoader loader)
         : CompilerObject
         , ICTMatchParameter
     {
         public IResult Match(ArgumentStream arguments)
-            => Arguments.Take(
-                parameter.Name ?? string.Empty,
-                loader.Class(parameter.ParameterType),
-                parameter.HasDefaultValue ? () => new Literal(parameter.DefaultValue, parameter.ParameterType, loader) : null,
-                arguments
-            );
+        {
+            var name = parameter.Name ?? string.Empty;
+            var type = loader.ParameterType(parameter);
+
+            if (!parameter.IsDefined(typeof(ParamArrayAttribute)))
+                return Arguments.Take(
+                    name,
+                    type,
+                    parameter.HasDefaultValue ? () => new Literal(parameter.DefaultValue, parameter.ParameterType, loader) : null,
+                    arguments
+                );
+
+            // Given by its name, it is the array itself.
+            if (arguments.Pop(name) is { } named)
+                return Scope.CG.ImplicitCast(named, type);
+
+            var given = new List<CompilerObject>();
+
+            while (arguments.Pop() is { } argument)
+                given.Add(argument);
+
+            if (given is [var single] && Scope.CG.ImplicitCast(single, type).Ok(out var array))
+                return Result.Ok(array);
+
+            var element = parameter.ParameterType.GetElementType()!;
+            var elements = new List<CompilerObject>();
+
+            foreach (var argument in given)
+                if (Scope.CG.ImplicitCast(argument, loader.Class(element)).Ok(out var converted))
+                    elements.Add(converted);
+                else
+                    return Result.Error($"An argument doesn't match the elements of {name}.");
+
+            return Result.Ok(new Call(loader.ArrayOf(element, elements.Count), [.. elements], () => type));
+        }
     }
 
     /// <summary>

@@ -7,6 +7,7 @@
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader.Code.Mapped\ZSharp.Compiler.HIRLoader.Code.Mapped.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.CG.Typed\ZSharp.Compiler.CG.Typed.csproj" />
+    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.CG.External\ZSharp.Compiler.CG.External.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.TS.Static\ZSharp.Compiler.TS.Static.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.Overloading.Static\ZSharp.Compiler.Overloading.Static.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj" />

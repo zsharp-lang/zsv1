@@ -43,6 +43,7 @@ namespace ZSharp.Lang
             mapped.Expressions.Register<AST.BinaryExpression>(Compile);
             mapped.Expressions.Register<AST.CastExpression>(Compile);
             mapped.Expressions.Register<AST.IsOfExpression>(Compile);
+            mapped.Expressions.Register<AST.ArrayLiteral>(Compile);
             mapped.Expressions.Register<AST.LetExpression>(Compile);
             mapped.Expressions.Register<AST.Function>(CompileDefinition);
             mapped.Expressions.Register<AST.TypeDefinition>(CompileDefinition);
@@ -271,6 +272,19 @@ namespace ZSharp.Lang
             return Result<HIRExpression>.Ok(new HIR.Code.Cast { Value = value!, Type = type! });
         }
 
+        private static IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.ArrayLiteral array)
+        {
+            var literal = new HIR.Code.ArrayLiteral();
+
+            foreach (var item in array.Items)
+                if (compiler.CompileExpression(item).When(out var value).Error(out var error))
+                    return Result<HIRExpression>.Error(error);
+                else
+                    literal.Items.Add(value!);
+
+            return Result<HIRExpression>.Ok(literal);
+        }
+
         /// <summary>
         /// <c>value is of T</c> tests whether the value is of a type. The only pattern so
         /// far is a name, as in <c>value is name of T</c>, which also defines a variable of
@@ -491,6 +505,23 @@ namespace ZSharp.Lang
         /// meta-compilers that compile imports.
         /// </summary>
         /// <param name="imported">Code that gives the imported value, made once for each name.</param>
+        /// <summary>
+        /// Binds the names of an import that ran while compiling to the members of what it
+        /// gave. Each member is reached as the import runs, as importing it means, so what
+        /// comes with it, as a class's extension methods, comes then, and a name the
+        /// imported value has no member for is an error of the import.
+        /// </summary>
+        public Error? BindImported(ASTCompiler compiler, AST.ImportStatement import, HIR.Instance imported)
+        {
+            foreach (var name in import.ImportedNames ?? [])
+                if (Core.Compiler.ModuleScope.HIRCodeLoader
+                    .LoadExpression(new HIR.Code.NamedMember { Target = new HIR.Code.Get(imported), Name = name.Name })
+                    .Error(out var error))
+                    return new ErrorMessage($"The import of {name.Name} failed: {error}");
+
+            return BindImported(compiler, import, () => new HIR.Code.Get(imported));
+        }
+
         public Error? BindImported(ASTCompiler compiler, AST.ImportStatement import, Func<HIRExpression> imported)
         {
             foreach (var name in import.ImportedNames ?? [])

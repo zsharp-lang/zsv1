@@ -25,12 +25,25 @@ namespace ZSharp.Compiler.Objects
         }
     }
 
+    /// <summary>
+    /// Statements, then a value. A block that ends in a variable, as a <c>let</c> does, is
+    /// that variable once its statements have run: assigning it assigns the variable, so
+    /// it can be passed by reference, as in <c>Int32.TryParse(text, let n: Int32)</c>.
+    /// </summary>
     internal sealed class BlockExpression(Block block, CompilerObject result)
         : CompilerObject
         , ICompileIRExpression
         , ITyped
+        , ICTSet
     {
         CompilerObject ITyped.Type => Scope.TS.TypeOf(result).Unwrap();
+
+        // A block can be assigned only if what it ends in can.
+        bool CompilerObject.Is<T>([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out T? found) where T : class
+            => (found = typeof(T) == typeof(ICTSet) && !result.Is<ICTSet>(out _) ? null : this as T) is not null;
+
+        public IResult Set(CompilerObject value)
+            => Scope.CG.Set(result, value);
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
         {

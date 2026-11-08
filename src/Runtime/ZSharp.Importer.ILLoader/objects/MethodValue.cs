@@ -50,18 +50,23 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// method's, and what the method returns goes where the delegate's result does.
         /// </summary>
         public static bool Fits(MethodInfo method, Type delegateType)
+            => Fits([.. method.GetParameters().Select(parameter => parameter.ParameterType)], method.ReturnType, delegateType);
+
+        /// <summary>
+        /// Whether a function of a signature can be a delegate of a type.
+        /// </summary>
+        public static bool Fits(Type[] parameters, Type returnType, Type delegateType)
         {
             if (!typeof(Delegate).IsAssignableFrom(delegateType) || delegateType.GetMethod("Invoke") is not { } invoke)
                 return false;
 
-            var parameters = method.GetParameters();
             var accepted = invoke.GetParameters();
 
             return parameters.Length == accepted.Length
-                && parameters.Zip(accepted).All(pair => pair.First.ParameterType.IsAssignableFrom(pair.Second.ParameterType))
+                && parameters.Zip(accepted).All(pair => pair.First.IsAssignableFrom(pair.Second.ParameterType))
                 && (invoke.ReturnType == typeof(void)
-                    ? method.ReturnType == typeof(void)
-                    : invoke.ReturnType.IsAssignableFrom(method.ReturnType));
+                    ? returnType == typeof(void)
+                    : invoke.ReturnType.IsAssignableFrom(returnType));
         }
     }
 }

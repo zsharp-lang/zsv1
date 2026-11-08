@@ -88,6 +88,8 @@ namespace ZSharp.Importer.ILLoader
 
             loader.Instances.Register<Package.DotNet.ExposedObject>(LoadExposed);
             loader.Instances.Register<Package.DotNet.Operator>(node => Result.Ok(new Objects.ClrOperator(this, node.Name)));
+            loader.Instances.Register<Package.DotNet.LiftedOperator>(node => Result.Ok(new Objects.LiftedOperator(this, node.Operator, node.Lifting)));
+            loader.Instances.Register<Package.DotNet.RefFamily>(node => Result.Ok(new Objects.RefFamily(this, node.IsOut)));
             loader.Instances.Register<Package.DotNet.Field>(field => ModuleGlobal(field) is { } global
                 ? Result.Ok(global)
                 : Result.Error($"Field {field.Name} can only be reached through its class."));
@@ -130,6 +132,7 @@ namespace ZSharp.Importer.ILLoader
                 Result.Ok(new Objects.Literal(literal.Value, typeof(double), this))
             );
             code.Expressions.Register<HIR.Code.NullLiteral>(_ => Result.Ok(new Objects.Null(this)));
+            code.Expressions.Register<HIR.Code.ArrayLiteral>(LoadArray);
 
             loadReturn = code.Statements.Register<HIR.Code.Return>(LoadReturn);
         }
@@ -195,6 +198,14 @@ namespace ZSharp.Importer.ILLoader
         }
 
         internal Platform.Runtime.Runtime Runtime => runtime;
+
+        /// <summary>
+        /// The extension methods of the classes imports have reached. A host adds it to the
+        /// dispatcher of external members.
+        /// </summary>
+        public ExtensionMethods Extensions => extensions ??= new(this);
+
+        private ExtensionMethods? extensions;
 
         private readonly Dictionary<(string, Type, Type), LIR.FunctionHandle> instructions = [];
 
@@ -287,6 +298,23 @@ namespace ZSharp.Importer.ILLoader
             }.Select(pair => (pair.Item1, (HIR.Instance)new Package.DotNet.Operator(pair.Item2)));
 
         /// <summary>
+        /// The operators that exist, lifted to nullable operands as C# lifts them, each an
+        /// overload of the operator it lifts.
+        /// </summary>
+        public IEnumerable<(string Operator, HIR.Instance Function)> LiftedOperators(IReadOnlyDictionary<string, HIR.Code.OverloadGroup> operators)
+            => new (string, Package.DotNet.Lifting)[]
+            {
+                ("+", Package.DotNet.Lifting.Value), ("-", Package.DotNet.Lifting.Value),
+                ("*", Package.DotNet.Lifting.Value), ("/", Package.DotNet.Lifting.Value),
+                ("==", Package.DotNet.Lifting.Equality), ("!=", Package.DotNet.Lifting.Equality),
+                ("<", Package.DotNet.Lifting.Comparison), (">", Package.DotNet.Lifting.Comparison),
+                ("<=", Package.DotNet.Lifting.Comparison), (">=", Package.DotNet.Lifting.Comparison),
+            }
+            .Where(pair => operators.ContainsKey(pair.Item1))
+            .Select(pair => (pair.Item1, (HIR.Instance)new Package.DotNet.LiftedOperator(operators[pair.Item1], pair.Item2)))
+            .ToArray();
+
+        /// <summary>
         /// The functions the methods of a type say operators stand for.
         /// </summary>
         public IEnumerable<(string Operator, HIR.Instance Function)> Operators(Type type)
@@ -302,6 +330,22 @@ namespace ZSharp.Importer.ILLoader
 
         internal Objects.Class Class(Type type)
             => new(this, type);
+
+        /// <summary>
+        /// The type of a reference to a variable of a type: <c>Ref[T]</c>, or <c>Out[T]</c>
+        /// for a parameter the callee only assigns.
+        /// </summary>
+        internal Objects.RefType Ref(Type element, bool isOut)
+            => new(this, element, isOut);
+
+        /// <summary>
+        /// The type a parameter has as it takes arguments: a <c>ref</c> or <c>out</c>
+        /// parameter takes a reference.
+        /// </summary>
+        internal CompilerObject ParameterType(ParameterInfo parameter)
+            => parameter.ParameterType.IsByRef
+                ? Ref(parameter.ParameterType.GetElementType()!, parameter.IsOut)
+                : Class(parameter.ParameterType);
 
         internal LIR.TypeHandle Handle(Type type)
         {
@@ -333,6 +377,149 @@ namespace ZSharp.Importer.ILLoader
             runtime.Map(handle, method);
 
             return handle;
+        }
+
+        private readonly Dictionary<FieldInfo, LIR.FunctionHandle> fieldAddresses = [];
+
+        /// <summary>
+        /// The function that gives the address of a field, of the object it is given if the
+        /// field isn't static.
+        /// </summary>
+        internal LIR.FunctionHandle FieldAddress(FieldInfo field)
+        {
+            if (fieldAddresses.TryGetValue(field, out var known))
+                return known;
+
+            var signature = new LIR.Signature { ReturnType = Handle(field.FieldType.MakeByRefType()) };
+
+            if (!field.IsStatic)
+                signature.Parameters.Add(new(Handle(field.DeclaringType!)) { Name = "this" });
+
+            var handle = new LIR.FunctionHandle(signature);
+
+            runtime.Map(handle, il => il.Emit(field.IsStatic ? System.Reflection.Emit.OpCodes.Ldsflda : System.Reflection.Emit.OpCodes.Ldflda, field));
+
+            return fieldAddresses[field] = handle;
+        }
+
+        private readonly Dictionary<(string, Type), LIR.FunctionHandle> comparisons = [];
+
+        /// <summary>
+        /// The function that compares two values of a type by the instruction C# compares
+        /// them with: enums by their values, signed or not, and references by identity.
+        /// </summary>
+        internal LIR.FunctionHandle Comparison(string name, Type operand)
+        {
+            if (comparisons.TryGetValue((name, operand), out var known))
+                return known;
+
+            var signature = new LIR.Signature { ReturnType = Handle(typeof(bool)) };
+            signature.Parameters.Add(new(Handle(operand)) { Name = "left" });
+            signature.Parameters.Add(new(Handle(operand)) { Name = "right" });
+
+            var handle = new LIR.FunctionHandle(signature);
+            var unsigned = operand.IsEnum && Enum.GetUnderlyingType(operand) is var underlying
+                && (underlying == typeof(byte) || underlying == typeof(ushort) || underlying == typeof(uint) || underlying == typeof(ulong));
+
+            var (instruction, negate) = name switch
+            {
+                "op_Equality" => (System.Reflection.Emit.OpCodes.Ceq, false),
+                "op_Inequality" => (System.Reflection.Emit.OpCodes.Ceq, true),
+                "op_LessThan" => (unsigned ? System.Reflection.Emit.OpCodes.Clt_Un : System.Reflection.Emit.OpCodes.Clt, false),
+                "op_GreaterThan" => (unsigned ? System.Reflection.Emit.OpCodes.Cgt_Un : System.Reflection.Emit.OpCodes.Cgt, false),
+                "op_LessThanOrEqual" => (unsigned ? System.Reflection.Emit.OpCodes.Cgt_Un : System.Reflection.Emit.OpCodes.Cgt, true),
+                "op_GreaterThanOrEqual" => (unsigned ? System.Reflection.Emit.OpCodes.Clt_Un : System.Reflection.Emit.OpCodes.Clt, true),
+                _ => throw new NotSupportedException($"{name} is not a comparison.")
+            };
+
+            runtime.Map(handle, il =>
+            {
+                il.Emit(instruction);
+
+                if (negate)
+                {
+                    il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4_0);
+                    il.Emit(System.Reflection.Emit.OpCodes.Ceq);
+                }
+            });
+
+            return comparisons[(name, operand)] = handle;
+        }
+
+        private IResult LoadArray(HIR.Code.ArrayLiteral array)
+        {
+            var items = new List<CompilerObject>();
+
+            foreach (var item in array.Items)
+                if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadExpression(item).When(out var loaded).Error(out var error))
+                    return Result.Error(error);
+                else
+                    items.Add(loaded!);
+
+            return Result.Ok(new Objects.ArrayLiteral(this, [.. items]));
+        }
+
+        /// <summary>
+        /// The functions that read and write what a reference refers to.
+        /// </summary>
+        internal LIR.FunctionHandle LoadIndirect(Type element)
+            => Instruction("ldobj", element.MakeByRefType(), element, il => il.Emit(System.Reflection.Emit.OpCodes.Ldobj, element));
+
+        private readonly Dictionary<Type, LIR.FunctionHandle> stores = [];
+
+        internal LIR.FunctionHandle StoreIndirect(Type element)
+        {
+            if (stores.TryGetValue(element, out var known))
+                return known;
+
+            var signature = new LIR.Signature();
+            signature.Parameters.Add(new(Handle(element.MakeByRefType())) { Name = "reference" });
+            signature.Parameters.Add(new(Handle(element)) { Name = "value" });
+
+            var handle = new LIR.FunctionHandle(signature);
+
+            runtime.Map(handle, il => il.Emit(System.Reflection.Emit.OpCodes.Stobj, element));
+
+            return stores[element] = handle;
+        }
+
+        private readonly Dictionary<(Type, int), LIR.FunctionHandle> arrays = [];
+
+        /// <summary>
+        /// The function that makes an array of its arguments, all of one type.
+        /// </summary>
+        internal LIR.FunctionHandle ArrayOf(Type element, int count)
+        {
+            if (arrays.TryGetValue((element, count), out var known))
+                return known;
+
+            var signature = new LIR.Signature { ReturnType = Handle(element.MakeArrayType()) };
+
+            for (var index = 0; index < count; index++)
+                signature.Parameters.Add(new(Handle(element)) { Name = $"element{index}" });
+
+            var handle = new LIR.FunctionHandle(signature);
+
+            runtime.Map(handle, il =>
+            {
+                var elements = Enumerable.Range(0, count).Select(_ => il.DeclareLocal(element)).ToArray();
+
+                for (var index = count - 1; index >= 0; index--)
+                    il.Emit(System.Reflection.Emit.OpCodes.Stloc, elements[index]);
+
+                il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4, count);
+                il.Emit(System.Reflection.Emit.OpCodes.Newarr, element);
+
+                for (var index = 0; index < count; index++)
+                {
+                    il.Emit(System.Reflection.Emit.OpCodes.Dup);
+                    il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4, index);
+                    il.Emit(System.Reflection.Emit.OpCodes.Ldloc, elements[index]);
+                    il.Emit(System.Reflection.Emit.OpCodes.Stelem, element);
+                }
+            });
+
+            return arrays[(element, count)] = handle;
         }
 
         internal LIR.FunctionHandle Handle(FieldInfo field, bool isSet)
@@ -515,17 +702,24 @@ namespace ZSharp.Importer.ILLoader
         /// <summary>
         /// The CLR types arguments stand for, if each is a type that exists.
         /// </summary>
-        internal Type[]? Types(Argument[] arguments)
+        /// <summary>
+        /// The CLR types arguments give type parameters, matched as a call's arguments are
+        /// to its parameters: each parameter takes the argument with its name, or else the
+        /// next positional one. Returns <see langword="null"/> if they don't match, or if an
+        /// argument isn't a type.
+        /// </summary>
+        internal Type[]? Types(Argument[] arguments, Type[] parameters)
         {
+            var stream = new ArgumentStream(arguments);
             var types = new List<Type>();
 
-            foreach (var argument in arguments)
-                if (argument.Name is null && argument.Object.Is<IILType>(out var known))
+            foreach (var parameter in parameters)
+                if ((stream.Pop(parameter.Name) ?? stream.Pop()) is { } argument && argument.Is<IILType>(out var known))
                     types.Add(known.GetILType());
                 else
                     return null;
 
-            return [.. types];
+            return stream.HasArguments ? null : [.. types];
         }
 
         private void RegisterType<T>(MappedLoader loader)
@@ -537,6 +731,14 @@ namespace ZSharp.Importer.ILLoader
 
         private IResult LoadType(Package.DotNet.TypeReference node)
         {
+            // A reference type is not a type of its own, but a reference to its target.
+            if (node is Package.DotNet.RefType reference)
+                return Core.Compiler.ModuleScope.HIRLoader.LoadType(reference.Target).When(out var target).Error(out var failure)
+                    ? Result.Error(failure)
+                    : target!.Is<IILType>(out var known) && known.GetILType() is { IsByRef: false } element
+                        ? Result.Ok(Ref(element, reference.IsOut))
+                        : Result.Error($"A reference can only be to a CLR type.");
+
             if (nodeTypes.TryGetValue(node, out var type))
                 return Result.Ok(Class(type));
 
@@ -799,12 +1001,19 @@ namespace ZSharp.Importer.ILLoader
                     return error;
 
                 var compiled = new LIR.Parameter(type!) { Name = parameter.Name };
-
-                signature.Parameters.Add(compiled);
-                variables[parameter] = new Objects.Variable(
+                var variable = new Objects.Variable(
                     compiled,
                     () => Core.Compiler.ModuleScope.HIRLoader.LoadType(parameter.Type!).Unwrap()
                 );
+
+                signature.Parameters.Add(compiled);
+
+                // A parameter that takes a reference is, to its code, a variable of what
+                // the reference refers to.
+                variables[parameter] = parameter.Type is Package.DotNet.RefType reference
+                    && Core.Compiler.ModuleScope.HIRLoader.LoadType(reference).Ok(out var loaded) && loaded is Objects.RefType referenced
+                        ? new Objects.Referenced(this, variable, referenced.Element)
+                        : variable;
             }
 
             return null;

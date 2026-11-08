@@ -50,6 +50,15 @@ namespace ZSharp.Compiler
 
         public static Code.NullLiteral Null() => new();
 
+        public static Code.ArrayLiteral Array() => new();
+
+        public static Code.ArrayLiteral With(Code.ArrayLiteral array, Code.Expression item)
+        {
+            array.Items.Add(item);
+
+            return array;
+        }
+
         public static Code.Call Call(Code.Expression callee) => new() { Callee = callee };
 
         public static Code.Call With(Code.Call call, Code.Expression value)

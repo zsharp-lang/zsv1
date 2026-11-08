@@ -38,6 +38,11 @@ mappedCode.Apply();
 
 new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(Scope.CG).Apply();
 new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(Scope.CG, Scope.TS).Apply();
+
+// Members from outside an object's own, as extension methods, come after its own.
+var external = new ZSharp.Compiler.CGDispatchers.External.Dispatcher(Scope.CG);
+external.Apply();
+external.Add(il.Extensions);
 new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(Scope.TS).Apply();
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
@@ -112,6 +117,9 @@ foreach (var library in new[] { typeof(Core.Runtime.ModuleScope), typeof(Core.ZS
 foreach (var (syntax, function) in il.ClrOperators())
     language.Add(syntax, function);
 
+foreach (var (syntax, function) in il.LiftedOperators(language.Functions))
+    language.Add(syntax, function);
+
 var probe = new C.Get(il.Load(typeof(Probe)));
 document.Scope.Add("Keep", new C.NamedMember { Target = probe, Name = "Keep" });
 document.Scope.Add("String", new C.Get(il.Load(typeof(string))));
@@ -123,7 +131,10 @@ foreach (var (name, clr) in new (string, Type)[] {
     ("TimeSpan", typeof(TimeSpan)), ("DateTime", typeof(DateTime)), ("Guid", typeof(Guid)), ("Double", typeof(double)),
     ("DayOfWeek", typeof(DayOfWeek)), ("Environment", typeof(Environment)), ("Probe", typeof(Probe)),
     ("Int64", typeof(long)), ("Decimal", typeof(decimal)), ("Math", typeof(Math)), ("Object", typeof(object)),
-    ("IDisposable154", typeof(IDisposable)) })
+    ("IDisposable154", typeof(IDisposable)), ("Interlocked", typeof(System.Threading.Interlocked)),
+    ("Bell", typeof(Bell)), ("EventArgs", typeof(EventArgs)),
+    ("Array", typeof(Array)), ("Enumerable", typeof(System.Linq.Enumerable)), ("Nullable", typeof(Nullable<>)),
+    ("Task", typeof(System.Threading.Tasks.Task)) })
     document.Scope.Add(name, new C.Get(il.Load(clr)));
 document.Scope.Add("Keep2", new C.NamedMember { Target = probe, Name = "Keep2" });
 document.Scope.Add("Which", new C.NamedMember { Target = probe, Name = "Which" });
@@ -1499,7 +1510,7 @@ Try("an operator is chosen by the types of its operands", () =>
     Run("""Keep(1.5 + 2.0); Keep("x" == "x");""") is null && Probe.Kept is [3.5, true]);
 
 Try("an operator with no overload for its operands is an error", () =>
-    Run("""Keep("a" - "b");""") is { } e && e.Contains("None of the 3 overloads applies"));
+    Run("""Keep("a" - "b");""") is { } e && e.Contains("None of the 8 overloads applies"));
 
 Try("an operator nothing defines is an error", () =>
     Run("Keep(2 ** 3);") is { } e && e.Contains("Operator (**) is not defined"));
@@ -2467,6 +2478,420 @@ Try("a name pattern in a module function", () =>
         Keep(M165.of("three"));
         """) is null && Kept() is 5);
 
+// ---- params arrays, Ref and Out
+
+Try("params takes each argument as an element", () =>
+    Run("Keep(Probe.CountOf(1, 2, 3));") is null && Kept() is 3);
+
+Try("params takes no arguments as an empty array", () =>
+    Run("Keep(Probe.CountOf());") is null && Kept() is 0);
+
+Try("params takes an array as the array", () =>
+    Run("Keep(Probe.CountOf(Probe.Numbers()));") is null && Kept() is 3);
+
+Try("params after other parameters, converting each element", () =>
+    Run("""Keep(Probe.Labels("n:", 1, "two", 3.5));""") is null && (string)Kept() == "n:1,two,3.5");
+
+Try("String.Join with params", () =>
+    Run("""Keep(String.Join(",", "a", "b"));""") is null && (string)Kept() == "a,b");
+
+Try("an out argument is assigned by the call", () =>
+    ResetKept() && Run("""let parsed166: Int32 = 0; Keep(Int32.TryParse("42", parsed166)); Keep(parsed166);""") is null
+        && Probe.Kept is [true, 42]);
+
+Try("ref arguments are read and assigned", () =>
+    Run("""
+        class Swaps167 {
+            @static fun swapped(): Int32 {
+                let left: Int32 = 1;
+                let right: Int32 = 2;
+                Probe.Swap(left, right);
+                return left * 10 + right;
+            }
+        }
+        Keep(Swaps167.swapped());
+        """) is null && Kept() is 21);
+
+Try("a parameter passed by reference", () =>
+    Run("""
+        class Halves168 {
+            @static fun halved(value: Int32, half: Int32): Int32 {
+                Probe.Halve(value, half);
+                return half;
+            }
+        }
+        Keep(Halves168.halved(10, 0));
+        """) is null && Kept() is 5);
+
+Try("a field is passed by its own address", () =>
+{
+    Probe.Tally = 5;
+    return Run("Keep(Interlocked.Increment(Probe.Tally));") is null && Kept() is 6 && Probe.Tally == 6;
+});
+
+Try("a property and a document local are passed through temporaries and assigned back", () =>
+    Run("let other170: Int32 = 2; Probe.Level = 1; Probe.Swap(Probe.Level, other170); Keep(Probe.Level * 10 + other170);") is null
+        && Kept() is 21 && Probe.Level == 2);
+
+Try("a value that is not a variable is not passed by reference", () =>
+    Run("""Keep(Int32.TryParse("1", 5));""") is { } e && e.Contains("overloads applies"));
+
+Try("a variable of another type is not passed by reference", () =>
+    Run("""let text169: String = ""; Keep(Int32.TryParse("1", text169));""") is { } e && e.Contains("overloads applies"));
+
+Try("Ref and Out are types of references", () =>
+    ResetKept() && Run("""import { Ref, Out } from "core:runtime"; Keep(Ref[Int32]); Keep(Out[Int32]);""") is null
+        && Probe.Kept is [Type a, Type b] && a == typeof(int).MakeByRefType() && b == a);
+
+// ---- CLR events
+
+Try("a handler added to a static event runs when it is raised, until it is removed", () =>
+    ResetKept() && Run("Probe.Ticked.add(Probe.Record); Probe.Tick(7); Probe.Ticked.remove(Probe.Record); Probe.Tick(8);") is null
+        && Probe.Kept is [7]);
+
+Try("a local function handles an instance event and captures a local", () =>
+    Run("""
+        class Rings171 {
+            @static fun count(): Int32 {
+                let bell = Bell();
+                let rings = 0;
+                fun rang(sender: Object, args: EventArgs) { rings = rings + 1; }
+                bell.Rung.add(rang);
+                bell.Ring();
+                bell.Ring();
+                return rings;
+            }
+        }
+        Keep(Rings171.count());
+        """) is null && Kept() is 2);
+
+Try("an event has only add and remove", () =>
+    Run("Probe.Ticked.raise(1);") is { } e && e.Contains("only add and remove"));
+
+// ---- inferring type arguments
+
+Try("a generic method infers its type argument from an argument", () =>
+    ResetKept() && Run("""Keep(Probe.Identity(5)); Keep(Probe.Identity("ab").Length);""") is null && Probe.Kept is [5, 2]);
+
+Try("a method that isn't generic is more specific than a generic one that takes the same", () =>
+    ResetKept() && Run("""Keep(Probe.Kind(1)); Keep(Probe.Kind("x"));""") is null && Probe.Kept is ["Int32", "generic"]);
+
+Try("an inferred generic method is compared as it would be called", () =>
+    Run("Keep(Array.IndexOf(Probe.Numbers(), 2));") is null && Kept() is 1);
+
+Try("a type argument is inferred through an interface an argument implements", () =>
+    ResetKept() && Run("Keep(Enumerable.Count(Probe.Numbers())); Keep(Enumerable.Max(Probe.Numbers()));") is null
+        && Probe.Kept is [3, 3]);
+
+Try("a type argument is inferred through a reference", () =>
+    ResetKept() && Run("""let text172: String = "x"; Keep(Interlocked.Exchange(text172, "y")); Keep(text172);""") is null
+        && Probe.Kept is ["x", "y"]);
+
+Try("type arguments are inferred from a local function", () =>
+    Run("""
+        class Twice173 {
+            @static fun total(): Int32 {
+                fun twice(value: Int32): Int32 { return value * 2; }
+                return Enumerable.Sum(Enumerable.Select(Probe.Numbers(), twice));
+            }
+        }
+        Keep(Twice173.total());
+        """) is null && Kept() is 12);
+
+Try("type arguments that can't be inferred are an error", () =>
+    Run("Keep(Enumerable.Empty());") is { } e && e.Contains("can't be inferred"));
+
+// ---- nullable value types
+
+Try("a nullable value has a value", () =>
+    ResetKept() && Run("let n174: Nullable[Int32] = 5; Keep(n174.HasValue); Keep(n174.Value);") is null && Probe.Kept is [true, 5]);
+
+Try("a nullable value can be null", () =>
+    ResetKept() && Run("let n175: Nullable[Int32] = null; Keep(n175.HasValue); Keep(n175.GetValueOrDefault(7));") is null
+        && Probe.Kept is [false, 7]);
+
+Try("a nullable value is cast to its value", () =>
+    Run("let n176: Nullable[Int32] = 3; Keep((n176 as Int32) + 1);") is null && Kept() is 4);
+
+Try("a value and null go to a nullable parameter", () =>
+    ResetKept() && Run("Keep(Probe.OrZero(5)); Keep(Probe.OrZero(null));") is null && Probe.Kept is [5, 0]);
+
+Try("a nullable value boxes to its value or to null", () =>
+    ResetKept() && Run("let n177: Nullable[Int32] = 9; let m177: Nullable[Int32] = null; Keep(n177); Keep(m177);") is null
+        && Probe.Kept is [9, null]);
+
+Try("Nullable comes from core:runtime", () =>
+    Run("""
+        module M178 {
+            import { Nullable, Int32 } from "core:runtime";
+            fun one(): Int32 { let n: Nullable[Int32] = 1; return n.Value; }
+        }
+        Keep(M178.one());
+        """) is null && Kept() is 1);
+
+// ---- tasks
+
+Try("a task's result", () =>
+    Run("Keep(Task.FromResult(5).Result);") is null && Kept() is 5);
+
+Try("a task waited on", () =>
+    Run("Task.Delay(1).Wait(); Keep(Task.CompletedTask.IsCompleted);") is null && Kept() is true);
+
+Try("a local function runs as a task", () =>
+    Run("""
+        class Work179 {
+            @static fun run(): Int32 {
+                let base = 40;
+                fun work(): Int32 { return base + 2; }
+                return Task.Run(work).Result;
+            }
+        }
+        Keep(Work179.run());
+        """) is null && Kept() is 42);
+
+// ---- extension methods
+
+Try("an extension method is no member until its class is added", () =>
+    Run("""Keep("hi".Shout());""") is { } e && e.Contains("no member named Shout"));
+
+Try("an extension method is called on a value", () =>
+{
+    il.Extensions.Add(typeof(ProbeExtensions));
+    return Run("""Keep("hi".Shout());""") is null && (string)Kept() == "HI!";
+});
+
+Try("a type's own method comes before an extension method", () =>
+    Run("""Keep("a".ToUpper());""") is null && (string)Kept() == "A");
+
+Try("an extension method of a value type", () =>
+    Run("let n180: Int32 = 4; Keep(n180.Twice());") is null && Kept() is 8);
+
+Try("an extension method takes a value of a type that goes to it", () =>
+    Run("""Keep("x".Describe());""") is null && (string)Kept() == "object x");
+
+Try("extension methods of several classes are overloads", () =>
+{
+    il.Extensions.Add(typeof(MoreProbeExtensions));
+    return ResetKept() && Run("""let n181: Int32 = 1; Keep(n181.Label()); Keep("s".Label());""") is null
+        && Probe.Kept is ["Int32", "String"];
+});
+
+Try("importing a class brings its extension methods", () =>
+    ResetKept() && Run("""
+        module M182 {
+            import { Enumerable } from "core:runtime";
+        }
+        Keep(Probe.Numbers().Count());
+        Keep(Probe.Numbers().Sum());
+        """) is null && Probe.Kept is [3, 6]);
+
+Try("an import of a name the module has no member for fails at the import", () =>
+    Run("""module M184 { import { Strin } from "core:runtime"; }""") is { } e && e.Contains("import of Strin failed"));
+
+Try("generic extension methods infer from the value and a local function", () =>
+    Run("""
+        class Linq183 {
+            @static fun run(): Int32 {
+                fun odd(value: Int32): Boolean { return value == 1 or value == 3; }
+                fun twice(value: Int32): Int32 { return value * 2; }
+                return Probe.Numbers().Where(odd).Select(twice).Sum();
+            }
+        }
+        Keep(Linq183.run());
+        """) is null && Kept() is 8);
+
+// ---- predefined operators
+
+Try("Int64 arithmetic stays Int64", () =>
+    ResetKept() && Run("Keep(Int64.MaxValue - 1); Keep(Int64.MaxValue - 1 > 0);") is null
+        && Probe.Kept is [long.MaxValue - 1, true]);
+
+Try("an Int32 and an Int64 add as Int64, as C# promotes them", () =>
+    Run("let small185: Int32 = 2; Keep(Int64.MaxValue - small185);") is null && Kept() is long.MaxValue - 2);
+
+Try("a string concatenates with any value", () =>
+    ResetKept() && Run("""Keep("n=" + 5); Keep(1.5 + "!"); Keep("a" + "b");""") is null && Probe.Kept is ["n=5", "1.5!", "ab"]);
+
+Try("enums compare by their values", () =>
+    ResetKept() && Run("Keep(DayOfWeek.Monday == DayOfWeek.Monday); Keep(DayOfWeek.Monday != DayOfWeek.Friday); Keep(DayOfWeek.Monday < DayOfWeek.Friday); Keep(DayOfWeek.Sunday >= DayOfWeek.Monday);") is null
+        && Probe.Kept is [true, true, true, false]);
+
+Try("references are equal if they are one object", () =>
+    ResetKept() && Run("let a186: Object = Bell(); let b186: Object = a186; Keep(a186 == b186); Keep(a186 == Bell()); Keep(a186 != Bell());") is null
+        && Probe.Kept is [true, false, true]);
+
+Try("an object compares with null", () =>
+    ResetKept() && Run("let o187: Object = null; Keep(o187 == null); Keep(o187 != null); Keep(Bell() == null);") is null
+        && Probe.Kept is [true, false, false]);
+
+Try("a type's own equality is more specific than reference equality", () =>
+    Run("""let a188: String = "ab"; Keep(a188 == "a" + "b");""") is null && Kept() is true);
+
+Try("a value type is not compared as a reference", () =>
+    Run("Keep(Bell() == 1);") is { } e && e.Contains("overloads applies"));
+
+// ---- arrays
+
+Try("values in brackets become an array where one is expected", () =>
+    ResetKept() && Run("let a189: Int32[] = [1, 2, 3]; Keep(a189.Length); Keep(a189[1]);") is null && Probe.Kept is [3, 2]);
+
+Try("an element of an array is assigned", () =>
+    Run("let a190: Int32[] = [1, 2]; a190[0] = 5; Keep(a190[0] + a190[1]);") is null && Kept() is 7);
+
+Try("a type given a length is an array of that length", () =>
+    ResetKept() && Run("let a191: String[] = String[3]; a191[2] = \"x\"; Keep(a191.Length); Keep(a191[0] == null); Keep(a191[2]);") is null
+        && Probe.Kept is [3, true, "x"]);
+
+Try("a length can be any Int32", () =>
+    Run("let n207: Int32 = 2; let a207: Int32[] = Int32[n207 + 1]; Keep(a207.Length);") is null && Kept() is 3);
+
+Try("a type given several lengths is an array of as many dimensions", () =>
+    Run("Keep(Int32[2, 3]);") is null && Kept() is int[,] grid && grid.GetLength(0) == 2 && grid.GetLength(1) == 3);
+
+Try("a generic type isn't given a length", () =>
+    Run("""module M208 { import { List } from "core:runtime"; let lists: Int32 = List[3].Length; }""") is { } e && e.Contains("type arguments, not lengths"));
+
+Try("an array type is not called", () =>
+    Run("Keep(Int32[](3));") is { } e && e.Contains("Int32[4]"));
+
+Try("values in brackets convert to the element type", () =>
+    Run("let a192: Double[] = [1, 2.5]; Keep(a192[0] + a192[1]);") is null && Kept() is 3.5);
+
+Try("empty brackets are an empty array", () =>
+    Run("let a193: String[] = []; Keep(a193.Length);") is null && Kept() is 0);
+
+Try("values in brackets go to a params array and to an interface arrays implement", () =>
+    ResetKept() && Run("""Keep(Probe.CountOf([4, 5])); Keep(String.Join(",", ["a", "b"]));""") is null
+        && Probe.Kept is [2, "a,b"]);
+
+Try("values in brackets have no type of their own", () =>
+    Run("let a194 = [1, 2];") is { } e && e.Contains("inferred"));
+
+Try("an array type is a type of arrays", () =>
+    Run("Keep(Int32[]);") is null && Kept() is Type type && type == typeof(int[]));
+
+// ---- let as an out argument
+
+Try("a let in a document is an out argument", () =>
+    ResetKept() && Run("""Keep(Int32.TryParse("12", let parsed195: Int32)); Keep(parsed195 + 1);""") is null && Probe.Kept is [true, 13]);
+
+Try("a let in a method is an out argument", () =>
+    Run("""
+        class Parse196 {
+            @static fun number(text: String): Int32 {
+                if (Int32.TryParse(text, let parsed: Int32)) return parsed;
+                return 0 - 1;
+            }
+        }
+        Keep(Parse196.number("40") + Parse196.number("x"));
+        """) is null && Kept() is 39);
+
+// ---- Ref and Out parameters of CLR methods written in Z#
+
+Try("an Out parameter is assigned through", () =>
+    ResetKept() && Run("""
+        class Halves197 {
+            @static fun halve(value: Int32, half: Out[Int32]): Boolean {
+                half = value / 2;
+                return value == half * 2;
+            }
+        }
+        Keep(Halves197.halve(9, let half197: Int32));
+        Keep(half197);
+        """) is null && Probe.Kept is [false, 4]);
+
+Try("a Ref parameter is read and assigned through", () =>
+    Run("""
+        class Bumps198 {
+            @static fun bump(counter: Ref[Int32]) { counter = counter + 1; }
+        }
+        let counter198: Int32 = 1;
+        Bumps198.bump(counter198);
+        Bumps198.bump(counter198);
+        Keep(counter198);
+        """) is null && Kept() is 3);
+
+Try("a Ref parameter passed on passes the reference it holds", () =>
+    ResetKept() && Run("""
+        class Increments199 {
+            @static fun increment(counter: Ref[Int32]): Int32 { return Interlocked.Increment(counter); }
+        }
+        let counter199: Int32 = 5;
+        Keep(Increments199.increment(counter199));
+        Keep(counter199);
+        """) is null && Probe.Kept is [6, 6]);
+
+Try("a Ref parameter is a reference on the CLR", () =>
+    Run("""
+        class Signature200 {
+            @static fun take(value: Ref[Int32]) { }
+        }
+        Keep(Signature200);
+        """) is null && Kept() is Type type
+        && type.GetMethod("take")!.GetParameters()[0].ParameterType == typeof(int).MakeByRefType());
+
+Try("a call with an identifier among its arguments, in a condition in a class", () =>
+    Run("""
+        class Parsing201 {
+            @static fun same(word: String): Int32 {
+                let other = "a";
+                if (String.Equals(word, other)) return 1;
+                return 0;
+            }
+        }
+        Keep(Parsing201.same("a"));
+        """) is null && Kept() is 1);
+
+// ---- lifted operators
+
+Try("nullable values add as their values", () =>
+    ResetKept() && Run("let a202: Nullable[Int32] = 2; let b202: Nullable[Int32] = 3; Keep(a202 + b202); Keep((a202 + 1).Value);") is null
+        && Probe.Kept is [5, 3]);
+
+Try("a null operand gives null", () =>
+    ResetKept() && Run("let a203: Nullable[Int32] = 2; let n203: Nullable[Int32] = null; Keep(a203 + n203); Keep((n203 * 2).HasValue);") is null
+        && Probe.Kept is [null, false]);
+
+Try("nullable values are equal if both are null", () =>
+    ResetKept() && Run("let a204: Nullable[Int32] = 2; let n204: Nullable[Int32] = null; Keep(n204 == null); Keep(a204 == null); Keep(a204 != n204); Keep(a204 == 2);") is null
+        && Probe.Kept is [true, false, true, true]);
+
+Try("a comparison with null is false", () =>
+    ResetKept() && Run("let a205: Nullable[Int32] = 2; let n205: Nullable[Int32] = null; Keep(a205 < n205); Keep(a205 >= n205); Keep(a205 < 3);") is null
+        && Probe.Kept is [false, false, true]);
+
+Try("an operator a type defines is lifted too", () =>
+    Run("let a206: Nullable[TimeSpan] = TimeSpan.FromSeconds(1.0); Keep((a206 + TimeSpan.FromSeconds(2.0)).Value.TotalSeconds);") is null
+        && Kept() is 3.0);
+
+// ---- index arguments are matched as call arguments are
+
+Try("a type argument given by its name", () =>
+    ResetKept() && Run("Keep(Nullable[T: Int32]); Keep(Probe.Identity[T: String](\"x\"));") is null
+        && Probe.Kept is [Type type, "x"] && type == typeof(int?));
+
+Try("type arguments given by name in any order", () =>
+    Run("""
+        import { Dictionary } from "core:runtime";
+        let d209 = Dictionary[TValue: Int32, TKey: String]();
+        d209["a"] = 1;
+        Keep(d209["a"]);
+        """) is null && Kept() is 1);
+
+Try("a type argument with a name the type has no parameter for is an error", () =>
+    Run("Keep(Nullable[U: Int32]);") is { } e && e.Length > 0);
+
+Try("an indexer's argument given by its name", () =>
+    Run("""
+        import { List } from "core:runtime";
+        let xs210 = List[Int32]();
+        xs210.Add(6);
+        Keep(xs210[index: 0]);
+        """) is null && Kept() is 6);
+
+Try("an array of several dimensions is indexed by an index for each", () =>
+    Run("let grid211 = Int32[2, 3]; grid211[1, 2] = 7; Keep(grid211[1, 2] + grid211[0, 0]);") is null && Kept() is 7);
+
 // ---- CLR value types
 
 Try("a struct's property is read from a struct a method returns", () =>
@@ -3239,6 +3664,40 @@ Try("a condition sees the document locals", () =>
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;
 
+/// <summary>
+/// An object with an instance event, for the event tests.
+/// </summary>
+public sealed class Bell
+{
+    public event EventHandler? Rung;
+
+    public void Ring() => Rung?.Invoke(this, EventArgs.Empty);
+}
+
+/// <summary>
+/// Extension methods for the extension tests.
+/// </summary>
+public static class ProbeExtensions
+{
+    public static string Shout(this string text) => text.ToUpperInvariant() + "!";
+
+    public static string ToUpper(this string text) => "extension";
+
+    public static int Twice(this int value) => value * 2;
+
+    public static string Describe(this object value) => "object " + value;
+
+    public static string Label(this int value) => "Int32";
+}
+
+/// <summary>
+/// More extension methods, with a name the others have too.
+/// </summary>
+public static class MoreProbeExtensions
+{
+    public static string Label(this string value) => "String";
+}
+
 public static class Probe
 {
     public static Type LastType(string name)
@@ -3294,6 +3753,38 @@ public static class Probe
     public static string Named(int count) => "count";
 
     public static int Counter;
+
+    public static int Tally;
+
+    public static int Level { get; set; }
+
+    public static T Identity<T>(T value) => value;
+
+    public static int OrZero(int? value) => value ?? 0;
+
+    public static string Kind<T>(T value) => "generic";
+
+    public static string Kind(int value) => "Int32";
+
+    public static event Action<int>? Ticked;
+
+    public static void Tick(int value) => Ticked?.Invoke(value);
+
+    public static void Record(int value) => Kept.Add(value);
+
+    public static int CountOf(params int[] values) => values.Length;
+
+    public static int[] Numbers() => [1, 2, 3];
+
+    public static string Labels(string prefix, params object[] values) => prefix + string.Join(",", values);
+
+    public static void Swap(ref int left, ref int right) => (left, right) = (right, left);
+
+    public static bool Halve(int value, out int half)
+    {
+        half = value / 2;
+        return value % 2 == 0;
+    }
 
     public static int Next() => ++Counter;
 
