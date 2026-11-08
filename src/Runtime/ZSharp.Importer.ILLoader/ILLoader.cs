@@ -19,23 +19,24 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<Module, Package.DotNet.Module> modules = [];
         private readonly Dictionary<Package.DotNet.Module, Module> moduleInfos = [];
 
+        /// <summary>
+        /// What the code being lowered returns, if it returns anything.
+        /// </summary>
+        private CompilerObject? returnType;
+
+        private Loader<HIR.Code.Return>? loadReturn;
+
         private readonly Dictionary<MethodInfo, Package.DotNet.Method> methods = [];
         private readonly Dictionary<Package.DotNet.Method, MethodInfo> methodInfos = [];
         private readonly Dictionary<ConstructorInfo, Package.DotNet.Constructor> constructors = [];
         private readonly Dictionary<Package.DotNet.Constructor, ConstructorInfo> constructorInfos = [];
         private readonly Dictionary<MethodBase, LIR.FunctionHandle> functions = [];
+        private readonly Dictionary<Type, LIR.FunctionHandle> boxes = [];
+        private readonly Dictionary<LIR.Type, LIR.FunctionHandle> typeObjects = [];
         private readonly Dictionary<(FieldInfo Field, bool IsSet), LIR.FunctionHandle> fieldAccessors = [];
 
         public void Install(MappedLoader loader, MappedCodeLoader code)
         {
-            var ts = Core.Compiler.ModuleScope.TS;
-            var isAssignableTo = ts.IsAssignableTo;
-
-            ts.IsAssignableTo = (target, source) =>
-                target.Is<Objects.Class>(out var to) && source.Is<Objects.Class>(out var from)
-                    ? to.IL.IsAssignableFrom(from.IL)
-                    : isAssignableTo(target, source);
-
             loader.Instances.Register<Package.DotNet.Method>(LoadMethod);
             loader.Definitions.Register<Package.DotNet.Method>(LoadMethod);
 
@@ -65,6 +66,24 @@ namespace ZSharp.Importer.ILLoader
             code.Expressions.Register<HIR.Code.BooleanLiteral>(literal =>
                 Result.Ok(new Objects.Literal(literal.Value, typeof(bool), this))
             );
+
+            loadReturn = code.Statements.Register<HIR.Code.Return>(LoadReturn);
+        }
+
+        /// <summary>
+        /// A return converts its value to what the code being lowered returns.
+        /// </summary>
+        private IResult LoadReturn(HIR.Code.Return statement)
+        {
+            if (statement.Value is null || returnType is null)
+                return loadReturn!(statement);
+
+            if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadExpression(statement.Value).When(out var value).Error(out var error))
+                return Result.Error(error);
+
+            return Core.Compiler.ModuleScope.CG.ImplicitCast(value!, returnType).Ok(out var converted)
+                ? Result.Ok(new Objects.Return(converted))
+                : Result.Error("A return value doesn't match what is returned.");
         }
 
         public Package.DotNet.Module Load(Module module)
@@ -179,6 +198,40 @@ namespace ZSharp.Importer.ILLoader
             return handle;
         }
 
+        /// <summary>
+        /// A function that turns a value of a value type into an object.
+        /// </summary>
+        internal LIR.FunctionHandle Box(Type type)
+        {
+            if (boxes.TryGetValue(type, out var handle))
+                return handle;
+
+            var signature = new LIR.Signature { ReturnType = Handle(typeof(object)) };
+
+            signature.Parameters.Add(new(Handle(type)) { Name = "value" });
+
+            boxes[type] = handle = new(signature);
+
+            runtime.Map(handle, il => il.Emit(System.Reflection.Emit.OpCodes.Box, type));
+
+            return handle;
+        }
+
+        /// <summary>
+        /// A function that gives the type object of a type: the value of a class.
+        /// </summary>
+        internal LIR.FunctionHandle TypeOf(LIR.Type type)
+        {
+            if (typeObjects.TryGetValue(type, out var handle))
+                return handle;
+
+            typeObjects[type] = handle = new(new LIR.Signature { ReturnType = Handle(typeof(Type)) });
+
+            runtime.MapTypeOf(handle, type);
+
+            return handle;
+        }
+
         internal static Type? ReturnType(MethodBase method)
             => method switch
             {
@@ -269,7 +322,7 @@ namespace ZSharp.Importer.ILLoader
                     return error;
 
             foreach (var node in nodes)
-                inProgress[node] = new(node, new(node.Name));
+                inProgress[node] = new(this, node, new(node.Name));
 
             try
             {
@@ -322,12 +375,11 @@ namespace ZSharp.Importer.ILLoader
                 var creation = new LIR.Signature { ReturnType = definition };
                 var code = new LIR.Signature();
 
-                var @this = new LIR.Parameter(definition) { Name = "this" };
-                code.Parameters.Add(@this);
-                variables[constructor.This] = new(@this, () => @class);
-
-                if (Parameters(constructor.Parameters, code) is { } error)
+                if (This(constructor.This, @class, constructor.Parameters, constructor.CustomMetadata, code) is { } error)
                     return error;
+
+                if (Parameters(CallParameters(constructor.Parameters, constructor.CustomMetadata), code) is { } invalid)
+                    return invalid;
 
                 creation.Parameters.AddRange(code.Parameters.Skip(1));
 
@@ -338,14 +390,13 @@ namespace ZSharp.Importer.ILLoader
             {
                 var signature = new LIR.Signature();
 
-                if (method.This is { } self)
-                {
-                    var @this = new LIR.Parameter(definition) { Name = "this" };
-                    signature.Parameters.Add(@this);
-                    variables[self] = new(@this, () => @class);
-                }
+                if (method.IsStatic && ExplicitThis(method.CustomMetadata))
+                    return new ErrorMessage($"Method {method.Name} is static, so it has no this.");
 
-                if (Parameters(method.Parameters, signature) is { } error)
+                if (!method.IsStatic && This(method.This, @class, method.Parameters, method.CustomMetadata, signature) is { } invalid)
+                    return invalid;
+
+                if (Parameters(CallParameters(method.Parameters, method.CustomMetadata), signature) is { } error)
                     return error;
 
                 if (method.ReturnType is not null)
@@ -367,10 +418,61 @@ namespace ZSharp.Importer.ILLoader
             return null;
         }
 
+        /// <summary>
+        /// Whether metadata makes the first parameter the object the code runs on.
+        /// </summary>
+        private bool ExplicitThis(List<Package.DotNet.CustomMetadata> metadata)
+        {
+            var marker = Load(typeof(ExplicitThisAttribute).GetConstructor(Type.EmptyTypes)!);
+
+            return metadata.Any(item => item.Constructor == marker);
+        }
+
+        /// <summary>
+        /// The parameters a call passes arguments to, which leaves out an explicit this.
+        /// </summary>
+        internal List<Package.DotNet.Parameter> CallParameters(
+            List<Package.DotNet.Parameter> parameters,
+            List<Package.DotNet.CustomMetadata> metadata
+        )
+            => ExplicitThis(metadata) ? [.. parameters.Skip(1)] : parameters;
+
+        /// <summary>
+        /// Maps <c>this</c> to the object the code runs on. An explicit this parameter is
+        /// pre-mapped to the same variable rather than given one of its own.
+        /// </summary>
+        private Error? This(
+            Package.DotNet.This @this,
+            Objects.ClassInProgress @class,
+            List<Package.DotNet.Parameter> parameters,
+            List<Package.DotNet.CustomMetadata> metadata,
+            LIR.Signature signature
+        )
+        {
+            var receiver = new LIR.Parameter(@class.Definition) { Name = "this" };
+            var variable = new Objects.Variable(receiver, () => @class);
+
+            signature.Parameters.Add(receiver);
+            variables[@this] = variable;
+
+            if (!ExplicitThis(metadata))
+                return null;
+
+            if (parameters.Count == 0)
+                return new ErrorMessage("An explicit this needs a parameter to be it.");
+
+            variables[parameters[0]] = variable;
+
+            return null;
+        }
+
         private Error? Parameters(List<Package.DotNet.Parameter> parameters, LIR.Signature signature)
         {
             foreach (var parameter in parameters)
             {
+                if (parameter.Type is null)
+                    return new ErrorMessage($"Parameter {parameter.Name} needs a type.");
+
                 if (CompileType(parameter.Type).When(out var type).Error(out var error))
                     return error;
 
@@ -379,7 +481,7 @@ namespace ZSharp.Importer.ILLoader
                 signature.Parameters.Add(compiled);
                 variables[parameter] = new(
                     compiled,
-                    () => Core.Compiler.ModuleScope.HIRLoader.LoadType(parameter.Type).Unwrap()
+                    () => Core.Compiler.ModuleScope.HIRLoader.LoadType(parameter.Type!).Unwrap()
                 );
             }
 
@@ -399,14 +501,14 @@ namespace ZSharp.Importer.ILLoader
                     if (field.DefaultValue is not null && Initialize(field, @class, constructor, declared) is { } error)
                         return error;
 
-                if (constructor.Body is { } body && Lower(body, declared.Function) is { } invalid)
+                if (constructor.Body is { } body && Lower(body, declared.Function, null) is { } invalid)
                     return invalid;
             }
 
             foreach (var (method, declared) in @class.Methods)
                 if (method.Body is null)
                     return new ErrorMessage($"Method {method.Name} has no body.");
-                else if (Lower(method.Body, declared.Function) is { } error)
+                else if (Lower(method.Body, declared.Function, method.ReturnType) is { } error)
                     return error;
 
             return null;
@@ -439,17 +541,37 @@ namespace ZSharp.Importer.ILLoader
             return null;
         }
 
-        private Error? Lower(HIR.Code.Code body, LIR.Function function)
+        private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned)
         {
-            if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadStatement(body.Block).When(out var loaded).Error(out var error))
-                return error;
+            if (Returns.Check(body.Block, returned is not null) is { } invalid)
+                return invalid;
 
-            if (Core.Compiler.ModuleScope.IR.CompileStatement(loaded!, runtime).When(out var statement).Error(out error))
-                return error;
+            var outer = returnType;
 
-            function.Body!.Block.Statements.Add(statement!);
+            returnType = null;
 
-            return null;
+            if (returned is not null)
+                if (Core.Compiler.ModuleScope.HIRLoader.LoadType(returned).When(out var type).Error(out var failure))
+                    return failure;
+                else
+                    returnType = type;
+
+            try
+            {
+                if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadStatement(body.Block).When(out var loaded).Error(out var error))
+                    return error;
+
+                if (Core.Compiler.ModuleScope.IR.CompileStatement(loaded!, runtime).When(out var statement).Error(out error))
+                    return error;
+
+                function.Body!.Block.Statements.Add(statement!);
+
+                return null;
+            }
+            finally
+            {
+                returnType = outer;
+            }
         }
 
         private void Reach(Package.DotNet.Class node, List<Package.DotNet.Class> nodes)

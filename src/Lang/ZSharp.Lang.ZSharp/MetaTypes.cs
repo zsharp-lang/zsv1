@@ -1,5 +1,6 @@
 namespace ZSharp.Lang
 {
+    /// <param name="compiler">The compiler the definition is compiled with.</param>
     /// <param name="definition">The definition to compile.</param>
     /// <param name="variable">
     /// The local that will hold the object, typed as the meta-type. The meta-type is
@@ -7,6 +8,7 @@ namespace ZSharp.Lang
     /// local's type to something editable.
     /// </param>
     public delegate IResult<CompiledDefinition, Error> MetaCompiler(
+        ASTCompiler compiler,
         AST.Definition definition,
         HIR.Code.Local variable
     );
@@ -14,13 +16,12 @@ namespace ZSharp.Lang
     /// <summary>
     /// A map from a meta-type to its compiler. It is a utility, and nothing depends on
     /// it: anything registered for a definition node may compile it some other way. It
-    /// resolves the meta-type, declares the local and binds the definition's name
-    /// inside itself, and the rest is the meta-compiler's.
+    /// resolves the meta-type, declares the local, and gives the definition a context
+    /// that binds its name inside itself. The rest is the meta-compiler's.
     /// </summary>
     /// <param name="resolve">Evaluates an <c>of</c> expression to its HIR object.</param>
     public sealed class MetaTypes(
         Language language,
-        ASTCompiler compiler,
         Func<HIRExpression, IResult<HIR.Instance, Error>> resolve
     )
     {
@@ -46,9 +47,9 @@ namespace ZSharp.Lang
             mapped.Definitions.Register<AST.Constructor>(Compile);
         }
 
-        private IResult<CompiledDefinition, Error> Compile(AST.Definition definition)
+        private IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition definition)
         {
-            if (MetaType(definition).When(out var metaType).Error(out var error))
+            if (MetaType(compiler, definition).When(out var metaType).Error(out var error))
                 return Result<CompiledDefinition>.Error(error);
 
             if (!compilers.TryGetValue(metaType!, out var metaCompiler))
@@ -60,26 +61,27 @@ namespace ZSharp.Lang
             var name = NameOf(definition);
             var variable = new HIR.Code.Local(name, type);
 
-            var scope = new Scope(language.Scope);
+            var context = new DefinitionContext(compiler.Contexts.Current, new Scope(Language.Names(compiler)));
 
-            if (name.Length > 0)
-                scope.Add(name, new HIR.Code.Get(variable));
+            if (name.Length > 0 && language.Bind(context.Names, name, new HIR.Code.Get(variable)) is { } invalid)
+                return Result<CompiledDefinition>.Error(invalid);
 
-            if (Within(scope, () => metaCompiler(definition, variable)).When(out var compiled).Error(out error))
+            if (compiler.Contexts.Within(context, () => metaCompiler(compiler, definition, variable)).When(out var compiled).Error(out error))
                 return Result<CompiledDefinition>.Error(error);
 
             return Result<CompiledDefinition>.Ok(compiled! with
             {
-                Fill = () => Within(scope, compiled.Fill),
+                Fill = () => compiler.Contexts.Within(context, compiled.Fill),
                 Name = name
             });
         }
 
-        private IResult<HIR.Instance, Error> MetaType(AST.Definition definition)
+        /// <summary>
+        /// Only a type definition can say its meta-type with <c>of</c>.
+        /// </summary>
+        private IResult<HIR.Instance, Error> MetaType(ASTCompiler compiler, AST.Definition definition)
         {
-            var of = definition is AST.TypeDefinition type ? type.Of : definition.MetaType;
-
-            if (of is not null)
+            if (definition is AST.TypeDefinition { Of: { } of })
                 return compiler.CompileExpression(of).When(out var expression).Error(out var error)
                     ? Result<HIR.Instance>.Error(error)
                     : resolve(expression!);
@@ -87,21 +89,6 @@ namespace ZSharp.Lang
             return defaults.TryGetValue(definition.GetType(), out var metaType)
                 ? Result<HIR.Instance>.Ok(metaType)
                 : Result<HIR.Instance>.Error($"A {definition.GetType().Name} has no default meta-type.");
-        }
-
-        private T Within<T>(Scope scope, Func<T> compile)
-        {
-            var outer = language.Scope;
-            language.Scope = scope;
-
-            try
-            {
-                return compile();
-            }
-            finally
-            {
-                language.Scope = outer;
-            }
         }
 
         private static string NameOf(AST.Definition definition)

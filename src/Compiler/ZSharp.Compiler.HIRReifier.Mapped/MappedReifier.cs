@@ -13,12 +13,25 @@ namespace ZSharp.Compiler
 
         public ReifierMap<HIR.Code.Statement> Statements { get; } = new();
 
+        /// <summary>
+        /// How values are encoded into code, by the type of the value rather than of a node.
+        /// </summary>
+        public ValueEncoderMap Values { get; } = new();
+
         public void Apply()
         {
             @base = reifier.Clone();
 
             reifier.ReifyExpression = ReifyExpression;
             reifier.ReifyStatement = ReifyStatement;
+            reifier.EncodeValue = EncodeValue;
+        }
+
+        private IResult<HIR.Code.Expression, Error> EncodeValue(object? value)
+        {
+            var result = @base.EncodeValue(value);
+
+            return result.IsUnsupported() ? Values.Encode(value) : result;
         }
 
         private IResult<HIR.Code.Expression, Error> ReifyExpression(HIR.Code.Expression expression)

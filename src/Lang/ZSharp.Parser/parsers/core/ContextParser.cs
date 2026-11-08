@@ -18,7 +18,7 @@ namespace ZSharp.Parser
 
         internal protected TContent ParseContextItem(Parser parser)
         {
-            if (parser.Is(Text.TokenType.Identifier, out var identifier))
+            if (parser.Is(Text.TokenType.Identifier, out var identifier) || parser.Is(Text.TokenType.Operator, out identifier))
                 if (keywordParsers.TryGetValue(identifier.Value, out var keywordParser))
                     return keywordParser.Parse(parser);
             return ParseDefaultContextItem(parser);

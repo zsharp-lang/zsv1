@@ -22,9 +22,14 @@ namespace ZSharp.Importer.ILLoader.Objects
                 : new Call(getter, [.. Receiver()], type).CompileIRExpression(target);
 
         public IResult Set(CompilerObject value)
-            => setter is null
-                ? Result.Error("This member can't be written.")
-                : Result.Ok(new Call(setter, [.. Receiver(), value], null));
+        {
+            if (setter is null)
+                return Result.Error("This member can't be written.");
+
+            return Core.Compiler.ModuleScope.CG.ImplicitCast(value, type()).Ok(out var converted)
+                ? Result.Ok(new Call(setter, [.. Receiver(), converted], null))
+                : Result.Error("The value doesn't match the type of this member.");
+        }
 
         private IEnumerable<CompilerObject> Receiver()
             => receiver is null ? [] : [receiver];

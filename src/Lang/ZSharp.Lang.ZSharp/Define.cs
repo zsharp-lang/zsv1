@@ -1,8 +1,8 @@
 namespace ZSharp.Lang
 {
     /// <summary>
-    /// Runs the build code of a definition statement once, and sets what its name
-    /// refers to.
+    /// Runs the build code of a definition at document level once, loads it, and sets
+    /// what code refers to.
     /// </summary>
     public sealed class Define(HIRExpression build, HIR.Code.Reference result)
         : HIRStatement

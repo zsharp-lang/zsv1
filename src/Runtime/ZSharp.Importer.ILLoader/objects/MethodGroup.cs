@@ -14,23 +14,21 @@ namespace ZSharp.Importer.ILLoader.Objects
         public IResult Call(Argument[] arguments)
         {
             var matching = candidates
-                .Where(candidate => candidate.GetParameters().Length == arguments.Length)
+                .Select(candidate => (Method: candidate, Values: Convert(candidate, arguments)))
+                .Where(candidate => candidate.Values is not null)
                 .ToArray();
 
             if (matching.Length > 1)
-                matching = [.. matching.Where(candidate => Accepts(candidate, arguments))];
+                matching = [.. matching.Where(candidate => Exact(candidate.Method, arguments))];
 
-            if (matching.Length > 1)
-                matching = [.. matching.Where(candidate => Exact(candidate, arguments))];
-
-            if (matching is not [var method])
+            if (matching is not [var (method, values)])
                 return Result.Error(
                     $"{candidates[0].Name} has {matching.Length} matching overloads for {arguments.Length} arguments."
                 );
 
             return Result.Ok(new Call(
                 loader.Handle(method),
-                [.. Receiver(), .. arguments.Select(argument => argument.Object)],
+                [.. Receiver(), .. values!],
                 ILLoader.ReturnType(method) is { } type ? () => loader.Class(type) : null
             ));
         }
@@ -43,17 +41,21 @@ namespace ZSharp.Importer.ILLoader.Objects
         private IEnumerable<CompilerObject> Receiver()
             => receiver is null ? [] : [receiver];
 
-        private static bool Accepts(MethodBase candidate, Argument[] arguments)
-            => candidate.GetParameters().Zip(arguments).All(pair =>
-                TypeOf(pair.Second) is not { } type || pair.First.ParameterType.IsAssignableFrom(type));
+        private CompilerObject[]? Convert(MethodBase candidate, Argument[] arguments)
+        {
+            var parameters = candidate.GetParameters();
 
-        private static bool Exact(MethodBase candidate, Argument[] arguments)
-            => candidate.GetParameters().Zip(arguments).All(pair =>
-                TypeOf(pair.Second) == pair.First.ParameterType);
-
-        private static Type? TypeOf(Argument argument)
-            => argument.Object.Is<ITyped>(out var typed) && typed.Type.Is<Class>(out var type)
-                ? type.IL
+            return parameters.Length == arguments.Length
+                ? Arguments.Convert(parameters.Select(parameter => loader.Class(parameter.ParameterType)), arguments)
                 : null;
+        }
+
+        private bool Exact(MethodBase candidate, Argument[] arguments)
+            => candidate.GetParameters().Zip(arguments).All(pair =>
+                Core.Compiler.ModuleScope.TS.TypeOf(pair.Second.Object).Ok(out var type)
+                && Same(loader.Class(pair.First.ParameterType), type));
+
+        private static bool Same(CompilerObject a, CompilerObject b)
+            => Core.Compiler.ModuleScope.TS.IsAssignableTo(a, b) && Core.Compiler.ModuleScope.TS.IsAssignableTo(b, a);
     }
 }

@@ -7,16 +7,22 @@ namespace ZSharp.Compiler
     /// </summary>
     public static class Nodes
     {
+        public static Code.Get Get(HIR.Instance instance) => new(instance);
+
         /// <summary>
-        /// Refers to a value of the code doing the building. A definition or a parameter
-        /// is HIR already. Anything else is a value that code captured.
+        /// Encodes a value held by the code doing the building into the code it builds.
         /// </summary>
-        public static Code.Get Get(object value)
-            => new(value as HIR.Instance ?? Core.Runtime.ModuleScope.ILLoader.Expose(value));
+        public static Code.Expression Encode(object value)
+            => Core.Compiler.ModuleScope.HIRReifier.EncodeValue(value).When(out var encoded).Error(out var error)
+                ? throw new InvalidOperationException(error.ToString())
+                : encoded!;
 
         public static Code.Local Local(string name, HIR.Type type) => new(name, type);
 
+
         public static Code.TypeExpression TypeExpression(Code.Expression expression) => new(expression);
+
+        public static Code.TypeOf TypeOf(Code.Expression value) => new(value);
 
         public static Code.Code CodeOf(Code.Statement statement)
         {
@@ -27,9 +33,7 @@ namespace ZSharp.Compiler
             return code;
         }
 
-        public static Code.StringLiteral String(string value) => new(value);
 
-        public static Code.BooleanLiteral Boolean(bool value) => new(value);
 
         public static Code.NamedMember Member(Code.Expression target, string name)
             => new() { Target = target, Name = name };

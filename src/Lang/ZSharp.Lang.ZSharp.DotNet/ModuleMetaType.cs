@@ -16,7 +16,7 @@ namespace ZSharp.Lang.DotNet
         Package.DotNet.TypeReference underlyingType
     )
     {
-        public IResult<CompiledDefinition, Error> Compile(AST.Definition node, Code.Local self)
+        public IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition node, Code.Local self)
         {
             if (node is not AST.Module module)
                 return Result<CompiledDefinition>.Error($"A {node.GetType().Name} is not a module.");
@@ -26,13 +26,14 @@ namespace ZSharp.Lang.DotNet
                 CodeBody.Construct(underlyingType, new Code.StringLiteral(module.Name)),
                 underlyingType,
                 () => container.Compile(
+                    compiler,
                     module.Body,
-                    member => new Code.ExpressionStatement(CodeBody.Add(
+                    (member, value) => new Code.ExpressionStatement(CodeBody.Add(
                         self,
                         ReferenceEquals(member.UnderlyingType, il.Load(typeof(Package.DotNet.Method)))
                             ? nameof(Package.DotNet.Module.Methods)
                             : nameof(Package.DotNet.Module.Definitions),
-                        new Code.Get(member.Variable)
+                        value
                     ))
                 )
             ));

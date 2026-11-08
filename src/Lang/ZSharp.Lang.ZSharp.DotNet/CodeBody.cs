@@ -13,8 +13,6 @@ namespace ZSharp.Lang.DotNet
     /// </summary>
     public sealed class CodeBody(
         Language language,
-        ASTCompiler compiler,
-        MappedASTCompiler mapped,
         ILLoader il
     )
     {
@@ -23,7 +21,7 @@ namespace ZSharp.Lang.DotNet
         /// where <c>Type</c> is the HIR marker. An existing type is reflected, and a
         /// definition being built already is its description.
         /// </summary>
-        public IResult<Code.Expression, Error> Described<T>(AST.Expression type)
+        public IResult<Code.Expression, Error> Described<T>(ASTCompiler compiler, AST.Expression type)
             => compiler.CompileExpression(type).When(out var compiled).Error(out var error)
                 ? Result<Code.Expression>.Error(error)
                 : Result<Code.Expression>.Ok(new Code.Cast { Value = compiled!, Type = new Code.Get(il.Load(typeof(T))) });
@@ -31,27 +29,28 @@ namespace ZSharp.Lang.DotNet
         /// <summary>
         /// Adds code that builds each parameter, and binds its name.
         /// </summary>
-        public Error? Parameters(Code.Block block, Code.Local owner, string list, IEnumerable<AST.Parameter> parameters)
+        public Error? Parameters(ASTCompiler compiler, Code.Block block, Code.Local owner, string list, IEnumerable<AST.Parameter> parameters)
         {
             foreach (var parameter in parameters)
             {
-                if (parameter.Type is null)
-                    return new ErrorMessage($"Parameter {parameter.Name} needs a type.");
+                Code.Expression[] arguments = [new Code.StringLiteral(parameter.Name)];
 
-                if (Described<HIR.Type>(parameter.Type).When(out var type).Error(out var error))
-                    return error;
+                // A parameter with no type is completed by a rule or is an error, which
+                // the code it belongs to decides when it is loaded.
+                if (parameter.Type is not null)
+                    if (Described<HIR.Type>(compiler, parameter.Type).When(out var type).Error(out var error))
+                        return error;
+                    else
+                        arguments = [.. arguments, type!];
 
                 var local = new Code.Local(parameter.Name, il.Load(typeof(Package.DotNet.Parameter)));
 
                 block.Locals.Add(local);
-                block.Statements.Add(Assign(local, Construct(
-                    il.Load(typeof(Package.DotNet.Parameter)),
-                    new Code.StringLiteral(parameter.Name),
-                    type!
-                )));
+                block.Statements.Add(Assign(local, Construct(il.Load(typeof(Package.DotNet.Parameter)), arguments)));
                 block.Statements.Add(new Code.ExpressionStatement(Add(owner, list, new Code.Get(local))));
 
-                language.Scope.Add(parameter.Name, new Code.Get(local));
+                if (language.Bind(compiler, parameter.Name, new Code.Get(local)) is { } invalid)
+                    return invalid;
             }
 
             return null;
@@ -60,18 +59,15 @@ namespace ZSharp.Lang.DotNet
         /// <summary>
         /// Adds code that sets the body of what is being built.
         /// </summary>
-        public Error? Body(Code.Block block, Code.Local owner, AST.Statement? body, bool returnsValue)
+        public Error? Body(ASTCompiler compiler, Code.Block block, Code.Local owner, AST.Statement? body)
         {
             if (body is null)
                 return new ErrorMessage("A body is required here.");
 
-            if (InBody(() => compiler.CompileStatement(body)).When(out var statement).Error(out var error))
+            if (BuiltBy(compiler, block, () => compiler.CompileStatement(body)).When(out var statement).Error(out var error))
                 return error;
 
             var code = statement as Code.Block ?? new Code.Block(statement!);
-
-            if (Returns.Check(code, returnsValue) is { } invalid)
-                return invalid;
 
             if (Core.Compiler.ModuleScope.HIRReifier.ReifyStatement(code).When(out var reified).Error(out error))
                 return error;
@@ -86,34 +82,20 @@ namespace ZSharp.Lang.DotNet
         }
 
         /// <summary>
-        /// Compiles code that belongs in a body and reifies it.
+        /// Compiles code that belongs in a body and reifies it. The given block is what
+        /// builds it.
         /// </summary>
-        public IResult<Code.Expression, Error> Reified(AST.Expression expression)
-            => InBody(() => compiler.CompileExpression(expression)).When(out var compiled).Error(out var error)
+        public IResult<Code.Expression, Error> Reified(ASTCompiler compiler, Code.Block block, AST.Expression expression)
+            => BuiltBy(compiler, block, () => compiler.CompileExpression(expression)).When(out var compiled).Error(out var error)
                 ? Result<Code.Expression>.Error(error)
                 : Core.Compiler.ModuleScope.HIRReifier.ReifyExpression(compiled!);
 
         /// <summary>
-        /// In a body, a definition inside an expression is back to being something the
-        /// code around it doesn't contain.
+        /// Compiles code that the given block builds, so a definition inside it is built
+        /// there.
         /// </summary>
-        private T InBody<T>(Func<T> compile)
-        {
-            var typeDefinitions = mapped.Expressions.Register<AST.TypeDefinition>(language.CompileDefinition);
-            var modules = mapped.Expressions.Register<AST.Module>(language.CompileDefinition);
-            var functions = mapped.Expressions.Register<AST.Function>(language.CompileDefinition);
-
-            try
-            {
-                return compile();
-            }
-            finally
-            {
-                mapped.Expressions.Register<AST.TypeDefinition>(typeDefinitions!);
-                mapped.Expressions.Register<AST.Module>(modules!);
-                mapped.Expressions.Register<AST.Function>(functions!);
-            }
-        }
+        private static T BuiltBy<T>(ASTCompiler compiler, Code.Block block, Func<T> compile)
+            => compiler.Contexts.Within(new BuildContext(compiler.Contexts.Current, block), compile);
 
         public Code.Call Node(string name, params Code.Expression[] arguments)
             => Call(new Code.NamedMember { Target = new Code.Get(il.Load(typeof(Nodes))), Name = name }, arguments);

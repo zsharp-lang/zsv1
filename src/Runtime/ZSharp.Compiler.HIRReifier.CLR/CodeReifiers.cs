@@ -20,30 +20,49 @@ namespace ZSharp.Compiler
             var statements = mapped.Statements;
 
             expressions.Register<Code.Get>(Reify);
-            expressions.Register<Code.StringLiteral>(literal => Ok(Call("String", literal)));
-            expressions.Register<Code.BooleanLiteral>(literal => Ok(Call("Boolean", literal)));
+            // A literal is a value, so it is encoded the way any value is.
+            expressions.Register<Code.StringLiteral>(literal => Ok(Call("Encode", literal)));
+            expressions.Register<Code.BooleanLiteral>(literal => Ok(Call("Encode", literal)));
             expressions.Register<Code.NamedMember>(Reify);
             expressions.Register<Code.PositionalMember>(Reify);
             expressions.Register<Code.Set>(Reify);
             expressions.Register<Code.Cast>(Reify);
+            expressions.Register<Code.TypeOf>(Reify);
             expressions.Register<Code.Call>(Reify);
             expressions.Register<Code.Index>(Reify);
             expressions.Register<Code.BlockExpression>(Reify);
-            expressions.Register<Code.Escape>(escape => Ok(Call("Get", escape.Value)));
 
             statements.Register<Code.ExpressionStatement>(Reify);
             statements.Register<Code.Block>(Reify);
             statements.Register<Code.IfStatement>(Reify);
             statements.Register<Code.Return>(Reify);
+
+            var values = mapped.Values;
+
+            values.Register<string>(value => Ok(new Code.StringLiteral(value)));
+            values.Register<bool>(value => Ok(new Code.BooleanLiteral(value)));
+            values.Register<HIR.Instance>(instance => Ok(new Code.Get(instance)));
+
+            // A class's value is its type object, which stands for the class's own node.
+            values.Register<Type>(type => Ok(new Code.Get(il.Load(type))));
+
+            // Anything else is placed as an object that already exists.
+            values.Register<object>(value => Ok(new Code.Get(il.Expose(value))));
         }
 
+        /// <summary>
+        /// A local of the code being reified gets a variable of its own in the code that
+        /// builds it. A variable of that building code is read when the building code
+        /// runs, and its value is encoded into the code being built. Any other instance is
+        /// placed as it is.
+        /// </summary>
         private Reified Reify(Code.Get get)
-            => Ok(Call("Get", get.Instance switch
+            => Ok(get.Instance switch
             {
-                Code.Local local when declared.TryGetValue(local, out var holder) => new Code.Get(holder),
-                Code.Local => get,
-                _ => Constant(get.Instance)
-            }));
+                Code.Local local when declared.TryGetValue(local, out var holder) => Call("Get", new Code.Get(holder)),
+                Code.Local => Call("Encode", get),
+                _ => Call("Get", Constant(get.Instance))
+            });
 
         private Reified Reify(Code.NamedMember member)
             => Expression(member.Target).When(out var target).Error(out var error)
@@ -74,6 +93,11 @@ namespace ZSharp.Compiler
                 ? Fail(error)
                 : Ok(Call("Cast", value!, type!));
         }
+
+        private Reified Reify(Code.TypeOf typeOf)
+            => Expression(typeOf.Value).When(out var value).Error(out var error)
+                ? Fail(error)
+                : Ok(Call("TypeOf", value!));
 
         private Reified Reify(Code.Call call)
             => Expression(call.Callee).When(out var callee).Error(out var error)

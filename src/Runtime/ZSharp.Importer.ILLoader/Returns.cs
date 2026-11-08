@@ -1,8 +1,6 @@
-using CommonZ;
-
 using Code = ZSharp.HIR.Code;
 
-namespace ZSharp.Lang.DotNet
+namespace ZSharp.Importer.ILLoader
 {
     /// <summary>
     /// Checks a body's returns against whether it returns a value. It sees only the

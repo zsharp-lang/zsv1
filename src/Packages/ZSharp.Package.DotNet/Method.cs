@@ -9,9 +9,11 @@ namespace Package.DotNet
         public bool IsStatic { get; set; }
 
         /// <summary>
-        /// What the code of an instance method being defined refers to as itself.
+        /// The object an instance method runs on.
         /// </summary>
-        public This? This { get; set; }
+        public This This { get; } = new();
+
+        public List<CustomMetadata> CustomMetadata { get; } = [];
 
         public List<Parameter> Parameters { get; } = [];
 

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Lang.Binding\ZSharp.Lang.Binding.csproj" />
+  </ItemGroup>
+
+</Project>

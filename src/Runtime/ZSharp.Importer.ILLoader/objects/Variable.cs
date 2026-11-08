@@ -15,13 +15,18 @@ namespace ZSharp.Importer.ILLoader.Objects
             => Result<LIR.Expression>.Ok(new LIR.GetLocal(variable));
 
         public IResult Set(CompilerObject value)
-            => Result.Ok(new SetVariable(variable, value));
+            => Core.Compiler.ModuleScope.CG.ImplicitCast(value, type()).Ok(out var converted)
+                ? Result.Ok(new SetVariable(variable, converted, type))
+                : Result.Error("The value doesn't match the type of this variable.");
     }
 
-    internal sealed class SetVariable(LIR.Variable variable, CompilerObject value)
+    internal sealed class SetVariable(LIR.Variable variable, CompilerObject value, Func<CompilerObject> type)
         : CompilerObject
         , ICompileIRExpression
+        , ITyped
     {
+        CompilerObject ITyped.Type => type();
+
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
             => Core.Compiler.ModuleScope.IR.CompileExpression(value, target).When(out var result).Error(out var error)
                 ? Result<LIR.Expression>.Error(error)

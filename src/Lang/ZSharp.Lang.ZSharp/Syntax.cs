@@ -122,9 +122,21 @@ namespace ZSharp.Lang
             //);
 
 
+            Decorated(zsharpParser.Document);
+            Decorated(zsharpParser.Module);
+            Decorated(zsharpParser.Class);
+            Decorated(zsharpParser.Class.Method);
+            Decorated(zsharpParser.Class.Constructor);
+            Decorated(zsharpParser.Function);
+            Decorated(zsharpParser.Statement);
+
             zsharpParser.RegisterParsers(target);
 
             return zsharpParser;
         }
+
+        private static void Decorated<T>(ContextParser<T, ZSharp.AST.Statement> parser)
+            where T : ZSharp.AST.Node
+            => parser.AddKeywordParser(LangParser.Symbols.Decorator, LangParser.ParseDecoratedStatement(parser));
     }
 }

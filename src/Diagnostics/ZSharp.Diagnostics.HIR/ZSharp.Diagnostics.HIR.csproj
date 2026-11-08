@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\HIR\ZSharp.HIR.Code\ZSharp.HIR.Code.csproj" />
+    <ProjectReference Include="..\..\Runtime\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Compiler\ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj" />
+    <ProjectReference Include="..\..\src\Library\ZSharp.Library.Core.Compiler\ZSharp.Library.Core.Compiler.csproj" />
+  </ItemGroup>
+</Project>

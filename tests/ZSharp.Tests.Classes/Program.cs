@@ -1,0 +1,1289 @@
+using CommonZ;
+using ZSharp.Compiler;
+using ZSharp.Importer.ILLoader;
+using ZSharp.Lang;
+using ZSharp.Lang.DotNet;
+using ZSharp.Parser;
+using ZSharp.Platform.Runtime;
+using ZSharp.Tokenizer;
+using C = ZSharp.HIR.Code;
+using Scope = Core.Compiler.ModuleScope;
+
+void Report(string name, bool ok)
+{
+    if (!ok)
+        Environment.ExitCode = 1;
+
+    Console.WriteLine($"{(ok ? "pass" : "FAIL")}  {name}");
+}
+void Try(string name, Func<bool> check)
+{
+    try { Report(name, check()); }
+    catch (Exception e)
+    {
+        Environment.ExitCode = 1;
+        Console.WriteLine($"FAIL  {name}: {e.GetType().Name}: {e.Message}");
+    }
+}
+
+var runtime = new Runtime();
+var il = new ILLoader(runtime);
+Core.Runtime.ModuleScope.Runtime = runtime;
+Core.Runtime.ModuleScope.ILLoader = il;
+
+var mapped = new MappedLoader(Scope.HIRLoader);
+var mappedCode = new MappedCodeLoader(Scope.HIRCodeLoader);
+mapped.Apply();
+mappedCode.Apply();
+
+new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(Scope.CG).Apply();
+new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(Scope.CG, Scope.TS).Apply();
+new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(Scope.TS).Apply();
+new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
+
+CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
+il.Install(mapped, mappedCode);
+
+var reifier = new MappedReifier(Scope.HIRReifier);
+reifier.Apply();
+new CodeReifiers(Scope.HIRReifier, il).Register(reifier);
+
+var runner = new HIRRunner();
+var mappedRunner = new MappedRunner(
+    runner, Scope.HIRCodeLoader,
+    co => { runtime.Execute(Scope.IR.CompileStatement(co, runtime).Unwrap()); return null; },
+    co => Result<object?>.Ok(runtime.Evaluate(Scope.IR.CompileExpression(co, runtime).Unwrap()))
+);
+mappedRunner.Apply();
+CodeRunners.Register(mappedRunner, runner);
+
+var compiler = new ASTCompiler();
+var mappedCompiler = new MappedASTCompiler(compiler);
+mappedCompiler.Apply();
+
+bool IsUnderlying(C.Expression type, ZSharp.HIR.Instance underlying)
+    => Scope.HIRCodeLoader.LoadExpression(type).When(out var target).IsOk
+    && Scope.HIRLoader.LoadInstance(underlying).When(out var definition).IsOk
+    && Scope.TS.IsAssignableTo(target!, definition!)
+    && Scope.TS.IsAssignableTo(definition!, target!);
+
+var binder = new ZSharp.Lang.Binder();
+var mappedBinder = new ZSharp.Lang.MappedBinder(binder);
+mappedBinder.Apply();
+
+var language = new Language(binder);
+var document = new DocumentCompiler();
+language.Install(mappedCompiler, mappedBinder, IsUnderlying);
+Language.Install(
+    mappedRunner, runner,
+    _ => Result<ZSharp.HIR.Instance>.Error("no imports here"),
+    instance => Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
+);
+DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
+
+var probe = new C.Get(il.Load(typeof(Probe)));
+document.Scope.Add("Keep", new C.NamedMember { Target = probe, Name = "Keep" });
+document.Scope.Add("String", new C.Get(il.Load(typeof(string))));
+document.Scope.Add("Boolean", new C.Get(il.Load(typeof(bool))));
+document.Scope.Add("Keep2", new C.NamedMember { Target = probe, Name = "Keep2" });
+
+var coreRuntime = new C.Get(il.Load(typeof(Core.Runtime.ModuleScope).Module));
+document.Scope.Add("explicitThis", new C.NamedMember { Target = coreRuntime, Name = "explicitThis" });
+document.Scope.Add("static", new C.NamedMember { Target = coreRuntime, Name = "static" });
+
+foreach (var decorator in new[] { "first", "second", "mark", "markMethod" })
+    document.Scope.Add(decorator, new C.NamedMember { Target = probe, Name = decorator });
+document.Scope.Add("Object", new C.Get(il.Load(typeof(object))));
+document.Scope.Add("DotNet_Class", new C.Get(il.Load(typeof(Package.DotNet.Class))));
+document.Scope.Add("DotNet_Module", new C.Get(il.Load(typeof(Package.DotNet.Module))));
+document.Scope.Add("FieldCount", new C.NamedMember { Target = probe, Name = "FieldCount" });
+
+ZSharp.AST.Statement ParseOne(string source)
+{
+    var parser = new Parser(Tokenizer.Tokenize(new(new StringReader(source))));
+    return Syntax.Install(parser).Document.ParseStatement(parser);
+}
+
+// Runs source statement by statement, returning the first error.
+string? Run(string source)
+{
+    var parser = new Parser(Tokenizer.Tokenize(new(new StringReader(source))));
+    var syntax = Syntax.Install(parser);
+
+    while (parser.HasTokens && !parser.Is(ZSharp.Text.TokenType.EOF))
+    {
+        var statement = syntax.Document.ParseStatement(parser);
+
+        if (document.Compile(compiler, statement).When(out var hir).Error(out var error))
+            return error.ToString();
+
+        if (runner.RunStatement(hir!) is { } failure)
+            return failure.ToString();
+    }
+
+    return null;
+}
+
+object Kept()
+{
+    var value = Probe.Kept[^1];
+    Probe.Kept.Clear();
+    return value;
+}
+
+Try("class compiles and runs", () => Run("""
+    class Animal { let name: String; }
+    class Dog : Animal { let friend: Dog; }
+    Keep(Dog());
+    """) is null);
+
+var dog = Kept();
+var type = dog.GetType();
+
+Try("it is a real CLR class", () => type.IsClass && type.Name == "Dog" && type.IsPublic);
+Try("self reference is its own type", () => type.GetField("friend")?.FieldType == type);
+Try("base class is real", () => type.BaseType?.Name == "Animal");
+Try("inherited field is real", () => type.GetField("name")?.FieldType == typeof(string));
+Try("default constructor", () => Activator.CreateInstance(type)?.GetType() == type);
+
+Try("fields hold values", () =>
+{
+    type.GetField("name")!.SetValue(dog, "rex");
+    type.GetField("friend")!.SetValue(dog, dog);
+    return (string?)type.GetField("name")!.GetValue(dog) == "rex"
+        && ReferenceEquals(type.GetField("friend")!.GetValue(dog), dog);
+});
+
+Try("a name always means the same type", () =>
+{
+    Run("Keep(Dog());");
+    return Kept().GetType() == type;
+});
+
+Try("members are reached like any class", () =>
+{
+    Probe.Kept.Clear();
+    var error = Run("Keep(Dog().name); Keep(Dog().friend);");
+    var values = Probe.Kept.ToArray();
+    Probe.Kept.Clear();
+    return error is null && values is [null, null];
+});
+
+Try("cast is structure, with no type loaded", () =>
+{
+    if (Run("Keep(class Plan { let note: String; let self: Plan; } as DotNet_Class);") is { } error)
+        throw new Exception(error);
+
+    return Kept() is Package.DotNet.Class { Name: "Plan", Fields: [{ Name: "note" }, { Name: "self" }] } plan
+        && plan.Fields[1].Type is Package.DotNet.Class self
+        && ReferenceEquals(self, plan);
+});
+
+Try("structure loads only when asked", () =>
+{
+    Run("Keep(class Later { let self: Later; } as DotNet_Class);");
+    var node = (Package.DotNet.Class)Kept();
+    var loaded = Scope.HIRLoader.LoadType(node).Unwrap();
+    return Scope.IR.CompileType(loaded, runtime).IsOk
+        && Scope.HIRLoader.LoadType(node).IsOk;
+});
+
+Try("expression definition has identity but binds no name outside", () =>
+{
+    if (Run("Keep(class Temp {}());") is { } error)
+        throw new Exception(error);
+
+    return Kept().GetType().Name == "Temp" && Run("Keep(Temp());")!.Contains("not defined");
+});
+
+Try("expression definition binds its name inside itself", () =>
+{
+    if (Run("Keep(class Node { let next: Node; }());") is { } error)
+        throw new Exception(error);
+
+    var node = Kept().GetType();
+    return node.GetField("next")?.FieldType == node;
+});
+
+Try("of with the CLR class meta-type", () =>
+    Run("class Explicit of DotNet_Class {}") is null && Run("Keep(Explicit());") is null && Kept().GetType().Name == "Explicit");
+
+Try("two classes can share a name", () =>
+{
+    Run("Keep(class Twin {}());");
+    var first = Kept().GetType();
+    Run("Keep(class Twin {}());");
+    return Kept().GetType() != first;
+});
+
+Try("unsupported meta-type is an error", () => Run("class X of String {}") is { } e && e.Contains("meta-type"));
+Try("field without a type is an error", () => Run("""class X { let a = "x"; }""") is { } e && e.Contains("needs a type"));
+Try("unknown field type is an error", () => Run("class X { let a: Missing; }") is { } e && e.Contains("not defined"));
+Try("non-type field type is an error", () => Run("""class X { let a: "text"; }""") is not null);
+Try("two bases is an error for now", () => Run("class X : String, String {}") is { } e && e.Contains("interfaces"));
+
+Try("a failed class leaves the name unusable, not half made", () =>
+    Run("class Bad { let a: Missing; }") is not null && Run("Keep(Bad());")!.Contains("not defined"));
+
+Try("build code reifies into a body", () =>
+{
+    var definition = (ZSharp.AST.Definition)((ZSharp.AST.DefinitionStatement)ParseOne("class Made { let self: Made; let s: String; }")).Definition;
+    var compiled = document.Within(compiler, () => compiler.CompileDefinition(definition)).Unwrap();
+    var reified = Scope.HIRReifier.ReifyExpression(compiled.Build().Unwrap()).Unwrap();
+    var code = (C.Expression)runner.EvaluateExpression(reified).Unwrap()!;
+
+    var first = runner.EvaluateExpression(code).Unwrap();
+    var second = runner.EvaluateExpression(code).Unwrap();
+
+    return first is Package.DotNet.Class { Name: "Made", Fields.Count: 2 } a
+        && second is Package.DotNet.Class b
+        && !ReferenceEquals(a, b)
+        && ReferenceEquals(a.Fields[0].Type, a);
+});
+
+// ---- Modules
+
+Try("forward references between classes", () =>
+{
+    if (Run("""
+        module M1 {
+            class A { let b: B; }
+            class B { let a: A; }
+        }
+        Keep(M1.A());
+        """) is { } error)
+        throw new Exception(error);
+
+    var a = Kept().GetType();
+    var b = a.GetField("b")!.FieldType;
+    return a.Name == "A" && b.Name == "B" && b.GetField("a")?.FieldType == a;
+});
+
+Try("forward base class", () =>
+{
+    if (Run("""
+        module M2 {
+            class C : D {}
+            class D { let tag: String; }
+        }
+        Keep(M2.C());
+        """) is { } error)
+        throw new Exception(error);
+
+    var c = Kept();
+    return c.GetType().BaseType?.Name == "D" && c.GetType().GetField("tag") is not null;
+});
+
+Try("module code runs while the module is built", () =>
+{
+    Probe.Kept.Clear();
+    if (Run("""
+        module M3 {
+            class Foo {}
+            Keep((Foo as DotNet_Class).Name);
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "Foo";
+});
+
+Try("a statement sees definitions constructed but not filled", () =>
+{
+    Probe.Counts.Clear();
+    if (Run("""
+        module M4 {
+            class F { let x: String; let y: String; }
+            FieldCount(F as DotNet_Class);
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    return Probe.Counts is [0];
+});
+
+Try("the module holds its filled definitions", () =>
+{
+    if (Run("""
+        module M5 {
+            class F { let x: String; }
+            Keep(class Inner {});
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    return Kept() is Package.DotNet.Class { Name: "Inner" };
+});
+
+Try("a statement can't use a later definition", () =>
+    Run("""
+        module M6 {
+            Keep(Later);
+            class Later {}
+        }
+        """) is { } e && e.Contains("not defined"));
+
+Try("a definition can't be called in its own module", () =>
+    Run("""
+        module M7 {
+            class Z {}
+            Keep(Z());
+        }
+        """) is not null);
+
+Try("a definition can't be a meta-type in its own module", () =>
+    Run("""
+        module M8 {
+            class Meta {}
+            class Y of Meta {}
+        }
+        """) is { } e && e.Contains("own module"));
+
+Try("module members stay inside the module", () =>
+    Run("module M9 { class OnlyInside {} }") is null && Run("Keep(OnlyInside());") is { } e && e.Contains("not defined"));
+
+Try("a missing module member is an error", () =>
+    Run("Keep(M9.Nothing());") is { } e && e.Contains("no member"));
+
+Try("a whole file module", () =>
+{
+    if (Run("""
+        module M10;
+        class Whole { let self: Whole; }
+        """) is { } error)
+        throw new Exception(error);
+
+    return Run("Keep(M10.Whole());") is null && Kept().GetType().Name == "Whole";
+});
+
+Try("class level code runs while the class is built", () =>
+{
+    Probe.Kept.Clear();
+    return Run("""class Cl { Keep("at class"); let s: String; }""") is null && (string)Kept() == "at class";
+});
+
+Try("an identity definition in class code is plain", () =>
+{
+    if (Run("""class Cm { Keep(class Nested {}); }""") is { } error)
+        throw new Exception(error);
+
+    return Kept() is Package.DotNet.Class { Name: "Nested" };
+});
+
+Try("a module can use earlier classes", () =>
+{
+    if (Run("""
+        class Outside {}
+        module M11 { class Uses : Outside { let o: Outside; } }
+        Keep(M11.Uses());
+        """) is { } error)
+        throw new Exception(error);
+
+    return Kept().GetType().BaseType?.Name == "Outside";
+});
+
+Try("document level has no forward references", () =>
+    Run("""
+        class Early { let l: Latecomer; }
+        class Latecomer {}
+        """) is { } e && e.Contains("not defined"));
+
+Try("base cycle is an error", () =>
+    Run("""
+        module M12 {
+            class P : Q {}
+            class Q : P {}
+        }
+        """) is { } e && e.Contains("derives from itself"));
+
+Try("sealed base is an error", () =>
+    Run("class S1 : String {}") is { } e && e.Contains("sealed"));
+
+Try("module cast is structure", () =>
+{
+    var module = (ZSharp.AST.Definition)((ZSharp.AST.DefinitionStatement)ParseOne("module M13 { class V {} }")).Definition;
+    var cast = (ZSharp.AST.CastExpression)((ZSharp.AST.ExpressionStatement)ParseOne("\"x\" as DotNet_Module;")).Expression;
+    cast.Expression = module;
+
+    return runner.EvaluateExpression(document.Within(compiler, () => compiler.CompileExpression(cast)).Unwrap()).Unwrap()
+        is Package.DotNet.Module { Name: "M13", Definitions: [Package.DotNet.Class { Name: "V" }] };
+});
+
+// ---- Bodies
+
+bool Show(string text) { Console.WriteLine($"note  {text}"); return true; }
+
+object? Call(object target, string method, params object?[] arguments)
+    => target.GetType().GetMethod(method)!.Invoke(target, arguments);
+
+Try("instance method", () =>
+{
+    if (Run("""
+        class Greeter {
+            let name: String;
+
+            @explicitThis new(this, name: String) { this.name = name; }
+
+            @explicitThis fun hello(this): String { return this.name; }
+        }
+        Keep(Greeter("zs"));
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string?)Call(Kept(), "hello") == "zs";
+});
+
+Try("z# calls its own method", () =>
+    Run("""Keep(Greeter("again").hello());""") is null && (string)Kept() == "again");
+
+Try("static method", () =>
+{
+    if (Run("""
+        class Maker {
+            @static fun make(text: String): String { return text; }
+        }
+        Keep(Maker.make("static"));
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "static";
+});
+
+Try("a method is a real CLR method", () =>
+{
+    Run("""Keep(Greeter("x"));""");
+    var method = Kept().GetType().GetMethod("hello")!;
+    return method.ReturnType == typeof(string) && !method.IsStatic && method.GetParameters().Length == 0;
+});
+
+Try("methods call each other forward", () =>
+{
+    if (Run("""
+        class Chain {
+            @explicitThis fun first(this): String { return this.second("end"); }
+            @explicitThis fun second(this, text: String): String { return text; }
+        }
+        Keep(Chain().first());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "end";
+});
+
+Try("a method reads an inherited field", () =>
+{
+    if (Run("""
+        class Parent { let tag: String; @explicitThis new(this) { this.tag = "inherited"; } }
+        class Child : Parent {
+            @explicitThis fun read(this): String { return this.tag; }
+        }
+        Keep(Child().read());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "inherited";
+});
+
+Try("a method constructs its own class", () =>
+{
+    if (Run("""
+        class Self {
+            let text: String;
+            @explicitThis new(this, text: String) { this.text = text; }
+            @explicitThis fun copy(this): Self { return Self(this.text); }
+        }
+        Keep(Self("same").copy().text);
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "same";
+});
+
+Try("classes in a module call each other", () =>
+{
+    if (Run("""
+        module Pair {
+            class Left {
+                @explicitThis fun other(this): Right { return Right(); }
+            }
+            class Right {
+                @explicitThis fun name(this): String { return "right"; }
+                @explicitThis fun back(this): Left { return Left(); }
+            }
+        }
+        Keep(Pair.Left().other().name());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "right";
+});
+
+Try("field default value", () =>
+{
+    if (Run("""
+        class Defaulted {
+            let label: String = "default";
+        }
+        Keep(Defaulted().label);
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "default";
+});
+
+Try("field default with a constructor", () =>
+{
+    if (Run("""
+        class Both {
+            let label: String = "first";
+            let other: String;
+            @explicitThis new(this) { this.other = this.label; }
+        }
+        Keep(Both().other);
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "first";
+});
+
+Try("locals and control flow", () =>
+{
+    if (Run("""
+        class Flow {
+            @explicitThis fun pick(this, yes: Boolean): String {
+                let result: String = "no";
+
+                if (yes) {
+                    result = "yes";
+                }
+
+                return result;
+            }
+        }
+        Keep(Flow().pick(true));
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "yes";
+});
+
+Try("a parameter can be assigned", () =>
+{
+    if (Run("""
+        class Assign {
+            @static fun change(text: String): String {
+                text = "changed";
+                return text;
+            }
+        }
+        Keep(Assign.change("x"));
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "changed";
+});
+
+Try("cast definition in a body builds a new object each call", () =>
+{
+    if (Run("""
+        class Factory {
+            @explicitThis fun make(this): DotNet_Class {
+                return class Made2 { let x: String; } as DotNet_Class;
+            }
+        }
+        Keep(Factory());
+        """) is { } error)
+        throw new Exception(error);
+
+    var factory = Kept();
+    return Call(factory, "make") is Package.DotNet.Class { Name: "Made2", Fields.Count: 1 } a
+        && Call(factory, "make") is Package.DotNet.Class b
+        && !ReferenceEquals(a, b);
+});
+
+Try("identity definition in a body is built once, with the method", () =>
+{
+    if (Run("""
+        class Holder {
+            @explicitThis fun make(this): Object { return class Once {}(); }
+        }
+        Keep(Holder());
+        """) is { } error)
+        throw new Exception(error);
+
+    var holder = Kept();
+    return Call(holder, "make")!.GetType() == Call(holder, "make")!.GetType()
+        && Call(holder, "make")!.GetType().Name == "Once";
+});
+
+Try("a definition in a body captures a parameter by being cast", () =>
+{
+    if (Run("""
+        class Capture {
+            @static fun make(name: String): DotNet_Class {
+                return class Holder2 {
+                    @explicitThis fun get(this): String { return name; }
+                } as DotNet_Class;
+            }
+        }
+        Keep(Capture.make("captured"));
+        """) is { } error)
+        throw new Exception(error);
+
+    var node = (Package.DotNet.Class)Kept();
+    var instance = runner.EvaluateExpression(new C.Call { Callee = new C.Get(node) }).Unwrap()!;
+    return (string?)Call(instance, "get") == "captured";
+});
+
+Try("a value return with no return type is an error", () =>
+    Run("""class E1 { @explicitThis fun f(this) { return "x"; } }""") is { } e && e.Contains("nothing is returned"));
+Try("a missing return is an error", () =>
+    Run("class E2 { @explicitThis fun f(this): String { } }") is { } e && e.Contains("every path"));
+Try("an empty return with a type is an error", () =>
+    Run("class E3 { @explicitThis fun f(this): String { return; } }") is { } e && e.Contains("needs a value"));
+Try("an untyped parameter is an error", () =>
+    Run("class E4 { @explicitThis fun f(this, x) { } }") is { } e && e.Contains("needs a type"));
+Try("a missing method is an error", () =>
+    Run("class E6 { @explicitThis fun f(this) { this.nope(); } } ") is { } e && e.Contains("no member"));
+Try("a bare method name is an error", () =>
+    Run("class E7 { @explicitThis fun f(this) { g(); } @explicitThis fun g(this) { } }") is not null);
+Try("a function outside a class is an error", () =>
+    Run("fun loose() { }") is not null);
+Try("a method in a module is an error", () =>
+    Run("module E8 { fun loose() { } }") is not null);
+
+// ---- Definitions go to the level that builds the code
+
+Try("a definition in a field default is built once", () =>
+{
+    if (Run("""
+        class Defaulted2 {
+            let value: Object = class Once2 {}();
+        }
+        Keep(Defaulted2().value);
+        """) is { } error)
+        throw new Exception(error);
+
+    var first = Kept();
+    return first.GetType().Name == "Once2"
+        && Run("Keep(Defaulted2().value);") is null
+        && Kept().GetType() == first.GetType();
+});
+
+Try("a definition at document level runs before its statement", () =>
+    Run("""Keep(class First {}());""") is null && Kept().GetType().Name == "First");
+
+Try("a definition in a document block with locals", () =>
+{
+    if (Run("""
+        if (true) {
+            let text: String = "x";
+            Keep(class InBlock {}());
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    return Kept().GetType().Name == "InBlock";
+});
+
+Try("a definition in a module statement runs before it", () =>
+{
+    Probe.Kept.Clear();
+    if (Run("""
+        module M20 {
+            Keep(class Early2 {});
+            class Other2 {}
+        }
+        """) is { } error)
+        throw new Exception(error);
+
+    return Kept() is Package.DotNet.Class { Name: "Early2" };
+});
+
+// ---- Types are checked in MIR
+
+Try("a local infers its type", () =>
+{
+    if (Run("""
+        class Inferred {
+            @explicitThis fun get(this): String {
+                let text = "inferred";
+                let same = text;
+                return same;
+            }
+        }
+        Keep(Inferred().get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "inferred";
+});
+
+Try("a local infers its type from a call", () =>
+{
+    if (Run("""
+        class InferredCall {
+            @explicitThis fun make(this): InferredCall { return InferredCall(); }
+            @explicitThis fun get(this): String {
+                let other = this.make();
+                return other.text();
+            }
+            @explicitThis fun text(this): String { return "called"; }
+        }
+        Keep(InferredCall().get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "called";
+});
+
+Try("an inferred local keeps its type", () =>
+    Run("""class I2 { @explicitThis fun f(this) { let text = "a"; text = true; } }""") is { } e && e.Contains("doesn't match"));
+
+Try("a wrong argument is an error", () =>
+    Run("""class T1 { @explicitThis fun take(this, text: String) { } @explicitThis fun f(this) { this.take(true); } }""") is { } e && e.Contains("no single overload"));
+
+Try("a wrong constructor argument is an error", () =>
+    Run("""class T2 { @explicitThis new(this, text: String) { } @explicitThis fun f(this) { T2(true); } }""") is { } e && e.Contains("no single constructor"));
+
+Try("a wrong argument to an imported method is an error", () =>
+    Run("""class T3 { @explicitThis fun f(this) { Keep2(true); } }""") is { } e && e.Contains("matching overloads"));
+
+Try("a wrong return value is an error", () =>
+    Run("""class T4 { @explicitThis fun f(this): String { return true; } }""") is { } e && e.Contains("doesn't match"));
+
+Try("a wrong field value is an error", () =>
+    Run("""class T5 { let text: String; @explicitThis fun f(this) { this.text = true; } }""") is { } e && e.Contains("doesn't match"));
+
+Try("a wrong field default is an error", () =>
+    Run("""class T6 { let text: String = true; }""") is { } e && e.Contains("doesn't match"));
+
+Try("a wrong parameter assignment is an error", () =>
+    Run("""class T7 { @static fun f(text: String) { text = true; } }""") is { } e && e.Contains("doesn't match"));
+
+Try("a derived class goes where its base is expected", () =>
+{
+    if (Run("""
+        module M30 {
+            class Base1 {
+                @explicitThis fun name(this): String { return "base"; }
+            }
+            class Derived1 : Base1 {
+                @explicitThis fun use(this): String { return Helper().read(this); }
+            }
+            class Helper {
+                @explicitThis fun read(this, value: Base1): String { return value.name(); }
+            }
+        }
+        Keep(M30.Derived1().use());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "base";
+});
+
+Try("a base class doesn't go where a derived one is expected", () =>
+    Run("""
+        module M31 {
+            class Base2 { @explicitThis fun use(this) { Helper2().read(this); } }
+            class Derived2 : Base2 { }
+            class Helper2 { @explicitThis fun read(this, value: Derived2) { } }
+        }
+        """) is { } e && e.Contains("no single overload"));
+
+Try("a class in progress goes where Object is expected", () =>
+{
+    if (Run("""
+        class AsObject {
+            @explicitThis fun self(this): Object { return this; }
+        }
+        Keep(AsObject().self());
+        """) is { } error)
+        throw new Exception(error);
+
+    return Kept().GetType().Name == "AsObject";
+});
+
+Try("a value type is boxed as an argument", () =>
+{
+    if (Run("""
+        class Boxes {
+            @static fun id(value: Object): Object { return value; }
+        }
+        Keep(Boxes.id(true));
+        """) is { } error)
+        throw new Exception(error);
+
+    return Kept() is true;
+});
+
+Try("a value type is boxed for an imported method", () =>
+    Run("Keep(true);") is null && Kept() is true);
+
+Try("a value type is boxed when returned", () =>
+{
+    if (Run("""
+        class Boxes2 {
+            @explicitThis fun get(this): Object { return true; }
+        }
+        Keep(Boxes2().get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return Kept() is true;
+});
+
+Try("a value type is boxed when assigned", () =>
+{
+    if (Run("""
+        class Boxes3 {
+            let value: Object;
+            @explicitThis new(this) { this.value = false; }
+        }
+        Keep(Boxes3().value);
+        """) is { } error)
+        throw new Exception(error);
+
+    return Kept() is false;
+});
+
+Try("a value type parameter in a cast definition", () =>
+{
+    if (Run("""
+        class Maker2 {
+            @static fun make(flag: Boolean): DotNet_Class {
+                return class Flagged {
+                    @explicitThis fun get(this): Boolean { return flag; }
+                } as DotNet_Class;
+            }
+        }
+        Keep(Maker2.make(true));
+        """) is { } error)
+        throw new Exception(error);
+
+    var node = (Package.DotNet.Class)Kept();
+    var instance = runner.EvaluateExpression(new C.Call { Callee = new C.Get(node) }).Unwrap()!;
+    return Call(instance, "get") is true;
+});
+
+Try("a method reaches a member of an imported base", () =>
+{
+    if (Run("""
+        class Named {
+            @explicitThis fun name(this): String { return this.ToString(); }
+        }
+        Keep(Named().name());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "Named";
+});
+
+// ---- Decorators, and this with no name
+
+Try("a method is an instance method by default", () =>
+{
+    if (Run("""
+        class Implicit {
+            fun get(): String { return "implicit"; }
+        }
+        Keep(Implicit().get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "implicit" && !Kept2Method("Implicit", "get").IsStatic;
+});
+
+Try("this is not a special name", () =>
+    Run("class NotThis { fun f(this) { } }") is { } e && e.Contains("needs a type"));
+
+Try("an explicit this can have any name", () =>
+{
+    if (Run("""
+        class Named2 {
+            let value: String = "named";
+            @explicitThis fun get(self): String { return self.value; }
+        }
+        Keep(Named2().get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "named" && Kept2Method("Named2", "get").GetParameters().Length == 0;
+});
+
+Try("an explicit this in a constructor", () =>
+{
+    if (Run("""
+        class Built {
+            let text: String;
+            @explicitThis new(me, text: String) { me.text = text; }
+        }
+        Keep(Built("built").text);
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "built";
+});
+
+Try("a decorator makes a method static", () =>
+{
+    if (Run("""
+        class Statics {
+            @static fun make(): String { return "static"; }
+        }
+        Keep(Statics.make());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "static" && Kept2Method("Statics", "make").IsStatic;
+});
+
+Try("a static method has no explicit this", () =>
+    Run("class S2 { @static @explicitThis fun f(self) { } }") is { } e && e.Contains("no this"));
+
+Try("an explicit this needs a parameter", () =>
+    Run("class S3 { @explicitThis fun f() { } }") is { } e && e.Contains("needs a parameter"));
+
+Try("decorators apply nearest first", () =>
+{
+    Probe.Order.Clear();
+    return Run("class Ordered { @first @second fun f() { } }") is null && Probe.Order is ["second", "first"];
+});
+
+Try("a decorated class at document level", () =>
+{
+    Probe.Marked.Clear();
+    return Run("@mark class Marked1 {}") is null
+        && Probe.Marked is ["Marked1"]
+        && Run("Keep(Marked1());") is null
+        && Kept().GetType().Name == "Marked1";
+});
+
+Try("a decorated class in a module", () =>
+{
+    Probe.Marked.Clear();
+    return Run("module M40 { @mark class Inner40 {} }") is null
+        && Probe.Marked is ["Inner40"]
+        && Run("Keep(M40.Inner40());") is null
+        && Kept().GetType().Name == "Inner40";
+});
+
+Try("a decorator runs after the fill", () =>
+{
+    Probe.Marked.Clear();
+    return Run("class Filled { @markMethod fun later() { } }") is null && Probe.Marked is ["later"];
+});
+
+Try("a decorator is type checked", () =>
+    Run("@markMethod class NotAMethod {}") is { } e && e.Contains("matching overloads"));
+
+Try("only a definition can be decorated", () =>
+    Run("""@mark Keep("x");""") is { } e && e.Contains("Only a definition"));
+
+// ---- Binding names
+
+var methodType = il.Load(typeof(Package.DotNet.Method));
+
+Try("a new name is bound", () =>
+{
+    var scope = new ZSharp.Lang.Scope();
+    var value = new C.StringLiteral("x");
+    return binder.Bind(scope, "n", value) is null && scope.Get("n") == value;
+});
+
+Try("methods with one name merge into an overload group", () =>
+{
+    var scope = new ZSharp.Lang.Scope();
+    C.Local[] methods = [new("f", methodType), new("f", methodType), new("f", methodType)];
+
+    foreach (var method in methods)
+        if (binder.Bind(scope, "f", new C.Get(method)) is { } error)
+            throw new Exception(error.ToString());
+
+    return scope.Get("f") is C.Get { Instance: C.OverloadGroup group }
+        && group.Items.SequenceEqual(methods);
+});
+
+Try("a name bound twice is an error by default", () =>
+{
+    var scope = new ZSharp.Lang.Scope();
+    binder.Bind(scope, "n", new C.StringLiteral("first"));
+    return binder.Bind(scope, "n", new C.StringLiteral("second")) is { } error && error.ToString()!.Contains("already defined");
+});
+
+Try("a conflict can shadow instead", () =>
+{
+    var scope = new ZSharp.Lang.Scope();
+    var second = new C.StringLiteral("second");
+    mappedBinder.Conflict = ZSharp.Lang.Conflict.Shadow;
+
+    try
+    {
+        binder.Bind(scope, "n", new C.StringLiteral("first"));
+        return binder.Bind(scope, "n", second) is null && scope.Get("n") == second;
+    }
+    finally
+    {
+        mappedBinder.Conflict = ZSharp.Lang.Conflict.Error;
+    }
+});
+
+Try("a local that isn't a let doesn't override", () =>
+{
+    var scope = new ZSharp.Lang.Scope();
+    binder.Bind(scope, "x", new C.Get(new C.Local("x", il.Load(typeof(string)))));
+    return binder.Bind(scope, "x", new C.Get(new C.Local("x", il.Load(typeof(string))))) is not null;
+});
+
+Try("two definitions with one name in a module are an error", () =>
+    Run("module M50 { class Twice {} class Twice {} }") is { } e && e.Contains("already defined"));
+
+Try("two methods with one name in a class merge", () =>
+    Run("""class Overloaded { fun f() { } fun f(text: String) { } }""") is null);
+
+Try("a let can hide a definition from an outer scope", () =>
+    Run("""class LetOverDefinition { fun f() { let LetOverDefinition = "x"; } }""") is null);
+
+Try("let reuses a name in the same block", () =>
+{
+    if (Run("""
+        class Reuse {
+            fun get(): String {
+                let text = "first";
+                let text = text;
+                let text: String = "second";
+                return text;
+            }
+        }
+        Keep(Reuse().get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "second";
+});
+
+Try("a let can hide a name from an outer scope", () =>
+    Run("""class Clash { fun f() { let Keep = "x"; } }""") is null);
+
+Try("a name in an inner scope sees what it shadows", () =>
+{
+    var outer = new ZSharp.Lang.Scope();
+    var inner = new ZSharp.Lang.Scope(outer);
+    var seen = (C.Expression?)null;
+    ZSharp.Lang.Shadow rule = (shadowed, value) => { seen = shadowed; return null; };
+    var first = new C.StringLiteral("outer");
+
+    binder.Bind(outer, "n", first);
+    mappedBinder.Shadows.Add(rule);
+
+    try
+    {
+        return binder.Bind(inner, "n", new C.StringLiteral("inner")) is null && seen == first && outer.Get("n") == first;
+    }
+    finally
+    {
+        mappedBinder.Shadows.Remove(rule);
+    }
+});
+
+Try("an overload group calls the one that matches", () =>
+{
+    var group = new C.OverloadGroup();
+    group.Items.Add(il.Load(typeof(Probe).GetMethod(nameof(Probe.PickString))!));
+    group.Items.Add(il.Load(typeof(Probe).GetMethod(nameof(Probe.PickBool))!));
+
+    var call = new C.Call { Callee = new C.Get(group), Arguments = [new() { Value = new C.StringLiteral("x") }] };
+    return (string?)runner.EvaluateExpression(call).Unwrap() == "string";
+});
+
+Try("an overload group with no match is an error", () =>
+{
+    var group = new C.OverloadGroup();
+    group.Items.Add(il.Load(typeof(Probe).GetMethod(nameof(Probe.PickString))!));
+
+    var call = new C.Call { Callee = new C.Get(group), Arguments = [new() { Value = new C.BooleanLiteral(true) }] };
+    return runner.EvaluateExpression(call).IsError;
+});
+
+// ---- Encoding values into code
+
+Try("a value is encoded by its type", () =>
+    Scope.HIRReifier.EncodeValue("x").Unwrap() is C.StringLiteral { Value: "x" }
+    && Scope.HIRReifier.EncodeValue(true).Unwrap() is C.BooleanLiteral { Value: true }
+    && Scope.HIRReifier.EncodeValue(typeof(string)).Unwrap() is C.Get { Instance: Package.DotNet.Class { Name: "System.String" } }
+    && Scope.HIRReifier.EncodeValue(il.Load(typeof(object))).Unwrap() is C.Get { Instance: Package.DotNet.Class { Name: "System.Object" } }
+    && Scope.HIRReifier.EncodeValue(new List<int>()).Unwrap() is C.Get { Instance: Package.DotNet.ExposedObject });
+
+Try("a class used as a value is its type object", () =>
+    Run("class ClassValue {} Keep(ClassValue);") is null && Kept() is Type { Name: "ClassValue" });
+
+Try("a class still loading used as a value is its type object", () =>
+{
+    if (Run("""
+        class SelfValue {
+            fun get(): Object { return SelfValue; }
+        }
+        Keep(SelfValue());
+        """) is { } error)
+        throw new Exception(error);
+
+    var instance = Kept();
+    return ReferenceEquals(Call(instance, "get"), instance.GetType());
+});
+
+Try("a definition used by a cast definition inside a body", () =>
+{
+    if (Run("""
+        module M60 {
+            class Bar60 {
+                @static fun name(): String { return "bar"; }
+            }
+
+            class Maker60 {
+                @static fun make(): DotNet_Class {
+                    return class Made60 {
+                        fun get(): String { return Bar60.name(); }
+                    } as DotNet_Class;
+                }
+            }
+        }
+        Keep(M60.Maker60.make());
+        """) is { } error)
+        throw new Exception(error);
+
+    var node = (Package.DotNet.Class)Kept();
+    var instance = runner.EvaluateExpression(new C.Call { Callee = new C.Get(node) }).Unwrap()!;
+    return (string?)Call(instance, "get") == "bar";
+});
+
+Try("a captured string is encoded as a literal", () =>
+{
+    if (Run("""
+        class Maker61 {
+            @static fun make(text: String): DotNet_Class {
+                return class Made61 {
+                    fun get(): String { return text; }
+                } as DotNet_Class;
+            }
+        }
+        Keep(Maker61.make("captured"));
+        """) is { } error)
+        throw new Exception(error);
+
+    var node = (Package.DotNet.Class)Kept();
+    return node.Methods[0].Body!.Block.Statements is [C.Block { Statements: [C.Return { Value: C.StringLiteral { Value: "captured" } }] }];
+});
+
+Try("three levels of generation", () =>
+{
+    if (Run("""
+        module M70 {
+            class Bar70 {
+                @static fun name(): String { return "bar"; }
+            }
+
+            class Maker70 {
+                @static fun make(outer: String): DotNet_Class {
+                    return class Middle70 {
+                        fun make(inner: String): DotNet_Class {
+                            return class Leaf70 {
+                                fun getBar(): String { return Bar70.name(); }
+                                fun getOuter(): String { return outer; }
+                                fun getInner(): String { return inner; }
+                            } as DotNet_Class;
+                        }
+                    } as DotNet_Class;
+                }
+            }
+        }
+        Keep(M70.Maker70.make("o"));
+        """) is { } error)
+        throw new Exception(error);
+
+    object Create(Package.DotNet.Class node)
+        => runner.EvaluateExpression(new C.Call { Callee = new C.Get(node) }).Unwrap()!;
+
+    var middle = Create((Package.DotNet.Class)Kept());
+    var leaf = Create((Package.DotNet.Class)Call(middle, "make", "i")!);
+
+    return (string?)Call(leaf, "getBar") == "bar"
+        && (string?)Call(leaf, "getOuter") == "o"
+        && (string?)Call(leaf, "getInner") == "i";
+});
+
+// ---- Forking
+
+C.Expression FirstArgument(ZSharp.Compiler.ASTCompiler with)
+    => ((C.Call)((C.ExpressionStatement)document.Within(with, () => with.CompileStatement(ParseOne("""Keep("x");"""))).Unwrap()).Expression)
+        .Arguments[0].Value;
+
+Try("a fork changes what is compiled inside the node too", () =>
+{
+    var fork = compiler.Fork();
+    var previous = fork.Expression;
+
+    fork.Expression = (current, expression) => expression is ZSharp.AST.LiteralExpression
+        ? Result<C.Expression>.Ok(new C.StringLiteral("forked"))
+        : previous(current, expression);
+
+    return FirstArgument(fork) is C.StringLiteral { Value: "forked" }
+        && FirstArgument(compiler) is C.StringLiteral { Value: "x" };
+});
+
+Try("a fork shares the contexts", () =>
+    ReferenceEquals(compiler.Fork().Contexts, compiler.Contexts));
+
+Try("a context offers what its parent offers", () =>
+{
+    var names = new ZSharp.Lang.Scope();
+    var outer = new ZSharp.Lang.DefinitionContext(null, names);
+    var inner = new ZSharp.Lang.BlockContext(outer, new ZSharp.Lang.Scope(names), new C.Block());
+
+    return ((ZSharp.Compiler.Context)inner).Is<ZSharp.Lang.IDeclaresLocals>(out _)
+        && ((ZSharp.Compiler.Context)outer).Is<ZSharp.Lang.IDeclaresLocals>(out _) is false
+        && ((ZSharp.Compiler.Context)inner).Is<ZSharp.Lang.INames>(out var found) && found != (object)outer;
+});
+
+Try("a let outside a block is an error", () =>
+    Run("""let loose = "x";""") is { } e && e.Contains("isn't in a block"));
+
+System.Reflection.MethodInfo Kept2Method(string type, string method)
+    => Probe.LastType(type).GetMethod(method)!;
+
+public static class Probe
+{
+    public static Type LastType(string name)
+        => AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(assembly => { try { return assembly.GetTypes(); } catch { return []; } })
+            .Last(type => type.Name == name);
+
+    public static readonly List<int> Counts = [];
+
+    public static void FieldCount(Package.DotNet.Class node) => Counts.Add(node.Fields.Count);
+
+    public static readonly List<object> Kept = [];
+
+    public static void Keep(object value) => Kept.Add(value);
+
+    public static void Keep2(string value) => Kept.Add(value);
+
+    public static readonly List<string> Order = [];
+
+    public static string PickString(string value) => "string";
+
+    public static string PickBool(bool value) => "bool";
+
+    [ZSharp.Importer.ILLoader.Alias("first")]
+    public static Package.DotNet.Method First(Package.DotNet.Method method) { Order.Add("first"); return method; }
+
+    [ZSharp.Importer.ILLoader.Alias("second")]
+    public static Package.DotNet.Method Second(Package.DotNet.Method method) { Order.Add("second"); return method; }
+
+    public static readonly List<string> Marked = [];
+
+    [ZSharp.Importer.ILLoader.Alias("mark")]
+    public static Package.DotNet.Class Mark(Package.DotNet.Class node) { Marked.Add(node.Name); return node; }
+
+    [ZSharp.Importer.ILLoader.Alias("markMethod")]
+    public static Package.DotNet.Method MarkMethod(Package.DotNet.Method node) { Marked.Add(node.Name); return node; }
+}

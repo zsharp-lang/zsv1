@@ -18,7 +18,7 @@ namespace ZSharp.Lang.DotNet
         Package.DotNet.TypeReference underlyingType
     )
     {
-        public IResult<CompiledDefinition, Error> Compile(AST.Definition node, Code.Local self)
+        public IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition node, Code.Local self)
         {
             if (node is not AST.TypeDefinition definition)
                 return Result<CompiledDefinition>.Error($"A {node.GetType().Name} is not a class.");
@@ -27,16 +27,17 @@ namespace ZSharp.Lang.DotNet
                 self,
                 CodeBody.Construct(underlyingType, new Code.StringLiteral(definition.Name)),
                 underlyingType,
-                () => Fill(definition, self)
+                () => Fill(compiler, definition, self)
             ));
         }
 
-        private IResult<Code.Block, Error> Fill(AST.TypeDefinition definition, Code.Local self)
+        private IResult<Code.Block, Error> Fill(ASTCompiler compiler, AST.TypeDefinition definition, Code.Local self)
         {
             var filled = container.Compile(
+                compiler,
                 definition.Content?.Statements ?? [],
-                member => new Code.ExpressionStatement(CodeBody.Add(self, ListOf(member), new Code.Get(member.Variable))),
-                member => Member(member, self)
+                (member, value) => new Code.ExpressionStatement(CodeBody.Add(self, ListOf(member), value)),
+                member => Member(compiler, member, self)
             );
 
             if (filled.When(out var block).Error(out var error))
@@ -48,7 +49,7 @@ namespace ZSharp.Lang.DotNet
             if (definition.Bases is not [var @base])
                 return Result<Code.Block>.Error($"Class {definition.Name} has interfaces, which aren't supported yet.");
 
-            if (body.Described<Package.DotNet.ClassReference>(@base).When(out var type).Error(out error))
+            if (body.Described<Package.DotNet.ClassReference>(compiler, @base).When(out var type).Error(out error))
                 return Result<Code.Block>.Error(error);
 
             block!.Statements.Insert(0, new Code.ExpressionStatement(new Code.Set
@@ -70,7 +71,7 @@ namespace ZSharp.Lang.DotNet
                 : nameof(Package.DotNet.Class.NestedDefinitions);
         }
 
-        private IResult<Code.Statement, Error>? Member(AST.Statement member, Code.Local self)
+        private IResult<Code.Statement, Error>? Member(ASTCompiler compiler, AST.Statement member, Code.Local self)
         {
             if (member is not AST.ExpressionStatement { Expression: AST.LetExpression let })
                 return null;
@@ -78,7 +79,7 @@ namespace ZSharp.Lang.DotNet
             if (let.Type is null)
                 return Result<Code.Statement>.Error($"Field {let.Name} needs a type.");
 
-            if (body.Described<HIR.Type>(let.Type).When(out var type).Error(out var error))
+            if (body.Described<HIR.Type>(compiler, let.Type).When(out var type).Error(out var error))
                 return Result<Code.Statement>.Error(error);
 
             var fieldType = il.Load(typeof(Package.DotNet.Field));
@@ -90,7 +91,7 @@ namespace ZSharp.Lang.DotNet
 
             if (let.Value is not null)
             {
-                if (body.Reified(let.Value).When(out var value).Error(out error))
+                if (body.Reified(compiler, block, let.Value).When(out var value).Error(out error))
                     return Result<Code.Statement>.Error(error);
 
                 block.Statements.Add(new Code.ExpressionStatement(new Code.Set

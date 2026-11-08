@@ -14,9 +14,15 @@ using Scope = Core.Compiler.ModuleScope;
 // It bootstraps the language and runs a script. What gets compiled after that, and
 // how, is up to the script.
 
-if (args.Length != 1)
+// Diagnostics print to standard error, so a program's own output stays as it is.
+//   --trace-reification  prints the code each reification receives and produces.
+//   --dump-definitions   prints the HIR of each definition a document defines.
+var options = args.Where(arg => arg.StartsWith("--")).ToHashSet();
+var files = args.Where(arg => !arg.StartsWith("--")).ToArray();
+
+if (files.Length != 1 || options.Except(["--trace-reification", "--dump-definitions"]).Any())
 {
-    Console.Error.WriteLine("Usage: zs <file>");
+    Console.Error.WriteLine("Usage: zs [--trace-reification] [--dump-definitions] <file>");
 
     return 1;
 }
@@ -46,6 +52,9 @@ var reifier = new MappedReifier(Scope.HIRReifier);
 reifier.Apply();
 new CodeReifiers(Scope.HIRReifier, il).Register(reifier);
 
+if (options.Contains("--trace-reification"))
+    TraceReification();
+
 #endregion
 
 #region Execution
@@ -69,7 +78,6 @@ var runner = new HIRRunner();
 var mappedRunner = new MappedRunner(runner, Scope.HIRCodeLoader, Execute, Evaluate);
 mappedRunner.Apply();
 CodeRunners.Register(mappedRunner, runner);
-CodeRunners.Register(codeLoader, Scope.HIRLoader, runner);
 
 #endregion
 
@@ -81,6 +89,7 @@ std.Add("io", il.Load(typeof(Standard.IO.ModuleScope).Module));
 var core = new LibraryImporter("core");
 core.Add("compiler", il.Load(typeof(Scope).Module));
 core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
+core.Add("diagnostics", il.Load(typeof(ZSharp.Diagnostics.ModuleScope).Module));
 
 var importer = new StringImporter();
 importer.Register("std", std);
@@ -105,19 +114,28 @@ bool IsUnderlyingType(ZSharp.HIR.Code.Expression type, ZSharp.HIR.Instance under
     && Scope.TS.IsAssignableTo(target!, definition!)
     && Scope.TS.IsAssignableTo(definition!, target!);
 
-var language = new Language(compiler);
-language.Install(mappedCompiler, IsUnderlyingType);
-Language.Install(mappedRunner, runner, Import, instance =>
-    Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
-);
+var binder = new ZSharp.Lang.Binder();
+var mappedBinder = new ZSharp.Lang.MappedBinder(binder);
+mappedBinder.Apply();
 
-ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, compiler, mappedCompiler, runner, il);
+var language = new Language(binder);
+var document = new DocumentCompiler();
+language.Install(mappedCompiler, mappedBinder, IsUnderlyingType);
+Language.Install(mappedRunner, runner, Import, instance =>
+{
+    if (options.Contains("--dump-definitions"))
+        Console.Error.WriteLine("definition:" + Environment.NewLine + ZSharp.Diagnostics.HIRPrinter.Print(instance) + Environment.NewLine);
+
+    return Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null;
+});
+
+ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
 
 #endregion
 
 #region Run
 
-using var stream = File.OpenText(args[0]);
+using var stream = File.OpenText(files[0]);
 
 var parser = new Parser(Tokenizer.Tokenize(new(stream)));
 var syntax = Syntax.Install(parser);
@@ -129,7 +147,7 @@ try
         var statement = syntax.Document.ParseStatement(parser);
 
         if (
-            compiler.CompileStatement(statement).When(out var hir).Error(out var error)
+            document.Compile(compiler, statement).When(out var hir).Error(out var error)
             || (error = runner.RunStatement(hir!)) is not null
         )
         {
@@ -149,3 +167,41 @@ catch (ParseError error)
 return 0;
 
 #endregion
+
+// Prints each reification a meta-compiler asks for, with what it produced. Reifying
+// code that was reified before shows up as its own entry, so each level can be seen.
+void TraceReification()
+{
+    var reifier = Scope.HIRReifier;
+    var reifyStatement = reifier.ReifyStatement;
+    var reifyExpression = reifier.ReifyExpression;
+    var depth = 0;
+    var count = 0;
+
+    reifier.ReifyStatement = statement => Trace(statement, node => reifyStatement(node));
+    reifier.ReifyExpression = expression => Trace(expression, node => reifyExpression(node));
+
+    IResult<ZSharp.HIR.Code.Expression, Error> Trace<T>(T node, Func<T, IResult<ZSharp.HIR.Code.Expression, Error>> reify)
+    {
+        if (depth++ > 0)
+            try { return reify(node); } finally { depth--; }
+
+        var number = ++count;
+
+        try
+        {
+            var result = reify(node);
+
+            Console.Error.WriteLine($"reification {number}, of:" + Environment.NewLine + ZSharp.Diagnostics.HIRPrinter.Print(node));
+            Console.Error.WriteLine(result.When(out var reified).Error(out var error)
+                ? $"failed: {error}" + Environment.NewLine
+                : "produced:" + Environment.NewLine + ZSharp.Diagnostics.HIRPrinter.Print(reified) + Environment.NewLine);
+
+            return result;
+        }
+        finally
+        {
+            depth--;
+        }
+    }
+}

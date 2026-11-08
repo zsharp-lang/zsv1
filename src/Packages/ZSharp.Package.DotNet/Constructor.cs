@@ -9,6 +9,8 @@ namespace Package.DotNet
     {
         public This This { get; } = new();
 
+        public List<CustomMetadata> CustomMetadata { get; } = [];
+
         public List<Parameter> Parameters { get; } = [];
 
         /// <summary>

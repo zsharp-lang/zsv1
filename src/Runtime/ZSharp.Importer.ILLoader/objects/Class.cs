@@ -13,8 +13,29 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTCastTo
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
+        , IRTImplicitCastTo
+        , IILType
+        , IAssignableTo
+        , ICompileIRExpression
+        , ITyped
     {
         public Type IL { get; } = il;
+
+        /// <summary>
+        /// A class used as a value is its type object.
+        /// </summary>
+        CompilerObject ITyped.Type => loader.Class(typeof(Type));
+
+        public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
+            => Result<LIR.Expression>.Ok(new LIR.Call(loader.TypeOf(loader.Handle(IL)), []));
+
+        public Type GetILType() => IL;
+
+        /// <summary>
+        /// A CLR type only goes to other CLR types.
+        /// </summary>
+        public bool IsAssignableTo(CompilerObject target)
+            => target.Is<IILType>(out var type) && type.GetILType().IsAssignableFrom(IL);
 
         public IResult<LIR.Type, Error> CompileIRType(object? target)
             => Result<LIR.Type>.Ok(loader.Handle(IL));
@@ -32,10 +53,22 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             var node = loader.Load(IL);
 
-            return targetType.Is<Class>(out var target) && target.IL.IsInstanceOfType(node)
+            return Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(node.GetType()))
                 ? Result.Ok(new Literal(node, node.GetType(), loader))
                 : Result.Error(new UnsupportedError($"{IL.Name} can't be cast to that type."));
         }
+
+        /// <summary>
+        /// A value of a value type becomes an object by boxing it, when it goes to a type
+        /// it is assignable to and that isn't its own. Anything else that is assignable
+        /// stays as it is.
+        /// </summary>
+        public IResult ImplicitCast(CompilerObject @object, CompilerObject type)
+            => IL.IsValueType
+            && Core.Compiler.ModuleScope.TS.IsAssignableTo(type, this)
+            && !Core.Compiler.ModuleScope.TS.IsAssignableTo(this, type)
+                ? Result.Ok(new Call(loader.Box(IL), [@object], () => type))
+                : Result.Error(new UnsupportedError($"{IL.Name} has no conversion to that type."));
 
         public IResult Member(MemberName member)
             => Find(BindingFlags.Static, member, null);

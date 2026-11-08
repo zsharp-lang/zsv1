@@ -17,39 +17,39 @@ namespace ZSharp.Compiler
 
         public void Apply()
         {
-            @base = compiler.Clone();
+            @base = compiler.Fork();
 
-            compiler.CompileExpression = CompileExpression;
-            compiler.CompileStatement = CompileStatement;
-            compiler.CompileDefinition = CompileDefinition;
+            compiler.Expression = CompileExpression;
+            compiler.Statement = CompileStatement;
+            compiler.Definition = CompileDefinition;
         }
 
-        private IResult<HIR.Code.Expression, Error> CompileExpression(AST.Expression expression)
+        private IResult<HIR.Code.Expression, Error> CompileExpression(ASTCompiler current, AST.Expression expression)
         {
-            var result = @base.CompileExpression(expression);
+            var result = @base.Expression(current, expression);
 
             if (result.IsUnsupported())
-                result = Expressions.Compile(expression);
+                result = Expressions.Compile(current, expression);
 
             return result;
         }
 
-        private IResult<CompiledDefinition, Error> CompileDefinition(AST.Definition definition)
+        private IResult<CompiledDefinition, Error> CompileDefinition(ASTCompiler current, AST.Definition definition)
         {
-            var result = @base.CompileDefinition(definition);
+            var result = @base.Definition(current, definition);
 
             if (result.IsUnsupported())
-                result = Definitions.Compile(definition);
+                result = Definitions.Compile(current, definition);
 
             return result;
         }
 
-        private IResult<HIR.Code.Statement, Error> CompileStatement(AST.Statement statement)
+        private IResult<HIR.Code.Statement, Error> CompileStatement(ASTCompiler current, AST.Statement statement)
         {
-            var result = @base.CompileStatement(statement);
+            var result = @base.Statement(current, statement);
 
             if (result.IsUnsupported())
-                result = Statements.Compile(statement);
+                result = Statements.Compile(current, statement);
 
             return result;
         }

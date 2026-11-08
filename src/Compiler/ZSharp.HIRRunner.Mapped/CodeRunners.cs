@@ -5,19 +5,6 @@ namespace ZSharp.Compiler
     /// </summary>
     public static class CodeRunners
     {
-        /// <summary>
-        /// Registers what running means for code that nothing reified: an escape runs
-        /// as it is loaded, and what it produced is loaded in its place.
-        /// </summary>
-        public static void Register(MappedCodeLoader code, HIRLoader loader, HIRRunner runner)
-            => code.Expressions.Register<HIR.Code.Escape>(escape =>
-                runner.EvaluateExpression(escape.Value).When(out var value).Error(out var error)
-                    ? Result.Error(error)
-                    : value is HIR.Instance instance
-                        ? loader.LoadInstance(instance)
-                        : Result.Error($"An escape must produce an instance, but got {value?.GetType().Name ?? "null"}.")
-            );
-
         public static void Register(MappedRunner mapped, HIRRunner runner)
         {
             mapped.Register<HIR.Code.Block>(block =>

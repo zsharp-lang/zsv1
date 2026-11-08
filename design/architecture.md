@@ -11,7 +11,10 @@ branch and is not used here.
 - Z# can extend Z#.
 - Interpreted language that uses reflection to compile code.
 - As few assumptions as possible.
+- As few special cases as possible. Everything flows through general mechanisms.
+- HIR is pure structure. All type checking and validation happens in MIR.
 - Every component knows only what it truly needs.
+- Almost everything is written in Z#. Once that is complete, C# isn't touched again.
 
 A *concept* is an empty C# interface unless stated otherwise.
 
@@ -32,6 +35,11 @@ import system that allows this, which is why import sources are expressions. So
 the contract between a source and everything after it is HIR alone, and any
 frontend or importer is a peer of the Z# one.
 
+`HIR.Code` isn't language-neutral: it is oriented to Z#. Each frontend brings its own
+HIR libraries. A C frontend would add HIR for structs, functions and typedefs, Python
+its own kinds of statements, object model and import system, and CSS its own HIR. That
+is why Z# can speak directly with any language, as long as there is an importer for it.
+
 ## The three cores
 
 The cores are distinct and unconnected. None references another. Layers are
@@ -47,6 +55,34 @@ HIR and LIR are purely structural: nothing in them does anything other than
 change itself. Only MIR has behaviour. That rules out laziness too: a node never
 holds a function to resolve later. Part of the reason for HIR's purity is that it
 is meant to be usable for runtime reflection in the future.
+
+HIR describes the structure of definitions and code. Behaviour only makes sense at
+compile time, when code is generated and objects interact, so it lives in MIR. That
+lets code generation and reflection share one API: a program can find every `ORMEntity`
+it defines by iterating its module's definitions and type checking them, instead of
+decoding compiled classes, and the same utilities read structure at compile time and
+at runtime. This assumes the metadata needed to rebuild the HIR nodes is emitted.
+
+MIR doesn't care about structure. Given the right number of COs, an operation can be
+applied without caring what they represent, and it may fail. A CO can come from HIR or
+be built in code, and both take part in the CG and TS operations equally. That is what
+lets objects interact across definitions, for example generating all the networking
+code between a server and a client so that the developer just calls a function.
+
+When a CO finally has to do something useful, it is asked for LIR, without caring how,
+and LIR is something that can be understood, inspected and traversed.
+
+An interaction is defined by adding to CG or TS, or by a new REI, such as the planned
+overloading and OOP REIs. Only the interaction has the same API. How an object takes
+part in it, or overrides it, is up to whoever implements it. Rust-like traits, for
+example, need only a new CG dispatcher that implements those endpoints by an external
+lookup on the result of `TS.TypeOf`.
+
+Some HIR can't be rebuilt from metadata, such as a reference bound late or an exposed
+object. That HIR is temporary: at runtime nothing generates HIR and there is no
+evaluation engine, so nothing waits for a value to resolve. An HIR node's shape can
+still load lazily, as when `Program as Module` reflects without loading everything,
+because that is hidden behind the same API.
 
 ### HIR
 
@@ -75,6 +111,14 @@ public interface CompilerObject
 
 Capabilities are reached through `Is<T>`, which an object may override to
 forward them.
+
+Code never inspects a CO. It applies an operation such as `CG.Set` and handles a
+possible failure: fire and forget. It never asks what a CO is, what it has or what it
+implements. Only a dispatcher may ask, and not always (traits don't), because only a
+dispatcher decides how to apply an operation to a CO. Even there, checking
+`Is<SomeInterface>` restricts which COs can ever take part, so custom semantics would
+need wrappers. `Is<T>` is only ever used with an interface, never a class, because
+interfaces add capabilities without the problems of inheritance.
 
 `Result` and `Error` are not part of MIR, because other layers such as AST -> HIR
 use them too. They live in `CommonZ`, and no core depends on them.
@@ -236,6 +280,9 @@ holds no reflection, so the link back to the CLR stays in the loader: it pre-cre
 LIR handles, maps them on the runtime, and remembers which node they belong to. Its
 registered HIR -> MIR loaders use that map to return COs primed with those handles.
 
+IL metadata is already fully resolved, unlike HIR, which has nodes such as `NamedMember`
+and `Call`. So the IL loader never calls any CO API.
+
 COs can do anything, so laziness lives there. Reflecting a whole type's members up
 front would reach much of the BCL, so a class CO discovers members when asked.
 Because a CO holds only LIR, it does not depend on a particular runtime. Another
@@ -249,8 +296,23 @@ type, reached like any other.
 
 Classes that reach each other load together. Their members are declared before any
 code is lowered, so code can refer to any of them, through a `ClassInProgress` CO since
-there is no type to reflect on yet. For now, as in `zsv1`, a first parameter named
-`this` makes a method an instance method. That isn't settled, as the open questions say.
+there is no type to reflect on yet. A method is an instance method unless it is marked
+static, as the members of a class describe.
+
+Each target decides how it handles a value: a `.NET` field, local or parameter converts
+it with `CG.ImplicitCast`, and another target might want an exact type or something else
+entirely. `CG.ImplicitCast` is what makes the common case simple while staying optional,
+so it isn't built into `CG.Set` or a call.
+
+Assignability goes both ways: the TS dispatcher asks the source whether it goes to the
+target (`IAssignableTo`), and the target whether it takes the source
+(`IAssignableFrom`). A CLR type says it only goes to other CLR types (`IILType`). A
+class still loading is a different CO that says it goes to itself and wherever its base
+goes. Neither needs to know what the other is. A class still loading reaches its base's
+members by applying the member operation to the receiver seen as the base. A reference to a base type stays as it is, and a value type
+becomes an object through a function handle mapped to the `box` instruction, the same
+way arithmetic maps to `add`. A body's returns are checked when it is lowered. A local
+with no type is typed by a `TypeOf` node, which stands for the `TS.TypeOf` operation.
 
 A `Package.DotNet` node for something that already exists is identity only, and one
 being defined lists its members. A C# library is imported through its CLR module.
@@ -274,6 +336,14 @@ compiler utilities and decides what to compile, from selecting files to running
 optimisations and generating code.
 
 The toolchain objects are reached from Z# through the `core:` prefix:
+
+- `core:runtime`: what is specific to the runtime, such as the platform, its types and
+  the CTS HIR.
+- `core:compiler`: the compiler, such as CG and TS.
+- `core:zsharp`: the language, such as the parser, the binder and the import system.
+
+A project compiler, meant to be written in Z#, would add `core:project`, which gives
+insight into the project being compiled.
 
 ```text
 import { cg } from "core:compiler";
@@ -456,32 +526,42 @@ code. A local of the reified code becomes a `Local()` object at the outer level,
 a value of the outer level, such as `c_Bar`, stays a value and is placed by `Get`.
 
 A parent registers its own members. This is the meta-compiler's job, as with
-`c_Foo.fields.add` above, so a member never places itself. A meta-compiler also
-controls where code runs, simply by overriding the cast while it compiles its
-contents. A function's meta-compiler emits a definition normally, as build code, and
-its override reifies a cast definition and inserts the `body.add` call. It then uses
-the code the cast returns like any other. The top level works the same way, so no
-concept of a current scope or destination is needed.
+`c_Foo.fields.add` above, so a member never places itself.
 
 A meta-compiler produces a `CompiledDefinition`: the build code and the underlying
-type. It is not HIR. The definition's expression handler keeps only the build code,
-and only the cast looks at the rest.
+type. It is not HIR. Only the definition's handlers and the cast look at it.
 
-A definition that isn't cast compiles to an `Escape` around its build code. That
-needs no override: where nothing reifies it, it runs as it is loaded and what it
-produced is loaded in its place, and where the code around it is reified, it stays
-unreified, so it runs with the code that does the building and the body gets a `Get`
-of the result. Reifying that code again reifies the inner code normally, so each
-definition lands on its own level. At module and class level, an identity definition
-in an expression is plain code like everything around it, so it can't be used as a
-type there. The `Escape` is what a function's reification needs, and the document
-level, where it also loads the result.
+A definition that isn't cast is built with whatever builds the code it is in. The
+language tracks that block, which a meta-compiler sets with `BuiltBy`. The definition's
+handler emits the build code there and returns a `Get` of its variable. That variable
+is a value of the outer level, like `c_Bar`, so reification needs nothing else: the
+body gets the object by `Get`, and each definition lands on its own level.
+
+In a container, the block is the container's own, so a definition in an expression runs
+right before its statement, as plain code. It still can't be used as a type there. At
+document level nothing builds the code, so the definition runs and loads right before
+its statement, through `Define`, and the statement refers to the result. A
+meta-compiler can still override the cast, but a reified body doesn't need to.
 
 A body is reified as a whole. Each local it declares gets a variable in the code that
 does the building, so every build has its own, and a type that depends on that level
 is a `TypeExpression`. A parameter or `this` is a variable of the building code as
 well, which is why its node ends up in the body by value, like `c_Bar`. A definition
 cast inside a body is plain code in that body, so it needs no override to get there.
+
+A variable of the building code is kept as it is through every reification, and is
+resolved at the first execution that contains it. What it holds then has to be encoded
+into the code being built, and how depends on the type of the value: a string is a
+literal, an instance is a `Get` of it, and a dictionary could be something else
+entirely. So the reifier has a second map, by the type of a value rather than of a node,
+and it is the one source of truth for putting a value into HIR, literals included.
+
+A class has a value at runtime. A Z# class's value is like Python's `Type[T]`: an object
+holding the class's and static variables, with class methods as a vtable. Its type has
+the shape `M[T]`, where `M` is the meta-type, and it can be cast implicitly to `M`, which
+is how reflection works: `Class[Foo]` to `Class`, `ORMEntity[Person]` to `ORMEntity`. A
+CLR class's value is its `System.Type`, so `DotNet_Class[T]` maps to `typeof(T)`, and
+encoding one gives the class's own node.
 
 A cast definition is regular code, generated from a more declarative node, so it
 doesn't capture anything. A parameter in one is treated exactly as a parameter or a
@@ -492,6 +572,19 @@ parameter doesn't exist when the definition is built.
 discovery belongs in a library that `build.zs` calls.
 
 ### Document level and modules
+
+Every definition is compiled by a meta-compiler, and the document is no exception: it
+has its own meta-compiler, which executes statement by statement where other
+definitions don't. That is a choice of the meta-compiler, not of where the code is, so
+a meta-type can also execute statement by statement, even inside a module. As it goes,
+the document meta-compiler builds a `Document` object, which is what importing another
+document gives, as in `import { foo } from "foo.zs";`.
+
+`let` is a definition like any other, and each meta-compiler sees it in its own terms:
+a module sees a global, a CLR class a field, and a method a local. `let` and `var` are
+the two definitions that don't get to choose their meta-type. Its local holding the
+definition is typed by what it defines, so name conflicts can be resolved by a rule for
+that type, much like the typed CG dispatcher.
 
 The document level runs statement by statement, so it has no forward references.
 Statement by statement execution with actual type safety rules them out, especially
@@ -520,14 +613,14 @@ A module's build code is generated in this order:
 1. Walk the module body and emit each statement directly. For a definition, emit only
    the construction of its object, which is the declaration of its variable.
 2. After the walk, emit the inner fill code of every definition, in order.
-3. Then apply each definition's decorators in order. Each decorator's result is the
-   input of the next.
+3. Then, right before a definition is registered, apply its decorators in order. Each
+   decorator's result is the input of the next.
 4. If the last decorator's result is a definition, register it in the module.
    Otherwise, emit it directly.
 
 Only the container sees the final output of the decorators. A name keeps meaning the
 object that was constructed, so what a definition refers to doesn't depend on source
-order. The type of a decorator's result is inferred from the decorator's signature,
+order. This means external access may differ from an internal reference. The type of a decorator's result is inferred from the decorator's signature,
 so the parent knows what it will register while compiling.
 
 This has consequences:
@@ -554,8 +647,40 @@ contents don't run while it is being built, which is why they are reified.
 
 ### Definition handling
 
-Compiling a definition is the meta-compiler's responsibility. Nothing about how it
-does that is enforced: all that matters is that it returns the relevant result. The
+Compiling a definition, including its contents, is the meta-compiler's responsibility.
+A `Function` node in a definition whose `of` is the CLR class compiles directly as a
+`Method`, so static is a first-class attribute of it, and a decorator that accepts a
+`Method` can mark it static. The point of the meta-type system is that custom definitions
+compile and reason about their content in their own terms, not in imposed ones.
+
+Nothing about how a meta-compiler does that is enforced: all that matters is that it
+returns the relevant result. A meta-compiler is the only one responsible for compiling
+its nodes, so there are no defaults imposed per context either. Whether it iterates over
+its nodes by hand or uses existing utilities is its choice, and what can be done is to
+give it better utilities. One is forking a compiler: cloning its current endpoints and
+changing them as it likes, with no global contamination since the fork is a new object.
+Handlers receive the compiler they run in, and only definitions fork.
+
+The Z# language keeps no context of its own. Its capabilities so far are names (where a
+name is looked up and bound), declaring locals (where a `let` puts its local) and
+building definitions (where a definition found inside code is built). A definition's
+context binds its name inside it; a block pushes a context with its own names and
+locals, without forking; a container or a body pushes one that builds definitions into
+its block. `DocumentCompiler` compiles a document statement by statement, and its
+context builds a definition by running it before the statement.
+
+Every definition keeps its own context. A context stack is shared by a compiler and all
+its forks, and a meta-compiler pushes its context onto it. A context is a bag of
+capabilities that can be checked, such as having an implicit object, registering
+members, having a definition variable or having exports, and it can delegate to the
+contexts above it. Nothing cares about the specifics of a context. Document-related
+behaviour lives only in the document meta-compiler.
+
+A document exports only what is marked `@export`. The decorator finds the context stack
+through `core:zsharp`, checks that the current context has exports, and adds its target
+to them, and otherwise reports an error. This is deferred: a decorator runs when its
+target is constructed, which inside a module is after the module's context has left the
+stack, so `@export` there needs an answer first. The
 compiler can supply common compilers and utilities, such as a map-based lookup from a
 meta-type to its compiler, or the construction and fill flow, and a meta-compiler uses
 them or doesn't.
@@ -572,25 +697,43 @@ produces HIR.
 
 `ZSharp.Lang.ZSharp` supplies both utilities. `MetaTypes` is the map from a meta-type
 to its compiler. It resolves the meta-type, declares the local and binds the name
-inside the definition. `ContainerCompiler` is the construction and fill flow. While
-it runs it overrides the `AST.Definition` expression handlers, so a definition inside
-an expression is plain code too. What a meta-compiler returns is a `CompiledDefinition`:
+inside the definition. `ContainerCompiler` is the construction and fill flow. It
+builds the code in the container, so a definition inside an expression is plain code
+too. What a meta-compiler returns is a `CompiledDefinition`:
 the local, the code that constructs the object, and a function that compiles its fill.
 
 HIR never references the AST. The AST is an input of a meta-compiler, and HIR is its
-output.
+output. Once a CO is constructed it is a pure handle, with no properties, and everything
+goes through external APIs, so details can't be filled in after that. A mapper can apply
+a rule while it constructs the CO, such as giving a `this` parameter its owner's type. A
+parameter missing a type is otherwise inferred or an error. Complete doesn't mean fully
+resolved: `NamedMember` is an HIR node that stands for the `CG.Member` operation.
+
+Default meta-types are what let `class` and `fun` be Z# terms and not .NET terms once Z#
+is defined in Z#. A default applies in a context, and an explicit `of` always overrides
+it there.
 
 ### Decorators
 
 There are statement decorators and expression decorators, and they work the same way.
 The function is resolved and called with the decorated HIR object, with type checking.
 
-A definition's decorators are called when the definition object is constructed, not at
-compile time. The first receives the HIR object, and each one after it receives the
-result of the one before.
+A definition's decorators run with the code that builds the definition, not at compile
+time: after its fill, right before it is registered. The first receives the HIR
+object, and each one after it receives the result of the one before. A decorator
+shouldn't go too deep, because definitions it refers to may not be filled entirely yet.
 
 For a definition, the result can be another definition. A definition gets the normal
-registration code, and anything else is emitted directly.
+registration code, and anything else is emitted directly. A decoration is a call that
+runs during the construction of the containing definition, so emitting a result means
+handing it to that parent: in a reified body it goes into the body, and in plain code
+it runs.
+
+A decorator is written `@expression` before a statement, where the expression is names,
+member accesses and calls, as in `@api.post("/login")`. Several decorators apply nearest
+first, so in `@a @b fun f()`, `b` receives the method and `a` receives what `b` returned.
+So far only definitions can be decorated. `core:runtime` supplies `@explicitThis` and
+`@static` for .NET methods and constructors.
 
 This means a decorator can act as a code transformer. `@ct` is one: it takes an HIR
 statement or expression and evaluates it when it is called, through the HIR
@@ -599,25 +742,101 @@ is wrapped, a type object is reflected on, raw HIR is returned as it is, and so 
 
 ### Members of a class
 
+Members are never added to a class that already exists. A class's members are part of
+its definition, so its meta-compiler adds them while it builds its own structure, and
+that is not an interaction between objects.
+
 A method compiler is part of the class compiler, and it handles references to other
 methods of the same class. It knows its own context, so it can check what a name
 resolved to.
 
+`this` is not a keyword or a special name. A method has a `this` HIR node, and methods
+are implicit `this` by default, with no name bound to it. A free name compiles to
+`NamedMember` on that node. Code that needs the object uses `@explicitThis`, which adds
+custom metadata to the method. Its mapper, registered for the .NET `Method` node, then
+pre-maps that parameter to the CO that `this` maps to, instead of constructing a new one.
+The decorator doesn't touch the code.
+
 A constructor call and a base call use the same call syntax, which covers both
-`new Foo()` and `base()` in C#. A base call passes `this` explicitly as a named
-argument, `Base(this: this)`, so the constructor knows it is a base call.
+`new Foo()` and `base()` in C#. A base call passes the constructor's first parameter
+explicitly. The constructor's call handler checks whether that parameter was passed,
+so `this` isn't hardcoded.
 
 ### Operators
 
 Operators work through mappings in the source compiler, as in `zsv1`. A table maps an
-operator to what it calls, an `[Operator]` method in a C# library provides an entry,
+operator, as a string, to an HIR `Instance`, an `[Operator]` method in a C# library provides an entry,
 and a binary expression compiles to an ordinary call. An operator stands for many
 functions, so this depends on overloading.
 
+### Binding names
+
+Defining a name asks two separate things: what to bind, and how to handle a name that is
+already bound. What to bind depends on the context and is decided by whoever defines
+the name. Inside a definition it is the definition's temporary local. Outside it, where
+the definition is already loaded, as at document level, it is a `Get` of the
+definition's HIR node or of a reference to it.
+
+Conflicts go through the binding REI, `Binder`, which belongs to the Z# frontend and works
+during AST -> HIR, so there are no COs. That is right: names are a source-level concept, and conflicts only happen
+where there are no actual references. Its dispatchers implement behaviour for HIR
+without HIR implementing it. There are three cases:
+
+- The name isn't bound yet: bind it.
+- The name is bound in the current scope: merge the two if they can be merged,
+  otherwise shadow or report an error.
+- The name is bound in an outer scope: bind it here, and the new binding may also do
+  something with the one it shadows, such as copying its overloads or adding a lookup
+  in the parent.
+
+`MappedBinder` implements it with registered merge and shadow rules and a policy for
+conflicts nothing merges, which is an error by default. The language registers a rule
+that a `let` bound over another `let` overrides it, which is how `let` reuses a name.
+
+A definition compiles roughly to a block that declares the local holding its HIR, as
+the meta-type builds it, with the inner construction in a nested block. That local is
+never overridden. Inside a container, the locals of its definitions live in the same
+scope, but binding works exactly the same, so two definitions with one name are an error
+unless a rule merges them: methods merge into an overload group, and a rule could merge
+classes that differ in their generic signatures, for example. The .NET meta-types register a rule that merges methods into an
+HIR `OverloadGroup`, which loads to a CO that applies an operation to each overload and
+keeps the one it succeeds on. `Scope` only stores names; every binding goes through the
+binder.
+
 ### Overloads
 
-An overload is its own HIR concept, with its own COs. If it is needed, a new REI says
-how multiple HIR objects combine into one.
+In HIR, an overload is pure structure. A class doesn't hold overloads, it holds methods.
+
+A class loaded to a CO builds whatever is convenient for it, such as a map from name to
+CO. Methods that share a name collapse into a method group CO at that point, because a
+group is special in code generation and not in the structure of a class.
+
+Where one HIR value has to stand for many and there is no class, as in the operator
+table, an overload group or method group can be an `Instance`.
+
+Name-based overloading on the AST side is similar, since it also collapses multiple
+values into one object. Member access defers to the CO. A free name uses the same CO,
+through the method's `this`.
+
+For .NET meta-types, overloads across a class and its base behave as they do on the CLR.
+
+A method group from existing IL can be built directly as a CO while loading, since the
+metadata is fully resolved. An overload group in HIR is structure, and the types of its
+definitions are known, which is enough because HIR has no behaviour; only loading it
+makes a proper CO. A class's overloads are complete when it is loaded, but at document
+level more overloads can be added later.
+
+Overloading has nothing to do with calls in particular. It chooses between candidates for
+any operation, such as a call or a cast to a function pointer, so each candidate applies
+the operation in its own way.
+
+## Diagnostics
+
+`ZSharp.Diagnostics.HIR` prints any HIR graph, with the common code nodes printed as
+code, so reified code reads as the calls it makes. The CLI's `--trace-reification`
+prints what each reification receives and produces, so every level can be seen, and
+`--dump-definitions` prints each definition a document defines. Z# code can call
+`dump` from `core:diagnostics` to print an HIR object.
 
 ## Extensions
 
@@ -705,8 +924,5 @@ The first target is parity with `zsv1`: importing `print` and calling it.
 - Whether a pluggable tokenizer is needed for new token forms.
 - Nullable types such as `Foo?`. They are meant to be pure operator overloading, which
   is a future milestone.
-- How a method is marked as an instance method. A first parameter named `this` makes
-  the name special, and it isn't always used. The alternative is that a decorator marks
-  a method with an explicit `this`, and there is no implicit `this`.
 - Which `Package.DotNet` entities are needed to fully describe the CTS, including how
   a value type becomes an object.

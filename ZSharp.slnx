@@ -3,6 +3,9 @@
   <Folder Name="/src/CLI/">
     <Project Path="src/CLI/ZSharp.CLI/ZSharp.CLI.csproj" />
   </Folder>
+  <Folder Name="/src/Diagnostics/">
+    <Project Path="src/Diagnostics/ZSharp.Diagnostics.HIR/ZSharp.Diagnostics.HIR.csproj" />
+  </Folder>
   <Folder Name="/src/Common/">
     <Project Path="src/Common/CommonZ/CommonZ.csproj" />
   </Folder>
@@ -40,6 +43,8 @@
     <Project Path="src/Lang/ZSharp.AST/ZSharp.AST.csproj" />
     <Project Path="src/Lang/ZSharp.Compiler.AST.Mapped/ZSharp.Compiler.AST.Mapped.csproj" />
     <Project Path="src/Lang/ZSharp.Compiler.AST/ZSharp.Compiler.AST.csproj" />
+    <Project Path="src/Lang/ZSharp.Lang.Binding.Mapped/ZSharp.Lang.Binding.Mapped.csproj" />
+    <Project Path="src/Lang/ZSharp.Lang.Binding/ZSharp.Lang.Binding.csproj" />
     <Project Path="src/Lang/ZSharp.Lang.ZSharp.DotNet/ZSharp.Lang.ZSharp.DotNet.csproj" />
     <Project Path="src/Lang/ZSharp.Lang.ZSharp/ZSharp.Lang.ZSharp.csproj" />
     <Project Path="src/Lang/ZSharp.Parser/ZSharp.Parser.csproj" />
@@ -59,5 +64,19 @@
     <Project Path="src/Runtime/ZSharp.Compiler.HIRReifier.CLR/ZSharp.Compiler.HIRReifier.CLR.csproj" />
     <Project Path="src/Runtime/ZSharp.Importer.ILLoader/ZSharp.Importer.ILLoader.csproj" />
     <Project Path="src/Runtime/ZSharp.Platform.Runtime/ZSharp.Platform.Runtime.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZSharp.Tests.Classes/ZSharp.Tests.Classes.csproj" />
+    <Project Path="tests/ZSharp.Tests.Compiler/ZSharp.Tests.Compiler.csproj" />
+    <Project Path="tests/ZSharp.Tests.EndToEnd/ZSharp.Tests.EndToEnd.csproj" />
+    <Project Path="tests/ZSharp.Tests.HIR/ZSharp.Tests.HIR.csproj" />
+    <Project Path="tests/ZSharp.Tests.IR/ZSharp.Tests.IR.csproj" />
+    <Project Path="tests/ZSharp.Tests.LIR.Code/ZSharp.Tests.LIR.Code.csproj" />
+    <Project Path="tests/ZSharp.Tests.LIR/ZSharp.Tests.LIR.csproj" />
+    <Project Path="tests/ZSharp.Tests.Members/ZSharp.Tests.Members.csproj" />
+    <Project Path="tests/ZSharp.Tests.Parser/ZSharp.Tests.Parser.csproj" />
+    <Project Path="tests/ZSharp.Tests.Reification/ZSharp.Tests.Reification.csproj" />
+    <Project Path="tests/ZSharp.Tests.Result/ZSharp.Tests.Result.csproj" />
+    <Project Path="tests/ZSharp.Tests.Runtime/ZSharp.Tests.Runtime.csproj" />
   </Folder>
 </Solution>

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Lang.Binding.Mapped\ZSharp.Lang.Binding.Mapped.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.AST.Mapped\ZSharp.Compiler.AST.Mapped.csproj" />
     <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.HIRRunner.Mapped\ZSharp.HIRRunner.Mapped.csproj" />

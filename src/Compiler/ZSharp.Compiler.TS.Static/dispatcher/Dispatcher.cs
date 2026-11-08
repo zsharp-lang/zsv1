@@ -10,7 +10,17 @@ namespace ZSharp.Compiler.TSDispatchers.Static
             @base = ts.Clone();
 
             ts.TypeOf = TypeOf;
+            ts.IsAssignableTo = IsAssignableTo;
         }
+
+        /// <summary>
+        /// Assignability goes both ways: the source can say where it goes, and the
+        /// target can say what it takes.
+        /// </summary>
+        public bool IsAssignableTo(CompilerObject target, CompilerObject source)
+            => @base.IsAssignableTo(target, source)
+            || source.Is<IAssignableTo>(out var to) && to.IsAssignableTo(target)
+            || target.Is<IAssignableFrom>(out var from) && from.IsAssignableFrom(source);
 
         public IResult TypeOf(CompilerObject @object)
         {

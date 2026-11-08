@@ -13,16 +13,16 @@ namespace ZSharp.Lang.DotNet
     {
         public static void Install(
             Language language,
-            ASTCompiler compiler,
             MappedASTCompiler mapped,
+            MappedBinder binding,
             HIRRunner runner,
             ILLoader il
         )
         {
-            var metaTypes = new MetaTypes(language, compiler, of => Resolve(of, runner, il));
-            var container = new ContainerCompiler(language, compiler, mapped);
+            var metaTypes = new MetaTypes(language, of => Resolve(of, runner, il));
+            var container = new ContainerCompiler(language);
 
-            var body = new CodeBody(language, compiler, mapped, il);
+            var body = new CodeBody(language, il);
 
             var @class = il.Load(typeof(Package.DotNet.Class));
             var module = il.Load(typeof(Package.DotNet.Module));
@@ -31,8 +31,8 @@ namespace ZSharp.Lang.DotNet
 
             metaTypes.Register(@class, new ClassMetaType(il, container, body, @class).Compile);
             metaTypes.Register(module, new ModuleMetaType(il, container, module).Compile);
-            metaTypes.Register(method, new MethodMetaType(language, il, body, method).Compile);
-            metaTypes.Register(constructor, new ConstructorMetaType(language, il, body, constructor).Compile);
+            metaTypes.Register(method, new MethodMetaType(il, body, method).Compile);
+            metaTypes.Register(constructor, new ConstructorMetaType(il, body, constructor).Compile);
 
             metaTypes.Default<AST.TypeDefinition>(@class);
             metaTypes.Default<AST.Module>(module);
@@ -40,6 +40,35 @@ namespace ZSharp.Lang.DotNet
             metaTypes.Default<AST.Constructor>(constructor);
 
             metaTypes.Install(mapped);
+
+            binding.Merges.Add((existing, value) =>
+                Overloads(existing, method) is { } before && Overloads(value, method) is { } after
+                    ? new Code.Get(Group([.. before, .. after]))
+                    : null
+            );
+        }
+
+        /// <summary>
+        /// The methods a name stands for: one being built, one already defined, or a
+        /// group of them. Anything else doesn't overload.
+        /// </summary>
+        private static List<HIR.Instance>? Overloads(Code.Expression value, HIR.Instance method)
+            => value switch
+            {
+                Code.Get { Instance: Code.OverloadGroup group } => group.Items,
+                Code.Get { Instance: Code.Local local } when ReferenceEquals(local.Type, method) => [local],
+                Code.Get { Instance: Code.Reference { Value: Package.DotNet.Method } reference } => [reference],
+                Code.Get { Instance: Package.DotNet.Method defined } => [defined],
+                _ => null
+            };
+
+        private static Code.OverloadGroup Group(List<HIR.Instance> items)
+        {
+            var group = new Code.OverloadGroup();
+
+            group.Items.AddRange(items);
+
+            return group;
         }
 
         /// <summary>

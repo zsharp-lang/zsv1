@@ -5,6 +5,7 @@
         public static class Symbols
         {
             public const string Assign          = "=";
+            public const string Decorator       = "@";
             public const string ImportAll       = "*";
             public const string MemberAccess    = ".";
             public const string ThenDo          = "=>";

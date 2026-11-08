@@ -5,7 +5,7 @@ namespace ZSharp.Compiler.Objects
     /// <summary>
     /// A local. A definition is loaded once, so every use shares one LIR local.
     /// </summary>
-    internal sealed class Local(HIR.Code.Local node)
+    internal sealed class Local(CompilerObject type)
         : CompilerObject
         , ICompileIRExpression
         , ICTSet
@@ -13,17 +13,14 @@ namespace ZSharp.Compiler.Objects
     {
         private LIR.Local? local;
 
-        CompilerObject ITyped.Type => Scope.HIRLoader.LoadType(node.Type).Unwrap();
+        CompilerObject ITyped.Type => type;
 
         public IResult<LIR.Local, Error> Compile(object? target)
         {
             if (local is not null)
                 return Result<LIR.Local>.Ok(local);
 
-            if (Scope.HIRLoader.LoadType(node.Type).When(out var type).Error(out var error))
-                return Result<LIR.Local>.Error(error);
-
-            if (Scope.IR.CompileType(type!, target).When(out var compiled).Error(out error))
+            if (Scope.IR.CompileType(type, target).When(out var compiled).Error(out var error))
                 return Result<LIR.Local>.Error(error);
 
             return Result<LIR.Local>.Ok(local = new(compiled!));
@@ -35,13 +32,18 @@ namespace ZSharp.Compiler.Objects
                 : Result<LIR.Expression>.Ok(new LIR.GetLocal(compiled!));
 
         public IResult Set(CompilerObject value)
-            => Result.Ok(new SetLocal(this, value));
+            => Scope.CG.ImplicitCast(value, type).Ok(out var converted)
+                ? Result.Ok(new SetLocal(this, converted))
+                : Result.Error("The value doesn't match the type of this local.");
     }
 
     internal sealed class SetLocal(Local local, CompilerObject value)
         : CompilerObject
         , ICompileIRExpression
+        , ITyped
     {
+        CompilerObject ITyped.Type => ((ITyped)local).Type;
+
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
         {
             if (local.Compile(target).When(out var compiled).Error(out var error))

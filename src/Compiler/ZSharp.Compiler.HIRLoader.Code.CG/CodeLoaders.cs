@@ -15,12 +15,35 @@ namespace ZSharp.Compiler
                     : loader.LoadInstance(reference.Value)
             );
 
+            instances.Instances.Register<HIR.Code.OverloadGroup>(group =>
+            {
+                var overloads = new List<CompilerObject>();
+
+                foreach (var item in group.Items)
+                    if (loader.LoadInstance(item).Error(out var error, out var overload))
+                        return Result.Error(error);
+                    else
+                        overloads.Add(overload);
+
+                return Result.Ok(new Objects.OverloadGroup([.. overloads]));
+            });
+
             instances.Types.Register<HIR.Code.TypeExpression>(type => code.LoadExpression(type.Expression));
 
-            instances.Definitions.Register<HIR.Code.Local>(local => Result.Ok(new Objects.Local(local)));
+            instances.Definitions.Register<HIR.Code.Local>(local =>
+                loader.LoadType(local.Type).Error(out var error, out var type)
+                    ? Result.Error(error)
+                    : Result.Ok(new Objects.Local(type))
+            );
             instances.Instances.Register<HIR.Code.Local>(local => loader.LoadDefinition(local));
 
             expressions.Register<HIR.Code.Get>(get => loader.LoadInstance(get.Instance));
+
+            expressions.Register<HIR.Code.TypeOf>(typeOf =>
+                code.LoadExpression(typeOf.Value).Error(out var error, out var value)
+                    ? Result.Error(error)
+                    : Core.Compiler.ModuleScope.TS.TypeOf(value)
+            );
 
             expressions.Register<HIR.Code.Cast>(cast =>
             {

@@ -18,6 +18,17 @@ namespace ZSharp.Platform.Runtime
         public void Map(LIR.FunctionHandle handle, Action<Emit.ILGenerator> emit)
             => functionHandles[handle] = emit;
 
+        /// <summary>
+        /// Maps a handle to code that gives the type object of a type, which works for a
+        /// type that is still being defined too.
+        /// </summary>
+        public void MapTypeOf(LIR.FunctionHandle handle, LIR.Type type)
+            => Map(handle, il =>
+            {
+                il.Emit(Emit.OpCodes.Ldtoken, ImportType(type));
+                il.Emit(Emit.OpCodes.Call, typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle))!);
+            });
+
         internal void EmitCall(Emit.ILGenerator il, LIR.ICallable callable)
         {
             switch (callable)
