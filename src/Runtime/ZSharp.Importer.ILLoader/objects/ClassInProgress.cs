@@ -60,21 +60,16 @@ namespace ZSharp.Importer.ILLoader.Objects
                 : Result<LIR.Type>.Error($"Class {Definition.Name} can only be compiled for the CLR runtime.");
 
         public IResult Call(Argument[] arguments)
-        {
-            var matching = Constructors
-                .Zip(Definition.Constructors)
-                .Select(constructor => (constructor.Second, Values: Arguments.Convert(
+            => Scope.CG.Call(
+                OverloadGroup.Of(Constructors.Zip(Definition.Constructors).Select(constructor => new Callable(
+                    $"A constructor of {Definition.Name}",
+                    constructor.Second,
                     loader.CallParameters(constructor.First.Parameters, constructor.First.CustomMetadata),
-                    arguments
-                )))
-                .Where(constructor => constructor.Values is not null)
-                .ToArray();
-
-            if (matching is not [var (constructor, values)])
-                return Result.Error($"Class {Definition.Name} has no single constructor for {arguments.Length} arguments.");
-
-            return Result.Ok(new Call(constructor, values!, () => this));
-        }
+                    null,
+                    () => this
+                ))),
+                arguments
+            );
 
         public IResult Member(MemberName member)
             => Find(member, null);
@@ -89,7 +84,13 @@ namespace ZSharp.Importer.ILLoader.Objects
                 .ToArray();
 
             if (methods.Length > 0)
-                return Result.Ok(new ClassMethods(loader, Definition.Name, methods, receiver));
+                return Result.Ok(OverloadGroup.Of(methods.Select(method => new Callable(
+                    $"{Definition.Name}.{member}",
+                    method.Value,
+                    loader.CallParameters(method.Key.Parameters, method.Key.CustomMetadata),
+                    receiver,
+                    method.Key.ReturnType is { } returnType ? () => Scope.HIRLoader.LoadType(returnType).Unwrap() : null
+                ))));
 
             if (receiver is not null && Definition.Fields.FirstOrDefault(field => field.Name == member) is { } field)
             {
@@ -127,38 +128,29 @@ namespace ZSharp.Importer.ILLoader.Objects
     }
 
     /// <summary>
-    /// The methods of a class being loaded that a name stands for, optionally bound to
-    /// the object they are called on.
+    /// A method or constructor of a class being loaded, optionally bound to the object it
+    /// is called on.
     /// </summary>
-    internal sealed class ClassMethods(
-        ILLoader loader,
-        string @class,
-        KeyValuePair<Package.DotNet.Method, ClassMethod>[] candidates,
-        CompilerObject? receiver
+    internal sealed class Callable(
+        string name,
+        LIR.ICallable callable,
+        List<Package.DotNet.Parameter> parameters,
+        CompilerObject? receiver,
+        Func<CompilerObject>? returnType
     )
         : CompilerObject
         , ICTCallable
+        , ISpecific
     {
         public IResult Call(Argument[] arguments)
         {
-            var matching = candidates
-                .Select(candidate => (Method: candidate, Values: Arguments.Convert(
-                    loader.CallParameters(candidate.Key.Parameters, candidate.Key.CustomMetadata),
-                    arguments
-                )))
-                .Where(candidate => candidate.Values is not null)
-                .ToArray();
+            if (Arguments.Types(parameters) is not { } types || Arguments.Convert(types, arguments) is not { } values)
+                return Result.Error($"{name} can't be called with these arguments.");
 
-            if (matching is not [var (method, values)])
-                return Result.Error($"{@class}.{candidates[0].Key.Name} has no single overload for {arguments.Length} arguments.");
-
-            var returnType = method.Key.ReturnType;
-
-            return Result.Ok(new Call(
-                method.Value,
-                [.. (receiver is null ? [] : new[] { receiver }), .. values!],
-                returnType is null ? null : () => Scope.HIRLoader.LoadType(returnType).Unwrap()
-            ));
+            return Result.Ok(new Call(callable, [.. (receiver is null ? [] : new[] { receiver }), .. values], returnType));
         }
+
+        public bool IsAsSpecificAs(CompilerObject other)
+            => Arguments.Types(parameters) is { } types && ZSharp.Compiler.Parameters.AreAsSpecificAs(types, other);
     }
 }

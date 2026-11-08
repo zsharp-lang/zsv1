@@ -616,12 +616,12 @@ namespace ZSharp.Importer.ILLoader
 
         private IResult LoadMethod(Package.DotNet.Method node)
             => methodInfos.TryGetValue(node, out var method)
-                ? Result.Ok(new Objects.MethodGroup(this, [method], null))
+                ? Result.Ok(new Objects.Method(this, method, null))
                 : Result.Error($"Method {node.Name} can only be reached through its class.");
 
         private IResult LoadConstructor(Package.DotNet.Constructor node)
             => constructorInfos.TryGetValue(node, out var constructor)
-                ? Result.Ok(new Objects.MethodGroup(this, [constructor], null))
+                ? Result.Ok(new Objects.Method(this, constructor, null))
                 : Result.Error("A constructor can only be reached through its class.");
 
         private IResult LoadVariable(HIR.Instance node)

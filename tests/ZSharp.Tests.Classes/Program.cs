@@ -40,6 +40,7 @@ new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(Scope.CG).Apply();
 new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(Scope.CG, Scope.TS).Apply();
 new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(Scope.TS).Apply();
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
+new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
 CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
 il.Install(mapped, mappedCode);
@@ -105,6 +106,8 @@ document.Scope.Add("Keep", new C.NamedMember { Target = probe, Name = "Keep" });
 document.Scope.Add("String", new C.Get(il.Load(typeof(string))));
 document.Scope.Add("Boolean", new C.Get(il.Load(typeof(bool))));
 document.Scope.Add("Keep2", new C.NamedMember { Target = probe, Name = "Keep2" });
+document.Scope.Add("Which", new C.NamedMember { Target = probe, Name = "Which" });
+document.Scope.Add("Either", new C.NamedMember { Target = probe, Name = "Either" });
 
 var coreRuntime = new C.Get(il.Load(typeof(Core.Runtime.ModuleScope).Module));
 document.Scope.Add("explicitThis", new C.NamedMember { Target = coreRuntime, Name = "explicitThis" });
@@ -758,13 +761,13 @@ Try("an inferred local keeps its type", () =>
     Run("""class I2 { @explicitThis fun f(this) { let text = "a"; text = true; } }""") is { } e && e.Contains("doesn't match"));
 
 Try("a wrong argument is an error", () =>
-    Run("""class T1 { @explicitThis fun take(this, text: String) { } @explicitThis fun f(this) { this.take(true); } }""") is { } e && e.Contains("no single overload"));
+    Run("""class T1 { @explicitThis fun take(this, text: String) { } @explicitThis fun f(this) { this.take(true); } }""") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a wrong constructor argument is an error", () =>
-    Run("""class T2 { @explicitThis new(this, text: String) { } @explicitThis fun f(this) { T2(true); } }""") is { } e && e.Contains("no single constructor"));
+    Run("""class T2 { @explicitThis new(this, text: String) { } @explicitThis fun f(this) { T2(true); } }""") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a wrong argument to an imported method is an error", () =>
-    Run("""class T3 { @explicitThis fun f(this) { Keep2(true); } }""") is { } e && e.Contains("matching overloads"));
+    Run("""class T3 { @explicitThis fun f(this) { Keep2(true); } }""") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a wrong return value is an error", () =>
     Run("""class T4 { @explicitThis fun f(this): String { return true; } }""") is { } e && e.Contains("doesn't match"));
@@ -806,7 +809,7 @@ Try("a base class doesn't go where a derived one is expected", () =>
             class Derived2 : Base2 { }
             class Helper2 { @explicitThis fun read(this, value: Derived2) { } }
         }
-        """) is { } e && e.Contains("no single overload"));
+        """) is { } e && e.Contains("can't be called with these arguments"));
 
 Try("a class in progress goes where Object is expected", () =>
 {
@@ -992,7 +995,7 @@ Try("a decorator runs after the fill", () =>
 });
 
 Try("a decorator is type checked", () =>
-    Run("@markMethod class NotAMethod {}") is { } e && e.Contains("matching overloads"));
+    Run("@markMethod class NotAMethod {}") is { } e && e.Contains("can't be called with these arguments"));
 
 Try("only a definition can be decorated", () =>
     Run("""@mark Keep("x");""") is { } e && e.Contains("Only a definition"));
@@ -1121,6 +1124,78 @@ Try("an overload group with no match is an error", () =>
     var call = new C.Call { Callee = new C.Get(group), Arguments = [new() { Value = new C.BooleanLiteral(true) }] };
     return runner.EvaluateExpression(call).IsError;
 });
+
+// ---- Overloading
+
+Try("a CLR overload is chosen by its parameter types", () =>
+    Run("""Keep(Which(true));""") is null && (string)Kept() == "bool");
+
+Try("the most specific CLR overload is chosen", () =>
+    Run("""Keep(Which("x"));""") is null && (string)Kept() == "string");
+
+Try("a less specific CLR overload is chosen when it is the only one that applies", () =>
+    Run("""Keep(Which(Object));""") is null && (string)Kept() == "object");
+
+Try("CLR overloads that are as specific as each other are ambiguous", () =>
+    Run("""Keep(Either("x", "y"));""") is { } e && e.Contains("none of them is more specific"));
+
+Try("the most specific Z# method is chosen", () =>
+{
+    if (Run("""
+        class Over1 {
+            @static fun pick(x: Object): String { return "object"; }
+            @static fun pick(x: String): String { return "string"; }
+        }
+        Keep(Over1.pick("a"));
+        Keep(Over1.pick(true));
+        """) is { } error)
+        throw new Exception(error);
+
+    return Probe.Kept[^2] is "string" && (string)Kept() == "object";
+});
+
+Try("Z# methods are chosen inside the class too", () =>
+{
+    if (Run("""
+        class Over2 {
+            @static fun pick(x: String): String { return "string"; }
+            @static fun pick(x: Boolean): String { return "bool"; }
+            @static fun get(): String { return Over2.pick(true); }
+        }
+        Keep(Over2.get());
+        """) is { } error)
+        throw new Exception(error);
+
+    return (string)Kept() == "bool";
+});
+
+Try("Z# methods that are as specific as each other are ambiguous", () =>
+    Run("""
+        class Over3 {
+            @static fun two(a: Object, b: String): String { return "first"; }
+            @static fun two(a: String, b: Object): String { return "second"; }
+        }
+        Keep(Over3.two("x", "y"));
+        """) is { } e && e.Contains("none of them is more specific"));
+
+Try("a Z# constructor is chosen by its parameter types", () =>
+{
+    if (Run("""
+        class Over4 {
+            let tag: String;
+            @explicitThis new(this, x: Object) { this.tag = "object"; }
+            @explicitThis new(this, x: String) { this.tag = "string"; }
+        }
+        Keep(Over4("a").tag);
+        Keep(Over4(true).tag);
+        """) is { } error)
+        throw new Exception(error);
+
+    return Probe.Kept[^2] is "string" && (string)Kept() == "object";
+});
+
+Try("when no overload applies, each one says why", () =>
+    Run("""Keep(Either(true, true));""") is { } e && e.Contains("None of the 2 overloads applies"));
 
 // ---- Encoding values into code
 
@@ -1662,6 +1737,16 @@ public static class Probe
     public static string PickString(string value) => "string";
 
     public static string PickBool(bool value) => "bool";
+
+    public static string Which(object value) => "object";
+
+    public static string Which(string value) => "string";
+
+    public static string Which(bool value) => "bool";
+
+    public static string Either(object first, string second) => "first";
+
+    public static string Either(string first, object second) => "second";
 
     [ZSharp.Importer.ILLoader.Alias("first")]
     public static Package.DotNet.Method First(Package.DotNet.Method method) { Order.Add("first"); return method; }

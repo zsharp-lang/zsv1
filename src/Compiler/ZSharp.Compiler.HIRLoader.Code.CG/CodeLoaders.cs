@@ -25,7 +25,7 @@ namespace ZSharp.Compiler
                     else
                         overloads.Add(overload);
 
-                return Result.Ok(new Objects.OverloadGroup([.. overloads]));
+                return Result.Ok(OverloadGroup.Of(overloads));
             });
 
             instances.Types.Register<HIR.Infer>(_ => Result.Error("A type was meant to be inferred, but wasn't."));

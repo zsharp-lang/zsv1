@@ -72,8 +72,8 @@ code between a server and a client so that the developer just calls a function.
 When a CO finally has to do something useful, it is asked for LIR, without caring how,
 and LIR is something that can be understood, inspected and traversed.
 
-An interaction is defined by adding to CG or TS, or by a new REI, such as the planned
-overloading and OOP REIs. Only the interaction has the same API. How an object takes
+An interaction is defined by adding to CG or TS, or by a new REI, such as overloading, or the
+planned OOP REI. Only the interaction has the same API. How an object takes
 part in it, or overrides it, is up to whoever implements it. Rust-like traits, for
 example, need only a new CG dispatcher that implements those endpoints by an external
 lookup on the result of `TS.TypeOf`.
@@ -195,8 +195,8 @@ To be designed. Settled so far:
 
 ## REI: Replacable Entrypoints Interface
 
-An REI is a set of replaceable operations. CG, TS, IR and HIR -> MIR are all
-REIs.
+An REI is a set of replaceable operations. CG, TS, IR, HIR -> MIR and overloading are
+all REIs.
 
 - An REI specifies only the signature of its operations, never their behaviour.
   Behaviour can always be changed, overridden or extended by replacing an
@@ -623,8 +623,8 @@ decorator returned can record an `Export` in its own exports, so exporting doesn
 depend on the context stack or on when the decorator runs. The document unwraps it: it
 exports the definition under the alias or its name, and binds its name to the
 definition. A meta-compiler that doesn't know `Export` fails to register it.
-`export("name")` has to return something that can be called, which needs overloads and
-calling an object.
+`export("name")` has to return something that can be called. Overloads of `export` in C#
+already resolve, so what is missing is calling the object it returns.
 
 `DocumentImporter` is the default importer, so a source with no prefix is a document. A
 relative path is relative to the importing document, each document runs once however
@@ -889,11 +889,11 @@ binder.
 In HIR, an overload is pure structure. A class doesn't hold overloads, it holds methods.
 
 A class loaded to a CO builds whatever is convenient for it, such as a map from name to
-CO. Methods that share a name collapse into a method group CO at that point, because a
+CO. Methods that share a name collapse into an overload group CO at that point, because a
 group is special in code generation and not in the structure of a class.
 
 Where one HIR value has to stand for many and there is no class, as in the operator
-table, an overload group or method group can be an `Instance`.
+table, an HIR `OverloadGroup` can be an `Instance`.
 
 Name-based overloading on the AST side is similar, since it also collapses multiple
 values into one object. Member access defers to the CO. A free name uses the same CO,
@@ -901,7 +901,7 @@ through the method's `this`.
 
 For .NET meta-types, overloads across a class and its base behave as they do on the CLR.
 
-A method group from existing IL can be built directly as a CO while loading, since the
+A group of methods from existing IL can be built directly as a CO while loading, since the
 metadata is fully resolved. An overload group in HIR is structure, and the types of its
 definitions are known, which is enough because HIR has no behaviour; only loading it
 makes a proper CO. A class's overloads are complete when it is loaded, but at document
@@ -910,6 +910,42 @@ level more overloads can be added later.
 Overloading has nothing to do with calls in particular. It chooses between candidates for
 any operation, such as a call or a cast to a function pointer, so each candidate applies
 the operation in its own way.
+
+The `Overloading` REI has two entrypoints:
+
+| Entrypoint | Question |
+|------------|----------|
+| `Apply(candidates, operation)` | Apply an operation to each candidate. Whose result is the result? |
+| `IsMoreSpecific(candidate, other)` | When an operation applies to both, is this candidate the better choice? |
+
+The group CO, `OverloadGroup`, is the same for every kind of candidate: HIR overload
+groups, IL methods and constructors, and the methods and constructors of a class being
+loaded. Each candidate is a CO of its own, and the group implements each operation it
+supports as `Apply(candidates, c => CG.<operation>(c, ...))`, so nothing in it is about
+calls. A single candidate stands for itself, with no group. For now the group supports
+calls; other operations are added the same way.
+
+The static dispatcher chooses the most specific candidate, as C# does. When one candidate
+applies, it is the result. When several do, the result is the one that is more specific
+than each of the others, and otherwise the call is ambiguous. When none do, each says
+why, and the operation is unsupported only if every candidate says it is.
+
+A candidate answers specificity through `ISpecific.IsAsSpecificAs(other)`. Candidates
+are never inspected, not even by each other: a candidate with parameters is at least as
+specific as another if the other can be called with values of its own parameter types.
+So `f(String)` is more specific than `f(Object)`, since `f(Object)` takes a `String` and
+`f(String)` doesn't take an `Object`. The values are placeholders that only have a type,
+and nothing compiles them. This replaces the separate "exact match" rule IL method groups
+had.
+
+These rules are provisional, and nothing should rely much on them:
+
+- CLR methods and constructors are meant to follow C#'s overloading rules. What is here
+  is a subset: there are no generics yet, on the CLR or in Z#, and nothing about
+  `params`, optional parameters, named arguments or numeric conversions.
+- How Z# standard entities overload may change. They use the same rule for now only
+  because it is the simplest one; a different rule is a different answer to
+  `IsAsSpecificAs`, or a different dispatcher.
 
 ## Diagnostics
 

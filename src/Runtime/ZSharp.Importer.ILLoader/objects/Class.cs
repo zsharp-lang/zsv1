@@ -44,7 +44,10 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// Calling a type constructs an instance of it.
         /// </summary>
         public IResult Call(Argument[] arguments)
-            => new MethodGroup(loader, IL.GetConstructors(), null).Call(arguments);
+            => Core.Compiler.ModuleScope.CG.Call(
+                OverloadGroup.Of(IL.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
+                arguments
+            );
 
         /// <summary>
         /// Casting a type to what describes it is reflection.
@@ -86,7 +89,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 .ToArray<MethodBase>();
 
             if (methods.Length > 0)
-                return Result.Ok(new MethodGroup(loader, methods, receiver));
+                return Result.Ok(OverloadGroup.Of(methods.Select(method => new Method(loader, method, receiver))));
 
             if (IL.GetProperties(flags).FirstOrDefault(property => Named(property, member)) is { } found)
                 return Result.Ok(new Accessor(

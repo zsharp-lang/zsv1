@@ -15,6 +15,9 @@ namespace Core.Compiler
         [Alias("ts")]
         public static ZSharp.Compiler.TS TS { get; set; } = new();
 
+        [Alias("overloading")]
+        public static ZSharp.Compiler.Overloading Overloading { get; set; } = new();
+
         [Alias("ir")]
         public static ZSharp.Compiler.IR IR { get; set; } = new();
 

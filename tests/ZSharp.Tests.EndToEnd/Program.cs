@@ -27,6 +27,7 @@ new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(Scope.CG).Apply();
 new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(Scope.CG, Scope.TS).Apply();
 new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(Scope.TS).Apply();
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
+new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
 CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
 il.Install(mapped, mappedCode);

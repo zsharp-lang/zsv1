@@ -4,10 +4,13 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         /// <summary>
         /// Converts arguments to the types of the parameters they go to, or returns
-        /// <see langword="null"/> if one of them can't be.
+        /// <see langword="null"/> if there are more or fewer of them, or one can't be.
         /// </summary>
-        public static CompilerObject[]? Convert(IEnumerable<CompilerObject> types, Argument[] arguments)
+        public static CompilerObject[]? Convert(CompilerObject[] types, Argument[] arguments)
         {
+            if (types.Length != arguments.Length)
+                return null;
+
             var converted = new List<CompilerObject>();
 
             foreach (var (type, argument) in types.Zip(arguments))
@@ -20,13 +23,11 @@ namespace ZSharp.Importer.ILLoader.Objects
         }
 
         /// <summary>
-        /// Converts arguments to parameters of something being defined.
+        /// The types of the parameters of something being defined, or <see langword="null"/>
+        /// if one of them can't be loaded.
         /// </summary>
-        public static CompilerObject[]? Convert(List<Package.DotNet.Parameter> parameters, Argument[] arguments)
+        public static CompilerObject[]? Types(List<Package.DotNet.Parameter> parameters)
         {
-            if (parameters.Count != arguments.Length)
-                return null;
-
             var types = new List<CompilerObject>();
 
             foreach (var parameter in parameters)
@@ -35,7 +36,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 else
                     return null;
 
-            return Convert(types, arguments);
+            return [.. types];
         }
     }
 }
