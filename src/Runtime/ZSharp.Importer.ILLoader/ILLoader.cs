@@ -210,19 +210,12 @@ namespace ZSharp.Importer.ILLoader
         internal LIR.FunctionHandle Convert(Type from, Type to)
             => Instruction("convert", from, to, il => Conversions.Emit(il, from, to));
 
-        /// <summary>
-        /// The function that casts a value to a type it might be of, which fails if it is
-        /// not: a reference is checked, and a value type is unboxed.
-        /// </summary>
-        internal LIR.FunctionHandle Downcast(Type from, Type to)
-            => Instruction("downcast", from, to, il =>
-                il.Emit(to.IsValueType ? System.Reflection.Emit.OpCodes.Unbox_Any : System.Reflection.Emit.OpCodes.Castclass, to));
-
         private readonly Dictionary<(Type, LIR.Type), LIR.FunctionHandle> downcasts = [];
 
         /// <summary>
-        /// The function that casts a value down to a type that may not exist yet, as a
-        /// class being loaded with it.
+        /// The function that casts a value down to a type it might be of, which fails if it
+        /// isn't: a reference is checked, and a value type is unboxed. The type is found as
+        /// the code is emitted, so it may be one the runtime is still building.
         /// </summary>
         internal LIR.FunctionHandle Downcast(Type from, LIR.Type to)
         {
@@ -238,18 +231,48 @@ namespace ZSharp.Importer.ILLoader
             return downcasts[(from, to)] = handle;
         }
 
+        private readonly Dictionary<(Type, LIR.Type), LIR.FunctionHandle> typeTests = [];
+
         /// <summary>
         /// The function that tells whether a value is of a type. <c>null</c> is of none.
+        /// The type is found as the code is emitted, so it may be one the runtime is still
+        /// building.
         /// </summary>
-        internal LIR.FunctionHandle IsOf(Type from, Type to)
-            => Instruction($"is {to.AssemblyQualifiedName}", from, typeof(bool), il =>
-            {
-                il.Emit(System.Reflection.Emit.OpCodes.Isinst, to);
-                il.Emit(System.Reflection.Emit.OpCodes.Ldnull);
-                il.Emit(System.Reflection.Emit.OpCodes.Cgt_Un);
-            });
+        internal LIR.FunctionHandle IsOf(Type from, LIR.Type to)
+        {
+            if (typeTests.TryGetValue((from, to), out var known))
+                return known;
+
+            var signature = new LIR.Signature { ReturnType = Handle(typeof(bool)) };
+            signature.Parameters.Add(new(Handle(from)) { Name = "value" });
+
+            var handle = new LIR.FunctionHandle(signature);
+            runtime.MapTypeTest(handle, to);
+
+            return typeTests[(from, to)] = handle;
+        }
 
         private readonly Dictionary<(Type, MethodInfo), LIR.FunctionHandle> delegates = [];
+
+        /// <summary>
+        /// The function that makes a delegate of a type for a method, given the object it
+        /// is bound to.
+        /// </summary>
+        internal LIR.FunctionHandle Delegate(Type delegateType, Platform.Runtime.ClassMethod method)
+        {
+            if (classDelegates.TryGetValue((delegateType, method), out var known))
+                return known;
+
+            var signature = new LIR.Signature { ReturnType = Handle(delegateType) };
+            signature.Parameters.Add(new(Handle(typeof(object))) { Name = "target" });
+
+            var handle = new LIR.FunctionHandle(signature);
+            runtime.MapDelegate(handle, delegateType, method);
+
+            return classDelegates[(delegateType, method)] = handle;
+        }
+
+        private readonly Dictionary<(Type, Platform.Runtime.ClassMethod), LIR.FunctionHandle> classDelegates = [];
 
         /// <summary>
         /// The function that makes a delegate of a type for a method, given the object it
@@ -607,21 +630,21 @@ namespace ZSharp.Importer.ILLoader
                 return Result.Error($"Module {node.Name} has a {other.GetType().Name}, which can't be defined yet.");
 
             // The module's own members are declared and lowered along with its classes, so
-            // each can use the other.
+            // each can use the other. Its code can name the module itself, which is known
+            // before any of it is lowered.
             var members = new LIR.Module(node.Name.Length > 0 ? node.Name : null);
+            var defined = new Objects.DefinedModule(this, node);
+            definedModules[node] = defined;
 
-            if (Define(
+            if ((Define(
                 node.Definitions.Select(definition => definition as Package.DotNet.Class ?? View((Package.DotNet.Interface)definition)),
                 () => DeclareMembers(node, members),
                 () => LowerMembers(node, members)
-            ) is { } error)
+            ) ?? LoadMembers(node, members)) is { } error)
+            {
+                definedModules.Remove(node);
                 return Result.Error(error);
-
-            if (LoadMembers(node, members) is { } invalid)
-                return Result.Error(invalid);
-
-            var defined = new Objects.DefinedModule(this, node);
-            definedModules[node] = defined;
+            }
 
             return Result.Ok(defined);
         }

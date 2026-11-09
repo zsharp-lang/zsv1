@@ -74,8 +74,10 @@ namespace ZSharp.Lang
             expressionParser.InfixL("/", 70);
             expressionParser.InfixL("**", 80);
 
-            expressionParser.InfixL("==", 30);
-            expressionParser.InfixL("!=", 30);
+            // Equality binds looser than comparisons and type tests, as in C#, so
+            // `a == b as T` is `a == (b as T)` and `a < b == c` is `(a < b) == c`.
+            expressionParser.InfixL("==", 18);
+            expressionParser.InfixL("!=", 18);
 
             expressionParser.InfixL(LangParser.Keywords.Or, 15);
 

@@ -24,6 +24,7 @@ namespace ZSharp.Platform.Runtime
                     ? argument
                     : throw new InvalidOperationException($"Type parameter {parameter.Name} is not defined."),
                 LIR.Reference reference => typeof(Box<>).MakeGenericType(ImportType(reference.Target)),
+                LIR.GenericInstance instance => ImportType(instance.Definition).MakeGenericType([.. instance.Arguments.Select(ImportType)]),
                 LIR.FunctionType => typeof(nint),
                 _ => throw new NotSupportedException($"Can't import a {type.GetType().Name}.")
             };

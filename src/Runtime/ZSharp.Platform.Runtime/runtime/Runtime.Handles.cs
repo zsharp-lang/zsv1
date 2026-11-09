@@ -11,11 +11,22 @@ namespace ZSharp.Platform.Runtime
         private readonly HashSet<LIR.FunctionHandle> byAddress = [];
 
         /// <summary>
+        /// The CLR methods handles are mapped to, which a member of a generic instance is
+        /// found from.
+        /// </summary>
+        private readonly Dictionary<LIR.FunctionHandle, IL.MethodBase> methodHandles = [];
+
+        /// <summary>
         /// Whether a call passes its first argument by its address, as an instance method of
         /// a value type takes its object.
         /// </summary>
         internal bool TakesAddress(LIR.ICallable callable)
-            => callable is LIR.FunctionHandle handle && byAddress.Contains(handle);
+            => callable switch
+            {
+                LIR.FunctionHandle handle => byAddress.Contains(handle),
+                LIR.InstanceMember member => TakesAddress(member.Member),
+                _ => false
+            };
 
         public void Map(LIR.TypeHandle handle, Type type)
             => typeHandles[handle] = type;
@@ -25,6 +36,7 @@ namespace ZSharp.Platform.Runtime
             if (!method.IsStatic && method is IL.MethodInfo && method.DeclaringType is { IsValueType: true })
                 byAddress.Add(handle);
 
+            methodHandles[handle] = method;
             Map(handle, il => EmitCall(il, method));
         }
 
@@ -49,23 +61,44 @@ namespace ZSharp.Platform.Runtime
             });
 
         /// <summary>
+        /// Maps a handle to code that tells whether a value is of a type, which may be one
+        /// the runtime is still building, so it is found as the code is emitted.
+        /// </summary>
+        public void MapTypeTest(LIR.FunctionHandle handle, LIR.Type type)
+            => Map(handle, il =>
+            {
+                il.Emit(Emit.OpCodes.Isinst, ImportType(type));
+                il.Emit(Emit.OpCodes.Ldnull);
+                il.Emit(Emit.OpCodes.Cgt_Un);
+            });
+
+        /// <summary>
         /// Maps a handle to code that makes a delegate of a method. Its argument is the
         /// object the method is bound to, or null for a static method. A virtual method is
         /// bound through the object, so the delegate calls what the object overrides.
         /// </summary>
         public void MapDelegate(LIR.FunctionHandle handle, Type delegateType, IL.MethodInfo method)
-            => Map(handle, il =>
-            {
-                if (method.IsVirtual && !method.IsStatic)
-                {
-                    il.Emit(Emit.OpCodes.Dup);
-                    il.Emit(Emit.OpCodes.Ldvirtftn, method);
-                }
-                else
-                    il.Emit(Emit.OpCodes.Ldftn, method);
+            => Map(handle, il => EmitDelegate(il, delegateType, method));
 
-                il.Emit(Emit.OpCodes.Newobj, delegateType.GetConstructor([typeof(object), typeof(nint)])!);
-            });
+        /// <summary>
+        /// Maps a handle to code that makes a delegate of a method of a class the runtime is
+        /// still building, which is found as the code is emitted.
+        /// </summary>
+        public void MapDelegate(LIR.FunctionHandle handle, Type delegateType, ClassMethod method)
+            => Map(handle, il => EmitDelegate(il, delegateType, Referenced(method)));
+
+        private static void EmitDelegate(Emit.ILGenerator il, Type delegateType, IL.MethodInfo method)
+        {
+            if (method.IsVirtual && !method.IsStatic)
+            {
+                il.Emit(Emit.OpCodes.Dup);
+                il.Emit(Emit.OpCodes.Ldvirtftn, method);
+            }
+            else
+                il.Emit(Emit.OpCodes.Ldftn, method);
+
+            il.Emit(Emit.OpCodes.Newobj, delegateType.GetConstructor([typeof(object), typeof(nint)])!);
+        }
 
         /// <summary>
         /// Maps a handle to code that gives the type object of a type, which works for a
@@ -125,6 +158,9 @@ namespace ZSharp.Platform.Runtime
                 case ClassFieldAccess access:
                     il.Emit(access.IsSet ? Emit.OpCodes.Stfld : Emit.OpCodes.Ldfld, Referenced(access.Field));
                     break;
+                case LIR.InstanceMember member:
+                    EmitCall(il, OnInstance(member));
+                    break;
                 case LIR.FunctionHandle handle:
                     if (!functionHandles.TryGetValue(handle, out var emit))
                         throw new InvalidOperationException("A function handle is not mapped.");
@@ -133,6 +169,28 @@ namespace ZSharp.Platform.Runtime
                 default:
                     throw new NotSupportedException($"Can't call a {callable.GetType().Name}.");
             }
+        }
+
+        /// <summary>
+        /// A member of a generic definition as an instance of it has it. While a type
+        /// argument is still being built, the instance has no members of its own to ask
+        /// for, so the member is found through the definition's.
+        /// </summary>
+        private IL.MethodBase OnInstance(LIR.InstanceMember member)
+        {
+            if (member.Member is not LIR.FunctionHandle handle || !methodHandles.TryGetValue(handle, out var method))
+                throw new NotSupportedException("A member of a generic instance is a method of its definition.");
+
+            var type = ImportType(member.Owner);
+
+            return ContainsBuilder(type)
+                ? method switch
+                {
+                    IL.ConstructorInfo constructor => Emit.TypeBuilder.GetConstructor(type, constructor),
+                    IL.MethodInfo info => Emit.TypeBuilder.GetMethod(type, info),
+                    _ => throw new NotSupportedException($"Can't call a {method.GetType().Name}.")
+                }
+                : IL.MethodBase.GetMethodFromHandle(method.MethodHandle, type.TypeHandle)!;
         }
 
         private static void EmitCall(Emit.ILGenerator il, IL.MethodBase method)

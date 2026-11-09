@@ -87,6 +87,7 @@ mappedBinder.Apply();
 var language = new Language(binder);
 
 Core.ZSharp.ModuleScope.Compiler = compiler;
+Core.ZSharp.ModuleScope.Language = language;
 Core.ZSharp.ModuleScope.Runner = statement => runner.RunStatement(statement);
 Core.ZSharp.ModuleScope.Evaluator = expression => runner.EvaluateExpression(expression);
 DocumentCompiler.Install(mapped, Scope.HIRLoader);
@@ -2966,6 +2967,58 @@ Try("Z# replaces how a meta-compiler is found, asking what it replaced", () =>
         Keep(M225.asked);
         """) is null && Kept() is int asked && asked > 0);
 
+// ---- precedence
+
+Try("equality binds looser than a cast and a comparison", () =>
+    ResetKept() && Run("""
+        let text231: Object = "x";
+        Keep(text231 == text231 as Object);
+        Keep(1 < 2 == true);
+        Keep(2 + 3 == 5);
+        """) is null && Probe.Kept is [true, true, true]);
+
+// ---- CLR generics over classes still being loaded
+
+Try("a generic CLR type is given a class loaded with the code that uses it", () =>
+    ResetKept() && Run("""
+        module M232 {
+            import { List } from "core:runtime";
+            def Item232 { let value: Int32; @explicitThis new(this, value: Int32) { this.value = value; } }
+            def Items232 {
+                @static fun total(): Int32 {
+                    let items = List[Item232]();
+                    items.Add(Item232(40));
+                    items.Add(Item232(2));
+                    items[1] = Item232(items[1].value);
+                    return items[0].value + items[1].value + items.Count - 2;
+                }
+            }
+        }
+        Keep(M232.Items232.total());
+        """) is null && Probe.Kept is [42]);
+
+Try("a module's code names the module itself", () =>
+    Run("""
+        module M233 {
+            fun half(value: Int32): Int32 { return value / 2; }
+            fun quarter(value: Int32): Int32 { return M233.half(M233.half(value)); }
+        }
+        Keep(M233.quarter(168));
+        """) is null && Kept() is 42);
+
+Try("a class's own method is a delegate in its own code", () =>
+    Run("""
+        import { Func } from "core:runtime";
+        def Holder234 {
+            @explicitThis fun give(this): Int32 { return 42; }
+            @explicitThis fun run(this): Int32 {
+                let given: Func[Int32] = this.give;
+                return given();
+            }
+        }
+        Keep(Holder234().run());
+        """) is null && Kept() is 42);
+
 // ---- CLR value types
 
 Try("a struct's property is read from a struct a method returns", () =>
@@ -3741,9 +3794,6 @@ Try("a condition sees the document locals", () =>
 Try("std:functions installs, by its name", () =>
     Run("""import { Function } from "std:functions";""") is null);
 
-Try("the prelude brings the standard definitions", () =>
-    Run("""import "std:prelude";""") is null);
-
 Try("a fun in a document is a Z# function", () =>
     Run("""
         fun twice215(value: Int32): Int32 { return value * 2; }
@@ -3861,6 +3911,47 @@ Try("a Z# function given too few arguments is an error", () =>
 
 Try("a positional parameter isn't given by name", () =>
     Run("Keep(twice215(value: 1));") is { } e && e.Length > 0);
+
+// ---- std:oop: Z#'s own classes, defined in Z#. Installing it makes def a Z# class, so
+// these come after everything else.
+
+Try("std:oop installs", () =>
+    Run("""import { Class } from "std:oop";""") is null);
+
+Try("a Z# class has fields, a constructor and methods", () =>
+    ResetKept() && Run("""
+        def Point229 {
+            let x: Int32;
+            let y: Int32;
+
+            new(this, x: Int32, y: Int32) { this.x = x; this.y = y; }
+
+            fun sum(): Int32 { return x + y; }
+            fun twice(this): Int32 { return this.sum() * 2; }
+            fun move(by: Int32) { x = x + by; }
+        }
+
+        let point229 = Point229(1, 2);
+        Keep(point229.sum());
+        Keep(point229.twice());
+        point229.move(10);
+        Keep(point229.x);
+        """) is null && Probe.Kept is [3, 6, 11]);
+
+Try("a Z# class has named constructors, and fields with default values", () =>
+    Run("""
+        def Counter230 {
+            let count: Int32 = 5;
+            new() { }
+            new from(this, start: Int32) { this.count = start; }
+            fun next(this): Int32 { this.count = this.count + 1; return this.count; }
+        }
+
+        Keep(Counter230().next() + Counter230.from(100).next());
+        """) is null && Kept() is 107);
+
+Try("the prelude brings the standard definitions", () =>
+    Run("""import "std:prelude";""") is null);
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;

@@ -33,6 +33,27 @@ namespace ZSharp.Platform.Runtime
         /// Emits the bodies of the standalone functions declared while loading, and loads
         /// and completes whatever those reach in turn.
         /// </summary>
+        private int loading;
+
+        /// <summary>
+        /// Runs a load. What a load reaches while code is being emitted, as a class first
+        /// used by that code, is loaded inside it, so only the outermost load finishes.
+        /// </summary>
+        private T Loading<T>(Func<T> load)
+        {
+            loading++;
+
+            try
+            {
+                return load();
+            }
+            finally
+            {
+                if (--loading == 0)
+                    Finish();
+            }
+        }
+
         private void Finish()
         {
             while (standaloneBodies.TryDequeue(out var standalone))

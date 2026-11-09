@@ -30,6 +30,9 @@ namespace ZSharp.Platform.Runtime
         /// Loads a module, and whatever it reaches in other modules.
         /// </summary>
         public void Load(LIR.Module module)
+            => Loading(() => { LoadModule(module); return true; });
+
+        private void LoadModule(LIR.Module module)
         {
             // Polymorphic structures are classes, realized together with their methods.
             LoadPolymorphic(module.Structures.Where(structure => PolymorphicOf(structure) is not null));
@@ -47,13 +50,15 @@ namespace ZSharp.Platform.Runtime
                 body();
 
             Complete();
-            Finish();
         }
 
         /// <summary>
         /// Loads classes that may refer to each other and to themselves.
         /// </summary>
         public Type[] Load(IReadOnlyList<ClassDefinition> definitions)
+            => Loading(() => LoadClasses(definitions));
+
+        private Type[] LoadClasses(IReadOnlyList<ClassDefinition> definitions)
         {
             var builders = new Dictionary<ClassDefinition, Emit.TypeBuilder>();
 
@@ -100,8 +105,6 @@ namespace ZSharp.Platform.Runtime
 
             foreach (var definition in builders.Keys)
                 CreateClass(definition, builders);
-
-            Finish();
 
             return [.. definitions.Select(definition => classes[definition])];
         }
@@ -274,13 +277,7 @@ namespace ZSharp.Platform.Runtime
         public IL.MethodInfo LoadMethod(LIR.Function function)
         {
             if (function.Module is null)
-            {
-                var standalone = ImportFunction(function);
-
-                Finish();
-
-                return standalone;
-            }
+                return Loading(() => ImportFunction(function));
 
             if (!(functions.TryGetValue(function, out var method) && method is not Emit.MethodBuilder))
                 Load(function.Module);

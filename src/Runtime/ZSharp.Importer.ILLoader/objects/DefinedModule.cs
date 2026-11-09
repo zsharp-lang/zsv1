@@ -9,8 +9,9 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         public IResult Member(MemberName member)
         {
+            // A class is found as a type, which it is while it is still being loaded too.
             if (node.Definitions.OfType<Package.DotNet.Class>().FirstOrDefault(@class => @class.Name == member) is { } found)
-                return Result.Ok(loader.Class(found));
+                return Core.Compiler.ModuleScope.HIRLoader.LoadType(found);
 
             var functions = node.Methods
                 .Where(method => method.Name == member)

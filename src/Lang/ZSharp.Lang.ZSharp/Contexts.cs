@@ -79,3 +79,21 @@ namespace ZSharp.Lang
         }
     }
 }
+
+namespace ZSharp.Lang
+{
+    /// <summary>
+    /// A context whose capability is an object, for a meta-compiler whose capabilities
+    /// are defined in Z#: it can do what the object is, and what the context it is in
+    /// can do.
+    /// </summary>
+    public sealed class CapabilityContext(Compiler.Context? parent, object capability)
+        : Compiler.ChildContext(parent)
+        , Compiler.Context
+    {
+        public object Capability { get; } = capability;
+
+        public new bool Is<T>([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out T? result) where T : class
+            => (result = Capability as T) is not null || base.Is(out result);
+    }
+}

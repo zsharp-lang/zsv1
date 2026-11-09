@@ -161,8 +161,8 @@ To be designed. Settled so far:
   WebAssembly together), LLVM, x86, RISC-V and Python.
 - A build script invokes targets explicitly, so there is no target API to define.
 - The concepts are `Module`, `Function`, `ICallable`, `Signature`, `Global`,
-  `Structure`, `Reference`, `FunctionType`, `Type`, `Handle`, metadata, and the
-  `Code` of a function body.
+  `Structure`, `Reference`, `GenericInstance`, `InstanceMember`, `FunctionType`,
+  `Type`, `Handle`, metadata, and the `Code` of a function body.
 - A `Signature` is ordered parameters and an optional return type. With no type
   system, a function that returns nothing has no return type.
 - `Module` holds common code and data. The smallest data piece is a simple data
@@ -172,6 +172,12 @@ To be designed. Settled so far:
 - `Reference` is a core LIR type that holds its target type. The lowerer (a CO,
   for example) decides the exact type of a field, and so whether it is stored
   inline. It can move out of the core if more targets show it isn't common.
+- `GenericInstance` is a generic definition given its type arguments, both LIR types.
+  The definition can be any type that takes arguments, as a handle to one a platform
+  has, so it is lowered once however many instances there are, and the platform makes
+  each instance. `InstanceMember` is a member of the definition called on an instance,
+  with the member's signature as the instance has it. LIR says nothing of what makes a
+  definition generic: that, with constraints and variance, stays in HIR.
 - `Args`, `KwArgs` and full generics move to HIR.
 - The LIR core has no generics, and everything in it is concrete. Simple generic
   types, with placeholder markers on type definitions, may be added later as an
@@ -373,7 +379,27 @@ signature, which uses its type parameters. Once its class is loaded, `Ids.id[Int
 instantiates it as any CLR generic method.
 
 Constraints, boxing a value of a type parameter, inferring type arguments, and using a
-generic class or method while its class is still being loaded aren't supported yet.
+generic class or method written in Z# while its class is still being loaded aren't
+supported yet.
+
+A generic CLR type can be given a type that isn't a CLR type yet, as a class still being
+loaded with the code that uses it: `List[Item]` in the module that defines `Item`. Such an
+instance isn't a CLR entity reflection can describe, so its CO describes it from the
+definition, with its type arguments in place of the definition's type parameters, and it
+lowers to an `LIR.GenericInstance` of the definition's handle, its members to
+`LIR.InstanceMember`s. The runtime makes the instance as it emits the code, and finds each
+member through `TypeBuilder.GetMethod`/`GetConstructor` while an argument is still being
+built, or through the member's handle once it exists. Which of the two is the runtime's
+business: the IL loader never asks. Its constructors, methods, properties and indexers are
+reached this way; its generic methods and its conversions to the interfaces it implements
+aren't yet. A generic instance over CLR types is a CLR entity, and reflection describes it
+as any other.
+
+The IL loader asks the runtime for an operation on a type by the type's LIR form, so one
+function serves a CLR type and a type that isn't one yet: a cast down, a type test, a
+`null`, and a delegate of a method of a class still being loaded are each found as the
+code is emitted. Only what needs a CLR type to answer, as whether a value type can be
+null, asks for one.
 
 Any CLR entity is exposed as C# sees it, so the rest of the runtime integration follows
 C#'s rules rather than new ones:
@@ -713,6 +739,35 @@ a custom type gets into the language to be used as a meta-type.
   method call, a new value of one is a new object, and its fields are reached through the
   object. A CO lowering for the runtime, which it sees as an `Object`, matches it against
   `Polymorphism` through the dynamic trait dispatchers. The prelude installs both.
+- `std:oop` is Z#'s class, in Z#. Its nodes are `Class`, `Field`, `Method`,
+  `Constructor` and `Receiver`, the object a method or constructor runs on, and a
+  method's parameters are `std:functions`' own. The class meta-compiler compiles its body
+  through the language's container compiler: a `let` is a field, and a `fun` or a `new`
+  written directly in it is a method or a constructor. In a method, `this` is bound if the
+  first parameter is `this`, and each field by its name to `this.field`, unless a
+  parameter has the name; both are bound to a local of the building code that holds the
+  method's receiver, as a parameter is. A class lowers for a target that has
+  `Polymorphism`: into an LIR module of its own, its structure is the type of its objects
+  with its fields, a method is a function that takes the object first, marked as the
+  class's, and a constructor is a function that makes the object with its fields' default
+  values, runs its code on it, and gives it. Calling the class runs its unnamed
+  constructor, a named one is a member of the class, and a value has its fields and
+  methods as members. Importing it makes `def` a Z# class, so the prelude imports it
+  last. A target without polymorphism, interfaces, static and class members, and type
+  objects come next.
+- What a definition written in Z# needs from code that uses a class still being loaded
+  with it is general: such a class goes to the interfaces it implements, can be cast down
+  to and tested for, has a `null`, can be given to a generic CLR type, and has its
+  methods as delegates in its own code, each resolved as the code is emitted. A module's
+  code can name the module itself, which is known before its code is lowered.
+- A definition in Z# lowers once for each target: each CO keeps what it lowered to by
+  target, and a CO that owns an LIR variable, as a parameter or the object a method runs
+  on, gives it to whatever lowers a function with it. A meta-compiler finds what the
+  definition around it is compiling from the compiler's contexts, as a method finds its
+  class's members; a `CapabilityContext` makes any object a context's capability.
+- The runtime counts how deep it is loading. What a load reaches while code is emitted,
+  as a class first used by that code, loads inside it, and only the outermost load
+  finishes, so nothing is completed while code is still being emitted.
 - In building code, `Get(node)` is the entity the node stands for. A definition that
   needs the node itself, as a type's description, casts the entity to what describes it,
   which is reflection.
@@ -1360,6 +1415,9 @@ Some syntax compiles to a call of a function the language is given, as in `zsv1`
 as `+` or `<`, and `import`. Each is a group so that more overloads can be added, and
 overloading chooses between them. `a + b` compiles to an ordinary call of the `+` group
 with both operands. `=`, `.`, `as` and `is` stay syntax, since they aren't calls.
+
+Equality binds looser than comparisons, `as` and `is`, as in C#: `a == b as T` is
+`a == (b as T)`, and `a < b == c` is `(a < b) == c`.
 
 A C# method marked `[Operator("+")]` is an overload of what `+` stands for, and
 `ILLoader.Operators` finds them in a type. For now the CLI adds those of `core:runtime`

@@ -14,17 +14,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         CompilerObject ITyped.Type => loader.Class(delegateType);
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
-        {
-            LIR.Expression bound = new LIR.Constant(loader.Handle(typeof(object)), null);
-
-            if (receiver is not null)
-                if (Core.Compiler.ModuleScope.IR.CompileExpression(receiver, target).When(out var compiled).Error(out var error))
-                    return Result<LIR.Expression>.Error(error);
-                else
-                    bound = compiled!;
-
-            return Result<LIR.Expression>.Ok(new LIR.Call(loader.Delegate(delegateType, method), [bound]));
-        }
+            => new BoundDelegate(loader, loader.Delegate(delegateType, method), receiver, loader.Class(delegateType)).CompileIRExpression(target);
 
         /// <summary>
         /// The delegate type a method is a value of when nothing asks for another: a

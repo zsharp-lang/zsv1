@@ -76,28 +76,36 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// </summary>
         private IResult? Converted(CompilerObject @object, CompilerObject type, bool implicitly)
         {
-            // A cast also goes down to a type that isn't a CLR type yet, as a class being
-            // loaded with the code, if that type goes to this one.
-            if (!implicitly && !IL.IsValueType && !type.Is<IILType>(out _)
-                && Core.Compiler.ModuleScope.TS.IsAssignableTo(this, type)
+            var to = type.Is<IILType>(out var known) ? known.GetILType() : null;
+
+            if (to == IL)
+                return null;
+
+            if (to is not null && Conversions.IsNumeric(IL) && Conversions.IsNumeric(to) && (!implicitly || Conversions.Widens(IL, to)))
+                return Result.Ok(new Call(loader.Convert(IL, to), [@object], () => type));
+
+            if (!implicitly && !IL.IsValueType && GoesDown(type, to)
                 && Core.Compiler.ModuleScope.IR.CompileType(type, loader.Runtime).Ok(out var lowered))
                 return Result.Ok(new Call(loader.Downcast(IL, lowered), [@object], () => type));
 
-            if (!type.Is<IILType>(out var known) || known.GetILType() is not { } to || to == IL)
+            if (to is null)
                 return null;
-
-            if (Conversions.IsNumeric(IL) && Conversions.IsNumeric(to) && (!implicitly || Conversions.Widens(IL, to)))
-                return Result.Ok(new Call(loader.Convert(IL, to), [@object], () => type));
-
-            // A cast also goes down, as in C#: to a type that derives from this one, or
-            // between an interface and a type that isn't sealed, which might implement it.
-            if (!implicitly && !IL.IsValueType && (to.IsAssignableTo(IL) || (to.IsInterface && !IL.IsSealed) || (IL.IsInterface && !to.IsSealed)))
-                return Result.Ok(new Call(loader.Downcast(IL, to), [@object], () => type));
 
             var defined = Conversions.Defined(IL, to, "op_Implicit") ?? (implicitly ? null : Conversions.Defined(IL, to, "op_Explicit"));
 
             return defined is null ? null : Core.Compiler.ModuleScope.CG.Call(new Method(loader, defined, null), [new(@object)]);
         }
+
+        /// <summary>
+        /// Whether a cast goes down from this type to another, as in C#: to a type that
+        /// derives from this one, or between an interface and a type that isn't sealed,
+        /// which might implement it. A type that isn't a CLR type, as a class being loaded
+        /// with the code, is one the cast goes down to if it goes to this type.
+        /// </summary>
+        private bool GoesDown(CompilerObject type, Type? to)
+            => to is null
+                ? Core.Compiler.ModuleScope.TS.IsAssignableTo(this, type)
+                : to.IsAssignableTo(IL) || (to.IsInterface && !IL.IsSealed) || (IL.IsInterface && !to.IsSealed);
 
         /// <summary>
         /// Whether a value of this type is of another type, as C# tells it with <c>is</c>.
@@ -106,14 +114,14 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// </summary>
         public IResult<MatchResult, Error> Match(CompilerObject value, CompilerObject pattern)
         {
-            if (!pattern.Is<IILType>(out var known) || known.GetILType() is not { } type)
-                return Result<MatchResult>.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a CLR type."));
+            if (IL.IsValueType)
+                return pattern.Is<IILType>(out var known) && known.GetILType() is { } type
+                    ? Result<MatchResult>.Ok(new MatchResult { Match = new Literal(type.IsAssignableFrom(IL), typeof(bool), loader) })
+                    : Result<MatchResult>.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a CLR type."));
 
-            CompilerObject match = IL.IsValueType
-                ? new Literal(type.IsAssignableFrom(IL), typeof(bool), loader)
-                : new Call(loader.IsOf(IL, type), [value], () => loader.Class(typeof(bool)));
-
-            return Result<MatchResult>.Ok(new MatchResult { Match = match });
+            return Core.Compiler.ModuleScope.IR.CompileType(pattern, loader.Runtime).Ok(out var lowered)
+                ? Result<MatchResult>.Ok(new MatchResult { Match = new Call(loader.IsOf(IL, lowered), [value], () => loader.Class(typeof(bool))) })
+                : Result<MatchResult>.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a type."));
         }
 
         /// <summary>
@@ -176,6 +184,29 @@ namespace ZSharp.Importer.ILLoader.Objects
             => [.. IL.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(property => property.GetIndexParameters().Length > 0)];
 
         /// <summary>
+        /// A generic type given types that aren't CLR types yet, as a class being loaded with
+        /// the code, as they are matched to its type parameters, or <see langword="null"/>
+        /// if they aren't all types.
+        /// </summary>
+        private Objects.Instantiation? Instantiated(Argument[] arguments)
+        {
+            if (!IL.IsGenericTypeDefinition)
+                return null;
+
+            var stream = new ArgumentStream(arguments);
+            var types = new List<CompilerObject>();
+
+            foreach (var parameter in IL.GetGenericArguments())
+                if ((stream.Pop(parameter.Name) ?? stream.Pop()) is { } argument
+                    && Core.Compiler.ModuleScope.IR.CompileType(argument, loader.Runtime).IsOk)
+                    types.Add(argument);
+                else
+                    return null;
+
+            return stream.HasArguments ? null : new Objects.Instantiation(loader, IL, [.. types]);
+        }
+
+        /// <summary>
         /// Giving a type values, as in <c>Int32[4]</c>, makes an array of that length, with
         /// a dimension for each value, as in <c>Int32[2, 3]</c>, through the constructor the
         /// CLR gives the array type, so the values are matched as a call's arguments are.
@@ -205,7 +236,9 @@ namespace ZSharp.Importer.ILLoader.Objects
                 return Result.Ok(loader.Class(IL.MakeArrayType()));
 
             if (loader.Types(arguments, IL.IsGenericTypeDefinition ? IL.GetGenericArguments() : []) is not { } types)
-                return NewArray(arguments);
+                return Instantiated(arguments) is { } instantiation
+                    ? Result.Ok(instantiation)
+                    : NewArray(arguments);
 
             if (!IL.IsGenericTypeDefinition)
                 return Result.Error(new UnsupportedError($"{IL.Name} is not generic."));

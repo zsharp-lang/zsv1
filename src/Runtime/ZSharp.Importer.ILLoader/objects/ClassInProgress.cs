@@ -68,7 +68,8 @@ namespace ZSharp.Importer.ILLoader.Objects
                     constructor.Second,
                     loader.CallParameters(constructor.First.Parameters, constructor.First.CustomMetadata),
                     null,
-                    () => this
+                    () => this,
+                    loader
                 ))),
                 arguments
             );
@@ -95,7 +96,8 @@ namespace ZSharp.Importer.ILLoader.Objects
                     method.Value,
                     loader.CallParameters(method.Key.Parameters, method.Key.CustomMetadata),
                     receiver,
-                    method.Key.ReturnType is { } returnType ? () => Scope.HIRLoader.LoadType(returnType).Unwrap() : null
+                    method.Key.ReturnType is { } returnType ? () => Scope.HIRLoader.LoadType(returnType).Unwrap() : null,
+                    loader
                 ))));
             }
 
@@ -136,19 +138,53 @@ namespace ZSharp.Importer.ILLoader.Objects
 
     /// <summary>
     /// A method or constructor of a class being loaded, optionally bound to the object it
-    /// is called on.
+    /// is called on. A method goes where a delegate is expected, as any CLR method does.
     /// </summary>
     internal sealed class Callable(
         string name,
         LIR.ICallable callable,
         List<HIR.Code.Parameter> parameters,
         CompilerObject? receiver,
-        Func<CompilerObject>? returnType
+        Func<CompilerObject>? returnType,
+        ILLoader loader
     )
         : CompilerObject
         , ICTCallable
         , ISpecific
+        , ICTImplicitCastTo
+        , ICTCastTo
     {
+        /// <summary>
+        /// A delegate of a type whose parameters go to the method's, and whose result is
+        /// where what the method returns goes.
+        /// </summary>
+        public IResult ImplicitCast(CompilerObject type)
+        {
+            if (callable is not ClassMethod method
+                || !type.Is<IILType>(out var known) || known.GetILType() is not { } delegateType
+                || !typeof(Delegate).IsAssignableFrom(delegateType) || delegateType.GetMethod("Invoke") is not { } invoke
+                || Arguments.Types(parameters) is not { } types || !Fits(types, invoke))
+                return Result.Error(new UnsupportedError($"{name} isn't a delegate of that type."));
+
+            return Result.Ok(new BoundDelegate(loader, loader.Delegate(delegateType, method), receiver, type));
+        }
+
+        public IResult Cast(CompilerObject type)
+            => ImplicitCast(type);
+
+        private bool Fits(CompilerObject[] types, System.Reflection.MethodInfo invoke)
+        {
+            var accepted = invoke.GetParameters();
+
+            if (types.Length != accepted.Length
+                || !types.Zip(accepted).All(pair => Scope.TS.IsAssignableTo(pair.First, loader.Class(pair.Second.ParameterType))))
+                return false;
+
+            return invoke.ReturnType == typeof(void)
+                ? returnType is null
+                : returnType is not null && Scope.TS.IsAssignableTo(loader.Class(invoke.ReturnType), returnType());
+        }
+
         public IResult Call(Argument[] arguments)
         {
             if (Arguments.Parameters(parameters) is not { } matching || Arguments.Match(matching, arguments) is not { } values)
@@ -159,5 +195,29 @@ namespace ZSharp.Importer.ILLoader.Objects
 
         public bool IsAsSpecificAs(CompilerObject other)
             => Arguments.Types(parameters) is { } types && ZSharp.Compiler.Parameters.AreAsSpecificAs(types, other);
+    }
+
+    /// <summary>
+    /// A delegate made of a method, bound to the object it was reached through, if any.
+    /// </summary>
+    internal sealed class BoundDelegate(ILLoader loader, LIR.FunctionHandle make, CompilerObject? receiver, CompilerObject type)
+        : CompilerObject
+        , ICompileIRExpression
+        , ITyped
+    {
+        CompilerObject ITyped.Type => type;
+
+        public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
+        {
+            LIR.Expression bound = new LIR.Constant(loader.Handle(typeof(object)), null);
+
+            if (receiver is not null)
+                if (Scope.IR.CompileExpression(receiver, target).When(out var compiled).Error(out var error))
+                    return Result<LIR.Expression>.Error(error);
+                else
+                    bound = compiled!;
+
+            return Result<LIR.Expression>.Ok(new LIR.Call(make, [bound]));
+        }
     }
 }

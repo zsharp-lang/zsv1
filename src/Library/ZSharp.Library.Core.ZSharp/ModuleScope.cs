@@ -16,6 +16,12 @@ namespace Core.ZSharp
         /// The meta-types definitions are compiled by, which Z# registers its own with and
         /// makes the default of a kind of definition.
         /// </summary>
+        /// <summary>
+        /// The language Z# is compiled with: its names, functions and definitions.
+        /// </summary>
+        [Alias("language")]
+        public static global::ZSharp.Lang.Language Language { get; set; } = null!;
+
         [Alias("metaTypes")]
         public static global::ZSharp.Lang.MetaTypes MetaTypes { get; set; } = null!;
 
