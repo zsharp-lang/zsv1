@@ -36,7 +36,7 @@ namespace ZSharp.Platform.Runtime
             return result;
         }
 
-        private const IL.BindingFlags Declared = IL.BindingFlags.Public | IL.BindingFlags.NonPublic
+        private const IL.BindingFlags DeclaredOnly = IL.BindingFlags.Public | IL.BindingFlags.NonPublic
             | IL.BindingFlags.Instance | IL.BindingFlags.Static | IL.BindingFlags.DeclaredOnly;
 
         /// <summary>
@@ -59,8 +59,8 @@ namespace ZSharp.Platform.Runtime
                 var parameters = method.Parameters.Select(ImportType).ToArray();
 
                 result = method.IsConstructor
-                    ? owner.GetConstructor(Declared, parameters)!
-                    : owner.GetMethod(method.Name, Declared, parameters)!;
+                    ? owner.GetConstructor(DeclaredOnly, parameters)!
+                    : owner.GetMethod(method.Name, DeclaredOnly, parameters)!;
             }
             else if (ContainsBuilder(owner))
                 result = OnInstance(Member(owner.GetGenericTypeDefinition(), method), owner);
@@ -78,8 +78,8 @@ namespace ZSharp.Platform.Runtime
 
         private static IL.MethodBase Member(Type type, ClrMethod method)
             => method.IsConstructor
-                ? type.GetConstructors(Declared).First(constructor => constructor.MetadataToken == method.Token)
-                : type.GetMethods(Declared).First(candidate => candidate.MetadataToken == method.Token);
+                ? type.GetConstructors(DeclaredOnly).First(constructor => constructor.MetadataToken == method.Token)
+                : type.GetMethods(DeclaredOnly).First(candidate => candidate.MetadataToken == method.Token);
 
         internal IL.FieldInfo ImportClrField(ClrField field)
         {
@@ -89,8 +89,8 @@ namespace ZSharp.Platform.Runtime
             var owner = ImportType(field.DeclaringType);
 
             var result = ContainsBuilder(owner)
-                ? Emit.TypeBuilder.GetField(owner, owner.GetGenericTypeDefinition().GetFields(Declared).First(candidate => candidate.MetadataToken == field.Token))
-                : owner.GetFields(Declared).First(candidate => candidate.MetadataToken == field.Token);
+                ? Emit.TypeBuilder.GetField(owner, owner.GetGenericTypeDefinition().GetFields(DeclaredOnly).First(candidate => candidate.MetadataToken == field.Token))
+                : owner.GetFields(DeclaredOnly).First(candidate => candidate.MetadataToken == field.Token);
 
             return clrFields[field] = result;
         }

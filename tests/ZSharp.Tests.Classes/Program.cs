@@ -4581,7 +4581,7 @@ Try("bitwise operators combine integers, and the flags of an enum as its integer
         Keep(2 | 4 & 4);
         """) is null && Probe.Kept is [7, 2, 6]);
 
-Try("the Cecil platform writes a module as an assembly, for a version of .NET, its Z# classes as classes", () =>
+Try("the Cecil platform writes a module as an assembly, for a version of .NET, its Z# and CLR classes as classes", () =>
 {
     if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget/packages/mono.cecil/0.11.6/lib/netstandard2.0/Mono.Cecil.dll")))
         return true;
@@ -4593,7 +4593,30 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         import { compile, emit } from "core:project";
         import { Int32, String } from "core:runtime";
         import { Interface as Interface286, static as static286, class as class286 } from "std:oop";
+        import { DotNet_Class as DotNet_Class286, DotNet_Interface as DotNet_Interface286, explicitThis as explicitThis286, virtual as virtual286, override as override286 } from "core:runtime";
         emit(compile("Twice286"));
+        """);
+    File.WriteAllText(Path.Combine(source, "clr.zs"), """
+        def Greeter286 of DotNet_Interface286 { fun greet(): String; }
+        def Animal286 of DotNet_Class286 {
+            let name: String;
+            @explicitThis286 new(this) { this.name = "animal"; }
+            @virtual286 @explicitThis286 fun sound(this): String { return "..."; }
+        }
+        def Dog286 of DotNet_Class286 : Animal286, Greeter286 {
+            @explicitThis286 new(this) { this.name = "dog"; }
+            @override286 @explicitThis286 fun sound(this): String { return "woof"; }
+            @explicitThis286 fun greet(this): String { return this.name + " says " + this.sound(); }
+        }
+        def Holder286[T] of DotNet_Class286 {
+            let held: T;
+            @explicitThis286 new(this, held: T) { this.held = held; }
+            @explicitThis286 fun with[U](this, other: U): U { return other; }
+        }
+        fun clr(): String {
+            let greeter: Greeter286 = Dog286();
+            return greeter.greet() + ", " + Holder286[String]("held").held + " " + Holder286[Int32](1).with[String]("with");
+        }
         """);
     File.WriteAllText(Path.Combine(source, "shapes.zs"), """
         def Shape286 of Interface286 {
@@ -4628,10 +4651,11 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         let target286 = Cecil286("Twice286", "net8.0");
         target286.add(lower286(Compiler286(discover286("{{source.Replace('\\', '/')}}")).compile()[0] as Module286, target286));
         target286.write("{{written}}");
-        import { twice as twice286, describe as describe286, square as square286 } from "{{written}}";
+        import { twice as twice286, describe as describe286, square as square286, clr as clr286 } from "{{written}}";
         Keep(twice286(21));
         Keep(describe286(square286(3)));
-        """) is null && Probe.Kept is [42, "a square of side 3 and area 9, 1 made"];
+        Keep(clr286());
+        """) is null && Probe.Kept is [42, "a square of side 3 and area 9, 1 made", "dog says woof, held with"];
 });
 
 Try("inside its module, a function's name is all of its overloads", () =>

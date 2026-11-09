@@ -2,7 +2,8 @@
 // they reach in other modules, and it is written once it has everything. A module is a
 // static class of its functions and globals, whose type initializer is the module's
 // initializer. A structure is a value type, and a polymorphic one, as a Z# class lowers
-// to, a class or an interface, whose methods are the functions that are its methods.
+// to, a class or an interface, whose methods are the functions that are its methods. A
+// CLR class defined in Z# is a class definition, written as the runtime loads one.
 
 // What emitting one function's body keeps: its locals and the loops it is in.
 def Body of DotNet_Class {
@@ -70,6 +71,12 @@ def Cecil of DotNet_Class : ClrPlatform {
     let standalone: TypeDefinition;
     let box: TypeDefinition;
     let unnamed: Int32;
+    let definitions: Dictionary[ClassDefinition, TypeDefinition];
+    let definedFields: Dictionary[ClassField, FieldDefinition];
+    let definedMethods: Dictionary[ClassMethod, MethodDefinition];
+    let definedConstructors: Dictionary[ClassConstructor, MethodDefinition];
+    let definedParameters: Dictionary[ClassGenericParameter, GenericParameter];
+    let prologues: Dictionary[LIRFunction, MethodReference];
 
     // An assembly for a version of .NET, as `net8.0`, or, given null, for the .NET that
     // runs it.
@@ -90,6 +97,12 @@ def Cecil of DotNet_Class : ClrPlatform {
         this.initializers = List[LIRModule]();
         this.names = Dictionary[String, Boolean]();
         this.unnamed = 0;
+        this.definitions = Dictionary[ClassDefinition, TypeDefinition]();
+        this.definedFields = Dictionary[ClassField, FieldDefinition]();
+        this.definedMethods = Dictionary[ClassMethod, MethodDefinition]();
+        this.definedConstructors = Dictionary[ClassConstructor, MethodDefinition]();
+        this.definedParameters = Dictionary[ClassGenericParameter, GenericParameter]();
+        this.prologues = Dictionary[LIRFunction, MethodReference]();
 
         this.opcodes = Dictionary[Int16, OpCode]();
         let table: Type = OpCodes;
@@ -248,6 +261,13 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     @explicitThis fun emitBody(this, method: MethodDefinition, function: LIRFunction) {
         let body = Body(method, function);
+
+        // A constructor's object is first made an object of its base.
+        if (this.prologues.ContainsKey(function)) {
+            body.il.Emit(OpCodes.Ldarg_0);
+            body.il.Emit(OpCodes.Call, this.prologues[function]);
+        }
+
         this.statement(body, function.Body.Block);
 
         // Reaching the end is valid only when there is nothing to return.
@@ -275,7 +295,11 @@ def Cecil of DotNet_Class : ClrPlatform {
         if (type is reference of ByRefType) return ByReferenceType(this.type(reference.Target));
         if (type is pointer of ClrPointerType) return PointerType(this.type(pointer.Target));
         if (type is instance of GenericInstance) {
-            let made = GenericInstanceType(this.type(instance.Definition));
+            // An instance is of the definition itself, not of what its own code calls it.
+            let definition: TypeReference = null;
+            if (instance.Definition is own of ClassDefinition) definition = this.classDefinition(own);
+            else definition = this.type(instance.Definition);
+            let made = GenericInstanceType(definition);
             let index = 0;
             while (index < instance.Arguments.Count) {
                 made.GenericArguments.Add(this.type(instance.Arguments[index]));
@@ -286,6 +310,11 @@ def Cecil of DotNet_Class : ClrPlatform {
         if (type is functionType of LIRFunctionType) return this.system("System.IntPtr");
         if (type is boxed of LIRReference) return this.boxOf(this.type(boxed.Target));
         if (type is structure of LIRStructure) return this.structure(structure);
+        if (type is defined of ClassDefinition) return this.selfOf(this.classDefinition(defined));
+        if (type is parameter of ClassGenericParameter) {
+            if (this.definedParameters.ContainsKey(parameter)) return this.definedParameters[parameter];
+            return fail("A type parameter of a class is only known inside its class.") as TypeReference;
+        }
         return fail("The Cecil platform can't write a type that is a " + type.GetType().Name + " yet.") as TypeReference;
     }
 
@@ -611,6 +640,199 @@ def Cecil of DotNet_Class : ClrPlatform {
         body.il.Emit(OpCodes.Ldloc, value);
     }
 
+    // ---- CLR classes defined in Z#
+
+    // A class as the runtime loads one: its type parameters, its base and interfaces, its
+    // fields, constructors that make an object of its base first, methods marked as what
+    // they are, and properties of its accessors.
+    @explicitThis fun classDefinition(this, definition: ClassDefinition): TypeDefinition {
+        if (this.definitions.ContainsKey(definition)) return this.definitions[definition];
+
+        let attributes = TypeAttributes.Public | TypeAttributes.Class;
+        if (definition.IsInterface) attributes = TypeAttributes.Public | TypeAttributes.Interface | TypeAttributes.Abstract;
+
+        let type = TypeDefinition("", this.unique(definition.Name, "Class"), attributes, null);
+        this.main.Types.Add(type);
+        this.definitions[definition] = type;
+
+        let index = 0;
+        while (index < definition.GenericParameters.Count) {
+            let parameter = GenericParameter(definition.GenericParameters[index].Name, type);
+            type.GenericParameters.Add(parameter);
+            this.definedParameters[definition.GenericParameters[index]] = parameter;
+            index = index + 1;
+        }
+
+        if (definition.IsInterface == false) {
+            if (definition.Base == null) type.BaseType = this.system("System.Object");
+            else type.BaseType = this.type(definition.Base);
+        }
+
+        index = 0;
+        while (index < definition.Interfaces.Count) {
+            type.Interfaces.Add(InterfaceImplementation(this.type(definition.Interfaces[index])));
+            index = index + 1;
+        }
+
+        index = 0;
+        while (index < definition.Fields.Count) {
+            let field = definition.Fields[index];
+            let declared = FieldDefinition(field.Name, FieldAttributes.Public, this.type(field.Type));
+            type.Fields.Add(declared);
+            this.definedFields[field] = declared;
+            index = index + 1;
+        }
+
+        index = 0;
+        while (index < definition.Constructors.Count) {
+            this.declareConstructor(definition, definition.Constructors[index], type);
+            index = index + 1;
+        }
+
+        index = 0;
+        while (index < definition.Methods.Count) {
+            this.declareClassMethod(definition, definition.Methods[index], type);
+            index = index + 1;
+        }
+
+        index = 0;
+        while (index < definition.Properties.Count) {
+            let property = definition.Properties[index];
+            let declared = PropertyDefinition(property.Name, PropertyAttributes.None, this.type(property.Type));
+            declared.HasThis = property.IsStatic == false;
+            if (property.Getter != null) declared.GetMethod = this.definedMethods[property.Getter];
+            if (property.Setter != null) declared.SetMethod = this.definedMethods[property.Setter];
+            type.Properties.Add(declared);
+            index = index + 1;
+        }
+
+        return type;
+    }
+
+    @explicitThis fun declareConstructor(this, definition: ClassDefinition, constructor: ClassConstructor, type: TypeDefinition) {
+        let attributes = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName;
+        let declared = MethodDefinition(".ctor", attributes, this.system("System.Void"));
+
+        let index = 0;
+        while (index < constructor.Signature.Parameters.Count) {
+            let parameter = constructor.Signature.Parameters[index];
+            declared.Parameters.Add(ParameterDefinition(parameter.Name, ParameterAttributes.None, this.type(parameter.Type)));
+            index = index + 1;
+        }
+
+        type.Methods.Add(declared);
+        this.definedConstructors[constructor] = declared;
+        this.functions[constructor.Function] = declared;
+        this.prologues[constructor.Function] = this.baseConstructor(definition);
+        this.pending.Add(constructor.Function);
+    }
+
+    // How a method is declared: a method that implements an interface method by its name
+    // is virtual and final, as C# makes it, so the CLR maps it to the interface's.
+    @explicitThis fun declareClassMethod(this, definition: ClassDefinition, method: ClassMethod, type: TypeDefinition) {
+        let attributes = MethodAttributes.Public | MethodAttributes.HideBySig;
+        if (method.IsStatic) attributes = attributes | MethodAttributes.Static;
+        else if (definition.IsInterface or method.IsAbstract) attributes = attributes | MethodAttributes.Abstract | MethodAttributes.Virtual | MethodAttributes.NewSlot;
+        else if (method.IsOverride) attributes = attributes | MethodAttributes.Virtual;
+        else if (method.IsVirtual) attributes = attributes | MethodAttributes.Virtual | MethodAttributes.NewSlot;
+        else if (definition.Interfaces.Count > 0) attributes = attributes | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final;
+
+        if (method.IsAbstract) {
+            if (definition.IsInterface == false) type.IsAbstract = true;
+        }
+
+        // A generic method's type parameters come first, as its signature uses them.
+        let declared = MethodDefinition(method.Name, attributes, this.system("System.Void"));
+        let index = 0;
+        while (index < method.GenericParameters.Count) {
+            let parameter = GenericParameter(method.GenericParameters[index].Name, declared);
+            declared.GenericParameters.Add(parameter);
+            this.definedParameters[method.GenericParameters[index]] = parameter;
+            index = index + 1;
+        }
+
+        declared.ReturnType = this.type(method.Signature.ReturnType);
+
+        index = 1;
+        if (method.IsStatic) index = 0;
+        while (index < method.Signature.Parameters.Count) {
+            let parameter = method.Signature.Parameters[index];
+            declared.Parameters.Add(ParameterDefinition(parameter.Name, ParameterAttributes.None, this.type(parameter.Type)));
+            index = index + 1;
+        }
+
+        type.Methods.Add(declared);
+        this.definedMethods[method] = declared;
+        this.functions[method.Function] = declared;
+        if (method.IsAbstract == false) {
+            if (definition.IsInterface == false) this.pending.Add(method.Function);
+        }
+    }
+
+    // The constructor of the base an object is made of first: its base's that takes
+    // nothing.
+    @explicitThis fun baseConstructor(this, definition: ClassDefinition): MethodReference {
+        if (definition.Base == null) return this.objectConstructor();
+
+        if (definition.Base is defined of ClassDefinition) {
+            this.classDefinition(defined);
+            let index = 0;
+            while (index < defined.Constructors.Count) {
+                if (defined.Constructors[index].Signature.Parameters.Count == 0) return this.classConstructorOf(defined.Constructors[index]);
+                index = index + 1;
+            }
+            return fail("The base of " + definition.Name + " has no constructor that takes nothing.") as MethodReference;
+        }
+
+        if (definition.Base is clr of ClrType) {
+            let flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            let found = this.references.system(clr).GetConstructor(flags, Type.EmptyTypes);
+            if (found == null) fail("The base of " + definition.Name + " has no constructor that takes nothing.");
+            return this.method(this.reflected.Method(found));
+        }
+
+        return fail("The Cecil platform can't make an object of the base of " + definition.Name + " yet.") as MethodReference;
+    }
+
+    // A generic class's own code refers to it as its instance over its own type
+    // parameters, as C# does.
+    @explicitThis fun selfOf(this, type: TypeDefinition): TypeReference {
+        if (type.GenericParameters.Count == 0) return type;
+        let made = GenericInstanceType(type);
+        let index = 0;
+        while (index < type.GenericParameters.Count) {
+            made.GenericArguments.Add(type.GenericParameters[index]);
+            index = index + 1;
+        }
+        return made;
+    }
+
+    @explicitThis fun ownerOfMember(this, owner: ClassDefinition): TypeReference {
+        if (owner == null) return fail("A member of a class isn't in a class.") as TypeReference;
+        return this.selfOf(this.classDefinition(owner));
+    }
+
+    @explicitThis fun classFieldOf(this, field: ClassField): FieldReference {
+        let owner = this.ownerOfMember(field.Owner);
+        let declared = this.definedFields[field];
+        if (owner is instance of GenericInstanceType) return FieldReference(declared.Name, declared.FieldType, owner);
+        return declared;
+    }
+
+    @explicitThis fun classMethodOf(this, method: ClassMethod): MethodReference {
+        let owner = this.ownerOfMember(method.Owner);
+        let declared = this.definedMethods[method];
+        if (owner is instance of GenericInstanceType) return this.onType(declared, owner);
+        return declared;
+    }
+
+    @explicitThis fun classConstructorOf(this, constructor: ClassConstructor): MethodReference {
+        let owner = this.ownerOfMember(constructor.Owner);
+        let declared = this.definedConstructors[constructor];
+        if (owner is instance of GenericInstanceType) return this.onType(declared, owner);
+        return declared;
+    }
+
     // ---- Statements
 
     @explicitThis fun statement(this, body: Body, statement: LIRStatement) {
@@ -880,23 +1102,82 @@ def Cecil of DotNet_Class : ClrPlatform {
             this.code(body, code);
             return;
         }
-        if (callable is member of InstanceMember) {
-            let onDefinition = member.Member as ClrMethod;
-            this.callClr(body, onDefinition, this.onType(this.references.method(onDefinition), this.type(member.Owner)));
+        if (callable is defined of ClassMethod) {
+            if (defined.IsStatic) body.il.Emit(OpCodes.Call, this.classMethodOf(defined));
+            else body.il.Emit(OpCodes.Callvirt, this.classMethodOf(defined));
             return;
+        }
+        if (callable is constructor of ClassConstructor) {
+            body.il.Emit(OpCodes.Newobj, this.classConstructorOf(constructor));
+            return;
+        }
+        if (callable is access of ClassFieldAccess) {
+            if (access.IsSet) body.il.Emit(OpCodes.Stfld, this.classFieldOf(access.Field));
+            else body.il.Emit(OpCodes.Ldfld, this.classFieldOf(access.Field));
+            return;
+        }
+        if (callable is member of InstanceMember) {
+            let owner = this.type(member.Owner);
+            if (member.Member is onDefinition of ClrMethod) {
+                this.callClr(body, onDefinition, this.onType(this.references.method(onDefinition), owner));
+                return;
+            }
+            if (member.Member is method of ClassMethod) {
+                this.classMethodOf(method);
+                let reference = this.onType(this.definedMethods[method], owner);
+                if (method.IsStatic) body.il.Emit(OpCodes.Call, reference);
+                else body.il.Emit(OpCodes.Callvirt, reference);
+                return;
+            }
+            if (member.Member is made of ClassConstructor) {
+                this.classConstructorOf(made);
+                body.il.Emit(OpCodes.Newobj, this.onType(this.definedConstructors[made], owner));
+                return;
+            }
+            if (member.Member is field of ClassFieldAccess) {
+                this.classFieldOf(field.Field);
+                let declared = this.definedFields[field.Field];
+                let reference = FieldReference(declared.Name, declared.FieldType, owner);
+                if (field.IsSet) body.il.Emit(OpCodes.Stfld, reference);
+                else body.il.Emit(OpCodes.Ldfld, reference);
+                return;
+            }
         }
         if (callable is instance of MethodInstance) {
-            let generic = instance.Method as ClrMethod;
-            let made = GenericInstanceMethod(this.method(generic));
-            let index = 0;
-            while (index < instance.Arguments.Count) {
-                made.GenericArguments.Add(this.type(instance.Arguments[index]));
-                index = index + 1;
+            if (instance.Method is generic of ClrMethod) {
+                this.callClr(body, generic, this.instantiated(this.method(generic), instance));
+                return;
             }
-            this.callClr(body, generic, made);
-            return;
+            let isStatic = false;
+            let element: MethodReference = null;
+            if (instance.Method is own of ClassMethod) {
+                element = this.classMethodOf(own);
+                isStatic = own.IsStatic;
+            }
+            if (instance.Method is onInstance of InstanceMember) {
+                if (onInstance.Member is inner of ClassMethod) {
+                    this.classMethodOf(inner);
+                    element = this.onType(this.definedMethods[inner], this.type(onInstance.Owner));
+                    isStatic = inner.IsStatic;
+                }
+            }
+            if (element != null) {
+                if (isStatic) body.il.Emit(OpCodes.Call, this.instantiated(element, instance));
+                else body.il.Emit(OpCodes.Callvirt, this.instantiated(element, instance));
+                return;
+            }
         }
         fail("The Cecil platform can't call a " + callable.GetType().Name + " yet.");
+    }
+
+    @explicitThis fun instantiated(this, element: MethodReference, instance: MethodInstance): MethodReference {
+        let made = GenericInstanceMethod(element);
+        let index = 0;
+        while (index < instance.Arguments.Count) {
+            made.GenericArguments.Add(this.type(instance.Arguments[index]));
+            index = index + 1;
+        }
+        return made;
     }
 
     // A constructor makes its object; a value type's own method is called directly, on
@@ -961,6 +1242,7 @@ def Cecil of DotNet_Class : ClrPlatform {
             else if (operand is field of ClrField) body.il.Emit(opcode, this.field(field));
             else if (operand is method of ClrMethod) body.il.Emit(opcode, this.method(method));
             else if (operand is function of LIRFunction) body.il.Emit(opcode, this.function(function));
+            else if (operand is defined of ClassMethod) body.il.Emit(opcode, this.classMethodOf(defined));
             else if (operand is type of LIRType) body.il.Emit(opcode, this.type(type));
             else fail("The Cecil platform can't write an instruction whose operand is a " + operand.GetType().Name + " yet.");
             index = index + 1;

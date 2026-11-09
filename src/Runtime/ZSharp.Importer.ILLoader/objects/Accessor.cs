@@ -19,18 +19,31 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         CompilerObject ITyped.Type => type();
 
+        private readonly Callee? getterOf, setterOf;
+
+        /// <summary>
+        /// A member of a definition, whose accessors are as each target lowers it, if it
+        /// has each.
+        /// </summary>
+        public Accessor(CompilerObject? receiver, Func<CompilerObject> type, Callee? getter, Callee? setter)
+            : this(receiver, type, (LIR.ICallable?)null, null)
+            => (getterOf, setterOf) = (getter, setter);
+
+        private Call? Read()
+            => getterOf is not null ? new Call(getterOf, [.. Receiver()], type) : getter is null ? null : new Call(getter, [.. Receiver()], type);
+
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
-            => getter is null
+            => Read() is not { } read
                 ? Result<LIR.Expression>.Error("This member can't be read.")
-                : new Call(getter, [.. Receiver()], type).CompileIRExpression(target);
+                : read.CompileIRExpression(target);
 
         public IResult Set(CompilerObject value)
         {
-            if (setter is null)
+            if (setter is null && setterOf is null)
                 return Result.Error("This member can't be written.");
 
             return Core.Compiler.ModuleScope.CG.ImplicitCast(value, type()).Ok(out var converted)
-                ? Result.Ok(new Call(setter, [.. Receiver(), converted], null))
+                ? Result.Ok(setterOf is not null ? new Call(setterOf, [.. Receiver(), converted], null) : new Call(setter!, [.. Receiver(), converted], null))
                 : Result.Error("The value doesn't match the type of this member.");
         }
 

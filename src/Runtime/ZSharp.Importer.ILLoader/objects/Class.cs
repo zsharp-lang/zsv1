@@ -93,9 +93,14 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (to is not null && Conversions.IsNumeric(IL) && Conversions.IsNumeric(to) && (!implicitly || Conversions.Widens(IL, to)))
                 return Result.Ok(new Call(loader.Convert(IL, to), [@object], () => type));
 
-            if (!implicitly && !IL.IsValueType && GoesDown(type, to)
-                && Core.Compiler.ModuleScope.IR.CompileType(type, loader.Runtime).Ok(out var lowered))
-                return Result.Ok(new Call(loader.Downcast(IL, lowered), [@object], () => type));
+            if (!implicitly && !IL.IsValueType && GoesDown(type, to) && type.Is<ICompileIRType>(out _))
+                return Result.Ok(new Call(
+                    target => Core.Compiler.ModuleScope.IR.CompileType(type, target).When(out var lowered).Error(out var error)
+                        ? Result<LIR.ICallable>.Error(error)
+                        : Result<LIR.ICallable>.Ok(loader.Downcast(IL, lowered!)),
+                    [@object],
+                    () => type
+                ));
 
             if (to is null)
                 return null;
@@ -130,8 +135,17 @@ namespace ZSharp.Importer.ILLoader.Objects
                     ? Result<MatchResult>.Ok(new MatchResult { Match = new Literal(type.IsAssignableFrom(IL), typeof(bool), loader) })
                     : Result<MatchResult>.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a CLR type."));
 
-            return Core.Compiler.ModuleScope.IR.CompileType(pattern, loader.Runtime).Ok(out var lowered)
-                ? Result<MatchResult>.Ok(new MatchResult { Match = new Call(loader.IsOf(IL, lowered), [value], () => loader.Class(typeof(bool))) })
+            return pattern.Is<ICompileIRType>(out _)
+                ? Result<MatchResult>.Ok(new MatchResult
+                {
+                    Match = new Call(
+                        target => Core.Compiler.ModuleScope.IR.CompileType(pattern, target).When(out var lowered).Error(out var error)
+                            ? Result<LIR.ICallable>.Error(error)
+                            : Result<LIR.ICallable>.Ok(loader.IsOf(IL, lowered!)),
+                        [value],
+                        () => loader.Class(typeof(bool))
+                    )
+                })
                 : Result<MatchResult>.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a type."));
         }
 
@@ -209,7 +223,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             foreach (var parameter in IL.GetGenericArguments())
                 if ((stream.Pop(parameter.Name) ?? stream.Pop()) is { } argument
-                    && Core.Compiler.ModuleScope.IR.CompileType(argument, loader.Runtime).IsOk)
+                    && argument.Is<ICompileIRType>(out _))
                     types.Add(argument);
                 else
                     return null;
@@ -312,10 +326,10 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// which delegates its signature fits.
         /// </summary>
         IResult ICTImplicitCastFrom.ImplicitCast(CompilerObject value)
-            => typeof(Delegate).IsAssignableFrom(IL) && IL != typeof(Delegate) && IL != typeof(MulticastDelegate)
+            => FunctionDelegate.Delegates(IL)
                 && value is not Method
                 && value.Is<ICompileIRReference<LIR.ICallable>>(out _)
-                ? Result.Ok(new FunctionDelegate(loader, IL, value))
+                ? Result.Ok(new FunctionDelegate(loader, this, IL, value))
                 : Result.Error(new UnsupportedError($"{IL.Name} has no conversion from that value."));
 
         /// <summary>

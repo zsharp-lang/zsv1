@@ -20,9 +20,8 @@ namespace ZSharp.Platform.Runtime
                 LIR.Structure structure when PolymorphicOf(structure) is not null => ImportType(ClassOf(structure)),
                 LIR.Structure structure => ImportStructure(structure),
                 // A generic class still being defined is its self instance to its own code.
-                ClassDefinition definition => classes.TryGetValue(definition, out var @class)
-                    ? @class is Emit.TypeBuilder && selves.TryGetValue(definition, out var self) ? self : @class
-                    : throw new InvalidOperationException($"Class {definition.Name} is not loaded."),
+                ClassDefinition definition => Realized(definition) is var @class
+                    && @class is Emit.TypeBuilder && selves.TryGetValue(definition, out var self) ? self : @class,
                 ClassGenericParameter parameter => genericParameters.TryGetValue(parameter, out var argument)
                     ? argument
                     : throw new InvalidOperationException($"Type parameter {parameter.Name} is not defined."),
@@ -82,9 +81,14 @@ namespace ZSharp.Platform.Runtime
                 ? Emit.TypeBuilder.GetConstructor(box, typeof(Box<>).GetConstructors()[0])
                 : box.GetConstructors()[0];
 
+        /// <summary>
+        /// Whether a type is one still being built, or an instance of one, or of anything
+        /// over one, whose members are found through the builder's.
+        /// </summary>
         private static bool ContainsBuilder(Type type)
             => type is Emit.TypeBuilder
-            || (type.IsGenericType && type.GetGenericArguments().Any(ContainsBuilder));
+            || (type.IsGenericType && !type.IsGenericTypeDefinition
+                && (type.GetGenericTypeDefinition() is Emit.TypeBuilder || type.GetGenericArguments().Any(ContainsBuilder)));
 
         private Type ImportStructure(LIR.Structure structure)
         {

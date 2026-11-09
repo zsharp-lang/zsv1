@@ -28,11 +28,15 @@ namespace ZSharp.LIR.CLR
         /// </summary>
         public List<ClassGenericParameter> GenericParameters { get; } = [];
 
-        public List<ClassField> Fields { get; } = [];
+        public ClassMembers<ClassField> Fields => fields ??= new(this);
 
-        public List<ClassConstructor> Constructors { get; } = [];
+        public ClassMembers<ClassConstructor> Constructors => constructors ??= new(this);
 
-        public List<ClassMethod> Methods { get; } = [];
+        public ClassMembers<ClassMethod> Methods => methods ??= new(this);
+
+        private ClassMembers<ClassField>? fields;
+        private ClassMembers<ClassConstructor>? constructors;
+        private ClassMembers<ClassMethod>? methods;
 
         public List<ClassProperty> Properties { get; } = [];
     }
@@ -64,7 +68,10 @@ namespace ZSharp.LIR.CLR
     }
 
     public sealed class ClassField(string name, LIR.Type type)
+        : ClassMember
     {
+        public ClassDefinition? Owner { get; set; }
+
         public string Name { get; set; } = name;
 
         public LIR.Type Type { get; set; } = type;
@@ -89,7 +96,10 @@ namespace ZSharp.LIR.CLR
     /// </summary>
     public sealed class ClassConstructor(LIR.Signature signature, LIR.Function function)
         : LIR.ICallable
+        , ClassMember
     {
+        public ClassDefinition? Owner { get; set; }
+
         public LIR.Signature Signature { get; } = signature;
 
         public LIR.Function Function { get; } = function;
@@ -100,7 +110,10 @@ namespace ZSharp.LIR.CLR
     /// </summary>
     public sealed class ClassMethod(string name, bool isStatic, LIR.Function function)
         : LIR.ICallable
+        , ClassMember
     {
+        public ClassDefinition? Owner { get; set; }
+
         public string Name { get; set; } = name;
 
         public bool IsStatic { get; } = isStatic;
@@ -125,5 +138,34 @@ namespace ZSharp.LIR.CLR
         public LIR.Function Function { get; } = function;
 
         public LIR.Signature Signature => Function.Signature;
+    }
+
+    /// <summary>
+    /// A field, constructor or method of a class, which knows the class it is in, so a
+    /// platform reaching a member first reaches its class.
+    /// </summary>
+    public interface ClassMember
+    {
+        public ClassDefinition? Owner { get; set; }
+    }
+
+    /// <summary>
+    /// The members of a class of one kind. Adding one makes the class its owner.
+    /// </summary>
+    public sealed class ClassMembers<T>(ClassDefinition owner)
+        : System.Collections.ObjectModel.Collection<T>
+        where T : ClassMember
+    {
+        protected override void InsertItem(int index, T item)
+        {
+            item.Owner = owner;
+            base.InsertItem(index, item);
+        }
+
+        protected override void SetItem(int index, T item)
+        {
+            item.Owner = owner;
+            base.SetItem(index, item);
+        }
     }
 }

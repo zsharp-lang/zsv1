@@ -274,7 +274,10 @@ to the registered loader.
 ## CLR target
 
 `ZSharp.Platform.Runtime` loads LIR into the running process through
-`Reflection.Emit`, and depends only on LIR. Loading declares everything first and
+`Reflection.Emit`, and depends only on LIR and the CLR handles. It realizes what it
+reaches as it reaches it: a class definition with the classes its declarations reach,
+created once the outermost class load is complete, as a class reached by another's code
+may be what that class derives from. Loading declares everything first and
 emits bodies afterwards, so modules can refer to each other, including in cycles.
 Reaching a member of another module loads that member too.
 
@@ -323,29 +326,46 @@ runtime what its handles mean:
 
 ### IL loader
 
-`ZSharp.Importer.ILLoader` describes CLR entities as `Package.DotNet` HIR. The HIR
-holds no reflection, so the link back to the CLR stays in the loader: it pre-creates
-LIR handles, maps them on the runtime, and remembers which node they belong to. Its
-registered HIR -> MIR loaders use that map to return COs primed with those handles.
+`ZSharp.Importer.ILLoader` is the CLR's meta-type, for what exists and for what is
+defined in Z#. It describes existing CLR entities as `Package.DotNet` HIR, which holds
+no reflection, so the link back to the CLR stays in the loader, which remembers which
+node each entity is. Its registered HIR -> MIR loaders give COs of them, which lower to
+the CLR handles of **CLR handles**, data every CLR platform realizes.
 
 IL metadata is already fully resolved, unlike HIR, which has nodes such as `NamedMember`
 and `Call`. So the IL loader never calls any CO API.
 
 COs can do anything, so laziness lives there. Reflecting a whole type's members up
 front would reach much of the BCL, so a class CO discovers members when asked.
-Because a CO holds only LIR, it does not depend on a particular runtime. Another
-.NET platform primes the same kind of CO its own way.
+Nothing a CO gives depends on a platform: what it lowers to is lowered for the target it
+is asked for, as a cast down, a type test or `null` lowers its type then.
 
-LIR has no classes. Loading a `Package.DotNet.Class` that is being defined emits a
-specialised LIR node, `ClassDefinition`, owned by `ZSharp.Platform.Runtime` and not
-by the LIR core, which that platform handles specially. No other target ever handles
-CLR class definitions, so a CO reports an error for one. Once loaded it is an existing
-type, reached like any other.
+A class, interface or module defined in Z# with the CLR's meta-type is a definition, as
+a Z# definition is, not a type of the running process:
 
-Classes that reach each other load together. Their members are declared before any
-code is lowered, so code can refer to any of them, through a `ClassInProgress` CO since
-there is no type to reflect on yet. A method is an instance method unless it is marked
-static, as the members of a class describe.
+- Its CO, `DefinedClass` or `DefinedModule`, stays its CO. Its members are what its HIR
+  says, and a call of one finds the member as the target it is lowered for has it.
+- It is lowered once for each CLR platform it is used on, to that platform's LIR: a
+  `ClassDefinition` of `ZSharp.LIR.CLR`, or an LIR module whose initializer gives its
+  globals their values. A platform that isn't a CLR one can't lower it.
+- Lowering one for a target declares it, its members and the types of their signatures,
+  and lowers its code once whatever it reached is declared too, so definitions that
+  reach each other, through their signatures or their code, are lowered together, by the
+  first one asked for. A module lowers its classes with it.
+- A generic class given its arguments is an instance of it: its members are typed with
+  its arguments in place of its type parameters, and called on the instance of the class
+  each target has, as LIR `InstanceMember`s. A generic method given its arguments is a
+  `MethodInstance` of the method each target has.
+- A method is a value, a delegate of its own signature, when every type in it is the
+  CLR's.
+- A document runs in the runtime, so a definition a document defines is lowered for the
+  runtime and loaded into it as it is defined, which is when what it accepts is checked.
+  Anything else is lowered for each platform as code using it is.
+- A local function's captures are the running process's cells, so a local function is
+  lowered for the runtime only.
+
+A method is an instance method unless it is marked static, as the members of a class
+describe.
 
 Each target decides how it handles a value: a `.NET` field, local or parameter converts
 it with `CG.ImplicitCast`, and another target might want an exact type or something else
@@ -1987,6 +2007,11 @@ into the running platform, and gives it LIR:
   from the files of the running process's, and the types their signatures name are the
   version's. Given null, it targets the .NET that runs it, and finds each handle in the
   running process, by its token.
+- **CLR classes defined in Z#** are written as the runtime loads them: a class or an
+  interface, its base and interfaces, its fields, constructors that make an object of
+  its base first, methods marked as what they are, properties, and type parameters. A
+  generic class's own code refers to its members through its instance over its own type
+  parameters, as C# does.
 - **What it writes.** A module is a static class of its functions and globals, whose
   type initializer is the module's initializer, marked as a module scope, so importing
   the assembly gives the module: `import { describe } from "Shop.dll"`. A function with
@@ -2000,11 +2025,7 @@ into the running platform, and gives it LIR:
 - **Live values** can't be written: a constant that is an object only the running
   process has fails, as does a type the running process made, which has no file.
 - **Not yet:**
-  - CLR class definitions, `def X of DotNet_Class`. The IL loader loads one into the
-    running process as it is defined, and code refers to it there after, so it can't be
-    written: the IL loader would have to lower a definition for each target, as a Z#
-    definition does. The IL loader also lowers the type of a cast down for the running
-    process as the cast is compiled.
+  - A CLR method with a local function, whose captures only the running process has.
   - A Z# class's constructor is a function of its module, not a CLR constructor, and a
     class method is a method of its metaclass, so code outside Z# makes an object by
     calling the module's function. A capability for constructors could make them the

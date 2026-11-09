@@ -15,8 +15,8 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (type.Is<IILType>(out var known) && known.GetILType() is { IsValueType: true } value && Nullable.GetUnderlyingType(value) is null)
                 return Result.Error(new UnsupportedError("null only goes to a type that can be null."));
 
-            return Core.Compiler.ModuleScope.IR.CompileType(type, loader.Runtime).Ok(out var lowered)
-                ? Result.Ok(new NullOf(lowered, type))
+            return type.Is<ICompileIRType>(out _)
+                ? Result.Ok(new NullOf(type))
                 : Result.Error(new UnsupportedError("null only goes to a type that can be null."));
         }
 
@@ -27,7 +27,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     /// <summary>
     /// The null of a type.
     /// </summary>
-    internal sealed class NullOf(LIR.Type lowered, CompilerObject type)
+    internal sealed class NullOf(CompilerObject type)
         : CompilerObject
         , ICompileIRExpression
         , ITyped
@@ -35,6 +35,8 @@ namespace ZSharp.Importer.ILLoader.Objects
         CompilerObject ITyped.Type => type;
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
-            => Result<LIR.Expression>.Ok(new LIR.Constant(lowered, null));
+            => Core.Compiler.ModuleScope.IR.CompileType(type, target).When(out var lowered).Error(out var error)
+                ? Result<LIR.Expression>.Error(error)
+                : Result<LIR.Expression>.Ok(new LIR.Constant(lowered!, null));
     }
 }

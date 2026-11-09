@@ -3,6 +3,12 @@ using System.Diagnostics.CodeAnalysis;
 namespace ZSharp.Importer.ILLoader.Objects
 {
     /// <summary>
+    /// What a call calls, as each target has it: a definition is lowered for each target,
+    /// so what calls one of its members finds the member as that target's lowering has it.
+    /// </summary>
+    internal delegate IResult<LIR.ICallable, Error> Callee(object? target);
+
+    /// <summary>
     /// A call of a CLR function. A variable passed by reference that has no address of its
     /// own goes through a temporary, which the call assigns back once it returns.
     /// </summary>
@@ -22,10 +28,27 @@ namespace ZSharp.Importer.ILLoader.Objects
         bool CompilerObject.Is<T>([NotNullWhen(true)] out T? result) where T : class
             => (result = returnType is null && typeof(T) == typeof(ITyped) ? null : this as T) is not null;
 
+        private readonly Callee? callee;
+
+        /// <summary>
+        /// A call of what each target has, as a member of a definition.
+        /// </summary>
+        public Call(Callee callee, CompilerObject[] arguments, Func<CompilerObject>? returnType)
+            : this((LIR.ICallable)null!, arguments, returnType)
+            => this.callee = callee;
+
         private sealed record Lowered(LIR.Call Call, LIR.Block Before, List<LIR.Statement> After);
 
         private IResult<Lowered, Error> Lower(object? target)
         {
+            var called = callable;
+
+            if (callee is not null)
+                if (callee(target).When(out var found).Error(out var missing))
+                    return Result<Lowered>.Error(missing);
+                else
+                    called = found!;
+
             var values = new List<LIR.Expression>();
             var before = new LIR.Block();
             var after = new List<LIR.Statement>();
@@ -65,7 +88,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 values.Add(value!);
             }
 
-            return Result<Lowered>.Ok(new(new LIR.Call(callable, values), before, after));
+            return Result<Lowered>.Ok(new(new LIR.Call(called, values), before, after));
         }
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)

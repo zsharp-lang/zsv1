@@ -19,6 +19,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , IRTSetIndex
         , IAssignableTo
         , ICTImplicitCastTo
+        , ICTImplicitCastFrom
         , ICTCastTo
     {
         /// <summary>
@@ -35,47 +36,70 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? described
                 : Result.Error(new UnsupportedError($"{definition.Name} can't be cast to that type."));
 
-        private LIR.GenericInstance? lowered;
+        private readonly Dictionary<object, LIR.GenericInstance> lowered = [];
+
+        private static readonly object NoTarget = new();
 
         public Type Definition => definition;
 
+        /// <summary>
+        /// Where an instance of a generic delegate type is expected, what can be referred to
+        /// as a function is a delegate of it.
+        /// </summary>
+        IResult ICTImplicitCastFrom.ImplicitCast(CompilerObject value)
+            => FunctionDelegate.Delegates(definition) && value.Is<ICompileIRReference<LIR.ICallable>>(out _)
+                ? Result.Ok(new FunctionDelegate(loader, this, definition, value))
+                : Result.Error(new UnsupportedError($"{definition.Name} has no conversion from that value."));
+
         public IReadOnlyList<CompilerObject> Arguments => arguments;
 
-        public LIR.GenericInstance Lowered()
-            => lowered ??= new LIR.GenericInstance(
-                loader.Handle(definition),
-                arguments.Select(argument => Lower(argument))
-            );
+        /// <summary>
+        /// The instance as a target lowers it: its arguments are types that may be lowered
+        /// differently for each target, as a class defined in Z# is.
+        /// </summary>
+        public LIR.GenericInstance Lowered(object? target)
+        {
+            if (!lowered.TryGetValue(target ?? NoTarget, out var known))
+                lowered[target ?? NoTarget] = known = new LIR.GenericInstance(
+                    loader.Handle(definition),
+                    arguments.Select(argument => Lower(argument, target))
+                );
 
-        private LIR.Type Lower(CompilerObject type)
-            => Core.Compiler.ModuleScope.IR.CompileType(type, loader.Runtime).Unwrap();
+            return known;
+        }
+
+        private static LIR.Type Lower(CompilerObject type, object? target)
+            => Core.Compiler.ModuleScope.IR.CompileType(type, target).Unwrap();
 
         /// <summary>
         /// A method or constructor of the definition, called on this instance: it takes and
         /// gives the types this instance has, and an instance method takes the object first.
         /// </summary>
-        public LIR.InstanceMember Lowered(MethodBase member)
+        public LIR.InstanceMember Lowered(MethodBase member, object? target)
         {
             var signature = new LIR.Signature();
 
             if (member is MethodInfo { IsStatic: false })
-                signature.Parameters.Add(new(Lowered()) { Name = "this" });
+                signature.Parameters.Add(new(Lowered(target)) { Name = "this" });
 
             foreach (var parameter in member.GetParameters())
-                signature.Parameters.Add(new(Lower(TypeOf(parameter.ParameterType))) { Name = parameter.Name });
+                signature.Parameters.Add(new(Lower(TypeOf(parameter.ParameterType), target)) { Name = parameter.Name });
 
             signature.ReturnType = member switch
             {
-                ConstructorInfo => Lowered(),
-                MethodInfo { ReturnType: var type } when type != typeof(void) => Lower(TypeOf(type)),
+                ConstructorInfo => Lowered(target),
+                MethodInfo { ReturnType: var type } when type != typeof(void) => Lower(TypeOf(type), target),
                 _ => null
             };
 
-            return new LIR.InstanceMember(Lowered(), loader.Handle(member), signature);
+            return new LIR.InstanceMember(Lowered(target), loader.Handle(member), signature);
         }
 
+        public Callee Member(MethodBase member)
+            => target => Result<LIR.ICallable>.Ok(Lowered(member, target));
+
         public IResult<LIR.Type, Error> CompileIRType(object? target)
-            => Result<LIR.Type>.Ok(Lowered());
+            => Result<LIR.Type>.Ok(Lowered(target));
 
         /// <summary>
         /// A type as a member of this instantiation has it: a type parameter of the
@@ -125,8 +149,8 @@ namespace ZSharp.Importer.ILLoader.Objects
                 return Result.Ok(new Accessor(
                     receiver,
                     () => TypeOf(property.PropertyType),
-                    property.GetMethod is { IsPublic: true } getter ? Lowered(getter) : null,
-                    property.SetMethod is { IsPublic: true } setter ? Lowered(setter) : null
+                    property.GetMethod is { IsPublic: true } getter ? Member(getter) : null,
+                    property.SetMethod is { IsPublic: true } setter ? Member(setter) : null
                 ));
 
             return Result.Error(new UnsupportedError($"{definition.Name} has no member named {member}."));
@@ -183,7 +207,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             };
 
             return Result.Ok(new Call(
-                owner.Lowered(member),
+                owner.Member(member),
                 [.. (receiver is null ? [] : new[] { receiver }), .. values],
                 returnType
             ));

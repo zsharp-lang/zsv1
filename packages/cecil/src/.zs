@@ -21,7 +21,8 @@ import {
     FieldDefinition, FieldReference, FieldAttributes, ParameterDefinition, ParameterAttributes,
     GenericInstanceType, GenericInstanceMethod, GenericParameter, GenericParameterType,
     ArrayType, ByReferenceType, PointerType, RequiredModifierType, OptionalModifierType,
-    CallSite, OpCode, OpCodes, ILProcessor, Instruction, VariableDefinition, InterfaceImplementation, CustomAttribute
+    CallSite, OpCode, OpCodes, ILProcessor, Instruction, VariableDefinition, InterfaceImplementation, CustomAttribute,
+    PropertyDefinition, PropertyAttributes
 } from "pkg:Mono.Cecil@0.11.6";
 
 import {
@@ -36,7 +37,8 @@ import {
 } from "std:zsharp/lir";
 import {
     ClrEntity, ClrType, ClrArrayType, ClrPointerType, ClrGenericParameter, ClrMethod, ClrField, ClrCode, ClrLocal,
-    ByRefType, AddressOf, CastDown, TypeTest, MethodOf, Polymorphic, Reflected
+    ByRefType, AddressOf, CastDown, TypeTest, MethodOf, Polymorphic, Reflected,
+    ClassDefinition, ClassMethod, ClassConstructor, ClassField, ClassFieldAccess, ClassGenericParameter, ClassProperty
 } from "std:zsharp/lir/clr";
 import { Error, Result, IResult } from "std:zsharp/common";
 

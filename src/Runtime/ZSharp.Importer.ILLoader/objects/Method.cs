@@ -54,7 +54,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (arguments.Length != generic.GetGenericArguments().Length || arguments.Any(argument => argument.Name is not null))
                 return null;
 
-            if (arguments.Any(argument => Core.Compiler.ModuleScope.IR.CompileType(argument.Object, loader.Runtime).Error(out _)))
+            if (arguments.Any(argument => !argument.Object.Is<ICompileIRType>(out _)))
                 return null;
 
             return new MethodInstantiation(loader, generic, [.. arguments.Select(argument => argument.Object)], receiver);
@@ -149,12 +149,9 @@ namespace ZSharp.Importer.ILLoader.Objects
             => [.. method.GetParameters().Select(loader.ParameterType)];
 
         /// <summary>
-        /// The parameters as they match arguments. A method defined from HIR has them as
-        /// written, so its default values are code. Any other has those of its metadata.
+        /// The parameters as they match arguments, as its metadata has them.
         /// </summary>
         private CompilerObject[] Matching()
-            => loader.DefinedParameters(method) is { } defined && Arguments.Parameters(defined) is { } written
-                ? written
-                : [.. method.GetParameters().Select(parameter => new ClrParameter(parameter, loader))];
+            => [.. method.GetParameters().Select(parameter => new ClrParameter(parameter, loader))];
     }
 }

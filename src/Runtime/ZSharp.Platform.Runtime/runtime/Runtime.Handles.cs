@@ -71,6 +71,10 @@ namespace ZSharp.Platform.Runtime
                 case ClassFieldAccess access:
                     il.Emit(access.IsSet ? Emit.OpCodes.Stfld : Emit.OpCodes.Ldfld, Referenced(access.Field));
                     break;
+                // A field of a class defined here, on an instance of the class.
+                case LIR.InstanceMember { Member: ClassFieldAccess access } member:
+                    il.Emit(access.IsSet ? Emit.OpCodes.Stfld : Emit.OpCodes.Ldfld, FieldOnInstance(access.Field, ImportType(member.Owner)));
+                    break;
                 case LIR.InstanceMember member:
                     EmitCall(il, OnInstance(member));
                     break;
@@ -109,6 +113,9 @@ namespace ZSharp.Platform.Runtime
             {
                 ClrMethod method => ImportClrMethod(method),
                 LIR.FunctionHandle handle when methodHandles.TryGetValue(handle, out var method) => method,
+                ClassMethod method => Declared(method),
+                ClassConstructor constructor => Declared(constructor),
+                LIR.InstanceMember member => OnInstance(member),
                 _ => null
             };
 

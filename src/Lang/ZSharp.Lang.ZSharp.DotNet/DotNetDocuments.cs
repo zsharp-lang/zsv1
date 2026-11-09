@@ -113,7 +113,27 @@ namespace ZSharp.Lang.DotNet
             return new HIR.Code.BlockExpression { Statements = [new HIR.Code.Declare(described)], Result = new HIR.Code.Get(described) };
         }
 
-        public Error? Load(HIR.Instance definition) => load(definition);
+        /// <summary>
+        /// A definition a document defines is the runtime's, as the document runs in it, so
+        /// it is lowered for the runtime and loaded into it as it is defined.
+        /// </summary>
+        public Error? Load(HIR.Instance definition)
+        {
+            if ((load(definition) ?? il.Define(definition, runtime)) is { } error)
+                return error;
+
+            switch (il.Lowered(definition, runtime))
+            {
+                case LIR.CLR.ClassDefinition @class:
+                    runtime.Load([@class]);
+                    break;
+                case LIR.Module module:
+                    runtime.Load(module);
+                    break;
+            }
+
+            return null;
+        }
 
         private DocumentFrame FrameOf(Package.ZSharp.Document document)
         {

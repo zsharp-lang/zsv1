@@ -15,17 +15,20 @@ namespace ZSharp.Importer.ILLoader.Objects
         public CompilerObject TypeOf(Type type)
             => loader.Substitute(type, parameter => parameter.DeclaringMethod is not null ? arguments[parameter.GenericParameterPosition] : null);
 
-        private LIR.Type Lower(CompilerObject type)
-            => Core.Compiler.ModuleScope.IR.CompileType(type, loader.Runtime).Unwrap();
+        private static LIR.Type Lower(CompilerObject type, object? target)
+            => Core.Compiler.ModuleScope.IR.CompileType(type, target).Unwrap();
 
         /// <summary>
         /// The LIR type of a parameter: a reference to a variable of its type, if it takes
-        /// one.
+        /// one, as the target lowers its type.
         /// </summary>
-        public LIR.Type ParameterType(Type type)
-            => type.IsByRef ? new LIR.CLR.ByRefType(Lower(TypeOf(type.GetElementType()!))) : Lower(TypeOf(type));
+        public LIR.Type ParameterType(Type type, object? target)
+            => type.IsByRef ? new LIR.CLR.ByRefType(Lower(TypeOf(type.GetElementType()!), target)) : Lower(TypeOf(type), target);
 
-        private LIR.MethodInstance Lowered()
+        /// <summary>
+        /// The instance of the method, as a target lowers its type arguments.
+        /// </summary>
+        private IResult<LIR.ICallable, Error> Lowered(object? target)
         {
             var signature = new LIR.Signature();
 
@@ -33,12 +36,12 @@ namespace ZSharp.Importer.ILLoader.Objects
                 signature.Parameters.Add(new(loader.Handle(definition.DeclaringType!)) { Name = "this" });
 
             foreach (var parameter in definition.GetParameters())
-                signature.Parameters.Add(new(ParameterType(parameter.ParameterType)) { Name = parameter.Name });
+                signature.Parameters.Add(new(ParameterType(parameter.ParameterType, target)) { Name = parameter.Name });
 
             if (definition.ReturnType != typeof(void))
-                signature.ReturnType = Lower(TypeOf(definition.ReturnType));
+                signature.ReturnType = Lower(TypeOf(definition.ReturnType), target);
 
-            return new LIR.MethodInstance(loader.Handle(definition), arguments.Select(Lower), signature);
+            return Result<LIR.ICallable>.Ok(new LIR.MethodInstance(loader.Handle(definition), arguments.Select(argument => Lower(argument, target)), signature));
         }
 
         public IResult Call(Argument[] given)
@@ -50,7 +53,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             Func<CompilerObject>? returnType = definition.ReturnType == typeof(void) ? null : () => TypeOf(definition.ReturnType);
 
-            return Result.Ok(new Call(Lowered(), [.. (receiver is null ? [] : new[] { receiver }), .. values], returnType));
+            return Result.Ok(new Call(Lowered, [.. (receiver is null ? [] : new[] { receiver }), .. values], returnType));
         }
     }
 
@@ -78,7 +81,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 && Core.Compiler.ModuleScope.TS.TypeOf(variable).Ok(out var type)
                 && Core.Compiler.ModuleScope.TS.IsAssignableTo(type!, element)
                 && Core.Compiler.ModuleScope.TS.IsAssignableTo(element, type!)
-                ? Result.Ok(new VariableAddress(variable, element, owner.ParameterType(parameter.ParameterType)))
+                ? Result.Ok(new VariableAddress(variable, element, target => owner.ParameterType(parameter.ParameterType, target)))
                 : Result.Error(new UnsupportedError($"Only a variable of the type can be passed to parameter {parameter.Name}."));
         }
     }
@@ -86,7 +89,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     /// <summary>
     /// A variable passed by its address, as a reference parameter takes it.
     /// </summary>
-    internal sealed class VariableAddress(CompilerObject variable, CompilerObject type, LIR.Type addressType)
+    internal sealed class VariableAddress(CompilerObject variable, CompilerObject type, Func<object?, LIR.Type> addressType)
         : CompilerObject
         , ICompileIRExpression
         , ITyped
@@ -102,7 +105,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 return Result<LIR.Expression>.Error(error);
 
             return LIR.CLR.AddressOf.Has(compiled!)
-                ? Result<LIR.Expression>.Ok(new LIR.CLR.AddressOf(compiled!, addressType))
+                ? Result<LIR.Expression>.Ok(new LIR.CLR.AddressOf(compiled!, addressType(target)))
                 : Result<LIR.Expression>.Error("This variable has no address, so it can't be passed by reference here.");
         }
     }

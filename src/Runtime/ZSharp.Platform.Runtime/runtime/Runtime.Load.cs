@@ -70,12 +70,110 @@ namespace ZSharp.Platform.Runtime
         }
 
         /// <summary>
+        /// The type a class definition is, realized the first time it is reached, with the
+        /// classes its declarations reach, so none of them reaches another while its members
+        /// are being declared. A class reached by code is loaded inside the load of that
+        /// code, whose classes are declared by then.
+        /// </summary>
+        private Type Realized(ClassDefinition definition)
+        {
+            if (!classes.TryGetValue(definition, out var known))
+            {
+                var batch = new List<ClassDefinition>();
+
+                Reach(definition, batch);
+                Loading(() => LoadClasses(batch));
+                known = classes[definition];
+            }
+
+            return known;
+        }
+
+        private bool Realized(ClassMember member)
+        {
+            if (member.Owner is { } owner)
+                Realized(owner);
+
+            return true;
+        }
+
+        private void Reach(ClassDefinition definition, List<ClassDefinition> batch)
+        {
+            if (classes.ContainsKey(definition) || batch.Contains(definition))
+                return;
+
+            batch.Add(definition);
+
+            Reach(definition.Base, batch);
+
+            foreach (var @interface in definition.Interfaces)
+                Reach(@interface, batch);
+
+            foreach (var field in definition.Fields)
+                Reach(field.Type, batch);
+
+            foreach (var property in definition.Properties)
+                Reach(property.Type, batch);
+
+            foreach (var signature in definition.Constructors.Select(constructor => constructor.Signature).Concat(definition.Methods.Select(method => method.Signature)))
+            {
+                Reach(signature.ReturnType, batch);
+
+                foreach (var parameter in signature.Parameters)
+                    Reach(parameter.Type, batch);
+            }
+        }
+
+        private void Reach(LIR.Type? type, List<ClassDefinition> batch)
+        {
+            switch (type)
+            {
+                case ClassDefinition definition: Reach(definition, batch); break;
+                case LIR.GenericInstance instance:
+                    Reach(instance.Definition, batch);
+                    foreach (var argument in instance.Arguments)
+                        Reach(argument, batch);
+                    break;
+                case ByRefType reference: Reach(reference.Target, batch); break;
+                case ClrArrayType array: Reach(array.Element, batch); break;
+                case ClrPointerType pointer: Reach(pointer.Target, batch); break;
+                case LIR.Reference reference: Reach(reference.Target, batch); break;
+            }
+        }
+
+        /// <summary>
         /// Loads classes that may refer to each other and to themselves.
         /// </summary>
         public Type[] Load(IReadOnlyList<ClassDefinition> definitions)
-            => Loading(() => LoadClasses(definitions));
+            => Loading(() => definitions.Select(Realized).ToArray());
 
         private Type[] LoadClasses(IReadOnlyList<ClassDefinition> definitions)
+        {
+            classLoading++;
+
+            try
+            {
+                return DefineClasses(definitions);
+            }
+            finally
+            {
+                if (--classLoading == 0)
+                    CreateClasses();
+            }
+        }
+
+        /// <summary>
+        /// How many class loads are running, one inside another's code.
+        /// </summary>
+        private int classLoading;
+
+        private void CreateClasses()
+        {
+            foreach (var definition in uncreated.ToList())
+                CreateClass(definition);
+        }
+
+        private Type[] DefineClasses(IReadOnlyList<ClassDefinition> definitions)
         {
             var builders = new Dictionary<ClassDefinition, Emit.TypeBuilder>();
 
@@ -120,8 +218,10 @@ namespace ZSharp.Platform.Runtime
                     new CodeEmitter(this, classMethods[method].GetILGenerator(), method.Function).EmitBody();
             }
 
+            // A class is created once the outermost class load is complete, as a class whose
+            // code reached it may still be building what it derives from.
             foreach (var definition in builders.Keys)
-                CreateClass(definition, builders);
+                uncreated.Add(definition);
 
             return [.. definitions.Select(definition => classes[definition])];
         }
@@ -234,25 +334,52 @@ namespace ZSharp.Platform.Runtime
         /// the class has, which any code can refer to, a standalone function's too.
         /// </summary>
         internal IL.FieldInfo Referenced(ClassField field)
-            => owners.TryGetValue(field, out var owner) && selves.TryGetValue(owner, out var self)
+            => Realized(field) && owners.TryGetValue(field, out var owner) && selves.TryGetValue(owner, out var self)
                 ? Emit.TypeBuilder.GetField(self, classFields[field])
                 : IsCreated(field)
                 ? CreatedField(classFields[field])
                 : classFields[field];
 
         internal IL.MethodInfo Referenced(ClassMethod method)
-            => owners.TryGetValue(method, out var owner) && selves.TryGetValue(owner, out var self)
+            => Realized(method) && owners.TryGetValue(method, out var owner) && selves.TryGetValue(owner, out var self)
                 ? Emit.TypeBuilder.GetMethod(self, classMethods[method])
                 : IsCreated(method)
                 ? (IL.MethodInfo)Created(classMethods[method])
                 : classMethods[method];
 
         internal IL.ConstructorInfo Referenced(ClassConstructor constructor)
-            => owners.TryGetValue(constructor, out var owner) && selves.TryGetValue(owner, out var self)
+            => Realized(constructor) && owners.TryGetValue(constructor, out var owner) && selves.TryGetValue(owner, out var self)
                 ? Emit.TypeBuilder.GetConstructor(self, classConstructors[constructor])
                 : IsCreated(constructor)
                 ? (IL.ConstructorInfo)Created(classConstructors[constructor])
                 : classConstructors[constructor];
+
+        /// <summary>
+        /// A member as its class declares it, rather than as the class's own code refers to
+        /// it, which a member of an instance of the class is found from.
+        /// </summary>
+        internal IL.MethodInfo Declared(ClassMethod method)
+            => Realized(method) && IsCreated(method) ? (IL.MethodInfo)Created(classMethods[method]) : classMethods[method];
+
+        internal IL.ConstructorInfo Declared(ClassConstructor constructor)
+            => Realized(constructor) && IsCreated(constructor) ? (IL.ConstructorInfo)Created(classConstructors[constructor]) : classConstructors[constructor];
+
+        /// <summary>
+        /// A field of a class defined here, on an instance of the class.
+        /// </summary>
+        internal IL.FieldInfo FieldOnInstance(ClassField field, Type instance)
+        {
+            Realized(field);
+
+            var declared = IsCreated(field) ? CreatedField(classFields[field]) : classFields[field];
+
+            // A field of a constructed type has its definition's token.
+            return ContainsBuilder(instance)
+                ? Emit.TypeBuilder.GetField(instance, declared)
+                : instance
+                    .GetFields(IL.BindingFlags.Public | IL.BindingFlags.NonPublic | IL.BindingFlags.Instance | IL.BindingFlags.Static | IL.BindingFlags.DeclaredOnly)
+                    .First(candidate => candidate.MetadataToken == declared.MetadataToken);
+        }
 
         private bool IsCreated(object member)
             => owners.TryGetValue(member, out var owner) && classes.TryGetValue(owner, out var type) && type is not Emit.TypeBuilder;
@@ -279,19 +406,24 @@ namespace ZSharp.Platform.Runtime
         /// <summary>
         /// The CLR needs a base class to exist before the classes deriving from it.
         /// </summary>
-        private void CreateClass(ClassDefinition definition, Dictionary<ClassDefinition, Emit.TypeBuilder> builders)
+        private void CreateClass(ClassDefinition definition)
         {
-            if (classes[definition] is not Emit.TypeBuilder builder || !builders.ContainsKey(definition))
+            if (classes[definition] is not Emit.TypeBuilder builder || !uncreated.Remove(definition))
                 return;
 
             if (definition.Base is ClassDefinition @base)
-                CreateClass(@base, builders);
+                CreateClass(@base);
 
             foreach (var @interface in definition.Interfaces.OfType<ClassDefinition>())
-                CreateClass(@interface, builders);
+                CreateClass(@interface);
 
             classes[definition] = builder.CreateType();
         }
+
+        /// <summary>
+        /// The classes declared and emitted, but not created yet.
+        /// </summary>
+        private readonly HashSet<ClassDefinition> uncreated = [];
 
         /// <summary>
         /// The method a class method became, once its class is loaded.
@@ -430,6 +562,9 @@ namespace ZSharp.Platform.Runtime
         private void Complete()
         {
             EmitInitializers();
+
+            if (classLoading == 0)
+                CreateClasses();
 
             var completed = new HashSet<LIR.Structure>();
 

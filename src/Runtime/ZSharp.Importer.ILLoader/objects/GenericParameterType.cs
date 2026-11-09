@@ -8,10 +8,11 @@ namespace ZSharp.Importer.ILLoader.Objects
     }
 
     /// <summary>
-    /// A type parameter of a generic class being loaded. A value of it only goes where the
-    /// same parameter is expected.
+    /// A type parameter of a generic class or method defined in Z#, as its definition is
+    /// lowered for each target. A value of it only goes where the same parameter is
+    /// expected.
     /// </summary>
-    internal sealed class GenericParameterType(Package.DotNet.GenericParameter node, ClassGenericParameter lowered)
+    internal sealed class GenericParameterType(Package.DotNet.GenericParameter node, Func<object?, IResult<LIR.Type, Error>> lowered)
         : CompilerObject
         , ICompileIRType
         , IAssignableTo
@@ -20,7 +21,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         public Package.DotNet.GenericParameter Node { get; } = node;
 
         public IResult<LIR.Type, Error> CompileIRType(object? target)
-            => Result<LIR.Type>.Ok(lowered);
+            => lowered(target);
 
         public bool IsAssignableTo(CompilerObject target)
             => target.Is<IGenericParameter>(out var other) && other.Node == Node;

@@ -17,7 +17,6 @@ namespace ZSharp.Importer.ILLoader
         /// realizes.
         /// </summary>
         private readonly LIR.CLR.Reflected reflected = new();
-        private readonly Dictionary<Package.DotNet.Class, Objects.ClassInProgress> inProgress = [];
 
         /// <summary>
         /// An interface is defined through a class-shaped view of it, which the class
@@ -49,11 +48,6 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<MethodInfo, Package.DotNet.Method> methods = [];
         private readonly Dictionary<Package.DotNet.Method, MethodInfo> methodInfos = [];
 
-        /// <summary>
-        /// The parameters of each method and constructor defined from HIR, as written, with
-        /// default values that are code.
-        /// </summary>
-        private readonly Dictionary<MethodBase, List<HIR.Code.Parameter>> definedParameters = [];
         private readonly Dictionary<ConstructorInfo, Package.DotNet.Constructor> constructors = [];
         private readonly Dictionary<Package.DotNet.Constructor, ConstructorInfo> constructorInfos = [];
         private readonly Dictionary<Type, LIR.CLR.ClrCode> boxes = [];
@@ -299,11 +293,6 @@ namespace ZSharp.Importer.ILLoader
         public IResult LoadParameter(HIR.Code.Parameter parameter)
             => LoadVariable(parameter);
 
-        /// <summary>
-        /// The parameters a method was defined with from HIR, if it was.
-        /// </summary>
-        internal List<HIR.Code.Parameter>? DefinedParameters(MethodBase method)
-            => definedParameters.TryGetValue(method, out var parameters) ? parameters : null;
 
         /// <summary>
         /// The operators CLR types define, by the syntax each stands for, so an operator in
@@ -564,45 +553,9 @@ namespace ZSharp.Importer.ILLoader
             };
 
         private IResult LoadModule(Package.DotNet.Module node)
-        {
-            if (moduleInfos.TryGetValue(node, out var module))
-                return Result.Ok(new Objects.Module(this, module));
-
-            // A module is defined once: its variables are its own, however often it is reached.
-            if (definedModules.TryGetValue(node, out var known))
-                return Result.Ok(known);
-
-            if (node.Properties.Count > 0)
-                return Result.Error($"Module {node.Name} has properties, which can't be defined yet.");
-
-            if (node.Definitions.FirstOrDefault(definition => definition is not (Package.DotNet.Class or Package.DotNet.Interface)) is { } other)
-                return Result.Error($"Module {node.Name} has a {other.GetType().Name}, which can't be defined yet.");
-
-            // The module's own members are declared and lowered along with its classes, so
-            // each can use the other. Its code can name the module itself, which is known
-            // before any of it is lowered.
-            var members = new LIR.Module(node.Name.Length > 0 ? node.Name : null);
-            var defined = new Objects.DefinedModule(this, node);
-            definedModules[node] = defined;
-
-            if ((Define(
-                node.Definitions.Select(definition => definition as Package.DotNet.Class ?? View((Package.DotNet.Interface)definition)),
-                () => DeclareMembers(node, members),
-                () => LowerMembers(node, members)
-            ) ?? LoadMembers(node, members)) is { } error)
-            {
-                definedModules.Remove(node);
-                return Result.Error(error);
-            }
-
-            return Result.Ok(defined);
-        }
-
-        /// <summary>
-        /// Gets a class that was defined, as a type that now exists.
-        /// </summary>
-        internal Objects.Class Class(Package.DotNet.Class node)
-            => Class(nodeTypes[node]);
+            => moduleInfos.TryGetValue(node, out var module)
+                ? Result.Ok(new Objects.Module(this, module))
+                : DefineModule(node);
 
         private Package.DotNet.TypeReference Describe(Type type)
         {
@@ -785,7 +738,10 @@ namespace ZSharp.Importer.ILLoader
                 return Instantiate(instance);
 
             if (node is Package.DotNet.Interface @interface)
-                return Define(View(@interface));
+                return Defined(View(@interface));
+
+            if (node is Package.DotNet.GenericParameter given && Substituted(given) is { } argument)
+                return Result.Ok(argument);
 
             if (node is Package.DotNet.GenericParameter parameter)
                 return typeParameters.TryGetValue(parameter, out var known)
@@ -793,259 +749,8 @@ namespace ZSharp.Importer.ILLoader
                     : Result.Error($"Type parameter {parameter.Name} can only be used inside its definition.");
 
             return node is Package.DotNet.Class definition
-                ? Define(definition)
+                ? Defined(definition)
                 : Result.Error(new UnsupportedError($"{node.GetType().Name} can't be defined yet."));
-        }
-
-        /// <summary>
-        /// Loads a class being defined into the runtime. It is then an existing type,
-        /// so from here on it is reached like any other.
-        /// </summary>
-        private IResult Define(Package.DotNet.Class node)
-        {
-            if (inProgress.TryGetValue(node, out var loading))
-                return Result.Ok(loading);
-
-            if (batch is not null)
-                return Join(node) is { } failed
-                    ? Result.Error(failed)
-                    : Result.Ok(inProgress[node]);
-
-            return Define([node]) is { } error
-                ? Result.Error(error)
-                : Result.Ok(Class(nodeTypes[node]));
-        }
-
-        /// <summary>
-        /// The classes being loaded together, and whether their code is being lowered.
-        /// </summary>
-        private List<Package.DotNet.Class>? batch;
-        private bool lowering;
-
-        /// <summary>
-        /// A class that code being lowered reaches, while classes are loaded, is loaded with
-        /// them, as code can refer to a class that refers back to it. It is declared now if
-        /// they already are, and lowered with them.
-        /// </summary>
-        private Error? Join(Package.DotNet.Class root)
-        {
-            var added = new List<Package.DotNet.Class>();
-
-            Reach(root, added);
-
-            foreach (var node in added)
-                if (Check(node) is { } error)
-                    return error;
-
-            Begin(added);
-            batch!.AddRange(added);
-
-            if (lowering)
-                foreach (var node in added)
-                    if (Declare(inProgress[node]) is { } error)
-                        return error;
-
-            return null;
-        }
-
-        /// <summary>
-        /// A class's definition, and its type parameters, which exist before its members are
-        /// declared, as they use them.
-        /// </summary>
-        private void Begin(List<Package.DotNet.Class> nodes)
-        {
-            foreach (var node in nodes)
-            {
-                var definition = new LIR.CLR.ClassDefinition(node.Name);
-
-                foreach (var parameter in node.GenericParameters)
-                {
-                    var lowered = new LIR.CLR.ClassGenericParameter(parameter.Name);
-
-                    definition.GenericParameters.Add(lowered);
-                    typeParameters[parameter] = new(parameter, lowered);
-                }
-
-                inProgress[node] = new(this, node, definition);
-            }
-        }
-
-        /// <summary>
-        /// Loads classes together with those they reach, as they can refer to each other.
-        /// What their code reaches while it is lowered joins them.
-        /// </summary>
-        /// <param name="declare">Declares more that the classes' code can reach, once they are declared.</param>
-        /// <param name="lower">Lowers the code of what was declared, once the classes' code is lowered.</param>
-        private Error? Define(IEnumerable<Package.DotNet.Class> roots, Func<Error?>? declare = null, Func<Error?>? lower = null)
-        {
-            var nodes = new List<Package.DotNet.Class>();
-
-            foreach (var root in roots)
-                Reach(root, nodes);
-
-            foreach (var node in nodes)
-                if (Check(node) is { } error)
-                    return error;
-
-            Begin(nodes);
-
-            var (outerBatch, outerLowering) = (batch, lowering);
-            (batch, lowering) = (nodes, false);
-
-            try
-            {
-                for (var index = 0; index < nodes.Count; index++)
-                    if (Declare(inProgress[nodes[index]]) is { } error)
-                        return error;
-
-                if (declare?.Invoke() is { } undeclared)
-                    return undeclared;
-
-                lowering = true;
-
-                for (var index = 0; index < nodes.Count; index++)
-                    if (Lower(inProgress[nodes[index]]) is { } error)
-                        return error;
-
-                if (lower?.Invoke() is { } unlowered)
-                    return unlowered;
-
-                var loaded = runtime.Load([.. nodes.Select(node => inProgress[node].Definition)]);
-
-                foreach (var (node, type) in nodes.Zip(loaded))
-                {
-                    nodeTypes[node] = type;
-                    typeNodes[type] = node;
-
-                    if (viewed.TryGetValue(node, out var @interface))
-                    {
-                        nodeTypes[@interface] = type;
-                        typeNodes[type] = @interface;
-                    }
-
-                    var @class = inProgress[node];
-
-                    foreach (var (method, declared) in @class.Methods)
-                        definedParameters[runtime.Defined(declared)] = CallParameters(method.Parameters, method.CustomMetadata);
-
-                    foreach (var (constructor, declared) in @class.Constructors.Zip(@class.Definition.Constructors))
-                        definedParameters[runtime.Defined(declared)] = CallParameters(constructor.Parameters, constructor.CustomMetadata);
-                }
-
-                return null;
-            }
-            finally
-            {
-                (batch, lowering) = (outerBatch, outerLowering);
-
-                foreach (var node in nodes)
-                    inProgress.Remove(node);
-            }
-        }
-
-        /// <summary>
-        /// Declares the members of a class, so that all the code can refer to them.
-        /// </summary>
-        private Error? Declare(Objects.ClassInProgress @class)
-        {
-            var (node, definition) = (@class.Node, @class.Definition);
-
-            if (node.Base is not null)
-                if (CompileType(node.Base).When(out var @base).Error(out var error))
-                    return error;
-                else
-                    definition.Base = @base;
-
-            definition.IsInterface = viewed.ContainsKey(node);
-
-            foreach (var @interface in node.Interfaces)
-                if (CompileType(@interface).When(out var implemented).Error(out var error))
-                    return error;
-                else
-                    definition.Interfaces.Add(implemented!);
-
-            foreach (var field in node.Fields)
-                if (CompileType(field.Type).When(out var type).Error(out var error))
-                    return error;
-                else
-                    definition.Fields.Add(new(field.Name, type!));
-
-            foreach (var constructor in @class.Constructors)
-            {
-                var creation = new LIR.Signature { ReturnType = definition };
-                var code = new LIR.Signature();
-
-                if (This(constructor.This, @class, constructor.Parameters, constructor.CustomMetadata, code) is { } error)
-                    return error;
-
-                if (Parameters(CallParameters(constructor.Parameters, constructor.CustomMetadata), code) is { } invalid)
-                    return invalid;
-
-                creation.Parameters.AddRange(code.Parameters.Skip(1));
-
-                definition.Constructors.Add(new(creation, new(code) { Body = new() }));
-            }
-
-            foreach (var method in node.Methods)
-            {
-                var signature = new LIR.Signature();
-                var methodParameters = new List<LIR.CLR.ClassGenericParameter>();
-
-                foreach (var parameter in method.GenericParameters)
-                {
-                    var lowered = new LIR.CLR.ClassGenericParameter(parameter.Name);
-
-                    methodParameters.Add(lowered);
-                    typeParameters[parameter] = new(parameter, lowered);
-                }
-
-                if (method.IsStatic && ExplicitThis(method.CustomMetadata))
-                    return new ErrorMessage($"Method {method.Name} is static, so it has no this.");
-
-                if (!method.IsStatic && This(method.This, @class, method.Parameters, method.CustomMetadata, signature) is { } invalid)
-                    return invalid;
-
-                if (Parameters(CallParameters(method.Parameters, method.CustomMetadata), signature) is { } error)
-                    return error;
-
-                if (method.ReturnType is not null)
-                    if (CompileType(method.ReturnType).When(out var type).Error(out error))
-                        return error;
-                    else
-                        signature.ReturnType = type;
-
-                var declared = new LIR.CLR.ClassMethod(
-                    method.Name,
-                    method.IsStatic,
-                    new(signature) { Name = method.Name, Body = new() }
-                )
-                {
-                    IsVirtual = method.IsVirtual,
-                    IsAbstract = method.IsAbstract || definition.IsInterface,
-                    IsOverride = method.IsOverride
-                };
-
-                declared.GenericParameters.AddRange(methodParameters);
-
-                definition.Methods.Add(declared);
-                @class.Methods[method] = declared;
-            }
-
-            // A property is the methods of its accessors: a getter that takes nothing and
-            // gives its value, and a setter that takes its value and gives nothing.
-            foreach (var property in node.Properties)
-                if (Property(node, property) is { } invalid)
-                    return invalid;
-                else if (CompileType(property.Type!).When(out var type).Error(out var error))
-                    return error;
-                else
-                    definition.Properties.Add(new(property.Name, type!, property.IsStatic)
-                    {
-                        Getter = property.Getter is { } getter ? @class.Methods[getter] : null,
-                        Setter = property.Setter is { } setter ? @class.Methods[setter] : null,
-                    });
-
-            return null;
         }
 
         /// <summary>
@@ -1068,136 +773,16 @@ namespace ZSharp.Importer.ILLoader
             => ExplicitThis(metadata) ? [.. parameters.Skip(1)] : parameters;
 
         /// <summary>
-        /// Maps <c>this</c> to the object the code runs on. An explicit this parameter is
-        /// pre-mapped to the same variable rather than given one of its own.
-        /// </summary>
-        private Error? This(
-            Package.DotNet.This @this,
-            Objects.ClassInProgress @class,
-            List<HIR.Code.Parameter> parameters,
-            List<Package.DotNet.CustomMetadata> metadata,
-            LIR.Signature signature
-        )
-        {
-            var receiver = new LIR.Parameter(@class.Definition) { Name = "this" };
-            var variable = new Objects.Variable(receiver, () => @class);
-
-            signature.Parameters.Add(receiver);
-            variables[@this] = variable;
-
-            if (!ExplicitThis(metadata))
-                return null;
-
-            if (parameters.Count == 0)
-                return new ErrorMessage("An explicit this needs a parameter to be it.");
-
-            variables[parameters[0]] = variable;
-
-            return null;
-        }
-
-        private Error? Parameters(List<HIR.Code.Parameter> parameters, LIR.Signature signature)
-        {
-            foreach (var parameter in parameters)
-            {
-                if (parameter.Type is null)
-                    return new ErrorMessage($"Parameter {parameter.Name} needs a type.");
-
-                if (CompileType(parameter.Type).When(out var type).Error(out var error))
-                    return error;
-
-                var compiled = new LIR.Parameter(type!) { Name = parameter.Name };
-                var variable = new Objects.Variable(
-                    compiled,
-                    () => Core.Compiler.ModuleScope.HIRLoader.LoadType(parameter.Type!).Unwrap()
-                );
-
-                signature.Parameters.Add(compiled);
-
-                // A parameter that takes a reference is, to its code, a variable of what
-                // the reference refers to.
-                variables[parameter] = parameter.Type is Package.DotNet.RefType reference
-                    && Core.Compiler.ModuleScope.HIRLoader.LoadType(reference).Ok(out var loaded) && loaded is Objects.RefType referenced
-                        ? new Objects.Referenced(this, variable, referenced.Element)
-                        : variable;
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Lowers the code of a class. Everything it can reach has been declared by now.
-        /// </summary>
-        private Error? Lower(Objects.ClassInProgress @class)
-        {
-            var (node, definition) = (@class.Node, @class.Definition);
-
-            foreach (var (constructor, declared) in @class.Constructors.Zip(definition.Constructors))
-            {
-                foreach (var field in node.Fields)
-                    if (field.DefaultValue is not null && Initialize(field, @class, constructor, declared) is { } error)
-                        return error;
-
-                if (constructor.Body is { } body && Lower(body, declared.Function, null, constructor.Parameters) is { } invalid)
-                    return invalid;
-            }
-
-            foreach (var (method, declared) in @class.Methods)
-                if (declared.IsAbstract)
-                    continue;
-                else if (method.Body is null)
-                    return new ErrorMessage($"Method {method.Name} has no body.");
-                else if (Lower(method.Body, declared.Function, method.ReturnType, method.Parameters) is { } error)
-                    return error;
-
-            return null;
-        }
-
-        private Error? Initialize(
-            Package.DotNet.Field field,
-            Objects.ClassInProgress @class,
-            Package.DotNet.Constructor constructor,
-            LIR.CLR.ClassConstructor declared
-        )
-        {
-            if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadExpression(field.DefaultValue!).When(out var value).Error(out var error))
-                return error;
-
-            if (Core.Compiler.ModuleScope.HIRLoader.LoadInstance(constructor.This).When(out var @this).Error(out error))
-                return error;
-
-            if (@class.Member(@this!, field.Name).When(out var target).Error(out error))
-                return error;
-
-            if (Core.Compiler.ModuleScope.CG.Set(target!, value!).When(out var set).Error(out error))
-                return error;
-
-            if (Core.Compiler.ModuleScope.IR.CompileStatement(set!, runtime).When(out var statement).Error(out error))
-                return error;
-
-            declared.Function.Body!.Block.Statements.Add(statement!);
-
-            return null;
-        }
-
-        /// <summary>
         /// Lowers code into a function on the CLR: it checks that the code returns what the
         /// function returns, and a return converts its value to that. The function's
         /// parameters are the lowerer's, so its code reaches them as the lowerer loads them.
         /// </summary>
-        public Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned)
-        {
-            function.Body ??= new LIR.Code();
-
-            return Lower(body, function, returned, []);
-        }
-
-        private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned, List<HIR.Code.Parameter> parameters)
+        private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned, List<HIR.Code.Parameter> parameters, object? target)
         {
             if (Returns.Check(body.Block, returned is not null) is { } invalid)
                 return invalid;
 
-            if (Cells(parameters, function) is { } failed)
+            if (Cells(parameters, function, target) is { } failed)
                 return failed;
 
             var outer = CodeLoaders.Returns;
@@ -1215,7 +800,7 @@ namespace ZSharp.Importer.ILLoader
                 if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadStatement(body.Block).When(out var loaded).Error(out var error))
                     return error;
 
-                if (Core.Compiler.ModuleScope.IR.CompileStatement(loaded!, runtime).When(out var statement).Error(out error))
+                if (Core.Compiler.ModuleScope.IR.CompileStatement(loaded!, target).When(out var statement).Error(out error))
                     return error;
 
                 function.Body!.Block.Statements.Add(statement!);
@@ -1260,11 +845,16 @@ namespace ZSharp.Importer.ILLoader
                 cells[capture] = new Objects.Cell(parameter, type!);
             }
 
-            if (Parameters(node.Parameters, signature) is { } invalid)
+            // A local function's captures are the running process's cells, so it runs there.
+            var capturing = signature.Parameters.Count;
+
+            if (Signature(node.Parameters, signature, runtime) is { } invalid)
                 return Result<LIR.Function>.Error(invalid);
 
+            Bind(null, null, node.Parameters, [], [.. signature.Parameters.Skip(capturing)]);
+
             if (node.ReturnType is not null)
-                if (CompileType(node.ReturnType).When(out var type).Error(out var error))
+                if (CompileType(node.ReturnType, runtime).When(out var type).Error(out var error))
                     return Result<LIR.Function>.Error(error);
                 else
                     signature.ReturnType = type;
@@ -1279,7 +869,7 @@ namespace ZSharp.Importer.ILLoader
 
             try
             {
-                if (Lower(node.Body, function, node.ReturnType, node.Parameters) is { } error)
+                if (Lower(node.Body, function, node.ReturnType, node.Parameters, runtime) is { } error)
                 {
                     localFunctions.Remove(node);
                     return Result<LIR.Function>.Error(error);
@@ -1298,7 +888,7 @@ namespace ZSharp.Importer.ILLoader
         /// the code starts, and the code uses the cell from then on, so it and the
         /// functions that capture it share it.
         /// </summary>
-        private Error? Cells(List<HIR.Code.Parameter> parameters, LIR.Function function)
+        private Error? Cells(List<HIR.Code.Parameter> parameters, LIR.Function function, object? target)
         {
             foreach (var parameter in parameters.Where(parameter => parameter.IsCaptured))
             {
@@ -1307,7 +897,7 @@ namespace ZSharp.Importer.ILLoader
 
                 var type = ((ITyped)variable).Type;
 
-                if (Core.Compiler.ModuleScope.IR.CompileType(type, runtime).When(out var compiled).Error(out var error))
+                if (Core.Compiler.ModuleScope.IR.CompileType(type, target).When(out var compiled).Error(out var error))
                     return error;
 
                 var cell = new LIR.Local(new LIR.Reference(compiled!)) { Name = parameter.Name };
@@ -1318,25 +908,6 @@ namespace ZSharp.Importer.ILLoader
             }
 
             return null;
-        }
-
-        private void Reach(Package.DotNet.Class node, List<Package.DotNet.Class> nodes)
-        {
-            if (nodeTypes.ContainsKey(node) || inProgress.ContainsKey(node) || nodes.Contains(node))
-                return;
-
-            nodes.Add(node);
-
-            if (node.Base is Package.DotNet.Class @base)
-                Reach(@base, nodes);
-
-            // An interface that already exists, as one of the CLR's, isn't defined again.
-            foreach (var @interface in node.Interfaces.OfType<Package.DotNet.Interface>().Where(@interface => !nodeTypes.ContainsKey(@interface)))
-                Reach(View(@interface), nodes);
-
-            foreach (var field in node.Fields)
-                if (field.Type is Package.DotNet.Class type)
-                    Reach(type, nodes);
         }
 
         private Error? Check(Package.DotNet.Class node)
@@ -1359,10 +930,6 @@ namespace ZSharp.Importer.ILLoader
             return null;
         }
 
-        private IResult<LIR.Type, Error> CompileType(HIR.Type type)
-            => Core.Compiler.ModuleScope.HIRLoader.LoadType(type).When(out var loaded).Error(out var error)
-                ? Result<LIR.Type>.Error(error)
-                : Core.Compiler.ModuleScope.IR.CompileType(loaded!, runtime);
 
         private IResult LoadMethod(Package.DotNet.Method node)
             => methodInfos.TryGetValue(node, out var method)
