@@ -23,7 +23,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// one.
         /// </summary>
         public LIR.Type ParameterType(Type type)
-            => type.IsByRef ? new Platform.Runtime.ByRefType(Lower(TypeOf(type.GetElementType()!))) : Lower(TypeOf(type));
+            => type.IsByRef ? new LIR.CLR.ByRefType(Lower(TypeOf(type.GetElementType()!))) : Lower(TypeOf(type));
 
         private LIR.MethodInstance Lowered()
         {
@@ -101,8 +101,8 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (Core.Compiler.ModuleScope.IR.CompileExpression(variable, target).When(out var compiled).Error(out var error))
                 return Result<LIR.Expression>.Error(error);
 
-            return Platform.Runtime.AddressOf.Has(compiled!)
-                ? Result<LIR.Expression>.Ok(new Platform.Runtime.AddressOf(compiled!, addressType))
+            return LIR.CLR.AddressOf.Has(compiled!)
+                ? Result<LIR.Expression>.Ok(new LIR.CLR.AddressOf(compiled!, addressType))
                 : Result<LIR.Expression>.Error("This variable has no address, so it can't be passed by reference here.");
         }
     }

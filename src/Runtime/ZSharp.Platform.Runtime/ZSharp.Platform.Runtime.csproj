@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\ZSharp.LIR\ZSharp.LIR.csproj" />
+    <ProjectReference Include="..\ZSharp.LIR.CLR\ZSharp.LIR.CLR.csproj" />
   </ItemGroup>
 
 </Project>

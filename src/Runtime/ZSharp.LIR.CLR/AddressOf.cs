@@ -1,9 +1,9 @@
-namespace ZSharp.Platform.Runtime
+namespace ZSharp.LIR.CLR
 {
     /// <summary>
     /// The address of a variable: a local, a parameter, a global, a field or what a
-    /// reference holds, or of the variable statements end in, once they have run. It is how the CLR passes a variable by reference, so it is a node
-    /// of this platform, not of LIR.
+    /// reference holds, or of the variable statements end in, once they have run. It is how the CLR passes a variable by reference, so it is a node of the CLR
+    /// platforms, not of LIR.
     /// </summary>
     public sealed class AddressOf(LIR.Expression variable, LIR.Type type)
         : LIR.Expression

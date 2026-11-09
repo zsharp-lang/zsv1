@@ -21,7 +21,7 @@ import { Parser } from "std:zsharp/lang/parser";
 import { Tokenizer, TextStream } from "std:zsharp/lang/tokenizer";
 import { Syntax } from "std:zsharp/lang";
 import { Module } from "std:modules";
-import { compiler, metaTypes, ct, core, Importer, export } from "core:zsharp";
+import { compiler, metaTypes, ct, core, documents, export } from "core:zsharp";
 
 // ---- Discovery
 
@@ -93,11 +93,12 @@ def Running of DotNet_Module {
     let current: Submodule;
     let emitted: List[Instance];
 
-    // Runs a submodule's module file, as a document.
+    // Runs a submodule's module file, as a document of its own each time the project is
+    // compiled.
     fun run(submodule: Submodule) {
         let outer = current;
         current = submodule;
-        Importer(submodule.ModuleFile).Unwrap();
+        documents.Execute(submodule.ModuleFile).Unwrap();
         current = outer;
     }
 

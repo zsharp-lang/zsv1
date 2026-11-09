@@ -1,17 +1,18 @@
-// std:zsharp/clr — the capabilities the CLR runtime has, given to it by traits. Each
-// marks LIR with the runtime's own metadata, which the runtime realizes.
+// std:zsharp/clr — the capabilities every CLR platform has, given to them by traits: the
+// running process, or an assembly written for a version of .NET. Each marks LIR with the
+// CLR's metadata, which every CLR platform realizes.
 
 import { Polymorphism } from "std:zsharp/capabilities";
 import { Implementation } from "std:traits";
-import { Runtime, Polymorphic, MethodOf, CastDown, TypeTest, explicitThis } from "core:runtime";
+import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest, explicitThis } from "core:runtime";
 import { Structure, Function } from "std:zsharp/lir";
 
 // The CLR has polymorphism: a polymorphic structure is a CLR class or interface, and a
 // method of one is a method of the class.
-def RuntimePolymorphism of Implementation[Polymorphism, Runtime] {
-    let value: Runtime;
+def ClrPolymorphism of Implementation[Polymorphism, ClrPlatform] {
+    let value: ClrPlatform;
 
-    @explicitThis new(this, value: Runtime) { this.value = value; }
+    @explicitThis new(this, value: ClrPlatform) { this.value = value; }
 
     @explicitThis fun objects(this, structure: Structure) {
         structure.Metadata.Add(Polymorphic());

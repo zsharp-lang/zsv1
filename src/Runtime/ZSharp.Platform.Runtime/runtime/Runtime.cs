@@ -4,6 +4,7 @@ namespace ZSharp.Platform.Runtime
     /// Loads LIR modules into the running process.
     /// </summary>
     public sealed partial class Runtime
+        : ClrPlatform
     {
         private readonly Emit.ModuleBuilder module;
 

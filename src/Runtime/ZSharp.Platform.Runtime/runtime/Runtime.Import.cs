@@ -14,6 +14,9 @@ namespace ZSharp.Platform.Runtime
                 LIR.TypeHandle handle => typeHandles.TryGetValue(handle, out var mapped)
                     ? mapped
                     : throw new InvalidOperationException("A type handle is not mapped."),
+                ClrType clr => ImportClrType(clr),
+                ClrArrayType array => array.IsVector ? ImportType(array.Element).MakeArrayType() : ImportType(array.Element).MakeArrayType(array.Rank),
+                ClrPointerType pointer => ImportType(pointer.Target).MakePointerType(),
                 LIR.Structure structure when PolymorphicOf(structure) is not null => ImportType(ClassOf(structure)),
                 LIR.Structure structure => ImportStructure(structure),
                 // A generic class still being defined is its self instance to its own code.

@@ -16,6 +16,7 @@ namespace ZSharp.Lang.DotNet
                 ("zsharp/hir/code", typeof(HIR.Code.Code).Module),
                 ("zsharp/mir", typeof(MIR.CompilerObject).Module),
                 ("zsharp/lir", typeof(LIR.Function).Module),
+                ("zsharp/lir/clr", typeof(LIR.CLR.ClrType).Module),
                 ("zsharp/lang", typeof(Language).Module),
                 ("zsharp/lang/ast", typeof(AST.Node).Module),
                 ("zsharp/lang/parser", typeof(Parser.Parser).Module),

@@ -12,6 +12,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTCallable
         , ICTCastTo
         , ICTImplicitCastTo
+        , ICTImplicitCastFrom
         , ICTGet
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
@@ -306,6 +307,18 @@ namespace ZSharp.Importer.ILLoader.Objects
             => loader.Describes(targetType) ? Cast(targetType) : Result.Error(new UnsupportedError($"{IL.Name} isn't a description."));
 
         /// <summary>
+        /// Where a delegate is expected, what can be referred to as a function, as a Z#
+        /// function, is a delegate of it. A CLR method converts by itself, as it knows
+        /// which delegates its signature fits.
+        /// </summary>
+        IResult ICTImplicitCastFrom.ImplicitCast(CompilerObject value)
+            => typeof(Delegate).IsAssignableFrom(IL) && IL != typeof(Delegate) && IL != typeof(MulticastDelegate)
+                && value is not Method
+                && value.Is<ICompileIRReference<LIR.ICallable>>(out _)
+                ? Result.Ok(new FunctionDelegate(loader, IL, value))
+                : Result.Error(new UnsupportedError($"{IL.Name} has no conversion from that value."));
+
+        /// <summary>
         /// A value of a value type becomes an object by boxing it, when it goes to a type
         /// it is assignable to and that isn't its own. Anything else that is assignable
         /// stays as it is.
@@ -329,15 +342,17 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             var flags = BindingFlags.Public | BindingFlags.FlattenHierarchy | kind;
 
-            var methods = IL
-                .GetMethods(flags)
+            var searched = Searched(kind);
+
+            var methods = searched
+                .SelectMany(type => type.GetMethods(flags))
                 .Where(method => !method.IsSpecialName && Named(method, member))
                 .ToArray<MethodBase>();
 
             if (methods.Length > 0)
                 return Result.Ok(OverloadGroup.Of(methods.Select(method => new Method(loader, method, receiver))));
 
-            if (IL.GetProperties(flags).FirstOrDefault(property => Named(property, member)) is { } found)
+            if (searched.SelectMany(type => type.GetProperties(flags)).FirstOrDefault(property => Named(property, member)) is { } found)
                 return Result.Ok(new Accessor(
                     receiver,
                     () => loader.Class(found.PropertyType),
@@ -345,7 +360,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                     found.SetMethod is { IsPublic: true } setter ? loader.Handle(setter) : null
                 ));
 
-            if (IL.GetEvents(flags).FirstOrDefault(@event => Named(@event, member)) is { } @event)
+            if (searched.SelectMany(type => type.GetEvents(flags)).FirstOrDefault(@event => Named(@event, member)) is { } @event)
                 return Result.Ok(new Event(loader, @event, receiver));
 
             if (IL.GetFields(flags).FirstOrDefault(field => Named(field, member)) is { } field)
@@ -365,6 +380,16 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             return Result.Error(new UnsupportedError($"{IL.Name} has no member named {member}."));
         }
+
+        /// <summary>
+        /// The types whose members are a type's. An interface's instance members are its
+        /// own, those of the interfaces it extends, and those of <c>object</c>, which any
+        /// value of it is, as C# sees them; reflection gives an interface only its own.
+        /// </summary>
+        private Type[] Searched(BindingFlags kind)
+            => IL.IsInterface && kind == BindingFlags.Instance
+                ? [IL, .. IL.GetInterfaces(), typeof(object)]
+                : [IL];
 
         private static bool Named(MemberInfo member, string name)
             => (member.GetCustomAttribute<AliasAttribute>()?.Name ?? member.Name) == name;

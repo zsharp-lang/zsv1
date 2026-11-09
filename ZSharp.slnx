@@ -68,6 +68,7 @@
     <Project Path="src/Runtime/ZSharp.Importer.ILLoader.Attributes/ZSharp.Importer.ILLoader.Attributes.csproj" />
     <Project Path="src/Runtime/ZSharp.Compiler.HIRReifier.CLR/ZSharp.Compiler.HIRReifier.CLR.csproj" />
     <Project Path="src/Runtime/ZSharp.Importer.ILLoader/ZSharp.Importer.ILLoader.csproj" />
+    <Project Path="src/Runtime/ZSharp.LIR.CLR/ZSharp.LIR.CLR.csproj" />
     <Project Path="src/Runtime/ZSharp.Platform.Runtime/ZSharp.Platform.Runtime.csproj" />
   </Folder>
   <Folder Name="/tests/">

@@ -1,4 +1,4 @@
-using ZSharp.Platform.Runtime;
+using ZSharp.LIR.CLR;
 
 namespace ZSharp.Importer.ILLoader.Objects
 {

@@ -10,6 +10,24 @@ namespace Core.Runtime
     partial class ModuleScope
     {
         [Operator("+")] public static int Add(int left, int right) => left + right;
+        [Operator("|")] public static int Or(int left, int right) => left | right;
+        [Operator("&")] public static int And(int left, int right) => left & right;
+        [Operator("|")] public static long Or(long left, long right) => left | right;
+        [Operator("&")] public static long And(long left, long right) => left & right;
+
+        /// <summary>
+        /// Flags of an enum combine as its underlying integers do, as in C#.
+        /// </summary>
+        [Operator("|")] public static T Or<T>(T left, T right) where T : struct, Enum
+            => (T)Enum.ToObject(typeof(T), Bits(left) | Bits(right));
+
+        [Operator("&")] public static T And<T>(T left, T right) where T : struct, Enum
+            => (T)Enum.ToObject(typeof(T), Bits(left) & Bits(right));
+
+        private static ulong Bits(Enum value)
+            => Convert.GetTypeCode(value) is TypeCode.SByte or TypeCode.Int16 or TypeCode.Int32 or TypeCode.Int64
+                ? unchecked((ulong)Convert.ToInt64(value))
+                : Convert.ToUInt64(value);
         [Operator("-")] public static int Subtract(int left, int right) => left - right;
         [Operator("*")] public static int Multiply(int left, int right) => left * right;
         [Operator("/")] public static int Divide(int left, int right) => left / right;

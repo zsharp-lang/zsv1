@@ -79,6 +79,10 @@ namespace ZSharp.Lang
             expressionParser.InfixL("==", 18);
             expressionParser.InfixL("!=", 18);
 
+            // Bitwise operators bind looser than equality, `&` tighter than `|`, as in C#.
+            expressionParser.InfixL("&", 17);
+            expressionParser.InfixL("|", 16);
+
             expressionParser.InfixL(LangParser.Keywords.Or, 15);
 
             expressionParser.Led(TokenType.LParen, LangParser.ParseCallExpression, 100);

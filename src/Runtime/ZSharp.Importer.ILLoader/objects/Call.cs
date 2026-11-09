@@ -47,7 +47,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
                     before.Locals.Add(temporary);
                     before.Statements.Add(new LIR.SetLocal(temporary, current!));
-                    values.Add(new Platform.Runtime.AddressOf(new LIR.GetLocal(temporary), byAddress.AddressType));
+                    values.Add(new LIR.CLR.AddressOf(new LIR.GetLocal(temporary), byAddress.AddressType));
 
                     if (Core.Compiler.ModuleScope.CG.Set(byAddress.Variable, new Temporary(temporary, byAddress.ElementClass)).When(out var assign).Error(out failure))
                         return Result<Lowered>.Error(failure);

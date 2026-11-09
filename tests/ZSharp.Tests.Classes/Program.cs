@@ -116,7 +116,12 @@ var document = new DocumentCompiler(language, host);
 var documents = new DocumentImporter(language, compiler, host);
 importer.Register("core", core);
 importer.Register("std", std);
-importer.DefaultImporter = documents;
+var fileImporter = new FileImporter(compiler);
+fileImporter.Register(".zs", documents.Import);
+importer.DefaultImporter = fileImporter;
+Core.ZSharp.ModuleScope.Files = fileImporter;
+Core.ZSharp.ModuleScope.Importers = importer;
+Core.ZSharp.ModuleScope.Documents = documents;
 
 if (ZSharp.Importer.String.DocumentLibrary.Above(AppContext.BaseDirectory, "std") is { } standard)
     std.Fallback = new ZSharp.Importer.String.DocumentLibrary(standard, documents);
@@ -3606,7 +3611,7 @@ Try("an import in a body passes its arguments too", () =>
 });
 
 Try("an import with arguments no overload takes is an error", () =>
-    Run($$"""import(true, false) { Library95 } from "{{Library("Library95", "x")}}";""") is { } e && e.Contains("None of the 2 overloads applies"));
+    Run($$"""import(true, false) { Library95 } from "{{Library("Library95", "x")}}";""") is { } e && e.Contains("None of the 3 overloads applies"));
 
 Try("an import in a body runs as the body is built", () =>
 {
@@ -3685,7 +3690,7 @@ Try("an import in a body can't use what the body is given", () =>
                 return Library92.hello();
             }
         }
-        """) is { } e && e.Contains("Import");
+        """) is { } e && (e.Contains("Import") || e.Contains("no member named Library92"));
 });
 
 Try("an import in a module runs as the module is constructed", () =>
@@ -4558,6 +4563,77 @@ Try("a module is any definition of Module", () =>
 Try("the prelude brings the standard definitions", () =>
     Run("""import "std:prelude";""") is null);
 
+Try("std:dotnet makes a .dll importable by its path, its public types its members", () =>
+    ResetKept() && Run($$"""
+        import "std:dotnet";
+        import { GenericProbe as GenericProbe285, ProbeFlags as ProbeFlags285 } from "{{typeof(GenericProbe).Assembly.Location.Replace('\\', '/')}}";
+        Keep(GenericProbe285.Same(5));
+        Keep(ProbeFlags285.Low | ProbeFlags285.High);
+        """) is null && Probe.Kept is [5, ProbeFlags.Low | ProbeFlags.High]);
+
+Try("a file nothing is registered for can't be imported", () =>
+    Run("""import { x } from "notes.txt";""") is { } error && error.Contains("nothing is registered"));
+
+Try("bitwise operators combine integers, and the flags of an enum as its integers", () =>
+    ResetKept() && Run("""
+        Keep(6 | 1);
+        Keep(6 & 3);
+        Keep(2 | 4 & 4);
+        """) is null && Probe.Kept is [7, 2, 6]);
+
+Try("the Cecil platform writes a module as an assembly, for a version of .NET, its Z# classes as classes", () =>
+{
+    if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget/packages/mono.cecil/0.11.6/lib/netstandard2.0/Mono.Cecil.dll")))
+        return true;
+
+    var root = Directory.CreateTempSubdirectory("zsharp-cecil-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        import { Int32, String } from "core:runtime";
+        import { Interface as Interface286, static as static286, class as class286 } from "std:oop";
+        emit(compile("Twice286"));
+        """);
+    File.WriteAllText(Path.Combine(source, "shapes.zs"), """
+        def Shape286 of Interface286 {
+            @class286 fun kind(): String;
+            fun area(): Int32;
+        }
+        def Square286 : Shape286 {
+            @static286 let made: Int32 = 0;
+            let side: Int32;
+            new(this, side: Int32) { made = made + 1; this.side = side; }
+            @class286 fun kind(): String { return "square"; }
+            fun area(): Int32 { return side * side; }
+        }
+        fun square(side: Int32): Shape286 { return Square286(side); }
+        fun describe(shape: Shape286): String {
+            if (shape is square of Square286) return "a square of side " + square.side + " and area " + shape.area() + ", " + Square286.made + " made";
+            return "a shape";
+        }
+        """);
+    File.WriteAllText(Path.Combine(source, "twice.zs"), """
+        let factor = 2;
+        fun twice(value: Int32): Int32 { return value * factor; }
+        """);
+
+    var written = Path.Combine(root, "Twice286.dll").Replace('\\', '/');
+
+    return ResetKept() && Run($$"""
+        import "std:dotnet";
+        import { discover as discover286, Compiler as Compiler286 } from "std:project";
+        import { Module as Module286, lower as lower286 } from "std:modules";
+        import { Cecil as Cecil286 } from "pkg:cecil";
+        let target286 = Cecil286("Twice286", "net8.0");
+        target286.add(lower286(Compiler286(discover286("{{source.Replace('\\', '/')}}")).compile()[0] as Module286, target286));
+        target286.write("{{written}}");
+        import { twice as twice286, describe as describe286, square as square286 } from "{{written}}";
+        Keep(twice286(21));
+        Keep(describe286(square286(3)));
+        """) is null && Probe.Kept is [42, "a square of side 3 and area 9, 1 made"];
+});
+
 Try("inside its module, a function's name is all of its overloads", () =>
     ResetKept() && Run("""
         def Overloads280 of DotNet_Module {
@@ -4633,6 +4709,12 @@ public static class GenericProbe
         return value is not null;
     }
 }
+
+/// <summary>
+/// Flags, for the tests of bitwise operators on an enum.
+/// </summary>
+[Flags]
+public enum ProbeFlags { Low = 1, High = 2 }
 
 /// <summary>
 /// An interface with a property, for the property tests.

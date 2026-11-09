@@ -12,7 +12,11 @@ namespace ZSharp.Importer.ILLoader
     {
         private readonly Dictionary<Type, Package.DotNet.TypeReference> typeNodes = [];
         private readonly Dictionary<Package.DotNet.TypeReference, Type> nodeTypes = [];
-        private readonly Dictionary<Type, LIR.TypeHandle> types = [];
+        /// <summary>
+        /// What describes the CLR entities code uses, as the CLR handles every CLR platform
+        /// realizes.
+        /// </summary>
+        private readonly LIR.CLR.Reflected reflected = new();
         private readonly Dictionary<Package.DotNet.Class, Objects.ClassInProgress> inProgress = [];
 
         /// <summary>
@@ -52,10 +56,9 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<MethodBase, List<HIR.Code.Parameter>> definedParameters = [];
         private readonly Dictionary<ConstructorInfo, Package.DotNet.Constructor> constructors = [];
         private readonly Dictionary<Package.DotNet.Constructor, ConstructorInfo> constructorInfos = [];
-        private readonly Dictionary<MethodBase, LIR.FunctionHandle> functions = [];
-        private readonly Dictionary<Type, LIR.FunctionHandle> boxes = [];
-        private readonly Dictionary<LIR.Type, LIR.FunctionHandle> typeObjects = [];
-        private readonly Dictionary<(FieldInfo Field, bool IsSet), LIR.FunctionHandle> fieldAccessors = [];
+        private readonly Dictionary<Type, LIR.CLR.ClrCode> boxes = [];
+        private readonly Dictionary<LIR.Type, LIR.CLR.ClrCode> typeObjects = [];
+        private readonly Dictionary<(FieldInfo Field, bool IsSet), LIR.CLR.ClrCode> fieldAccessors = [];
 
         public void Install(MappedLoader loader, MappedCodeLoader code)
         {
@@ -184,13 +187,13 @@ namespace ZSharp.Importer.ILLoader
 
         private ExtensionMethods? extensions;
 
-        private readonly Dictionary<(string, Type, Type), LIR.FunctionHandle> instructions = [];
+        private readonly Dictionary<(string, Type, Type), LIR.CLR.ClrCode> instructions = [];
 
         /// <summary>
-        /// A function of one value that the runtime maps to instructions, as a conversion is,
-        /// made once for each operation and pair of types.
+        /// A function of one value whose code is instructions, as a conversion is, made once
+        /// for each operation and pair of types.
         /// </summary>
-        private LIR.FunctionHandle Instruction(string operation, Type from, Type to, Action<System.Reflection.Emit.ILGenerator> emit)
+        private LIR.CLR.ClrCode Instruction(string operation, Type from, Type to, Action<LIR.CLR.ClrCode> emit)
         {
             if (instructions.TryGetValue((operation, from, to), out var known))
                 return known;
@@ -198,26 +201,26 @@ namespace ZSharp.Importer.ILLoader
             var signature = new LIR.Signature { ReturnType = Handle(to) };
             signature.Parameters.Add(new(Handle(from)) { Name = "value" });
 
-            var handle = new LIR.FunctionHandle(signature);
-            runtime.Map(handle, emit);
+            var code = new LIR.CLR.ClrCode(signature);
+            emit(code);
 
-            return instructions[(operation, from, to)] = handle;
+            return instructions[(operation, from, to)] = code;
         }
 
         /// <summary>
         /// The function that converts a number from one numeric type to another.
         /// </summary>
-        internal LIR.FunctionHandle Convert(Type from, Type to)
-            => Instruction("convert", from, to, il => Conversions.Emit(il, from, to));
+        internal LIR.CLR.ClrCode Convert(Type from, Type to)
+            => Instruction("convert", from, to, code => Conversions.Emit(code, from, to));
 
-        private readonly Dictionary<(Type, LIR.Type), LIR.FunctionHandle> downcasts = [];
+        private readonly Dictionary<(Type, LIR.Type), LIR.CLR.ClrCode> downcasts = [];
 
         /// <summary>
         /// The function that casts a value down to a type it might be of, which fails if it
-        /// isn't: a reference is checked, and a value type is unboxed. The type is found as
-        /// the code is emitted, so it may be one the runtime is still building.
+        /// isn't: a reference is checked, and a value type is unboxed, as <c>unbox.any</c>
+        /// does both. The type may be one a platform is still building.
         /// </summary>
-        internal LIR.FunctionHandle Downcast(Type from, LIR.Type to)
+        internal LIR.CLR.ClrCode Downcast(Type from, LIR.Type to)
         {
             if (downcasts.TryGetValue((from, to), out var known))
                 return known;
@@ -225,20 +228,16 @@ namespace ZSharp.Importer.ILLoader
             var signature = new LIR.Signature { ReturnType = to };
             signature.Parameters.Add(new(Handle(from)) { Name = "value" });
 
-            var handle = new LIR.FunctionHandle(signature);
-            runtime.MapDowncast(handle, to);
-
-            return downcasts[(from, to)] = handle;
+            return downcasts[(from, to)] = new LIR.CLR.ClrCode(signature).Emit(System.Reflection.Emit.OpCodes.Unbox_Any, to);
         }
 
-        private readonly Dictionary<(Type, LIR.Type), LIR.FunctionHandle> typeTests = [];
+        private readonly Dictionary<(Type, LIR.Type), LIR.CLR.ClrCode> typeTests = [];
 
         /// <summary>
         /// The function that tells whether a value is of a type. <c>null</c> is of none.
-        /// The type is found as the code is emitted, so it may be one the runtime is still
-        /// building.
+        /// The type may be one a platform is still building.
         /// </summary>
-        internal LIR.FunctionHandle IsOf(Type from, LIR.Type to)
+        internal LIR.CLR.ClrCode IsOf(Type from, LIR.Type to)
         {
             if (typeTests.TryGetValue((from, to), out var known))
                 return known;
@@ -246,39 +245,34 @@ namespace ZSharp.Importer.ILLoader
             var signature = new LIR.Signature { ReturnType = Handle(typeof(bool)) };
             signature.Parameters.Add(new(Handle(from)) { Name = "value" });
 
-            var handle = new LIR.FunctionHandle(signature);
-            runtime.MapTypeTest(handle, to);
-
-            return typeTests[(from, to)] = handle;
+            return typeTests[(from, to)] = new LIR.CLR.ClrCode(signature)
+                .Emit(System.Reflection.Emit.OpCodes.Isinst, to)
+                .Emit(System.Reflection.Emit.OpCodes.Ldnull)
+                .Emit(System.Reflection.Emit.OpCodes.Cgt_Un);
         }
 
-        private readonly Dictionary<(Type, MethodInfo), LIR.FunctionHandle> delegates = [];
+        private readonly Dictionary<(Type, object), LIR.CLR.ClrCode> delegates = [];
+
+        /// <summary>
+        /// The function that makes a delegate of a type for a method of a class a platform
+        /// is still building, given the object it is bound to.
+        /// </summary>
+        internal LIR.CLR.ClrCode Delegate(Type delegateType, LIR.CLR.ClassMethod method)
+            => Delegate(delegateType, method, !method.IsStatic && (method.IsVirtual || method.IsAbstract || method.IsOverride));
 
         /// <summary>
         /// The function that makes a delegate of a type for a method, given the object it
         /// is bound to.
         /// </summary>
-        internal LIR.FunctionHandle Delegate(Type delegateType, Platform.Runtime.ClassMethod method)
-        {
-            if (classDelegates.TryGetValue((delegateType, method), out var known))
-                return known;
-
-            var signature = new LIR.Signature { ReturnType = Handle(delegateType) };
-            signature.Parameters.Add(new(Handle(typeof(object))) { Name = "target" });
-
-            var handle = new LIR.FunctionHandle(signature);
-            runtime.MapDelegate(handle, delegateType, method);
-
-            return classDelegates[(delegateType, method)] = handle;
-        }
-
-        private readonly Dictionary<(Type, Platform.Runtime.ClassMethod), LIR.FunctionHandle> classDelegates = [];
+        internal LIR.CLR.ClrCode Delegate(Type delegateType, MethodInfo method)
+            => Delegate(delegateType, Handle(method), method.IsVirtual && !method.IsStatic);
 
         /// <summary>
-        /// The function that makes a delegate of a type for a method, given the object it
-        /// is bound to.
+        /// Its argument is the object the method is bound to, or null for a static method. A
+        /// virtual method is found through the object, so the delegate calls what the object
+        /// overrides.
         /// </summary>
-        internal LIR.FunctionHandle Delegate(Type delegateType, MethodInfo method)
+        private LIR.CLR.ClrCode Delegate(Type delegateType, object method, bool isVirtual)
         {
             if (delegates.TryGetValue((delegateType, method), out var known))
                 return known;
@@ -286,10 +280,16 @@ namespace ZSharp.Importer.ILLoader
             var signature = new LIR.Signature { ReturnType = Handle(delegateType) };
             signature.Parameters.Add(new(Handle(typeof(object))) { Name = "target" });
 
-            var handle = new LIR.FunctionHandle(signature);
-            runtime.MapDelegate(handle, delegateType, method);
+            var code = new LIR.CLR.ClrCode(signature);
 
-            return delegates[(delegateType, method)] = handle;
+            if (isVirtual)
+                code.Emit(System.Reflection.Emit.OpCodes.Dup).Emit(System.Reflection.Emit.OpCodes.Ldvirtftn, method);
+            else
+                code.Emit(System.Reflection.Emit.OpCodes.Ldftn, method);
+
+            code.Emit(System.Reflection.Emit.OpCodes.Newobj, Handle(delegateType.GetConstructor([typeof(object), typeof(nint)])!));
+
+            return delegates[(delegateType, method)] = code;
         }
 
         /// <summary>
@@ -315,6 +315,7 @@ namespace ZSharp.Importer.ILLoader
                 ("+", "op_Addition"), ("-", "op_Subtraction"), ("*", "op_Multiply"), ("/", "op_Division"),
                 ("<", "op_LessThan"), (">", "op_GreaterThan"), ("<=", "op_LessThanOrEqual"), (">=", "op_GreaterThanOrEqual"),
                 ("==", "op_Equality"), ("!=", "op_Inequality"),
+                ("|", "op_BitwiseOr"), ("&", "op_BitwiseAnd"),
             }.Select(pair => (pair.Item1, (HIR.Instance)new Package.DotNet.Operator(pair.Item2)));
 
         /// <summary>
@@ -367,45 +368,19 @@ namespace ZSharp.Importer.ILLoader
                 ? Ref(parameter.ParameterType.GetElementType()!, parameter.IsOut)
                 : Class(parameter.ParameterType);
 
-        internal LIR.TypeHandle Handle(Type type)
-        {
-            if (!types.TryGetValue(type, out var handle))
-            {
-                types[type] = handle = new();
-                runtime.Map(handle, type);
-            }
+        internal LIR.Type Handle(Type type)
+            => reflected.Type(type);
 
-            return handle;
-        }
+        internal LIR.CLR.ClrMethod Handle(MethodBase method)
+            => reflected.Method(method);
 
-        internal LIR.FunctionHandle Handle(MethodBase method)
-        {
-            if (functions.TryGetValue(method, out var handle))
-                return handle;
-
-            var signature = new LIR.Signature();
-
-            if (!method.IsStatic && method is MethodInfo)
-                signature.Parameters.Add(new(Handle(method.DeclaringType!)) { Name = "this" });
-
-            foreach (var parameter in method.GetParameters())
-                signature.Parameters.Add(new(Handle(parameter.ParameterType)) { Name = parameter.Name });
-
-            signature.ReturnType = ReturnType(method) is { } type ? Handle(type) : null;
-
-            functions[method] = handle = new(signature);
-            runtime.Map(handle, method);
-
-            return handle;
-        }
-
-        private readonly Dictionary<FieldInfo, LIR.FunctionHandle> fieldAddresses = [];
+        private readonly Dictionary<FieldInfo, LIR.CLR.ClrCode> fieldAddresses = [];
 
         /// <summary>
         /// The function that gives the address of a field, of the object it is given if the
         /// field isn't static.
         /// </summary>
-        internal LIR.FunctionHandle FieldAddress(FieldInfo field)
+        internal LIR.CLR.ClrCode FieldAddress(FieldInfo field)
         {
             if (fieldAddresses.TryGetValue(field, out var known))
                 return known;
@@ -415,20 +390,17 @@ namespace ZSharp.Importer.ILLoader
             if (!field.IsStatic)
                 signature.Parameters.Add(new(Handle(field.DeclaringType!)) { Name = "this" });
 
-            var handle = new LIR.FunctionHandle(signature);
-
-            runtime.Map(handle, il => il.Emit(field.IsStatic ? System.Reflection.Emit.OpCodes.Ldsflda : System.Reflection.Emit.OpCodes.Ldflda, field));
-
-            return fieldAddresses[field] = handle;
+            return fieldAddresses[field] = new LIR.CLR.ClrCode(signature)
+                .Emit(field.IsStatic ? System.Reflection.Emit.OpCodes.Ldsflda : System.Reflection.Emit.OpCodes.Ldflda, reflected.Field(field));
         }
 
-        private readonly Dictionary<(string, Type), LIR.FunctionHandle> comparisons = [];
+        private readonly Dictionary<(string, Type), LIR.CLR.ClrCode> comparisons = [];
 
         /// <summary>
         /// The function that compares two values of a type by the instruction C# compares
         /// them with: enums by their values, signed or not, and references by identity.
         /// </summary>
-        internal LIR.FunctionHandle Comparison(string name, Type operand)
+        internal LIR.CLR.ClrCode Comparison(string name, Type operand)
         {
             if (comparisons.TryGetValue((name, operand), out var known))
                 return known;
@@ -437,7 +409,6 @@ namespace ZSharp.Importer.ILLoader
             signature.Parameters.Add(new(Handle(operand)) { Name = "left" });
             signature.Parameters.Add(new(Handle(operand)) { Name = "right" });
 
-            var handle = new LIR.FunctionHandle(signature);
             var unsigned = operand.IsEnum && Enum.GetUnderlyingType(operand) is var underlying
                 && (underlying == typeof(byte) || underlying == typeof(ushort) || underlying == typeof(uint) || underlying == typeof(ulong));
 
@@ -452,18 +423,12 @@ namespace ZSharp.Importer.ILLoader
                 _ => throw new NotSupportedException($"{name} is not a comparison.")
             };
 
-            runtime.Map(handle, il =>
-            {
-                il.Emit(instruction);
+            var code = new LIR.CLR.ClrCode(signature).Emit(instruction);
 
-                if (negate)
-                {
-                    il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4_0);
-                    il.Emit(System.Reflection.Emit.OpCodes.Ceq);
-                }
-            });
+            if (negate)
+                code.Emit(System.Reflection.Emit.OpCodes.Ldc_I4_0).Emit(System.Reflection.Emit.OpCodes.Ceq);
 
-            return comparisons[(name, operand)] = handle;
+            return comparisons[(name, operand)] = code;
         }
 
         private IResult LoadArray(HIR.Code.ArrayLiteral array)
@@ -482,12 +447,12 @@ namespace ZSharp.Importer.ILLoader
         /// <summary>
         /// The functions that read and write what a reference refers to.
         /// </summary>
-        internal LIR.FunctionHandle LoadIndirect(Type element)
-            => Instruction("ldobj", element.MakeByRefType(), element, il => il.Emit(System.Reflection.Emit.OpCodes.Ldobj, element));
+        internal LIR.CLR.ClrCode LoadIndirect(Type element)
+            => Instruction("ldobj", element.MakeByRefType(), element, code => code.Emit(System.Reflection.Emit.OpCodes.Ldobj, Handle(element)));
 
-        private readonly Dictionary<Type, LIR.FunctionHandle> stores = [];
+        private readonly Dictionary<Type, LIR.CLR.ClrCode> stores = [];
 
-        internal LIR.FunctionHandle StoreIndirect(Type element)
+        internal LIR.CLR.ClrCode StoreIndirect(Type element)
         {
             if (stores.TryGetValue(element, out var known))
                 return known;
@@ -496,19 +461,16 @@ namespace ZSharp.Importer.ILLoader
             signature.Parameters.Add(new(Handle(element.MakeByRefType())) { Name = "reference" });
             signature.Parameters.Add(new(Handle(element)) { Name = "value" });
 
-            var handle = new LIR.FunctionHandle(signature);
-
-            runtime.Map(handle, il => il.Emit(System.Reflection.Emit.OpCodes.Stobj, element));
-
-            return stores[element] = handle;
+            return stores[element] = new LIR.CLR.ClrCode(signature).Emit(System.Reflection.Emit.OpCodes.Stobj, Handle(element));
         }
 
-        private readonly Dictionary<(Type, int), LIR.FunctionHandle> arrays = [];
+        private readonly Dictionary<(Type, int), LIR.CLR.ClrCode> arrays = [];
 
         /// <summary>
-        /// The function that makes an array of its arguments, all of one type.
+        /// The function that makes an array of its arguments, all of one type. They are on
+        /// the stack, so it keeps them in locals, the last first, to store them in order.
         /// </summary>
-        internal LIR.FunctionHandle ArrayOf(Type element, int count)
+        internal LIR.CLR.ClrCode ArrayOf(Type element, int count)
         {
             if (arrays.TryGetValue((element, count), out var known))
                 return known;
@@ -518,34 +480,30 @@ namespace ZSharp.Importer.ILLoader
             for (var index = 0; index < count; index++)
                 signature.Parameters.Add(new(Handle(element)) { Name = $"element{index}" });
 
-            var handle = new LIR.FunctionHandle(signature);
+            var code = new LIR.CLR.ClrCode(signature);
+            var type = Handle(element);
 
-            runtime.Map(handle, il =>
-            {
-                var elements = Enumerable.Range(0, count).Select(_ => il.DeclareLocal(element)).ToArray();
+            for (var index = 0; index < count; index++)
+                code.Locals.Add(type);
 
-                for (var index = count - 1; index >= 0; index--)
-                    il.Emit(System.Reflection.Emit.OpCodes.Stloc, elements[index]);
+            for (var index = count - 1; index >= 0; index--)
+                code.Emit(System.Reflection.Emit.OpCodes.Stloc, new LIR.CLR.ClrLocal(index));
 
-                il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4, count);
-                il.Emit(System.Reflection.Emit.OpCodes.Newarr, element);
+            code.Emit(System.Reflection.Emit.OpCodes.Ldc_I4, count).Emit(System.Reflection.Emit.OpCodes.Newarr, type);
 
-                for (var index = 0; index < count; index++)
-                {
-                    il.Emit(System.Reflection.Emit.OpCodes.Dup);
-                    il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4, index);
-                    il.Emit(System.Reflection.Emit.OpCodes.Ldloc, elements[index]);
-                    il.Emit(System.Reflection.Emit.OpCodes.Stelem, element);
-                }
-            });
+            for (var index = 0; index < count; index++)
+                code.Emit(System.Reflection.Emit.OpCodes.Dup)
+                    .Emit(System.Reflection.Emit.OpCodes.Ldc_I4, index)
+                    .Emit(System.Reflection.Emit.OpCodes.Ldloc, new LIR.CLR.ClrLocal(index))
+                    .Emit(System.Reflection.Emit.OpCodes.Stelem, type);
 
-            return arrays[(element, count)] = handle;
+            return arrays[(element, count)] = code;
         }
 
-        internal LIR.FunctionHandle Handle(FieldInfo field, bool isSet)
+        internal LIR.CLR.ClrCode Handle(FieldInfo field, bool isSet)
         {
-            if (fieldAccessors.TryGetValue((field, isSet), out var handle))
-                return handle;
+            if (fieldAccessors.TryGetValue((field, isSet), out var known))
+                return known;
 
             var signature = new LIR.Signature();
 
@@ -557,8 +515,6 @@ namespace ZSharp.Importer.ILLoader
             else
                 signature.ReturnType = Handle(field.FieldType);
 
-            fieldAccessors[(field, isSet)] = handle = new(signature);
-
             var opcode = (isSet, field.IsStatic) switch
             {
                 (false, false) => System.Reflection.Emit.OpCodes.Ldfld,
@@ -567,43 +523,36 @@ namespace ZSharp.Importer.ILLoader
                 (true, true) => System.Reflection.Emit.OpCodes.Stsfld,
             };
 
-            runtime.Map(handle, il => il.Emit(opcode, field));
-
-            return handle;
+            return fieldAccessors[(field, isSet)] = new LIR.CLR.ClrCode(signature).Emit(opcode, reflected.Field(field));
         }
 
         /// <summary>
         /// A function that turns a value of a value type into an object.
         /// </summary>
-        internal LIR.FunctionHandle Box(Type type)
+        internal LIR.CLR.ClrCode Box(Type type)
         {
-            if (boxes.TryGetValue(type, out var handle))
-                return handle;
+            if (boxes.TryGetValue(type, out var known))
+                return known;
 
             var signature = new LIR.Signature { ReturnType = Handle(typeof(object)) };
 
             signature.Parameters.Add(new(Handle(type)) { Name = "value" });
 
-            boxes[type] = handle = new(signature);
-
-            runtime.Map(handle, il => il.Emit(System.Reflection.Emit.OpCodes.Box, type));
-
-            return handle;
+            return boxes[type] = new LIR.CLR.ClrCode(signature).Emit(System.Reflection.Emit.OpCodes.Box, Handle(type));
         }
 
         /// <summary>
-        /// A function that gives the type object of a type: the value of a class.
+        /// A function that gives the type object of a type: the value of a class. It works
+        /// for a type still being defined too.
         /// </summary>
-        internal LIR.FunctionHandle TypeOf(LIR.Type type)
+        internal LIR.CLR.ClrCode TypeOf(LIR.Type type)
         {
-            if (typeObjects.TryGetValue(type, out var handle))
-                return handle;
+            if (typeObjects.TryGetValue(type, out var known))
+                return known;
 
-            typeObjects[type] = handle = new(new LIR.Signature { ReturnType = Handle(typeof(Type)) });
-
-            runtime.MapTypeOf(handle, type);
-
-            return handle;
+            return typeObjects[type] = new LIR.CLR.ClrCode(new LIR.Signature { ReturnType = Handle(typeof(Type)) })
+                .Emit(System.Reflection.Emit.OpCodes.Ldtoken, type)
+                .Emit(System.Reflection.Emit.OpCodes.Call, Handle(typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle))!));
         }
 
         internal static Type? ReturnType(MethodBase method)
@@ -857,13 +806,73 @@ namespace ZSharp.Importer.ILLoader
             if (inProgress.TryGetValue(node, out var loading))
                 return Result.Ok(loading);
 
+            if (batch is not null)
+                return Join(node) is { } failed
+                    ? Result.Error(failed)
+                    : Result.Ok(inProgress[node]);
+
             return Define([node]) is { } error
                 ? Result.Error(error)
                 : Result.Ok(Class(nodeTypes[node]));
         }
 
         /// <summary>
+        /// The classes being loaded together, and whether their code is being lowered.
+        /// </summary>
+        private List<Package.DotNet.Class>? batch;
+        private bool lowering;
+
+        /// <summary>
+        /// A class that code being lowered reaches, while classes are loaded, is loaded with
+        /// them, as code can refer to a class that refers back to it. It is declared now if
+        /// they already are, and lowered with them.
+        /// </summary>
+        private Error? Join(Package.DotNet.Class root)
+        {
+            var added = new List<Package.DotNet.Class>();
+
+            Reach(root, added);
+
+            foreach (var node in added)
+                if (Check(node) is { } error)
+                    return error;
+
+            Begin(added);
+            batch!.AddRange(added);
+
+            if (lowering)
+                foreach (var node in added)
+                    if (Declare(inProgress[node]) is { } error)
+                        return error;
+
+            return null;
+        }
+
+        /// <summary>
+        /// A class's definition, and its type parameters, which exist before its members are
+        /// declared, as they use them.
+        /// </summary>
+        private void Begin(List<Package.DotNet.Class> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                var definition = new LIR.CLR.ClassDefinition(node.Name);
+
+                foreach (var parameter in node.GenericParameters)
+                {
+                    var lowered = new LIR.CLR.ClassGenericParameter(parameter.Name);
+
+                    definition.GenericParameters.Add(lowered);
+                    typeParameters[parameter] = new(parameter, lowered);
+                }
+
+                inProgress[node] = new(this, node, definition);
+            }
+        }
+
+        /// <summary>
         /// Loads classes together with those they reach, as they can refer to each other.
+        /// What their code reaches while it is lowered joins them.
         /// </summary>
         /// <param name="declare">Declares more that the classes' code can reach, once they are declared.</param>
         /// <param name="lower">Lowers the code of what was declared, once the classes' code is lowered.</param>
@@ -878,33 +887,24 @@ namespace ZSharp.Importer.ILLoader
                 if (Check(node) is { } error)
                     return error;
 
-            foreach (var node in nodes)
-            {
-                var definition = new Platform.Runtime.ClassDefinition(node.Name);
+            Begin(nodes);
 
-                // A class's type parameters exist before its members are declared, which use them.
-                foreach (var parameter in node.GenericParameters)
-                {
-                    var lowered = new Platform.Runtime.ClassGenericParameter(parameter.Name);
-
-                    definition.GenericParameters.Add(lowered);
-                    typeParameters[parameter] = new(parameter, lowered);
-                }
-
-                inProgress[node] = new(this, node, definition);
-            }
+            var (outerBatch, outerLowering) = (batch, lowering);
+            (batch, lowering) = (nodes, false);
 
             try
             {
-                foreach (var node in nodes)
-                    if (Declare(inProgress[node]) is { } error)
+                for (var index = 0; index < nodes.Count; index++)
+                    if (Declare(inProgress[nodes[index]]) is { } error)
                         return error;
 
                 if (declare?.Invoke() is { } undeclared)
                     return undeclared;
 
-                foreach (var node in nodes)
-                    if (Lower(inProgress[node]) is { } error)
+                lowering = true;
+
+                for (var index = 0; index < nodes.Count; index++)
+                    if (Lower(inProgress[nodes[index]]) is { } error)
                         return error;
 
                 if (lower?.Invoke() is { } unlowered)
@@ -936,6 +936,8 @@ namespace ZSharp.Importer.ILLoader
             }
             finally
             {
+                (batch, lowering) = (outerBatch, outerLowering);
+
                 foreach (var node in nodes)
                     inProgress.Remove(node);
             }
@@ -987,11 +989,11 @@ namespace ZSharp.Importer.ILLoader
             foreach (var method in node.Methods)
             {
                 var signature = new LIR.Signature();
-                var methodParameters = new List<Platform.Runtime.ClassGenericParameter>();
+                var methodParameters = new List<LIR.CLR.ClassGenericParameter>();
 
                 foreach (var parameter in method.GenericParameters)
                 {
-                    var lowered = new Platform.Runtime.ClassGenericParameter(parameter.Name);
+                    var lowered = new LIR.CLR.ClassGenericParameter(parameter.Name);
 
                     methodParameters.Add(lowered);
                     typeParameters[parameter] = new(parameter, lowered);
@@ -1012,7 +1014,7 @@ namespace ZSharp.Importer.ILLoader
                     else
                         signature.ReturnType = type;
 
-                var declared = new Platform.Runtime.ClassMethod(
+                var declared = new LIR.CLR.ClassMethod(
                     method.Name,
                     method.IsStatic,
                     new(signature) { Name = method.Name, Body = new() }
@@ -1155,7 +1157,7 @@ namespace ZSharp.Importer.ILLoader
             Package.DotNet.Field field,
             Objects.ClassInProgress @class,
             Package.DotNet.Constructor constructor,
-            Platform.Runtime.ClassConstructor declared
+            LIR.CLR.ClassConstructor declared
         )
         {
             if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadExpression(field.DefaultValue!).When(out var value).Error(out var error))
@@ -1320,7 +1322,7 @@ namespace ZSharp.Importer.ILLoader
 
         private void Reach(Package.DotNet.Class node, List<Package.DotNet.Class> nodes)
         {
-            if (nodeTypes.ContainsKey(node) || nodes.Contains(node))
+            if (nodeTypes.ContainsKey(node) || inProgress.ContainsKey(node) || nodes.Contains(node))
                 return;
 
             nodes.Add(node);

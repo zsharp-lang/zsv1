@@ -369,6 +369,14 @@ def Meta of DotNet_Module {
     fun instanceOfGlobal(node: Global): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
 }
 
+// ---- Lowering
+
+// A module lowered for a target: the LIR module its CO lowers it to, with its members.
+@export
+fun lower(node: Module, target: Object): LIRModule {
+    return (Meta.loadModule(node).Unwrap() as Objects.ModuleObject).module(target);
+}
+
 // ---- Installing it
 
 mappedLoader.Instances.Register[Module](Meta.loadModule);

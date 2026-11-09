@@ -15,11 +15,11 @@ namespace ZSharp.Importer.ILLoader.Objects
 
         public Type Element => element;
 
-        public LIR.TypeHandle ElementType => loader.Handle(element);
+        public LIR.Type ElementType => loader.Handle(element);
 
         public CompilerObject ElementClass => loader.Class(element);
 
-        public LIR.TypeHandle AddressType => loader.Handle(element.MakeByRefType());
+        public LIR.Type AddressType => loader.Handle(element.MakeByRefType());
 
         CompilerObject ITyped.Type => loader.Ref(element, isOut: false);
 
@@ -36,8 +36,8 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (Core.Compiler.ModuleScope.IR.CompileExpression(variable, target).When(out var compiled).Error(out var error))
                 return error;
 
-            if (Platform.Runtime.AddressOf.Has(compiled!))
-                address = new Platform.Runtime.AddressOf(compiled!, AddressType);
+            if (LIR.CLR.AddressOf.Has(compiled!))
+                address = new LIR.CLR.AddressOf(compiled!, AddressType);
             else
                 value = compiled;
 

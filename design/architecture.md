@@ -287,9 +287,39 @@ Reaching a member of another module loads that member too.
 | `FunctionType` | `nint`, called with `calli` |
 | `TypeHandle` | A mapped `System.Type` |
 | `FunctionHandle` | A mapped method or constructor, or code emitted in place of the call |
+| The CLR handles | What they describe, in the running process |
 
-Mapping a function handle to emitted code is how arithmetic becomes an `add`
-instruction rather than a call.
+Mapping a function handle to emitted code is how a platform can make its own handle
+an instruction rather than a call. The CLR's own entities don't go through it.
+
+### CLR handles
+
+CLR platforms share a shape, the CTS and IL, so `ZSharp.LIR.CLR` describes it as LIR
+handles every CLR platform realizes, which the IL loader makes instead of telling one
+runtime what its handles mean:
+
+- `ClrType`, `ClrMethod` and `ClrField` stand for an entity of the CTS by data only: the
+  assembly and module that define it and its metadata token, and its names. A platform
+  of the running process finds it by its token, among its declaring type's members,
+  which a generic instance's members share with its definition's. A platform targeting
+  other assemblies, as another version's reference assemblies, finds it by its names, as
+  a type the reference assemblies forward. A method the runtime makes up, as an array's,
+  has no token, so it is found by its name and its declared parameter types.
+- A generic instance is `LIR.GenericInstance` of a `ClrType`; arrays, pointers, by-ref
+  types and type parameters are types of their own.
+- `ClrCode` is a function whose code is IL: instructions by the value of their opcodes,
+  which every platform shares, with operands that are numbers, strings, LIR types, CLR
+  methods and fields, methods of classes being defined, or its own locals. Boxing, field
+  access, casts, type tests, comparisons, conversions, arrays, delegates and `typeof`
+  are all `ClrCode`. ECMA-335 makes them uniform: `unbox.any` casts a reference type as
+  `castclass` does, and `box` does nothing to a reference.
+- The CLR's own LIR, a class definition and its members, and the address of a variable,
+  are in it too, as only CLR platforms realize them. Something only a CLR platform can
+  lower lowers for a target that is a `ClrPlatform`.
+- `Reflected` describes reflection's objects as these handles, each entity once.
+- Live values stay the running process's: a document's frame is a constant of the
+  runtime. A platform that writes an assembly can't map one, and has no need to reject
+  it: nothing defines it.
 
 ### IL loader
 
@@ -1722,6 +1752,10 @@ These rules are provisional, and nothing should rely much on them:
   because it is the simplest one; a different rule is a different answer to
   `IsAsSpecificAs`, or a different dispatcher.
 
+Bitwise `&` and `|` bind looser than equality, `&` tighter than `|`, as in C#. They are
+defined for integers, for a CLR type's `op_BitwiseAnd` and `op_BitwiseOr`, and for the
+flags of an enum, which combine as its underlying integers.
+
 ### Arguments
 
 Parameters take their values from a call, as in `zsv1`. A call's arguments become an
@@ -1874,12 +1908,19 @@ The `as` cast marking such a definition is not settled.
 - A `std:` library is a CLR module, or else a document of the standard library written
   in Z#, found from where the toolchain runs: `std:name` is `std/name.zs`, or else
   `std/name/name.zs`.
+- A source with no prefix is a file, relative to the document importing it, and what
+  imports it is what is registered for its extension in `core:zsharp`'s `files`: a
+  `.zs` file is a document. `std:dotnet`, in Z#, registers `.dll`: the assembly is
+  loaded into the running platform, and importing it gives its module, whose members
+  are its public types by their names, whatever their namespaces. So
+  `import { AssemblyDefinition } from "Mono.Cecil.dll"` reaches Mono.Cecil.
 - Nothing is imported for a script. The prelude, `std:prelude`, imports what a script
   wants, so a script imports it first, `import "std:prelude";`, and gets the standard
   definitions, as Z# functions, through an ordinary import.
 - Importers do nothing CO-related. They return real HIR, and imported names
   cross into MIR through the HIR -> MIR REI.
-- Libraries are supplied by a `pkg:` importer written purely in Z#.
+- Libraries are supplied by a `pkg:` importer written purely in Z#, the package manager,
+  as **Packages** describes.
 - An import that runs while compiling reaches each of its names' members as it runs,
   since that is what importing them means: whatever comes with a member comes then, as
   a class's extension methods do, and a name the imported value has no member for is an
@@ -1919,12 +1960,85 @@ The `as` cast marking such a definition is not settled.
 - **The build script** decides what to do with what was emitted, as loading it and
   calling into it, or lowering it for a platform.
 - **Not yet:**
-  - Only the AST compiler is forked. The HIR loader and the import system are shared,
-    and a module file is a document, so it runs once per toolchain run.
+  - Only the AST compiler is forked, and the HIR loader is shared. A module file runs as
+    a document of its own each time its project is compiled, through `core:zsharp`'s
+    `documents`, though importing it still gives what it gave when first imported.
   - A path is relative to where the toolchain runs.
+  - A definition of a module that fails to load is left out of what it holds, so the
+    failure shows only where the definition is used, and less clearly.
   - A syntax error in a source stops the build with the parser's exception.
   - There are no rules for names across submodules.
   - Writing an LIR file, and building the platform as a submodule, come next.
+
+## The Cecil platform
+
+`packages/cecil` is a CLR platform written in Z#, as a project: it writes LIR as a .NET
+assembly through Mono.Cecil, which it imports as `pkg:Mono.Cecil@0.11.6`. A build script
+imports it as `pkg:cecil`, a package that is a project, which compiles it and loads it
+into the running platform, and gives it LIR:
+`Cecil(name, version)` is an assembly being written, `add(module)` adds an LIR module,
+`lower(module, target)` from `std:modules` gives a Z# module's LIR for it, and
+`write(path)` writes the assembly.
+
+- **Versions.** Given a version, as `net8.0`, it reads the newest reference pack of it
+  installed with the running .NET, and finds each CLR handle there by its names: a type
+  by its full name, a member by its name and declared signature, as keys LIR and Cecil
+  give alike. What the pack doesn't have, as the toolchain's own assemblies, it reads
+  from the files of the running process's, and the types their signatures name are the
+  version's. Given null, it targets the .NET that runs it, and finds each handle in the
+  running process, by its token.
+- **What it writes.** A module is a static class of its functions and globals, whose
+  type initializer is the module's initializer, marked as a module scope, so importing
+  the assembly gives the module: `import { describe } from "Shop.dll"`. A function with
+  no module is in a class of its own. A structure is a value type. A polymorphic one, as
+  a Z# class or interface lowers to, is a CLR class or interface: its fields are its
+  own, its objects start with no code of their own, as the code that makes one sets its
+  fields, and its methods are the functions of its module that are its methods, virtual
+  so a method implements an interface's of its name and signature, and abstract with no
+  code. A reference to a variable is a box the assembly defines for itself. Code is IL,
+  as the runtime emits it, and the CLR handles are what they describe.
+- **Live values** can't be written: a constant that is an object only the running
+  process has fails, as does a type the running process made, which has no file.
+- **Not yet:**
+  - CLR class definitions, `def X of DotNet_Class`. The IL loader loads one into the
+    running process as it is defined, and code refers to it there after, so it can't be
+    written: the IL loader would have to lower a definition for each target, as a Z#
+    definition does. The IL loader also lowers the type of a cast down for the running
+    process as the cast is compiled.
+  - A Z# class's constructor is a function of its module, not a CLR constructor, and a
+    class method is a method of its metaclass, so code outside Z# makes an object by
+    calling the module's function. A capability for constructors could make them the
+    class's own, as the platform realizes them.
+
+## Packages
+
+`pkg:` imports a package, with the package manager, which is a project of the
+toolchain's in `pkg`, written in Z#. `pkg/build.zs` builds it as an assembly into
+`pkg/build` with the Cecil platform, and `std:packages`, which the prelude imports, loads
+that assembly, from its bytes so it can be built again while in use, or else, until it is
+built, compiles the project, which is how it is built the first time. Either is
+`core:packages`.
+
+- **Roots.** A package is found in roots, in order: the project's, `packages` where the
+  toolchain runs from, then the toolchain's, `packages` next to the standard library.
+  `roots` holds them, its initial ones defined by the package manager, and `add(root)`
+  adds one after them.
+- **What a package is.** In a root, `a/b` is a file, `a/b.dll` or `a/b/b.dll`, or a
+  document, `a/b.zs` or `a/b/b.zs`, imported as files are, or a project, the directory
+  `a/b` with its module file in it or in its `src`. A project is compiled by what the
+  package manager is given, `compileProjectsWith`, which `std:packages` gives the project
+  compiler, and what it emits first is the package.
+- **NuGet.** What no root has is looked for in the packages NuGet installed: `Name` is
+  the newest version that isn't a preview, `Name@1.2.3` that one, and the assembly is that
+  of the target framework most like the running one's. Nothing is downloaded yet.
+- **The prefix** is registered by Z#: `core:zsharp`'s `importers` routes a prefix to a
+  function, and a Z# function is a delegate where one is expected.
+
+A Z# function where a CLR delegate is expected is a delegate of it: a delegate type
+converts a value that can be referred to as a function into one, and the instruction
+that points to the function takes the LIR function, which a CLR platform finds as the
+method it declared. A function of no module can't be pointed to in the runtime, which
+runs it as a dynamic method.
 
 ## Project layout
 
@@ -1970,6 +2084,13 @@ The first target is parity with `zsv1`: importing `print` and calling it.
   is a future milestone.
 - Which `Package.DotNet` entities are needed to fully describe the CTS, including how
   a value type becomes an object.
+- **The IL loader describes the CLR from the running process, not the target.** A CLR
+  platform built for another .NET version resolves the shared CLR handles against that
+  version's reference assemblies, but the IL loader chose overloads and members against
+  the running .NET. So code built for net8.0 can pick an overload net8.0 doesn't have,
+  which fails only when its handle is mapped. The fix is for the IL loader to describe
+  the target's reference assemblies, without loading them, as `MetadataLoadContext`
+  reads them.
 
 ## Choices and restrictions from 2026-11-09
 

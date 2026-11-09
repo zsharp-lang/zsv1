@@ -41,6 +41,26 @@ namespace Core.ZSharp
         public static global::ZSharp.Importer.String.LibraryImporter Libraries { get; set; } = null!;
 
         /// <summary>
+        /// What imports a source with no prefix, a file, by what is registered for its
+        /// extension.
+        /// </summary>
+        [Alias("files")]
+        public static global::ZSharp.Lang.FileImporter Files { get; set; } = null!;
+
+        /// <summary>
+        /// What routes a source to the importer of its prefix, which Z# can add to, as
+        /// the package manager adds <c>pkg:</c>.
+        /// </summary>
+        [Alias("importers")]
+        public static global::ZSharp.Importer.String.StringImporter Importers { get; set; } = null!;
+
+        /// <summary>
+        /// What runs documents, which can run one again, as a project's module file is.
+        /// </summary>
+        [Alias("documents")]
+        public static global::ZSharp.Lang.DocumentImporter Documents { get; set; } = null!;
+
+        /// <summary>
         /// What imports from a source, giving the imported value or why it can't.
         /// </summary>
         public static Func<string, IResult<global::ZSharp.HIR.Instance, CommonZ.Error>> Importer { get; set; } = null!;
@@ -103,6 +123,15 @@ namespace Core.ZSharp
             => Importer(source).When(out var imported).Error(out var error)
                 ? throw new InvalidOperationException(error.ToString())
                 : imported!;
+
+        /// <summary>
+        /// Imports from an instance, which is what importing it gives, as a module a project
+        /// compiled: <c>import { Cecil } from platform</c>.
+        /// </summary>
+        [Alias("import")]
+        [Operator("import")]
+        public static global::ZSharp.HIR.Instance Import(global::ZSharp.HIR.Instance instance)
+            => instance;
 
         /// <summary>
         /// Marks a definition as an operation of the language, as in

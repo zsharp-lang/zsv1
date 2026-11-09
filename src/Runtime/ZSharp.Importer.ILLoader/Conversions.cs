@@ -34,7 +34,7 @@ namespace ZSharp.Importer.ILLoader
         /// <summary>
         /// The code that converts a number already on the stack to another numeric type.
         /// </summary>
-        public static void Emit(ILGenerator il, Type from, Type to)
+        public static void Emit(LIR.CLR.ClrCode il, Type from, Type to)
         {
             if (to == typeof(float) || to == typeof(double))
             {

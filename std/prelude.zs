@@ -18,3 +18,7 @@ import "std:zsharp/clr";
 import { Module } from "std:modules";
 import { Class, Interface } from "std:oop";
 import { Type } from "std:types";
+
+// .NET assemblies as files, and packages, as `pkg:`, from the package manager.
+import "std:dotnet";
+import "std:packages";

@@ -1,6 +1,7 @@
 using System.Reflection.Emit;
 using L = ZSharp.LIR;
 using ZSharp.Platform.Runtime;
+using ZSharp.LIR.CLR;
 
 void Report(string name, bool ok)
 {

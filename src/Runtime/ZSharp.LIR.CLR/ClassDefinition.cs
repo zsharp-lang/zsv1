@@ -1,9 +1,9 @@
-namespace ZSharp.Platform.Runtime
+namespace ZSharp.LIR.CLR
 {
     /// <summary>
-    /// A CLR class, as LIR that only this platform handles. LIR has no classes, and
-    /// no other target ever handles a CLR class definition, so this belongs here and
-    /// not in the LIR core.
+    /// A CLR class, as LIR that the CLR platforms handle. LIR has no classes, and
+    /// only a CLR platform handles a CLR class definition, so this belongs with the
+    /// CLR handles and not in the LIR core.
     /// </summary>
     public sealed class ClassDefinition(string name)
         : LIR.Type

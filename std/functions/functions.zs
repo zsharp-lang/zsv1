@@ -12,10 +12,10 @@ import { CompilerObject } from "std:zsharp/mir";
 import { Error, Result, IResult } from "std:zsharp/common";
 import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
 import { ICTCallable, ICTMatchParameter } from "std:zsharp/compiler/cg/direct";
-import { ICompileIRExpression, ICompileIRDefinitionIn } from "std:zsharp/compiler/ir";
+import { ICompileIRExpression, ICompileIRDefinitionIn, ICompileIRReference } from "std:zsharp/compiler/ir";
 import { ITyped } from "std:zsharp/compiler/ts";
 import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
-import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode, Module as LIRModule } from "std:zsharp/lir";
+import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode, Module as LIRModule, ICallable } from "std:zsharp/lir";
 import { Bodies } from "std:zsharp/lang";
 import { CodeLoaders } from "std:zsharp/compiler/code";
 import { Holder, Held } from "std:zsharp/lowering";
@@ -123,7 +123,7 @@ def Objects of DotNet_Module {
     // A Z# function as a CO: calling it matches the arguments to its parameters, and it
     // is lowered once for each target, to an LIR function of its own: a function of what
     // holds it, as a module, if something does.
-    def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, Held, ICompileIRDefinitionIn[LIRModule] {
+    def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, Held, ICompileIRDefinitionIn[LIRModule], ICompileIRReference[ICallable] {
         let node: Function;
         let holder: Holder;
         let lowered: Dictionary[Object, LIRFunction];
@@ -137,6 +137,13 @@ def Objects of DotNet_Module {
         }
 
         @explicitThis fun hold(this, holder: Holder) { this.holder = holder; }
+
+        // It is referred to as its function, as a delegate of it is.
+        @explicitThis fun CompileIRReference(this, target: Object): IResult[ICallable, Error] {
+            let function = this.function(target);
+            if (function == null) return Result[ICallable].Error(this.failures[target]);
+            return Result[ICallable].Ok(function);
+        }
 
         @explicitThis fun CompileIRDefinition(this, owner: LIRModule, target: Object): Error {
             if (this.function(target) != null) return null;

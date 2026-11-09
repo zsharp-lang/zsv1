@@ -24,12 +24,13 @@ namespace ZSharp.Lang.DotNet
         : IDocumentHost
     {
         private readonly Dictionary<Package.ZSharp.Document, DocumentFrame> frames = [];
-        private readonly Dictionary<LIR.Type, (LIR.FunctionHandle Get, LIR.FunctionHandle Set)> elements = [];
+        private readonly Dictionary<LIR.Type, (LIR.CLR.ClrCode Get, LIR.CLR.ClrCode Set)> elements = [];
 
-        private readonly LIR.TypeHandle objects = Handle(runtime, typeof(object[]));
-        private readonly LIR.TypeHandle index = Handle(runtime, typeof(int));
-        private readonly LIR.TypeHandle frameType = Handle(runtime, typeof(DocumentFrame));
-        private LIR.FunctionHandle? values;
+        private static readonly LIR.CLR.Reflected reflected = new();
+        private readonly LIR.Type objects = reflected.Type(typeof(object[]));
+        private readonly LIR.Type index = reflected.Type(typeof(int));
+        private readonly LIR.Type frameType = reflected.Type(typeof(DocumentFrame));
+        private LIR.CLR.ClrMethod? values;
 
         /// <summary>
         /// Loads a local of a document as an element of its document's frame.
@@ -127,14 +128,7 @@ namespace ZSharp.Lang.DotNet
         /// </summary>
         internal LIR.Expression Values(DocumentFrame frame)
         {
-            if (values is null)
-            {
-                var signature = new LIR.Signature { ReturnType = objects };
-                signature.Parameters.Add(new(frameType) { Name = "frame" });
-
-                values = new(signature);
-                runtime.Map(values, typeof(DocumentFrame).GetMethod(nameof(DocumentFrame.Values))!);
-            }
+            values ??= reflected.Method(typeof(DocumentFrame).GetMethod(nameof(DocumentFrame.Values))!);
 
             return new LIR.Call(values, [new LIR.Constant(frameType, frame)]);
         }
@@ -142,7 +136,11 @@ namespace ZSharp.Lang.DotNet
         /// <summary>
         /// The functions that read and write an element of a frame as a value of a type.
         /// </summary>
-        internal (LIR.FunctionHandle Get, LIR.FunctionHandle Set) Elements(LIR.Type type)
+        /// <para>
+        /// An element is an object, so reading one unboxes or casts it, as <c>unbox.any</c>
+        /// does either, and writing one boxes it, which does nothing to a reference.
+        /// </para>
+        internal (LIR.CLR.ClrCode Get, LIR.CLR.ClrCode Set) Elements(LIR.Type type)
         {
             if (elements.TryGetValue(type, out var known))
                 return known;
@@ -156,25 +154,15 @@ namespace ZSharp.Lang.DotNet
             set.Parameters.Add(new(index) { Name = "index" });
             set.Parameters.Add(new(type) { Name = "value" });
 
-            var handles = (Get: new LIR.FunctionHandle(get), Set: new LIR.FunctionHandle(set));
-
-            runtime.MapGetElement(handles.Get, type);
-            runtime.MapSetElement(handles.Set, type);
+            var handles = (
+                Get: new LIR.CLR.ClrCode(get).Emit(System.Reflection.Emit.OpCodes.Ldelem_Ref).Emit(System.Reflection.Emit.OpCodes.Unbox_Any, type),
+                Set: new LIR.CLR.ClrCode(set).Emit(System.Reflection.Emit.OpCodes.Box, type).Emit(System.Reflection.Emit.OpCodes.Stelem_Ref)
+            );
 
             return elements[type] = handles;
         }
 
         internal LIR.Constant Index(int slot) => new(index, slot);
-
-        private static LIR.TypeHandle Handle(Platform.Runtime.Runtime runtime, Type type)
-        {
-            var handle = new LIR.TypeHandle();
-
-            runtime.Map(handle, type);
-
-            return handle;
-        }
-
     }
 
     /// <summary>

@@ -13,6 +13,19 @@ namespace ZSharp.Importer.String
         public void Register(string prefix, IStringImporter importer)
             => importers[prefix] = importer;
 
+        /// <summary>
+        /// Routes a prefix to a function, which is given the rest of the source, as
+        /// <c>pkg:</c> is to the package manager's.
+        /// </summary>
+        public void Register(string prefix, Func<string, IResult<HIR.Instance, Error>> import)
+            => importers[prefix] = new FunctionImporter(import);
+
+        private sealed class FunctionImporter(Func<string, IResult<HIR.Instance, Error>> import)
+            : IStringImporter
+        {
+            public IResult<HIR.Instance, Error> Import(string source) => import(source);
+        }
+
         public IResult<HIR.Instance, Error> Import(string source)
         {
             // A rooted path, such as C:/a.zs, has no prefix.

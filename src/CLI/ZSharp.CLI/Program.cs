@@ -165,9 +165,15 @@ Core.ZSharp.ModuleScope.MetaTypes = ZSharp.Lang.DotNet.DotNetMetaTypes.Install(l
 
 #region Run
 
-// A source with no prefix is a document, and the document given to the CLI is the first.
+// A source with no prefix is a file, a .zs file is a document, and the document given
+// to the CLI is the first.
 var documents = new DocumentImporter(language, compiler, host);
-importer.DefaultImporter = documents;
+var fileImporter = new FileImporter(compiler);
+fileImporter.Register(".zs", documents.Import);
+importer.DefaultImporter = fileImporter;
+Core.ZSharp.ModuleScope.Files = fileImporter;
+Core.ZSharp.ModuleScope.Importers = importer;
+Core.ZSharp.ModuleScope.Documents = documents;
 
 // The standard library written in Z# is found from where the toolchain runs.
 if (DocumentLibrary.Above(AppContext.BaseDirectory, "std") is { } standard)

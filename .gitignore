@@ -402,3 +402,9 @@ FodyWeavers.xsd
 
 # src/Packages holds Z# packages, not NuGet output.
 !src/Packages/*
+
+# packages holds the toolchain's Z# packages, and std/packages is std:packages, not NuGet
+# output, and pkg/build is what the package manager is built into.
+!/packages/*
+!/std/packages/*
+pkg/build/

@@ -1,4 +1,4 @@
-using ZSharp.Platform.Runtime;
+using ZSharp.LIR.CLR;
 
 using Scope = Core.Compiler.ModuleScope;
 
@@ -57,9 +57,9 @@ namespace ZSharp.Importer.ILLoader.Objects
                 : Scope.HIRLoader.LoadType(node.Base).Ok(out var loaded) ? loaded : null;
 
         public IResult<LIR.Type, Error> CompileIRType(object? target)
-            => target is Runtime
+            => target is ClrPlatform
                 ? Result<LIR.Type>.Ok(Definition)
-                : Result<LIR.Type>.Error($"Class {Definition.Name} can only be compiled for the CLR runtime.");
+                : Result<LIR.Type>.Error($"Class {Definition.Name} can only be compiled for a CLR platform.");
 
         public IResult Call(Argument[] arguments)
             => Scope.CG.Call(
@@ -208,7 +208,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     /// <summary>
     /// A delegate made of a method, bound to the object it was reached through, if any.
     /// </summary>
-    internal sealed class BoundDelegate(ILLoader loader, LIR.FunctionHandle make, CompilerObject? receiver, CompilerObject type)
+    internal sealed class BoundDelegate(ILLoader loader, LIR.ICallable make, CompilerObject? receiver, CompilerObject type)
         : CompilerObject
         , ICompileIRExpression
         , ITyped
