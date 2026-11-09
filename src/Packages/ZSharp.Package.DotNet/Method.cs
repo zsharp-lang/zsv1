@@ -3,6 +3,7 @@ namespace Package.DotNet
     public sealed class Method(string name)
         : ZSharp.HIR.Definition
         , ZSharp.HIR.Instance
+        , ZSharp.HIR.Named
     {
         public string Name { get; set; } = name;
 

@@ -25,6 +25,7 @@ namespace ZSharp.Platform.Runtime
                     : throw new InvalidOperationException($"Type parameter {parameter.Name} is not defined."),
                 LIR.Reference reference => typeof(Box<>).MakeGenericType(ImportType(reference.Target)),
                 LIR.GenericInstance instance => ImportType(instance.Definition).MakeGenericType([.. instance.Arguments.Select(ImportType)]),
+                ByRefType reference => ImportType(reference.Target).MakeByRefType(),
                 LIR.FunctionType => typeof(nint),
                 _ => throw new NotSupportedException($"Can't import a {type.GetType().Name}.")
             };
@@ -39,10 +40,23 @@ namespace ZSharp.Platform.Runtime
             return fields[field];
         }
 
+        /// <summary>
+        /// A module's globals are declared together, in their order, so its initializers
+        /// run in that order.
+        /// </summary>
         internal IL.FieldInfo ImportGlobal(LIR.Global global)
         {
             if (!globals.TryGetValue(global, out var result))
-                result = DeclareGlobal(global);
+            {
+                foreach (var declared in global.Module?.Globals ?? Enumerable.Empty<LIR.Global>())
+                    if (!globals.ContainsKey(declared))
+                        DeclareGlobal(declared);
+
+                if (global.Module is { } module)
+                    Initialize(module);
+
+                result = globals.TryGetValue(global, out var found) ? found : DeclareGlobal(global);
+            }
 
             return result;
         }

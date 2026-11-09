@@ -101,6 +101,14 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ))));
             }
 
+            if (Node.Properties.FirstOrDefault(property => property.Name == member && property.IsStatic == receiver is null) is { } property)
+                return Result.Ok(new Accessor(
+                    receiver,
+                    () => Scope.HIRLoader.LoadType(property.Type!).Unwrap(),
+                    property.Getter is { } getter ? Methods[getter] : null,
+                    property.Setter is { } setter ? Methods[setter] : null
+                ));
+
             if (receiver is not null && Definition.Fields.FirstOrDefault(field => field.Name == member) is { } field)
             {
                 var type = Node.Fields.First(item => item.Name == member).Type;

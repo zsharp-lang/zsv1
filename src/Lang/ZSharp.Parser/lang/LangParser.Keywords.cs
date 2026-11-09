@@ -13,6 +13,7 @@
             public const string For         = "for";
             public const string From        = "from";
             public const string Function    = "fun";
+            public const string Get         = "get";
             public const string If          = "if";
             public const string Import      = "import";
             public const string In          = "in";
@@ -23,6 +24,7 @@
             public const string Of          = "of";
             public const string Or          = "or";
             public const string Return      = "return";
+            public const string Set         = "set";
             public const string Var         = "var";
             public const string When        = "when";
             public const string While       = "while";

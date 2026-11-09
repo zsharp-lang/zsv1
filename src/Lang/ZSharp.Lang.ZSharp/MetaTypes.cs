@@ -130,6 +130,8 @@ namespace ZSharp.Lang
             {
                 AST.TypeDefinition type => type.Name,
                 AST.Module module => module.Name,
+                // An accessor is named by its property, which is what has the name.
+                AST.Accessor => string.Empty,
                 AST.Function function => function.Name ?? string.Empty,
                 _ => string.Empty
             };

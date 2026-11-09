@@ -26,6 +26,44 @@ namespace ZSharp.Parser
             if (parser.Is(TokenType.Identifier))
                 name = parser.Eat(TokenType.Identifier).Value;
 
+            return ParseRest<Function>(parser, funKeyword, name, (tokens, parts) => new(tokens)
+            {
+                Body = parts.Body,
+                GenericParameters = parts.GenericParameters,
+                Name = parts.Name,
+                ReturnType = parts.ReturnType,
+                Signature = parts.Signature,
+            });
+        }
+
+        /// <summary>
+        /// An accessor of a property, <c>get Name(): T { ... }</c> or
+        /// <c>set Name(value: T) { ... }</c>: a function named by its property.
+        /// </summary>
+        public Accessor ParseAccessor(Parser parser)
+        {
+            var isSetter = parser.Is(LangParser.Keywords.Set);
+            var keyword = parser.Eat(isSetter ? LangParser.Keywords.Set : LangParser.Keywords.Get);
+            var name = parser.Eat(TokenType.Identifier).Value;
+
+            return ParseRest<Accessor>(parser, keyword, name, (tokens, parts) => new(tokens)
+            {
+                Body = parts.Body,
+                GenericParameters = parts.GenericParameters,
+                Name = parts.Name,
+                ReturnType = parts.ReturnType,
+                Signature = parts.Signature,
+                IsSetter = isSetter,
+            });
+        }
+
+        private sealed record Parts(string? Name, List<GenericParameter>? GenericParameters, Signature Signature, Expression? ReturnType, Statement? Body);
+
+        private T ParseRest<T>(Parser parser, Token keyword, string? name, Func<FunctionTokens, Parts, T> make)
+            where T : Function
+        {
+            var funKeyword = keyword;
+
             List<GenericParameter>? genericParameters = null;
             if (parser.Is(TokenType.LBracket, eat: true))
             {
@@ -55,17 +93,7 @@ namespace ZSharp.Parser
             // A method with no body, as an abstract or an interface's, ends with ;.
             Statement? body = parser.Is(TokenType.Semicolon, eat: true) ? null : ParseFunctionBody(parser);
 
-            return new(new()
-            {
-                FunKeyword = funKeyword,
-            })
-            {
-                Body = body,
-                GenericParameters = genericParameters,
-                Name = name,
-                ReturnType = returnType,
-                Signature = signature,
-            };
+            return make(new() { FunKeyword = funKeyword }, new(name, genericParameters, signature, returnType, body));
         }
 
         protected override Statement ParseDefaultContextItem(Parser parser)

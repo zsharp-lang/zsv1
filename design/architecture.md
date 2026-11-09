@@ -161,19 +161,24 @@ To be designed. Settled so far:
   WebAssembly together), LLVM, x86, RISC-V and Python.
 - A build script invokes targets explicitly, so there is no target API to define.
 - The concepts are `Module`, `Function`, `ICallable`, `Signature`, `Global`,
-  `Structure`, `Reference`, `GenericInstance`, `InstanceMember`, `FunctionType`,
-  `Type`, `Handle`, metadata, and the `Code` of a function body.
+  `Structure`, `Reference`, `GenericInstance`, `InstanceMember`, `MethodInstance`,
+  `FunctionType`, `Type`, `Handle`, `Initialized`, metadata, and the `Code` of a
+  function body.
 - A `Signature` is ordered parameters and an optional return type. With no type
   system, a function that returns nothing has no return type.
 - `Module` holds common code and data. The smallest data piece is a simple data
   structure, and layout is inferred from field order.
 - Concepts such as a method are metadata attached to a `Function`. A target may
   interpret metadata, but it is not strictly required for functionality.
-- A `Global` can have an initializer, the value it has before it is first read or
-  written: evaluated once, a module's in the order of its globals. Every target
-  initializes what it loads, as the CLR's type initializers, a JS module's body or LLVM's
-  global constructors, so it is a core concept. The CLR runtime gives each module's
-  holder type an initializer that sets its globals.
+- `Initialized` is a capability of a definition: code that runs once to initialize it,
+  before any of it is used, which whatever is lowered into it can add to, as a global its
+  initial value. A `Module` has it. Every target initializes what it loads, as the CLR's
+  type initializers, a JS module's body or LLVM's global constructors, so it is a core
+  concept. The CLR runtime runs a module's initializer as the type initializer of the
+  holder its globals are declared in, which it declares together.
+- `MethodInstance` is a generic function given LIR type arguments, as `GenericInstance`
+  is for a type: the platform makes the instance, so its arguments may be types it is
+  still building.
 - `Reference` is a core LIR type that holds its target type. The lowerer (a CO,
   for example) decides the exact type of a field, and so whether it is stored
   inline. It can move out of the core if more targets show it isn't common.
@@ -761,7 +766,7 @@ a custom type gets into the language to be used as a meta-type.
   last. A target without polymorphism, static and class members, and type objects come
   next.
 - A Z# interface is written `def Shape of Interface { fun area(): Int32; }`: an
-  `Interface` node has methods with no code, and no fields or constructors. A class
+  `Interface` node has methods with no code, and nothing defines fields for it. A class
   implements the interfaces it is given as bases, `def Square : Shape`, and must have each
   of their methods, with the name and the parameter and return types; it has no
   inheritance. A class and an interface are both what methods belong to, a `MethodOwner`,
@@ -807,9 +812,10 @@ a custom type gets into the language to be used as a meta-type.
   does nothing, and a class member is reached through the class's type object. Using the
   object where there is none, in a static or class method, is an error when the code is
   loaded.
-- A static field lowers to an LIR global of the class's module, initialized with the
-  field's default value. A field is loaded from its node, as a method is, so it knows its
-  class.
+- A static field lowers to an LIR global of the class's module, which the module's
+  initializer gives the field's default value. A class's static fields and its type object
+  are lowered with it, so its module is whole once the class is lowered. The class's CO
+  holds the COs of its static fields.
 - A class is a value: its type object, the one object of its metaclass for each target. A member marked `@class`, which `std:oop` exports, is the
   type object's: a class field is a field of the metaclass, and a class method a method of
   it, which runs on the type object, named `this` if its first parameter says so. An
@@ -819,13 +825,68 @@ a custom type gets into the language to be used as a meta-type.
   `Shape`, calls what that class has. A metaclass and a class shape lower to structures
   the target's polymorphism makes an object type and an interface, in the class's or
   interface's module, and a class's metaclass implements its interfaces' class shapes. A
-  class's type object is an LIR global of its module, initialized with a new object of its
-  metaclass. `ClassOf` is the node that describes a metaclass, so it can be written in a
+  class's type object is an LIR global of its module, which the module's initializer makes
+  a new object of its metaclass. `ClassOf` is the node that describes a metaclass, so it can be written in a
   signature.
 - With no inheritance, a value of a class is of that class, so a class member reached
   through it, or by name in one of its methods, is its class's type object's. Only a value
   of an interface could be of any class, so what class it is would come from the object,
   which isn't reachable yet.
+- `def` isn't a class or a type: it is a definition, `def ID? (of META)? ...`, and
+  `module` is `def` of `Module`. So a definition's body holds definitions as a module's
+  does, and whether it takes each is its meta-type's to say; a CLR module is
+  `def Name of DotNet_Module`. Z#'s definitions are the defaults, and a library that
+  needs another meta-type says `of`, so what a library's definitions are doesn't depend on
+  what was imported before it.
+- A module is a standard definition too: `std:modules` defines it in Z#, and the CLR
+  realizes it as a module. The HIR `Module` is structure: its globals and its
+  definitions. A `let` in a module is a `Global`, of the type written or of its
+  initializer, which is code; an import runs as the code that builds the module runs; and
+  a definition is compiled by its own meta-type. The AST compiler binds names as the AST
+  has them.
+- Z# is meant to be extended, so the standard definitions work with general concepts
+  rather than predicting each use. A meta-type, and its meta-compiler, handles only what
+  it cares about: what it doesn't care about, it doesn't define, and that fails on its
+  own wherever nothing defines it. What it does care about, it can and should reject.
+  A class cares about its fields, methods and constructors, and also about owning any
+  other definition written in it, which it holds and makes reachable, without caring what
+  that definition is.
+- An HIR node does nothing by itself, so a structure the definition would consider
+  invalid isn't wrong until it is used as a definition: until it is loaded to a CO, which
+  is when its node is complete. So a meta-compiler builds what is written, and rejects
+  only what it can't build; what a definition accepts is checked by its loader. A class
+  method with no code, an interface method with code, a field or a global with neither a
+  type nor a value, and a CLR property whose accessors don't make one are errors of
+  loading them, not of building them. Code that builds HIR in steps, as a generator,
+  passes through structure that isn't complete yet.
+- A module is a unit of state and of loading, not a namespace, so modules don't nest.
+  That needs no rule: `module` is syntax only in a document, and a module isn't an HIR
+  `Definition` but an `Instance`, the root of what it holds, so nothing that holds
+  definitions, as a module's or a class's list of them, can hold one. A module's CO
+  doesn't lower into anything, as it has no `ICompileIRDefinitionIn`. In code, a module
+  is a value, cast to what it is, as `module { ... } as Module`, which is its structure
+  with no identity, as any definition cast to its meta-type is. A module's loader keeps
+  one CO for each, as the IL loader does for a CLR module, and its members are bound to
+  that CO. `Definition` never meant identity; one CO for each definition is only what the
+  definition loader does. Grouping definitions inside a document, if it is needed, would
+  be a meta-type of its own, with no state.
+- A Z# class or interface has its own lists, of fields, methods and constructors, and
+  one for any other definition written in it, which is compiled as it would be anywhere
+  and reached through the class's CO by the name `Named` gives it: what a class defines
+  its members to be is a `fun`, a `new` and a `let`. An accessor is a definition a class
+  doesn't define a member for yet. A field has the type written, or else its value's.
+- `Named` is an HIR capability: a definition with a name of its own. The CO loader of an
+  HIR module finds its members by the names `Named` gives them, so a module holds no
+  mapping. A node of a CLR definition is `Named` by its name, and a Z# node by an
+  accessor of its own.
+- Belonging is how a definition lowers, not its structure, so no node holds an owner.
+  The CO of what holds definitions, as a module's, binds its members' COs to itself as it
+  is loaded, which is MIR, and lowers them top-down: its LIR module is made for a target,
+  and each member is lowered into it with `ir.CompileDefinition(member, owner, target)`,
+  globals first, in their order. A global gives its initial value to its owner's
+  initializer, if the owner has that capability. A member lowered first by itself, as a
+  function a call reaches, asks what holds it. `std:zsharp/lowering` defines `Holder`,
+  `Held` and `Initializing`, and installs nothing.
 - What a definition written in Z# needs from code that uses a class still being loaded
   with it is general: such a class goes to the interfaces it implements, can be cast down
   to and tested for, has a `null`, can be given to a generic CLR type, and has its
@@ -847,6 +908,14 @@ a custom type gets into the language to be used as a meta-type.
   since the definition doesn't exist yet: loaded, it is a variable of the meta-type, and
   reading it gives the node. A definition that exists is its CO, whose value is its type
   object, which converts to the node where an HIR type is expected.
+- A property is written as its accessors, `get Name(): T { ... }` and
+  `set Name(value: T) { ... }`, each a definition of its own named by its property, which
+  binds no name. The CLR's meta-compiler compiles them as the methods the CLR names for
+  the property, and pairs them into a `Property` once the class's members are built; the
+  runtime defines the property and links its accessors, so a C# interface's property is
+  implemented by an accessor.
+- Giving a group of overloads type arguments gives the group of those it applies to:
+  which is meant is the call's to choose.
 - A CLR class, interface or module compiles a `fun` written directly in it as a CLR
   method, through `CodeBody.WithMethods`, whatever the default for `fun` is: the meta-type
   of its members is the container's to choose.
@@ -1853,5 +1922,12 @@ Restrictions:
 - **A value of an interface doesn't give its class.** `shape.Class` would take each
   object reaching its type object, which a polymorphism operation, as `cast` and `test`
   are, could give.
+- **Whether a match against a trait is dynamic depends on the implementations that
+  exist when the code is compiled.** `Traits.isTrait` is "a type something implements
+  now", so `std:oop`, which matches its target against `Polymorphism`, has to be imported
+  after `std:zsharp/clr` gives the runtime polymorphism. A trait would need to be one by
+  what it is, not by what implements it so far.
+- **A Z# class has no properties yet.** CLR definitions have them, written as `get` and
+  `set` accessors; `std:oop` rejects them until its classes have them too.
 - **Only one target has polymorphism.** Lowering for each target is kept by target, but
   nothing yet lowers a class for a target without polymorphism.

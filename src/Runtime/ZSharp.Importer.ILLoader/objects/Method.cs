@@ -46,6 +46,21 @@ namespace ZSharp.Importer.ILLoader.Objects
             => method is MethodInfo info ? MethodValue.Natural(info) : null;
 
         /// <summary>
+        /// A generic method given types that aren't CLR types yet, as a class being loaded
+        /// with the code, if each is a type and there is one for each type parameter.
+        /// </summary>
+        private MethodInstantiation? Instantiated(MethodInfo generic, Argument[] arguments)
+        {
+            if (arguments.Length != generic.GetGenericArguments().Length || arguments.Any(argument => argument.Name is not null))
+                return null;
+
+            if (arguments.Any(argument => Core.Compiler.ModuleScope.IR.CompileType(argument.Object, loader.Runtime).Error(out _)))
+                return null;
+
+            return new MethodInstantiation(loader, generic, [.. arguments.Select(argument => argument.Object)], receiver);
+        }
+
+        /// <summary>
         /// Giving a generic method its arguments, as in <c>f[Int32]</c>, instantiates it.
         /// </summary>
         public IResult Index(Argument[] arguments)
@@ -54,7 +69,9 @@ namespace ZSharp.Importer.ILLoader.Objects
                 return Result.Error(new UnsupportedError($"{method.Name} is not generic."));
 
             if (loader.Types(arguments, generic.GetGenericArguments()) is not { } types)
-                return Result.Error($"{method.Name} takes {generic.GetGenericArguments().Length} type arguments.");
+                return Instantiated(generic, arguments) is { } instantiation
+                    ? Result.Ok(instantiation)
+                    : Result.Error($"{method.Name} takes {generic.GetGenericArguments().Length} type arguments.");
 
             try
             {

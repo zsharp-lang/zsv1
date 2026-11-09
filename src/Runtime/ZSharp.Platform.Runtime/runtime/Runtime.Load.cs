@@ -26,10 +26,21 @@ namespace ZSharp.Platform.Runtime
         private readonly List<LIR.Global> pendingGlobals = [];
 
         /// <summary>
-        /// The globals with initializers declared in each module's holder since it was last
-        /// completed, which the holder's type initializer gives their values.
+        /// The modules whose initializer was given to a holder, and those whose holder's
+        /// type initializer is still to be emitted.
         /// </summary>
-        private readonly Dictionary<LIR.Module, List<LIR.Global>> initialized = [];
+        private readonly HashSet<LIR.Module> initializedModules = [];
+        private readonly List<LIR.Module> pendingInitializers = [];
+
+        /// <summary>
+        /// A module's initializer runs as the type initializer of the holder its globals
+        /// are declared in, which the CLR runs before any of them is first used.
+        /// </summary>
+        internal void Initialize(LIR.Module module)
+        {
+            if (module.Initializer.Block.Statements.Count > 0 && initializedModules.Add(module))
+                pendingInitializers.Add(module);
+        }
         private readonly List<LIR.Function> pendingFunctions = [];
 
         /// <summary>
@@ -151,6 +162,23 @@ namespace ZSharp.Platform.Runtime
                 declared.SetParameters([.. method.Signature.Parameters.Skip(method.IsStatic ? 0 : 1).Select(parameter => ImportType(parameter.Type))]);
 
                 classMethods[method] = declared;
+            }
+
+            foreach (var property in definition.Properties)
+            {
+                var declared = builder.DefineProperty(
+                    property.Name,
+                    IL.PropertyAttributes.None,
+                    property.IsStatic ? IL.CallingConventions.Standard : IL.CallingConventions.HasThis,
+                    ImportType(property.Type),
+                    Type.EmptyTypes
+                );
+
+                if (property.Getter is { } getter)
+                    declared.SetGetMethod(classMethods[getter]);
+
+                if (property.Setter is { } setter)
+                    declared.SetSetMethod(classMethods[setter]);
             }
         }
 
@@ -353,14 +381,6 @@ namespace ZSharp.Platform.Runtime
             globals[global] = field;
             pendingGlobals.Add(global);
 
-            if (global.Initializer is not null)
-            {
-                if (!initialized.TryGetValue(global.Module!, out var declared))
-                    initialized[global.Module!] = declared = [];
-
-                declared.Add(global);
-            }
-
             return field;
         }
 
@@ -385,23 +405,19 @@ namespace ZSharp.Platform.Runtime
         }
 
         /// <summary>
-        /// A holder's globals are given their initial values by its type initializer, which
-        /// the CLR runs before any of them is first used. What an initializer reaches is
-        /// declared and emitted with it.
+        /// Emits the type initializers of the holders whose modules have initializers.
+        /// What an initializer reaches is declared and emitted with it.
         /// </summary>
         private void EmitInitializers()
         {
-            while (initialized.Count > 0)
+            while (pendingInitializers.Count > 0)
             {
-                var pending = initialized.ToList();
-                initialized.Clear();
+                var pending = pendingInitializers.ToList();
+                pendingInitializers.Clear();
 
-                foreach (var (owner, declared) in pending)
+                foreach (var owner in pending)
                 {
-                    var initializer = new LIR.Function(new LIR.Signature()) { Name = ".cctor", Body = new LIR.Code() };
-
-                    foreach (var global in declared)
-                        initializer.Body.Block.Statements.Add(new LIR.SetGlobal(global, global.Initializer!));
+                    var initializer = new LIR.Function(new LIR.Signature()) { Name = ".cctor", Body = owner.Initializer };
 
                     new CodeEmitter(this, Holder(owner).DefineTypeInitializer().GetILGenerator(), initializer).EmitBody();
                 }

@@ -3,6 +3,7 @@ namespace Package.DotNet
     public sealed class Interface(string name)
         : InterfaceReference
         , DotNetDefinition
+        , ZSharp.HIR.Named
     {
         public string Name { get; set; } = name;
 

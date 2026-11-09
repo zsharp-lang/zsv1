@@ -14,6 +14,21 @@ namespace ZSharp.LIR
     }
 
     /// <summary>
+    /// A generic function given its type arguments, LIR types, which the platform makes
+    /// the instance of. Its signature is the function's with the arguments in place of
+    /// its type parameters.
+    /// </summary>
+    public sealed class MethodInstance(ICallable method, IEnumerable<Type> arguments, Signature signature)
+        : ICallable
+    {
+        public ICallable Method { get; set; } = method;
+
+        public List<Type> Arguments { get; } = [.. arguments];
+
+        public Signature Signature { get; set; } = signature;
+    }
+
+    /// <summary>
     /// A member of a generic definition, called on an instance of it. Its signature is
     /// the member's as the instance has it, with the instance's arguments in place of
     /// the definition's type parameters.

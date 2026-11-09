@@ -3,6 +3,7 @@ namespace Package.DotNet
     public sealed class Struct(string name)
         : StructReference
         , DotNetDefinition
+        , ZSharp.HIR.Named
     {
         public string Name { get; set; } = name;
 

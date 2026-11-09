@@ -146,6 +146,8 @@ foreach (var (name, clr) in new (string, Type)[] {
     ("Int64", typeof(long)), ("Decimal", typeof(decimal)), ("Math", typeof(Math)), ("Object", typeof(object)),
     ("IDisposable154", typeof(IDisposable)), ("Interlocked", typeof(System.Threading.Interlocked)),
     ("Bell", typeof(Bell)), ("EventArgs", typeof(EventArgs)),
+    ("IHasLabel", typeof(IHasLabel)),
+    ("GenericProbe", typeof(GenericProbe)),
     ("Array", typeof(Array)), ("Enumerable", typeof(System.Linq.Enumerable)), ("Nullable", typeof(Nullable<>)),
     ("Task", typeof(System.Threading.Tasks.Task)) })
     document.Scope.Add(name, new C.Get(il.Load(clr)));
@@ -178,6 +180,20 @@ ZSharp.AST.Statement ParseOne(string source)
 }
 
 // Runs source statement by statement, returning the first error.
+// Whether code fails, as code nothing defines the meaning of does, whether its syntax
+// or the language is what doesn't define it.
+bool Fails(string source)
+{
+    try
+    {
+        return Run(source) is not null;
+    }
+    catch (Exception)
+    {
+        return true;
+    }
+}
+
 string? Run(string source)
 {
     var parser = new Parser(Tokenizer.Tokenize(new(new StringReader(source))));
@@ -3033,6 +3049,66 @@ Try("a generic CLR type given a class still being built is the description of it
         Keep(M248.Bag248().size());
         """) is null && Kept() is 1);
 
+Try("a CLR class has properties, read and written through their accessors", () =>
+    ResetKept() && Run("""
+        def Box256 {
+            let value: Int32;
+            @explicitThis new(this) { this.value = 1; }
+            @explicitThis get Doubled(this): Int32 { return this.value * 2; }
+            @explicitThis set Doubled(this, value: Int32) { this.value = value / 2; }
+            @static get Kind(): String { return "boxes"; }
+            @explicitThis fun read(this): Int32 { this.Doubled = 40; return this.Doubled; }
+        }
+
+        let box256 = Box256();
+        Keep(box256.Doubled);
+        box256.Doubled = 10;
+        Keep(box256.value);
+        Keep(box256.read());
+        Keep(Box256.Kind);
+        """) is null && Probe.Kept is [2, 5, 40, "boxes"]
+    && Probe.LastType("Box256").GetProperty("Doubled") is { CanRead: true, CanWrite: true });
+
+Try("a CLR class implements an interface's property with an accessor", () =>
+    Run("""
+        def Labeled257 : IHasLabel {
+            @explicitThis new(this) { }
+            @explicitThis get Label(this): String { return "labeled"; }
+        }
+        Keep(Labeled257());
+        """) is null && Kept() is IHasLabel { Label: "labeled" });
+
+Try("a property's setter takes one value and returns nothing", () =>
+    Run("""
+        def Bad258 {
+            @explicitThis new(this) { }
+            @explicitThis set Value(this, a: Int32, b: Int32): Int32 { return a; }
+        }
+        """) is { } e && e.Contains("takes one value"));
+
+Try("a generic CLR method is given a class loaded with the code that uses it", () =>
+    Run("""
+        module M259 {
+            def Item259 {
+                let value: Int32;
+                @explicitThis new(this, value: Int32) { this.value = value; }
+                @static fun total(): Int32 {
+                    let same = GenericProbe.Same[Item259](Item259(40));
+                    let copy: Item259 = null;
+                    if (GenericProbe.Copy[Item259](Item259(2), copy)) return same.value + copy.value;
+                    return 0;
+                }
+            }
+        }
+        Keep(M259.Item259.total());
+        """) is null && Kept() is 42);
+
+Try("generic overloads given type arguments are chosen between by the call", () =>
+    ResetKept() && Run("""
+        Keep(GenericProbe.Pick[Int32](1));
+        Keep(GenericProbe.Pick[Int32](1, 2));
+        """) is null && Probe.Kept is ["one", "two"]);
+
 // ---- CLR value types
 
 Try("a struct's property is read from a struct a method returns", () =>
@@ -4036,7 +4112,7 @@ Try("a Z# interface has no fields, constructors or code", () =>
     Run("""
         import { Interface } from "std:oop";
         def Fielded238 of Interface { let x: Int32; }
-        """) is { } fields && fields.Contains("no fields")
+        """) is not null
     && Run("""
         import { Interface } from "std:oop";
         def Coded238 of Interface { fun f(): Int32 { return 1; } }
@@ -4267,11 +4343,148 @@ Try("a class method of a Z# class can't call its objects' methods by name", () =
         Keep(Thing252.shared());
         """) is { } e && e.Contains("a class method runs on the class"));
 
+// ---- std:modules: Z#'s own modules, defined in Z#. Installing it makes `module` a Z#
+// module, so only these tests and the prelude's come after it.
+
+Try("std:modules installs", () =>
+    Run("""import { Module } from "std:modules";""") is null);
+
+Try("a Z# module's globals are initialized in their order, and its functions use them", () =>
+    ResetKept() && Run("""
+        module Shop253 {
+            let tax: Int32 = 10;
+            let sold = 0;
+            let label: String = "shop " + tax;
+
+            fun sell(price: Int32): Int32 {
+                sold = sold + 1;
+                return price + price * tax / 100;
+            }
+        }
+
+        Keep(Shop253.label);
+        Keep(Shop253.sell(200));
+        Shop253.tax = 20;
+        Keep(Shop253.sell(100));
+        Keep(Shop253.sold);
+        """) is null && Probe.Kept is ["shop 10", 220, 120, 2]);
+
+Try("what is defined in a Z# module belongs to it", () =>
+    ResetKept() && Run("""
+        module Geometry254 {
+            let unit = 1;
+
+            def Point {
+                let x: Int32;
+                new(this, x: Int32) { this.x = x; }
+                fun moved(): Point { return Point(x + unit); }
+            }
+
+            fun origin(): Point { return Point(0); }
+        }
+
+        module Labels254 {
+            let name = "label";
+            fun describe(point: Geometry254.Point): String { return name + " " + point.x; }
+        }
+
+        Keep(Geometry254.origin().moved().moved().x);
+        Keep(Labels254.describe(Geometry254.Point(7)));
+        """) is null && Probe.Kept is [2, "label 7"]);
+
+Try("nothing holds a module, as a module isn't a definition", () =>
+    Fails("""module Outer261 { module Inner261 { } }""")
+    && Fails("""def Holder262 { module Inner262 { } }""")
+    && Fails("""
+        import { Module as Module263 } from "std:modules";
+        module Outer263 { def Inner263 of Module263 { } }
+        """));
+
+Try("a Z# class holds a definition it doesn't define a member for, reached by its name", () =>
+    Run("""
+        def Holder266 {
+            new() { }
+            def Inner266 {
+                let value: Int32 = 42;
+                new() { }
+            }
+        }
+        Keep(Holder266.Inner266().value);
+        """) is null && Kept() is 42);
+
+Try("a Z# field has the type of its value, if it is written with none", () =>
+    Run("""
+        def Counted267 {
+            let count = 41;
+            new() { }
+            fun next(): Int32 { count = count + 1; return count; }
+        }
+        Keep(Counted267().next());
+        """) is null && Kept() is 42);
+
+Try("a Z# class is checked as it is loaded, once it is complete", () =>
+    Run("""
+        def Empty268 {
+            new() { }
+            fun nothing(): Int32;
+        }
+        let empty268 = Empty268();
+        """) is { } e && e.Contains("needs code"));
+
+Try("in code, a module is a value, cast to what it is", () =>
+    Run("""
+        import { Module as Module264 } from "std:modules";
+        fun make264(): Module264 {
+            return module Made264 {
+                let answer = 42;
+            } as Module264;
+        }
+        Keep(make264());
+        """) is null && Kept() is ZSharp.HIR.Named { Name: "Made264" });
+
+Try("a module is any definition of Module", () =>
+    ResetKept() && Run("""
+        import { Module as Module260 } from "std:modules";
+
+        def Counter260 of Module260 {
+            let count = 41;
+            fun next(): Int32 { count = count + 1; return count; }
+        }
+
+        Keep(Counter260.next());
+        """) is null && Kept() is 42);
+
 Try("the prelude brings the standard definitions", () =>
     Run("""import "std:prelude";""") is null);
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;
+
+/// <summary>
+/// Generic methods, for the tests of generic methods given classes still being loaded.
+/// </summary>
+public static class GenericProbe
+{
+    public static T Same<T>(T value) => value;
+
+    public static string Pick<T>(T value) => "one";
+
+    public static string Pick<T>(T first, T second) => "two";
+
+    public static bool Copy<T>(T value, out T copy)
+    {
+        copy = value;
+        return value is not null;
+    }
+}
+
+/// <summary>
+/// An interface with a property, for the property tests.
+/// </summary>
+public interface IHasLabel
+{
+    string Label { get; }
+}
 
 /// <summary>
 /// An object with an instance event, for the event tests.

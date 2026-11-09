@@ -37,10 +37,23 @@ namespace ZSharp.Compiler
             );
 
         /// <summary>
-        /// Indexing a group, as giving generic arguments does, is applied to each candidate.
+        /// Indexing a group, as giving generic arguments does, is applied to each candidate,
+        /// and the candidates it applies to are a group again: which of them is meant is
+        /// what is done with it next, as a call, to say. If it applies to none, the error is
+        /// what overloading reports.
         /// </summary>
         public IResult Index(Argument[] arguments)
-            => Scope.Overloading.Apply(candidates, candidate => Scope.CG.Index(candidate, arguments));
+        {
+            var indexed = new List<CompilerObject>();
+
+            foreach (var candidate in candidates)
+                if (Scope.CG.Index(candidate, arguments).Ok(out var result))
+                    indexed.Add(result);
+
+            return indexed.Count > 0
+                ? Result.Ok(Of(indexed))
+                : Scope.Overloading.Apply(candidates, candidate => Scope.CG.Index(candidate, arguments));
+        }
 
         /// <summary>
         /// A group goes where one of its candidates does, as a group of methods goes where a

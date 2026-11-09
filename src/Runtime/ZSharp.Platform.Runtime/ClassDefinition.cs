@@ -33,6 +33,25 @@ namespace ZSharp.Platform.Runtime
         public List<ClassConstructor> Constructors { get; } = [];
 
         public List<ClassMethod> Methods { get; } = [];
+
+        public List<ClassProperty> Properties { get; } = [];
+    }
+
+    /// <summary>
+    /// A property of a class: the methods that read and write it, which the CLR links by
+    /// its name, so reflection and C# see a property.
+    /// </summary>
+    public sealed class ClassProperty(string name, LIR.Type type, bool isStatic)
+    {
+        public string Name { get; set; } = name;
+
+        public LIR.Type Type { get; set; } = type;
+
+        public bool IsStatic { get; } = isStatic;
+
+        public ClassMethod? Getter { get; set; }
+
+        public ClassMethod? Setter { get; set; }
     }
 
     /// <summary>

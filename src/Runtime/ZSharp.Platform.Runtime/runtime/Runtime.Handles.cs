@@ -25,6 +25,7 @@ namespace ZSharp.Platform.Runtime
             {
                 LIR.FunctionHandle handle => byAddress.Contains(handle),
                 LIR.InstanceMember member => TakesAddress(member.Member),
+                LIR.MethodInstance instance => TakesAddress(instance.Method),
                 _ => false
             };
 
@@ -164,6 +165,9 @@ namespace ZSharp.Platform.Runtime
                 case LIR.InstanceMember member:
                     EmitCall(il, OnInstance(member));
                     break;
+                case LIR.MethodInstance instance:
+                    EmitCall(il, Instantiated(instance));
+                    break;
                 case LIR.FunctionHandle handle:
                     if (!functionHandles.TryGetValue(handle, out var emit))
                         throw new InvalidOperationException("A function handle is not mapped.");
@@ -194,6 +198,18 @@ namespace ZSharp.Platform.Runtime
                     _ => throw new NotSupportedException($"Can't call a {method.GetType().Name}.")
                 }
                 : IL.MethodBase.GetMethodFromHandle(method.MethodHandle, type.TypeHandle)!;
+        }
+
+        /// <summary>
+        /// A generic method's instance, made as the code is emitted, so its type arguments
+        /// may be types the runtime is still building.
+        /// </summary>
+        private IL.MethodInfo Instantiated(LIR.MethodInstance instance)
+        {
+            if (instance.Method is not LIR.FunctionHandle handle || !methodHandles.TryGetValue(handle, out var method) || method is not IL.MethodInfo { IsGenericMethodDefinition: true } generic)
+                throw new NotSupportedException("A method instance is of a generic method.");
+
+            return generic.MakeGenericMethod([.. instance.Arguments.Select(ImportType)]);
         }
 
         private static void EmitCall(Emit.ILGenerator il, IL.MethodBase method)

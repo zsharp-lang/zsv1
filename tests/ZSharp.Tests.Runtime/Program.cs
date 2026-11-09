@@ -233,17 +233,19 @@ var callsModule = new L.Function(Sig(i32)) { Name = "callsModule", Body = new L.
 callsModule.Body.Block.Statements.Add(new L.Return(new L.Call(sum, I(4))));
 Report("a standalone function calls a module function", (int)runtime.LoadMethod(callsModule).Invoke(null, [])! == 6);
 
-// Globals with initializers: each has its value before it is first used, and an
-// initializer can call a function and use a global declared before it.
+// A module's initializer: it runs before any of its globals is first used, and gives
+// them their values in its order.
 var initializing = new L.Module("Initializing");
-var base_ = new L.Global(i32) { Name = "base", Initializer = new L.Call(add, I(40), I(1)) };
+var base_ = new L.Global(i32) { Name = "base" };
 initializing.Globals.Add(base_);
-var next = new L.Global(i32) { Name = "next", Initializer = new L.Call(add, new L.GetGlobal(base_), I(1)) };
+var next = new L.Global(i32) { Name = "next" };
 initializing.Globals.Add(next);
+initializing.Initializer.Block.Statements.Add(new L.SetGlobal(base_, new L.Call(add, I(40), I(1))));
+initializing.Initializer.Block.Statements.Add(new L.SetGlobal(next, new L.Call(add, new L.GetGlobal(base_), I(1))));
 var readsNext = Fn(initializing, "readsNext", Sig(i32), code =>
     code.Block.Statements.Add(new L.Return(new L.GetGlobal(next))));
 runtime.Load(initializing);
-Report("a global has its initializer's value before it is first used", (int)Run(readsNext)! == 42);
+Report("a module's initializer runs before its globals are first used", (int)Run(readsNext)! == 42);
 
 // Polymorphic structures, as a platform with polymorphism marks them: an interface with
 // an abstract method, and a class that implements it, called through the interface.

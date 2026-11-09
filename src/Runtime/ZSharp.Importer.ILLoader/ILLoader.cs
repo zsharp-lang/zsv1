@@ -77,8 +77,8 @@ namespace ZSharp.Importer.ILLoader
             loader.Definitions.Register<Package.DotNet.Struct>(LoadType);
             loader.Definitions.Register<Package.DotNet.Interface>(LoadType);
 
+            // A module is an instance, loaded to one CO, which LoadModule keeps.
             loader.Instances.Register<Package.DotNet.Module>(LoadModule);
-            loader.Definitions.Register<Package.DotNet.Module>(LoadModule);
 
             loader.Instances.Register<Package.DotNet.ExposedObject>(LoadExposed);
             loader.Instances.Register<Package.DotNet.Operator>(node => Result.Ok(new Objects.ClrOperator(this, node.Name)));
@@ -700,10 +700,51 @@ namespace ZSharp.Importer.ILLoader
 
         internal bool IsInterface(Package.DotNet.Class node) => viewed.ContainsKey(node);
 
+        private Error? Property(Package.DotNet.Class owner, Package.DotNet.Property property)
+        {
+            if (property is { Getter: null, Setter: null } || property.Type is null)
+                return new ErrorMessage($"Property {property.Name} of {owner.Name} needs a getter with a return type, or a setter that takes its value.");
+
+            if (property.Getter is { } getter && (getter.ReturnType is null || CallParameters(getter.Parameters, getter.CustomMetadata).Count > 0))
+                return new ErrorMessage($"The getter of property {property.Name} of {owner.Name} takes nothing and gives its value.");
+
+            if (property.Setter is { } setter && (setter.ReturnType is not null || CallParameters(setter.Parameters, setter.CustomMetadata).Count != 1))
+                return new ErrorMessage($"The setter of property {property.Name} of {owner.Name} takes one value and returns nothing.");
+
+            if (property is { Getter: { } read, Setter: { } write } && read.IsStatic != write.IsStatic)
+                return new ErrorMessage($"The accessors of property {property.Name} of {owner.Name} are both static or both not.");
+
+            return null;
+        }
+
         /// <summary>
         /// Whether a type is one that describes types, as an HIR type is: where a type goes
         /// as what describes it, as in a signature, rather than as its type object.
         /// </summary>
+        /// <summary>
+        /// A type as an instance of a generic definition has it: a type parameter is what
+        /// it is given, and a type made of them is made of what they are given.
+        /// </summary>
+        internal CompilerObject Substitute(Type type, Func<Type, CompilerObject?> given)
+        {
+            if (type.IsGenericParameter && given(type) is { } argument)
+                return argument;
+
+            if (!type.ContainsGenericParameters)
+                return Class(type);
+
+            if (type.IsGenericType)
+            {
+                var arguments = type.GetGenericArguments().Select(argument => Substitute(argument, given)).ToArray();
+
+                return arguments.All(argument => argument.Is<IILType>(out _))
+                    ? Class(type.GetGenericTypeDefinition().MakeGenericType([.. arguments.Select(argument => argument.As<IILType>()!.GetILType())]))
+                    : new Objects.Instantiation(this, type.GetGenericTypeDefinition(), arguments);
+            }
+
+            return Class(typeof(object));
+        }
+
         internal bool Describes(CompilerObject type)
             => Core.Compiler.ModuleScope.TS.IsAssignableTo(Class(typeof(ZSharp.HIR.Type)), type);
 
@@ -987,6 +1028,20 @@ namespace ZSharp.Importer.ILLoader
                 definition.Methods.Add(declared);
                 @class.Methods[method] = declared;
             }
+
+            // A property is the methods of its accessors: a getter that takes nothing and
+            // gives its value, and a setter that takes its value and gives nothing.
+            foreach (var property in node.Properties)
+                if (Property(node, property) is { } invalid)
+                    return invalid;
+                else if (CompileType(property.Type!).When(out var type).Error(out var error))
+                    return error;
+                else
+                    definition.Properties.Add(new(property.Name, type!, property.IsStatic)
+                    {
+                        Getter = property.Getter is { } getter ? @class.Methods[getter] : null,
+                        Setter = property.Setter is { } setter ? @class.Methods[setter] : null,
+                    });
 
             return null;
         }
@@ -1287,7 +1342,7 @@ namespace ZSharp.Importer.ILLoader
             if (node.StaticConstructor is not null)
                 return new ErrorMessage($"Class {node.Name} has a static constructor, which can't be defined yet.");
 
-            if (node.Properties.Count > 0 || node.NestedDefinitions.Count > 0)
+            if (node.NestedDefinitions.Count > 0)
                 return new ErrorMessage($"Class {node.Name} has members that can't be defined yet.");
 
             if (node.Base is Package.DotNet.TypeReference known && nodeTypes.TryGetValue(known, out var type) && type.IsSealed)

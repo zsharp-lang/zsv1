@@ -82,24 +82,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// definition is the argument given for it.
         /// </summary>
         public CompilerObject TypeOf(Type type)
-        {
-            if (type.IsGenericParameter && type.DeclaringMethod is null)
-                return arguments[type.GenericParameterPosition];
-
-            if (!type.ContainsGenericParameters)
-                return loader.Class(type);
-
-            if (type.IsGenericType)
-            {
-                var given = type.GetGenericArguments().Select(TypeOf).ToArray();
-
-                return given.All(argument => argument.Is<IILType>(out _))
-                    ? loader.Class(type.GetGenericTypeDefinition().MakeGenericType([.. given.Select(argument => argument.As<IILType>()!.GetILType())]))
-                    : new Instantiation(loader, type.GetGenericTypeDefinition(), given);
-            }
-
-            return loader.Class(typeof(object));
-        }
+            => loader.Substitute(type, parameter => parameter.DeclaringMethod is null ? arguments[parameter.GenericParameterPosition] : null);
 
         /// <summary>
         /// Another instantiation of the same definition over the same types is this type,

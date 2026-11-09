@@ -4,20 +4,21 @@
 // defines its HIR node, the meta-compiler that compiles `fun` to it, and the loader that
 // makes it a CO, and makes it what `fun` is wherever nothing else compiles one.
 
-import { String, Object, Boolean, Int32, List, Dictionary, explicitThis } from "core:runtime";
-import { Instance, Definition, Variable, Type } from "std:zsharp/hir";
-import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral } from "std:zsharp/hir/code";
+import { String, Object, Boolean, Int32, List, Dictionary, explicitThis, DotNet_Class, DotNet_Module } from "core:runtime";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition } from "std:zsharp/hir";
+import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get } from "std:zsharp/hir/code";
 import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "std:zsharp/lang/ast";
 import { CompilerObject } from "std:zsharp/mir";
 import { Error, Result, IResult } from "std:zsharp/common";
 import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
 import { ICTCallable, ICTMatchParameter } from "std:zsharp/compiler/cg/direct";
-import { ICompileIRExpression } from "std:zsharp/compiler/ir";
+import { ICompileIRExpression, ICompileIRDefinitionIn } from "std:zsharp/compiler/ir";
 import { ITyped } from "std:zsharp/compiler/ts";
 import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
-import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode } from "std:zsharp/lir";
+import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode, Module as LIRModule } from "std:zsharp/lir";
 import { Bodies } from "std:zsharp/lang";
 import { CodeLoaders } from "std:zsharp/compiler/code";
+import { Holder, Held } from "std:zsharp/lowering";
 import { metaTypes, bodies, export } from "core:zsharp";
 import { cg, ir, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
 
@@ -25,23 +26,25 @@ import { cg, ir, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
 
 // A Z# function. Its meta-compiler fills it through bodies, by these names.
 @export
-def Function : Instance, Definition {
-    let Name: String;
+def Function of DotNet_Class : Instance, Definition, NamedDefinition {
+    let name: String;
     let Parameters: List[Definition];
     let Locals: List[Local];
     let ReturnType: Type;
     let Body: Code;
 
     @explicitThis new(this, name: String) {
-        this.Name = name;
+        this.name = name;
         this.Parameters = List[Definition]();
         this.Locals = List[Local]();
     }
+
+    @explicitThis get Name(this): String { return this.name; }
 }
 
 // A parameter that a positional argument fills, or else its default value.
 @export
-def Positional : Instance, Definition, Variable {
+def Positional of DotNet_Class : Instance, Definition, Variable {
     let Name: String;
     let Type: Type;
     let DefaultValue: Expression;
@@ -52,7 +55,7 @@ def Positional : Instance, Definition, Variable {
 
 // A parameter that an argument with its name fills, or else its default value.
 @export
-def Named : Instance, Definition, Variable {
+def Named of DotNet_Class : Instance, Definition, Variable {
     let Name: String;
     let Type: Type;
     let DefaultValue: Expression;
@@ -67,7 +70,7 @@ def Named : Instance, Definition, Variable {
 // One CO is both, and it owns the LIR parameter the signature holds for each target, so
 // whatever lowers a function with it asks it for that parameter.
 @export
-def ParameterObject : CompilerObject, ICTMatchParameter, ICompileIRExpression, ITyped {
+def ParameterObject of DotNet_Class : CompilerObject, ICTMatchParameter, ICompileIRExpression, ITyped {
     let name: String;
     let named: Boolean;
     let type: Type;
@@ -116,11 +119,13 @@ def ParameterObject : CompilerObject, ICTMatchParameter, ICompileIRExpression, I
     }
 }
 
-module Objects {
+def Objects of DotNet_Module {
     // A Z# function as a CO: calling it matches the arguments to its parameters, and it
-    // is lowered once for each target, to an LIR function of its own.
-    def FunctionObject : CompilerObject, ICTCallable {
+    // is lowered once for each target, to an LIR function of its own: a function of what
+    // holds it, as a module, if something does.
+    def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, Held, ICompileIRDefinitionIn[LIRModule] {
         let node: Function;
+        let holder: Holder;
         let lowered: Dictionary[Object, LIRFunction];
         // Why its code didn't lower for each target it didn't.
         let failures: Dictionary[Object, Error];
@@ -129,6 +134,13 @@ module Objects {
             this.node = node;
             this.lowered = Dictionary[Object, LIRFunction]();
             this.failures = Dictionary[Object, Error]();
+        }
+
+        @explicitThis fun hold(this, holder: Holder) { this.holder = holder; }
+
+        @explicitThis fun CompileIRDefinition(this, owner: LIRModule, target: Object): Error {
+            if (this.function(target) != null) return null;
+            return this.failures[target];
         }
 
         @explicitThis fun parameter(this, index: Int32): ParameterObject {
@@ -142,6 +154,13 @@ module Objects {
 
         @explicitThis fun function(this, target: Object): LIRFunction {
             if (this.lowered.ContainsKey(target)) return this.lowered[target];
+
+            // What holds it lowers it with the rest of what it holds.
+            let container: LIRModule = null;
+            if (this.holder != null) {
+                container = this.holder.module(target);
+                if (this.lowered.ContainsKey(target)) return this.lowered[target];
+            }
 
             let signature = Signature();
             let returned = this.returnType();
@@ -158,6 +177,7 @@ module Objects {
             let function = LIRFunction(signature);
             function.Name = this.node.Name;
             this.lowered[target] = function;
+            if (container != null) container.Functions.Add(function);
 
             // Its code is loaded knowing what it returns, so a return converts its value to
             // that, and compiled into the function.
@@ -168,6 +188,7 @@ module Objects {
 
             if (loaded.IsError) {
                 this.lowered.Remove(target);
+                if (container != null) container.Functions.Remove(function);
                 this.failures[target] = loaded.UnwrapError();
                 return null;
             }
@@ -175,6 +196,7 @@ module Objects {
             let statement = ir.CompileStatement(loaded.Unwrap(), target);
             if (statement.IsError) {
                 this.lowered.Remove(target);
+                if (container != null) container.Functions.Remove(function);
                 this.failures[target] = statement.UnwrapError();
                 return null;
             }
@@ -204,7 +226,7 @@ module Objects {
     }
 
     // A call of a Z# function.
-    def FunctionCall : CompilerObject, ICompileIRExpression, ITyped {
+    def FunctionCall of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
         let callee: FunctionObject;
         let arguments: List[CompilerObject];
 
@@ -240,7 +262,7 @@ module Objects {
 // ---- The meta-compiler
 
 // What fills a function as it is built: its parameters, what it returns, and its code.
-def Filler {
+def Filler of DotNet_Class {
     let compiler: ASTCompiler;
     let function: FunctionSyntax;
     let self: Local;
@@ -274,7 +296,7 @@ def Filler {
     }
 }
 
-module Meta {
+def Meta of DotNet_Module {
     fun compile(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
         if (definition is function of FunctionSyntax) {
             let filler = Filler(compiler, function, self);

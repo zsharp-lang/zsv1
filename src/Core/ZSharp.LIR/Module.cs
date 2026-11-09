@@ -4,8 +4,10 @@ namespace ZSharp.LIR
     /// The root of every graph. Members may directly reference entities owned
     /// by a different module.
     /// </summary>
-    public sealed class Module : Definition
+    public sealed class Module : Definition, Initialized
     {
+        public Code Initializer { get; } = new();
+
         public ModuleCollection<Function> Functions { get; }
 
         public ModuleCollection<Global> Globals { get; }

@@ -4,14 +4,14 @@
 // still matched by what its type implements.
 
 import { Traits, Lookup } from "std:traits";
-import { String } from "core:runtime";
+import { String, DotNet_Module } from "core:runtime";
 import { Error, Result, IResult } from "std:zsharp/common";
 import { CompilerObject } from "std:zsharp/mir";
 import { Argument, Match, Cast, MatchResult } from "std:zsharp/compiler/cg";
 import { cg, hirLoader } from "core:compiler";
 import { Instance } from "std:zsharp/hir";
 
-module DynamicTraits {
+def DynamicTraits of DotNet_Module {
     let previousMatch: Match;
     let previousCast: Cast;
     let lookup: CompilerObject;

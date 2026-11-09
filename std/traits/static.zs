@@ -2,13 +2,14 @@
 // type implements a trait, the value goes where the trait is expected, implicitly or by
 // a cast, as the adapter of its implementation; that is decided as the code compiles.
 
+import { DotNet_Module } from "core:runtime";
 import { Traits } from "std:traits";
 import { Error, IResult } from "std:zsharp/common";
 import { CompilerObject } from "std:zsharp/mir";
 import { Argument, ImplicitCast, Cast } from "std:zsharp/compiler/cg";
 import { cg } from "core:compiler";
 
-module StaticTraits {
+def StaticTraits of DotNet_Module {
     let previousImplicitCast: ImplicitCast;
     let previousCast: Cast;
 

@@ -9,6 +9,7 @@ namespace Package.DotNet
     public sealed class Class(string name)
         : ClassReference
         , DotNetDefinition
+        , ZSharp.HIR.Named
     {
         public string Name { get; set; } = name;
 

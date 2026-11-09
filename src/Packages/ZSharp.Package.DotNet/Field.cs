@@ -3,6 +3,7 @@ namespace Package.DotNet
     public sealed class Field(string name, ZSharp.HIR.Type type)
         : ZSharp.HIR.Definition
         , ZSharp.HIR.Instance
+        , ZSharp.HIR.Named
     {
         public string Name { get; set; } = name;
 

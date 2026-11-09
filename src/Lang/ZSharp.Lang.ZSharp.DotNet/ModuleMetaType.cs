@@ -21,7 +21,16 @@ namespace ZSharp.Lang.DotNet
     {
         public IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition node, Code.Local self)
         {
-            if (node is not AST.Module module)
+            // A module is any definition with a body, as `module Name { ... }` or
+            // `def Name of DotNet_Module { ... }`.
+            var (name, content) = node switch
+            {
+                AST.Module module => (module.Name, module.Body),
+                AST.TypeDefinition definition => (definition.Name, definition.Content?.Statements ?? []),
+                _ => (null!, null!)
+            };
+
+            if (content is null)
                 return Result<CompiledDefinition>.Error($"A {node.GetType().Name} is not a module.");
 
             // In a module, an import runs as the module is constructed, unless it can run now,
@@ -42,11 +51,11 @@ namespace ZSharp.Lang.DotNet
 
             return Result<CompiledDefinition>.Ok(new(
                 self,
-                CodeBody.Construct(underlyingType, new Code.StringLiteral(module.Name)),
+                CodeBody.Construct(underlyingType, new Code.StringLiteral(name)),
                 underlyingType,
                 () => container.Compile(
                     fork,
-                    module.Body,
+                    content,
                     (member, value) => new Code.ExpressionStatement(body.Register(
                         self,
                         ReferenceEquals(member.UnderlyingType, il.Load(typeof(Package.DotNet.Method)))

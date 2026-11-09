@@ -58,6 +58,20 @@ namespace ZSharp.Lang.DotNet
 
             block!.Statements.InsertRange(0, parameters!);
 
+            // A property is defined once its accessors are, as they are what it is.
+            foreach (var property in (definition.Content?.Statements ?? [])
+                .Select(statement => Language.Undecorate(statement, out _))
+                .OfType<AST.DefinitionStatement>()
+                .Select(statement => statement.Definition)
+                .OfType<AST.Accessor>()
+                .Select(accessor => accessor.Name)
+                .Distinct())
+                block.Statements.Add(new Code.ExpressionStatement(new Code.Call
+                {
+                    Callee = new Code.NamedMember { Target = new Code.Get(il.Load(typeof(Properties))), Name = nameof(Properties.Define) },
+                    Arguments = [new() { Value = new Code.Get(self) }, new() { Value = new Code.StringLiteral(property) }]
+                }));
+
             return Bases(compiler, definition, self, block!) is { } failed ? Result<Code.Block>.Error(failed) : filled;
         }
 

@@ -11,7 +11,7 @@
 // std:traits/static decides from the static type, and std:traits/dynamic looks an
 // implementation up by the type a value has as the code runs.
 
-import { String, Object, Boolean, Int32, List, Type as ClrType, DotNet_Class, explicitThis, static } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Type as ClrType, DotNet_Class, explicitThis, static, DotNet_Module } from "core:runtime";
 import { Instance, Definition, Type } from "std:zsharp/hir";
 import { Local, Get, Block, Declare, ExpressionStatement, Set, StringLiteral, Cast, Expression } from "std:zsharp/hir/code";
 import { Definition as DefinitionSyntax, TypeDefinition as TypeSyntax } from "std:zsharp/lang/ast";
@@ -28,12 +28,12 @@ import { ts, hirLoader, mappedLoader } from "core:compiler";
 // The meta-type of an implementation of a trait for a type. It only says what is
 // implemented for what, by its type arguments.
 @export
-def Implementation[Trait, For] {}
+def Implementation[Trait, For] of DotNet_Class {}
 
 // An implementation of a trait for a type: the trait, the type, and the class whose
 // objects hold a value of the type as the trait.
 @export
-def TraitImplementation : Instance, Definition {
+def TraitImplementation of DotNet_Class : Instance, Definition {
     let Name: String;
     let Trait: Type;
     let For: Type;
@@ -51,7 +51,7 @@ def TraitImplementation : Instance, Definition {
 // One implementation, as the dispatchers use it: the types and adapter as COs, for
 // code being compiled, and as CLR types, for code that runs.
 @export
-def Entry {
+def Entry of DotNet_Class {
     let implemented: CompilerObject;
     let trait: CompilerObject;
     let adapter: CompilerObject;
@@ -70,7 +70,7 @@ def Entry {
 }
 
 @export
-module Traits {
+def Traits of DotNet_Module {
     let entries: List[Entry] = List[Entry]();
 
     fun add(entry: Entry) { entries.Add(entry); }
@@ -124,7 +124,7 @@ module Traits {
 
 // What code calls as it runs to match a value against a trait or make it one.
 @export
-def Lookup {
+def Lookup of DotNet_Class {
     @static fun has(value: Object, trait: ClrType): Boolean {
         if (trait.IsInstanceOfType(value)) return true;
         return Traits.find(value, trait) != null;
@@ -144,7 +144,7 @@ def Lookup {
 
 // Code that gives a type's node, not the type: the type cast to what describes it, which
 // is reflection, as what describes it is given.
-def Described {
+def Described of DotNet_Class {
     @static fun node(type: Type, description: Instance): Expression {
         let cast = Cast();
         cast.Value = Get(type as Instance);
@@ -155,7 +155,7 @@ def Described {
 
 // What fills an implementation as it is built: its adapter, a CLR class compiled from
 // the definition's own members, which implements the trait.
-def Filler {
+def Filler of DotNet_Class {
     let compiler: ASTCompiler;
     let definition: DefinitionSyntax;
     let self: Local;
@@ -190,7 +190,7 @@ def Filler {
     }
 }
 
-module Meta {
+def Meta of DotNet_Module {
     let previousFind: MetaCompilerOf;
     let implementation: Instance;
     let metaCompiler: MetaCompiler;

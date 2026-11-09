@@ -45,6 +45,13 @@ namespace ZSharp.Parser
         {
             InitializeModuleLevelParser(Document);
             InitializeModuleLevelParser(Module);
+            InitializeDefinitionBodyParser(Class);
+
+            // A module is defined in a document.
+            Document.AddKeywordParser(
+                LangParser.Keywords.Module,
+                Utils.DefinitionStatement(Module)
+            );
 
             InitializeStatementParser();
 
@@ -62,10 +69,6 @@ namespace ZSharp.Parser
                 LangParser.Keywords.Function, 
                 Utils.DefinitionStatement(Function)
             );
-            parser.AddKeywordParser(
-                LangParser.Keywords.Module, 
-                Utils.DefinitionStatement(Module)
-            );
 
             parser.AddKeywordParser(
                 LangParser.Keywords.Import, 
@@ -78,6 +81,23 @@ namespace ZSharp.Parser
             parser.AddKeywordParser(
                 LangParser.Keywords.Var,
                 Utils.ExpressionStatement(LangParser.ParseVarExpression)
+            );
+        }
+
+        /// <summary>
+        /// A definition's body holds definitions as a module's does: what each is, and
+        /// whether the definition takes it, is its meta-type's to say.
+        /// </summary>
+        private void InitializeDefinitionBodyParser<T>(ContextParser<T, Statement> parser)
+            where T : Node
+        {
+            parser.AddKeywordParser(
+                LangParser.Keywords.Def,
+                Utils.DefinitionStatement(Class)
+            );
+            parser.AddKeywordParser(
+                LangParser.Keywords.Import,
+                LangParser.ParseImportStatement
             );
         }
 

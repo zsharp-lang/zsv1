@@ -28,6 +28,14 @@ namespace ZSharp.Parser
                 LangParser.Keywords.New,
                 Utils.DefinitionStatement(Constructor.Parse)
             );
+            AddKeywordParser(
+                LangParser.Keywords.Get,
+                Utils.DefinitionStatement(Method.ParseAccessor)
+            );
+            AddKeywordParser(
+                LangParser.Keywords.Set,
+                Utils.DefinitionStatement(Method.ParseAccessor)
+            );
         }
 
         public override TypeDefinition Parse(Parser parser)
