@@ -821,7 +821,7 @@ a custom type gets into the language to be used as a meta-type.
   it, which runs on the type object, named `this` if its first parameter says so. An
   interface declares class methods too, on its class shape, the metaclass every class that
   implements it has, so a class implements an interface's class methods with class
-  methods, and a call on a value of `Shape.Class`, the type of any class that implements
+  methods, and a call on a value of `Type[Shape]`, the type of any class that implements
   `Shape`, calls what that class has. A metaclass and a class shape lower to structures
   the target's polymorphism makes an object type and an interface, in the class's or
   interface's module, and a class's metaclass implements its interfaces' class shapes. A
@@ -873,8 +873,41 @@ a custom type gets into the language to be used as a meta-type.
 - A Z# class or interface has its own lists, of fields, methods and constructors, and
   one for any other definition written in it, which is compiled as it would be anywhere
   and reached through the class's CO by the name `Named` gives it: what a class defines
-  its members to be is a `fun`, a `new` and a `let`. An accessor is a definition a class
-  doesn't define a member for yet. A field has the type written, or else its value's.
+  its members to be is a `fun`, a `new`, a `let`, and a `get` or `set` accessor. A field
+  has the type written, or else its value's.
+- No name of a definition's members is its own: what was `Square.Class` would take the
+  name `Class` from a class's members, as a Python class's names are taken. So the type
+  of a definition's type object is `Type[T]`, from `std:types`: `Type` is a class whose
+  class method is its index operator, which builds `TypeOf(GetValue(Get(T)))`, the HIR
+  that describes the type of T's value. That runs as code, and is reflection; the type
+  itself is what TS finds once the node is loaded, which is the compiler. So it takes
+  nothing of a meta-type beyond the value its CO gives: a Z# class's value is its type
+  object, of its metaclass; a CLR class's is itself, a `Type`; an interface's is of its
+  class shape, the type of any class that implements it, but nothing lowers it, as an
+  interface has no type object, so evaluating it is what fails; and a module's CO gives
+  no value, so it has no type. A meta-type can say what `M[T]` means of its own, as an
+  index operator.
+- `Get` gives the instance's CO itself, and `GetValue` its value, which is `CG.Get`. A
+  definition and its value are different COs: a class's CO and its type object's. Code
+  that uses a class as a value still reads the class's CO as one, so it compiles to the
+  type object too, until `Get` is renamed `Reference` and reading a value is always
+  `GetValue`, which is the change that remains.
+- An operator is a definition that is one: `@operator(Operator.Index)`, or
+  `@operator((/))` with an operator literal, marks a definition that has the HIR
+  `OperatorDefinition` capability, as a Z# method does. A decorator takes and gives the
+  definition, so decorators compose. `M[T]` is `CG.Index`, which a CO handles if it
+  defines `ICTGetIndex`, or else the typed dispatcher by the type of the value: a Z# class
+  defines both, calling its class methods that are its index operator for the class, and
+  its methods that are for one of its objects. The operator's left operand is what the
+  method runs on.
+- A property of a Z# class or interface is what its accessors read and write. An accessor
+  is a method of what holds it, named for what it is, `get Name` or `set Name`, so it is
+  lowered, dispatched and implemented as any method is, and never clashes with a method
+  named for the property; a `Property` groups the two, and is defined once its accessors
+  are built. It is reached by its name as a field is: through an object, through the class
+  if it is static, through the type object if it is the class's, and by name in a method.
+  Its loader checks what a property needs of its accessors. A Z# property isn't a CLR
+  property: it is the class's, and the CLR realizes only its methods.
 - `Named` is an HIR capability: a definition with a name of its own. The CO loader of an
   HIR module finds its members by the names `Named` gives them, so a module holds no
   mapping. A node of a CLR definition is `Named` by its name, and a Z# node by an
@@ -1908,8 +1941,6 @@ Choices:
 - **Decorator names.** `@static` and `@class`, exported by `std:oop`, so a document that
   uses the CLR's `static` too imports one under another name. Alternatives: other names,
   or one decorator that overloading resolves for each kind of definition.
-- **The type of a class's type object is written `Shape.Class`.** It is a member of the
-  class or interface. Alternatives: `Type[Shape]`, or a function of the type.
 
 Restrictions:
 
@@ -1927,7 +1958,5 @@ Restrictions:
   now", so `std:oop`, which matches its target against `Polymorphism`, has to be imported
   after `std:zsharp/clr` gives the runtime polymorphism. A trait would need to be one by
   what it is, not by what implements it so far.
-- **A Z# class has no properties yet.** CLR definitions have them, written as `get` and
-  `set` accessors; `std:oop` rejects them until its classes have them too.
 - **Only one target has polymorphism.** Lowering for each target is kept by target, but
   nothing yet lowers a class for a target without polymorphism.

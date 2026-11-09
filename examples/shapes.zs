@@ -4,6 +4,7 @@
 import "std:prelude";
 import { print } from "std:io";
 import { Interface, static, class } from "std:oop";
+import { Type } from "std:types";
 import { String, Int32 } from "core:runtime";
 
 def Shape of Interface {
@@ -33,7 +34,7 @@ def Circle : Shape {
     fun area(): Int32 { return 3 * radius * radius; }
 }
 
-fun describe(kind: Shape.Class): String { return "a unit " + kind.kind() + " has area " + kind.unit().area(); }
+fun describe(kind: Type[Shape]): String { return "a unit " + kind.kind() + " has area " + kind.unit().area(); }
 
 fun side(shape: Shape): Int32 {
     if (shape is square of Square) return square.side;

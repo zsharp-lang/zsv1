@@ -12,6 +12,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTCallable
         , ICTCastTo
         , ICTImplicitCastTo
+        , ICTGet
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
         , IRTCallable
@@ -37,6 +38,12 @@ namespace ZSharp.Importer.ILLoader.Objects
             => Result<LIR.Expression>.Ok(new LIR.Call(loader.TypeOf(loader.Handle(IL)), []));
 
         public Type GetILType() => IL;
+
+        /// <summary>
+        /// A type's value is its type object, which this already is as a value.
+        /// </summary>
+        public IResult Get()
+            => Result.Ok(this);
 
         /// <summary>
         /// A CLR type only goes to other CLR types.

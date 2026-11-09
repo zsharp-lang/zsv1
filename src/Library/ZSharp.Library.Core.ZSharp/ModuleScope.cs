@@ -97,6 +97,33 @@ namespace Core.ZSharp
                 : imported!;
 
         /// <summary>
+        /// Marks a definition as an operation of the language, as in
+        /// <c>@operator(Operator.Index)</c>.
+        /// </summary>
+        [Alias("operator")]
+        public static Func<global::ZSharp.HIR.Instance, global::ZSharp.HIR.Instance> Operator(global::ZSharp.Lang.Operator @operator)
+            => Marked(@operator);
+
+        /// <summary>
+        /// Marks a definition as one of the functions a piece of syntax stands for, as in
+        /// <c>@operator((/))</c>, which is given as what an operator literal is.
+        /// </summary>
+        [Alias("operator")]
+        public static Func<global::ZSharp.HIR.Instance, global::ZSharp.HIR.Instance> Operator(global::ZSharp.HIR.Instance @operator)
+            => Marked(@operator);
+
+        /// <summary>
+        /// A decorator takes and gives the definition, so decorators compose; it is an
+        /// operator as a definition that has that capability, which one without it can't be.
+        /// </summary>
+        private static Func<global::ZSharp.HIR.Instance, global::ZSharp.HIR.Instance> Marked(object @operator)
+            => definition =>
+            {
+                ((global::ZSharp.HIR.OperatorDefinition)definition).Operator = @operator;
+                return definition;
+            };
+
+        /// <summary>
         /// Marks a definition to be exported under its name.
         /// </summary>
         [Alias("export")]

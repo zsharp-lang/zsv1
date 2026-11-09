@@ -17,3 +17,4 @@ import "std:zsharp/clr";
 // Z#'s own modules and classes: they make `module` a Z# module and `def` a Z# class.
 import { Module } from "std:modules";
 import { Class, Interface } from "std:oop";
+import { Type } from "std:types";

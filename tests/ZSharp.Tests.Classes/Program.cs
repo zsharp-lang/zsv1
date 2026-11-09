@@ -4216,6 +4216,7 @@ Try("a class method of a Z# class runs on the class, and a class field is the cl
 Try("a class is a value, and an interface's class methods are what each class has", () =>
     ResetKept() && Run("""
         import { Interface, class as class245 } from "std:oop";
+        import { Type as Type245 } from "std:types";
 
         def Shape245 of Interface {
             @class245 fun unit(): Shape245;
@@ -4239,11 +4240,11 @@ Try("a class is a value, and an interface's class methods are what each class ha
             fun area(): Int32 { return 3 * radius * radius; }
         }
 
-        fun describe245(shape: Shape245.Class): String { return shape.kind() + " " + shape.unit().area(); }
+        fun describe245(shape: Type245[Shape245]): String { return shape.kind() + " " + shape.unit().area(); }
 
         Keep(describe245(Square245));
         Keep(describe245(Circle245));
-        let kind245: Shape245.Class = Circle245;
+        let kind245: Type245[Shape245] = Circle245;
         Keep(kind245.kind());
         """) is null && Probe.Kept is ["square 4", "circle 3", "circle"]);
 
@@ -4342,6 +4343,105 @@ Try("a class method of a Z# class can't call its objects' methods by name", () =
         }
         Keep(Thing252.shared());
         """) is { } e && e.Contains("a class method runs on the class"));
+
+Try("a Z# class has properties, read and written through their accessors", () =>
+    ResetKept() && Run("""
+        import { static as static269, class as class269 } from "std:oop";
+
+        def Square269 {
+            @static269 let made: Int32 = 0;
+            @class269 let unit: Int32 = 1;
+            let side: Int32;
+
+            new(this, side: Int32) { made = made + 1; this.side = side; }
+
+            get Side(): Int32 { return side; }
+            set Side(value: Int32) { side = value; }
+            get Doubled(): Int32 { return Side * 2; }
+
+            @static269 get Made(): Int32 { return made; }
+            @class269 get Unit(): Int32 { return unit; }
+        }
+
+        let square269 = Square269(3);
+        Keep(square269.Doubled);
+        square269.Side = 5;
+        Keep(square269.Side);
+        Keep(Square269.Made);
+        Keep(Square269.Unit);
+        """) is null && Probe.Kept is [6, 5, 1, 1]);
+
+Try("a Z# interface declares properties, which each class that implements it has", () =>
+    ResetKept() && Run("""
+        import { Interface } from "std:oop";
+
+        def Sized270 of Interface { get Area(): Int32; }
+
+        def Square270 : Sized270 {
+            let side: Int32;
+            new(this, side: Int32) { this.side = side; }
+            get Area(): Int32 { return side * side; }
+        }
+
+        fun area270(shape: Sized270): Int32 { return shape.Area; }
+        Keep(area270(Square270(4)));
+        """) is null && Kept() is 16);
+
+Try("a Z# property's accessors are checked as its class is loaded", () =>
+    Run("""
+        def Bad271 {
+            new() { }
+            set Value(a: Int32, b: Int32) { }
+        }
+        let bad271 = Bad271();
+        """) is { } e && e.Contains("takes one value"));
+
+Try("Type[T] is the type of a definition's value, as the compiler finds it", () =>
+    ResetKept() && Run("""
+        import { Type as Type272 } from "std:types";
+        import { class as class272 } from "std:oop";
+
+        def Kind272 {
+            @class272 fun name(): String { return "kind"; }
+        }
+
+        let kind272: Type272[Kind272] = Kind272;
+        Keep(kind272.name());
+        let text272: Type272[String] = String;
+        Keep(text272);
+        """) is null && Probe.Kept is ["kind", var type] && type == typeof(string));
+
+Try("a Z# class's index operator is what indexing the class or one of its objects calls", () =>
+    ResetKept() && Run("""
+        import { class as class273 } from "std:oop";
+        import { operator as operator273 } from "core:zsharp";
+        import { Operator as Operator273 } from "std:zsharp/lang";
+
+        def Grid273 {
+            let scale: Int32;
+            new(this, scale: Int32) { this.scale = scale; }
+
+            @class273 @operator273(Operator273.Index) fun(size: Int32): Grid273 { return Grid273(size); }
+            @operator273(Operator273.Index) fun(at: Int32): Int32 { return at * scale; }
+        }
+
+        let grid273 = Grid273[10];
+        Keep(grid273[4]);
+        """) is null && Kept() is 40);
+
+Try("an interface's value has its class shape for a type, and nothing evaluates it", () =>
+    Fails("""
+        import { Interface } from "std:oop";
+        def Shape275 of Interface { fun area(): Int32; }
+        let shape275 = Shape275;
+        """));
+
+Try("a module has no type object, so it has no type", () =>
+    Fails("""
+        import { Type as Type274 } from "std:types";
+        module Plain274 { let x = 1; }
+        let plain274: Type274[Plain274] = Plain274;
+        """));
 
 // ---- std:modules: Z#'s own modules, defined in Z#. Installing it makes `module` a Z#
 // module, so only these tests and the prelude's come after it.

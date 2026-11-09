@@ -11,26 +11,27 @@
 // is the class's type object's: a class is a value, the one object of its metaclass,
 // whose fields are the class fields and whose methods are the class methods, which run on
 // it. An interface can declare class methods too, which the class of each value of it
-// has, so `Shape.Class` is the type of any class that implements `Shape`.
+// has, so the type of any class that implements `Shape`, its class shape, is
+// `Type[Shape]`, as `Type[Square]` is the type of `Square`'s type object.
 //
 // Importing it makes `def` a Z# class wherever nothing else compiles one, and
 // `def Name of Interface` a Z# interface.
 
 import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Interface, explicitThis, static as clrStatic, DotNet_Class, DotNet_Module } from "core:runtime";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition } from "std:zsharp/hir";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, OperatorDefinition } from "std:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement, Cast as CastCode } from "std:zsharp/hir/code";
 import {
     Function as FunctionSyntax, Definition as DefinitionSyntax, TypeDefinition as TypeSyntax,
     Constructor as ConstructorSyntax, Accessor as AccessorSyntax, LetExpression as LetSyntax, Expression as ExpressionSyntax,
-    Signature as SignatureSyntax, Parameter as ParameterSyntax, Statement as StatementSyntax,
+    Signature as SignatureSyntax, Parameter as ParameterSyntax, Statement as StatementSyntax, DefinitionStatement as DefinitionStatementSyntax,
     DecoratedStatement as DecoratedSyntax, ExpressionStatement as ExpressionStatementSyntax
 } from "std:zsharp/lang/ast";
 import { CompilerObject } from "std:zsharp/mir";
 import { Error, ErrorMessage, Result, IResult } from "std:zsharp/common";
 import { Argument, ArgumentStream, MatchResult } from "std:zsharp/compiler/cg";
 import { UnsupportedError } from "std:zsharp/compiler";
-import { ICTCallable, ICTGetMember, ICTSet, ICTCastTo, ICTImplicitCastTo } from "std:zsharp/compiler/cg/direct";
-import { IRTGetMember, IRTCastTo, IRTTypeMatch } from "std:zsharp/compiler/cg/typed";
+import { ICTCallable, ICTGetMember, ICTSet, ICTCastTo, ICTImplicitCastTo, ICTGetIndex, ICTGet } from "std:zsharp/compiler/cg/direct";
+import { IRTGetMember, IRTCastTo, IRTTypeMatch, IRTGetIndex } from "std:zsharp/compiler/cg/typed";
 import { ICompileIRExpression, ICompileIRType, ICompileIRStatement, ICompileIRDefinitionIn } from "std:zsharp/compiler/ir";
 import { ITyped, IAssignableTo } from "std:zsharp/compiler/ts";
 import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTDefinition, CompileASTStatement, Context } from "std:zsharp/compiler/ast";
@@ -40,7 +41,8 @@ import {
     Global as LIRGlobal, GetGlobal, SetGlobal,
     Field as LIRField, Module as LIRModule, Expression as LIRExpression, Statement as LIRStatement, Code as LIRCode, Evaluate, Type as LIRType
 } from "std:zsharp/lir";
-import { Bodies, ContainerCompiler, CapabilityContext, Language } from "std:zsharp/lang";
+import { Bodies, ContainerCompiler, CapabilityContext, Language, Operator } from "std:zsharp/lang";
+import { OverloadGroup } from "std:zsharp/compiler/overloading";
 import { CodeLoaders } from "std:zsharp/compiler/code";
 import { Positional, Named, ParameterObject } from "std:functions";
 import { Holder, Held, Initializing } from "std:zsharp/lowering";
@@ -71,7 +73,7 @@ def Field of DotNet_Class : Instance, Definition {
 }
 
 @export
-def Method of DotNet_Class : Instance, Definition {
+def Method of DotNet_Class : Instance, Definition, OperatorDefinition {
     let Name: String;
     let Parameters: List[Definition];
     let Locals: List[Local];
@@ -80,6 +82,7 @@ def Method of DotNet_Class : Instance, Definition {
     let This: Receiver;
     let IsStatic: Boolean;
     let IsClass: Boolean;
+    let operator: Object;
 
     @explicitThis new(this, name: String) {
         this.Name = name;
@@ -87,6 +90,23 @@ def Method of DotNet_Class : Instance, Definition {
         this.Locals = List[Local]();
         this.This = Receiver();
     }
+
+    // The operator it is, if it is one, as `@operator(Operator.Index)` makes it.
+    @explicitThis get Operator(this): Object { return this.operator; }
+    @explicitThis set Operator(this, value: Object) { this.operator = value; }
+}
+
+// A property: what its accessors read and write, which are methods of what holds it,
+// named for what they are, `get Name` and `set Name`.
+@export
+def Property of DotNet_Class : Instance, Definition, NamedDefinition {
+    let name: String;
+    let Getter: Method;
+    let Setter: Method;
+
+    @explicitThis new(this, name: String) { this.name = name; }
+
+    @explicitThis get Name(this): String { return this.name; }
 }
 
 // A constructor makes an object, runs its code on it, and gives it. The unnamed one is
@@ -113,6 +133,7 @@ def Class of DotNet_Class : Instance, Definition, Type, NamedDefinition {
     let Fields: List[Field];
     let Methods: List[Method];
     let Constructors: List[Constructor];
+    let Properties: List[Property];
     let Interfaces: List[Type];
     // Any other definition written in it.
     let Definitions: List[Definition];
@@ -122,6 +143,7 @@ def Class of DotNet_Class : Instance, Definition, Type, NamedDefinition {
         this.Fields = List[Field]();
         this.Methods = List[Method]();
         this.Constructors = List[Constructor]();
+        this.Properties = List[Property]();
         this.Interfaces = List[Type]();
         this.Definitions = List[Definition]();
     }
@@ -135,12 +157,14 @@ def Class of DotNet_Class : Instance, Definition, Type, NamedDefinition {
 def Interface of DotNet_Class : Instance, Definition, Type, NamedDefinition {
     let name: String;
     let Methods: List[Method];
+    let Properties: List[Property];
     // Any other definition written in it.
     let Definitions: List[Definition];
 
     @explicitThis new(this, name: String) {
         this.name = name;
         this.Methods = List[Method]();
+        this.Properties = List[Property]();
         this.Definitions = List[Definition]();
     }
 
@@ -706,6 +730,14 @@ def Objects of DotNet_Module {
                 index = index + 1;
             }
 
+            let property = Properties.find(this.owner.node.Properties, name);
+            if (property != null) {
+                let accessor = Properties.accessorOf(property);
+                if (accessor.IsClass) return Result[CompilerObject].Ok(Properties.value(property, object));
+                if (accessor.IsStatic) return Result[CompilerObject].Ok(Properties.value(property, null));
+                return Result[CompilerObject].Error("There is no object here: property " + name + " is the objects' of the class " + this.owner.node.Name + ", and a class method runs on the class.");
+            }
+
             index = 0;
             while (index < this.owner.node.Methods.Count) {
                 let method = this.owner.node.Methods[index];
@@ -796,6 +828,107 @@ def Objects of DotNet_Module {
         }
     }
 
+    // A property of an object, or of a class or its type object: reading it calls its
+    // getter, and writing it its setter, as calling them through the object does.
+    def PropertyValue of DotNet_Class : CompilerObject, ICompileIRExpression, ICTSet, ITyped {
+        let getter: MethodObject;
+        let setter: MethodObject;
+        let object: CompilerObject;
+        let name: String;
+
+        @explicitThis new(this, getter: MethodObject, setter: MethodObject, object: CompilerObject, name: String) {
+            this.getter = getter;
+            this.setter = setter;
+            this.object = object;
+            this.name = name;
+        }
+
+        @explicitThis fun get_Type(this): CompilerObject {
+            if (this.getter != null) return this.getter.returnType();
+            return Matching.typeOf(this.setter.node.Parameters[0]);
+        }
+
+        @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+            if (this.getter == null) return Result[LIRExpression].Error("Property " + this.name + " can't be read.");
+
+            let read = BoundMethod(this.getter, this.object).Call([]);
+            if (read.IsError) return Result[LIRExpression].Error(read.UnwrapError());
+            return ir.CompileExpression(read.Unwrap(), target);
+        }
+
+        @explicitThis fun Set(this, value: CompilerObject): IResult[CompilerObject, Error] {
+            if (this.setter == null) return Result[CompilerObject].Error("Property " + this.name + " can't be written.");
+
+            let written = BoundMethod(this.setter, this.object).Call([Argument(value)]);
+            if (written.IsError) return written;
+            return Result[CompilerObject].Ok(Evaluated(written.Unwrap()));
+        }
+    }
+
+    // A call evaluated as a statement, for what it does.
+    def Evaluated of DotNet_Class : CompilerObject, ICompileIRStatement {
+        let call: CompilerObject;
+
+        @explicitThis new(this, call: CompilerObject) { this.call = call; }
+
+        @explicitThis fun CompileIRStatement(this, target: Object): IResult[LIRStatement, Error] {
+            let call = ir.CompileExpression(this.call, target);
+            if (call.IsError) return Result[LIRStatement].Error(call.UnwrapError());
+            return Result[LIRStatement].Ok(Evaluate(call.Unwrap()));
+        }
+    }
+
+    // What indexing a class or one of its values calls: its methods that are its index
+    // operator, the class's for the class and the objects' for a value, called with what
+    // is indexed as a call of them is.
+    def Indexing of DotNet_Class {
+        @clrStatic fun call(methods: List[Method], load: MethodOwner, onClass: Boolean, object: CompilerObject, arguments: Argument[], owner: String): IResult[CompilerObject, Error] {
+            let candidates = List[CompilerObject]();
+            let index = 0;
+            while (index < methods.Count) {
+                let method = methods[index];
+                if (Operator.Index.Equals(method.Operator)) {
+                    if (method.IsClass == onClass) {
+                        if (method.IsStatic == false) candidates.Add(BoundMethod(hirLoader.LoadDefinition(method).Unwrap() as MethodObject, object));
+                    }
+                }
+                index = index + 1;
+            }
+
+            if (candidates.Count == 0) return Result[CompilerObject].Error(owner + " has no index operator.");
+            return cg.Call(OverloadGroup.Of(candidates), arguments);
+        }
+    }
+
+    // A property of a class or an interface, by its name, reached through an object or a
+    // class: its accessors' COs, which are its methods'.
+    def Properties of DotNet_Class {
+        @clrStatic fun find(properties: List[Property], name: String): Property {
+            let index = 0;
+            while (index < properties.Count) {
+                if (properties[index].Name == name) return properties[index];
+                index = index + 1;
+            }
+            return null;
+        }
+
+        @clrStatic fun accessor(method: Method): MethodObject {
+            if (method == null) return null;
+            return hirLoader.LoadDefinition(method).Unwrap() as MethodObject;
+        }
+
+        @clrStatic fun value(property: Property, object: CompilerObject): PropertyValue {
+            return PropertyValue(Properties.accessor(property.Getter), Properties.accessor(property.Setter), object, property.Name);
+        }
+
+        // Whether its accessors are the class's or its type object's, as the getter is, or
+        // the setter if it has none.
+        @clrStatic fun accessorOf(property: Property): Method {
+            if (property.Getter != null) return property.Getter;
+            return property.Setter;
+        }
+    }
+
     // The definitions a class or an interface holds, reached by the names `Named` gives
     // them.
     def Owned of DotNet_Class {
@@ -817,6 +950,29 @@ def Objects of DotNet_Module {
             if (field.Type != null) return hirLoader.LoadType(field.Type).Unwrap();
             return ts.TypeOf(hirCodeLoader.LoadExpression(field.DefaultValue).Unwrap()).Unwrap();
         }
+    }
+
+    // A class's value: its type object, of its metaclass.
+    def TypeObject of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
+        let owner: ClassObject;
+
+        @explicitThis new(this, owner: ClassObject) { this.owner = owner; }
+
+        @explicitThis fun get_Type(this): CompilerObject { return this.owner.meta; }
+
+        @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+            return this.owner.CompileIRExpression(target);
+        }
+    }
+
+    // An interface's value, of its class shape: what any class that implements it is.
+    // Nothing lowers it to code, as an interface has no type object of its own.
+    def InterfaceValue of DotNet_Class : CompilerObject, ITyped {
+        let owner: InterfaceObject;
+
+        @explicitThis new(this, owner: InterfaceObject) { this.owner = owner; }
+
+        @explicitThis fun get_Type(this): CompilerObject { return this.owner.meta; }
     }
 
     // A value that exists as the code is compiled, as the node a definition is.
@@ -904,7 +1060,7 @@ def Objects of DotNet_Module {
     // A Z# interface. As a type, it is the object type of any class that implements it,
     // which its target's polymorphism makes. A value of it has its methods as members, and
     // is cast down to, and tested for, what implements it.
-    def InterfaceObject of DotNet_Class : CompilerObject, MethodOwner, ICompileIRType, ICTCastTo, ICTImplicitCastTo, ICTGetMember[String], IRTGetMember[String], IRTCastTo, IRTTypeMatch, IAssignableTo, Held, ICompileIRDefinitionIn[LIRModule] {
+    def InterfaceObject of DotNet_Class : CompilerObject, MethodOwner, ICompileIRType, ICTCastTo, ICTImplicitCastTo, ICTGetMember[String], IRTGetMember[String], IRTGetIndex, ICTGet, IRTCastTo, IRTTypeMatch, IAssignableTo, Held, ICompileIRDefinitionIn[LIRModule] {
         let node: Interface;
         let holder: Holder;
         let structures: Dictionary[Object, Structure];
@@ -932,14 +1088,22 @@ def Objects of DotNet_Module {
             return LIRModule(this.node.Name);
         }
 
+        // Indexing a value of it calls its methods that are its index operator, which are
+        // what the value's class has.
+        @explicitThis fun Index(this, object: CompilerObject, arguments: Argument[]): IResult[CompilerObject, Error] {
+            return Indexing.call(this.node.Methods, this, false, object, arguments, "The interface " + this.node.Name);
+        }
+
         @explicitThis fun metaclass(this): CompilerObject { return this.meta; }
 
-        // `Shape.Class` is the type of any class that implements it, and what it holds is
-        // reached by its name.
+        // What it holds is reached by its name.
         @explicitThis fun Member(this, name: String): IResult[CompilerObject, Error] {
-            if (name == "Class") return Result[CompilerObject].Ok(this.meta);
             return Owned.member(this.node.Definitions, name, "The interface " + this.node.Name);
         }
+
+        // Its value is of its class shape, the type of any class that implements it, so
+        // `Type[Shape]` is that; evaluating it is what fails, as nothing lowers it.
+        @explicitThis fun Get(this): IResult[CompilerObject, Error] { return Result[CompilerObject].Ok(InterfaceValue(this)); }
 
         @explicitThis fun name(this): String { return "The interface " + this.node.Name; }
 
@@ -1014,6 +1178,11 @@ def Objects of DotNet_Module {
         }
 
         @explicitThis fun Member(this, object: CompilerObject, name: String): IResult[CompilerObject, Error] {
+            let property = Properties.find(this.node.Properties, name);
+            if (property != null) {
+                if (Properties.accessorOf(property).IsClass == false) return Result[CompilerObject].Ok(Properties.value(property, object));
+            }
+
             let index = 0;
             while (index < this.node.Methods.Count) {
                 let method = this.node.Methods[index];
@@ -1050,7 +1219,7 @@ def Objects of DotNet_Module {
     // A Z# class. As a type, it is the object type its target lowers it to; calling it
     // runs its unnamed constructor, and its named constructors are its members. A value
     // of it has its fields and methods as members.
-    def ClassObject of DotNet_Class : CompilerObject, MethodOwner, ICompileIRType, ICTCallable, ICTCastTo, ICTImplicitCastTo, ICTGetMember[String], IRTGetMember[String], IAssignableTo, ICompileIRExpression, ITyped, Held, ICompileIRDefinitionIn[LIRModule] {
+    def ClassObject of DotNet_Class : CompilerObject, MethodOwner, ICompileIRType, ICTCallable, ICTCastTo, ICTImplicitCastTo, ICTGetMember[String], IRTGetMember[String], ICTGetIndex, IRTGetIndex, ICTGet, IAssignableTo, ICompileIRExpression, ITyped, Held, ICompileIRDefinitionIn[LIRModule] {
         let node: Class;
         let meta: Metaclass;
         let holder: Holder;
@@ -1079,6 +1248,16 @@ def Objects of DotNet_Module {
             return ErrorMessage(this.failure(target));
         }
 
+        // Indexing the class calls its class methods that are its index operator, on the
+        // class, and indexing one of its objects the methods that are, on the object.
+        @explicitThis fun Index(this, arguments: Argument[]): IResult[CompilerObject, Error] {
+            return Indexing.call(this.node.Methods, this, true, this, arguments, "The class " + this.node.Name);
+        }
+
+        @explicitThis fun Index(this, object: CompilerObject, arguments: Argument[]): IResult[CompilerObject, Error] {
+            return Indexing.call(this.node.Methods, this, false, object, arguments, "The class " + this.node.Name);
+        }
+
         // The LIR module it lowers into: what holds it lowers to, or one of its own.
         @explicitThis fun container(this, target: Object): LIRModule {
             if (this.holder != null) return this.holder.module(target);
@@ -1087,7 +1266,11 @@ def Objects of DotNet_Module {
 
         @explicitThis fun metaclass(this): CompilerObject { return this.meta; }
 
-        // A class used as a value is its type object.
+        // The class's value is its type object.
+        @explicitThis fun Get(this): IResult[CompilerObject, Error] { return Result[CompilerObject].Ok(TypeObject(this)); }
+
+        // A class used as a value is its type object, as long as what gives a definition
+        // gives its CO, rather than its value.
         @explicitThis fun get_Type(this): CompilerObject { return this.meta; }
 
         @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
@@ -1328,13 +1511,20 @@ def Objects of DotNet_Module {
         }
 
         // The class's members are its named constructors, its static fields and methods,
-        // and its class fields and methods, reached through its type object. `Class` is
-        // the type of its type object.
+        // and its class fields and methods, reached through its type object. No name is
+        // the class's own: the type of its type object is `Type[Name]`.
         @explicitThis fun Member(this, name: String): IResult[CompilerObject, Error] {
-            if (name == "Class") return Result[CompilerObject].Ok(this.meta);
 
             let constructor = this.named(name);
             if (constructor != null) return Result[CompilerObject].Ok(constructor);
+
+            let property = Properties.find(this.node.Properties, name);
+            if (property != null) {
+                let accessor = Properties.accessorOf(property);
+                if (accessor.IsStatic) return Result[CompilerObject].Ok(Properties.value(property, null));
+                if (accessor.IsClass) return Result[CompilerObject].Ok(Properties.value(property, this));
+                return Result[CompilerObject].Error("Property " + name + " of the class " + this.node.Name + " is its objects'.");
+            }
 
             let index = 0;
             while (index < this.node.Fields.Count) {
@@ -1372,6 +1562,12 @@ def Objects of DotNet_Module {
                 index = index + 1;
             }
 
+            let property = Properties.find(this.node.Properties, name);
+            if (property != null) {
+                if (Properties.accessorOf(property).IsClass) return Result[CompilerObject].Ok(Properties.value(property, this));
+                return Result[CompilerObject].Ok(Properties.value(property, object));
+            }
+
             index = 0;
             while (index < this.node.Fields.Count) {
                 let field = this.node.Fields[index];
@@ -1394,6 +1590,28 @@ def Objects of DotNet_Module {
 
             return Result[CompilerObject].Error("The class " + this.node.Name + " has no member named " + name + ".");
         }
+    }
+}
+
+// ---- Properties
+
+// A property of a class or an interface, defined as the building code runs from its
+// accessors, the methods `get Name` and `set Name`.
+def Accessors of DotNet_Class {
+    @clrStatic fun define(owner: Instance, name: String) {
+        if (owner is type of Class) Accessors.pair(type.Methods, type.Properties, name);
+        if (owner is shape of Interface) Accessors.pair(shape.Methods, shape.Properties, name);
+    }
+
+    @clrStatic fun pair(methods: List[Method], properties: List[Property], name: String) {
+        let property = Property(name);
+        let index = 0;
+        while (index < methods.Count) {
+            if (methods[index].Name == "get " + name) property.Getter = methods[index];
+            if (methods[index].Name == "set " + name) property.Setter = methods[index];
+            index = index + 1;
+        }
+        properties.Add(property);
     }
 }
 
@@ -1453,13 +1671,18 @@ def Members of DotNet_Class {
     }
 
     @explicitThis fun definition(this, compiler: ASTCompiler, node: DefinitionSyntax): IResult[CompiledDefinition, Error] {
-        // What a class defines its members to be: a fun is a method, and a new a
-        // constructor of a class. An accessor is a definition of its own, which a class
-        // doesn't define, so it is compiled as any definition is, as is anything else.
+        // What a class defines its members to be: a fun is a method, an accessor a method
+        // of its property, and a new a constructor of a class. Anything else is compiled as
+        // it would be anywhere, and held.
         if (Bodies.DefinitionOf(compiler.Contexts.Current) == this.owner) {
-            if (node is accessor of AccessorSyntax) return this.definitions(compiler, node);
+            if (node is accessor of AccessorSyntax) {
+                if (this.names.Contains(accessor.Name) == false) this.names.Add(accessor.Name);
+                return metaTypes.Compile(compiler, node, Method as Instance);
+            }
             if (node is function of FunctionSyntax) {
-                this.names.Add(function.Name);
+                if (function.Name != null) {
+                    if (function.Name.Length > 0) this.names.Add(function.Name);
+                }
                 return metaTypes.Compile(compiler, node, Method as Instance);
             }
             if (node is constructor of ConstructorSyntax) {
@@ -1681,7 +1904,6 @@ def ClassFiller of DotNet_Class {
         let block = Block([]);
 
         if (this.definition.Bases != null) {
-            if (this.isClass == false) return Result[Block].Error("The interface " + this.definition.Name + " can't be given bases.");
 
             let index = 0;
             while (index < this.definition.Bases.Count) {
@@ -1703,6 +1925,27 @@ def ClassFiller of DotNet_Class {
         if (filled.IsError) return filled;
 
         block.Statements.Add(filled.Unwrap());
+
+        // A property is defined once its accessors are, as they are what it is.
+        let defined = List[String]();
+        let index = 0;
+        while (index < this.definition.Content.Statements.Count) {
+            let decorators: List[ExpressionSyntax] = null;
+            let statement = Language.Undecorate(this.definition.Content.Statements[index], decorators);
+            if (statement is written of DefinitionStatementSyntax) {
+                if (written.Definition is accessor of AccessorSyntax) {
+                    if (defined.Contains(accessor.Name) == false) {
+                        defined.Add(accessor.Name);
+                        let callee = NamedMember();
+                        callee.Target = Get(Accessors as Instance);
+                        callee.Name = "define";
+                        block.Statements.Add(ExpressionStatement(Bodies.Call(callee, Get(this.self), StringLiteral(accessor.Name))));
+                    }
+                }
+            }
+            index = index + 1;
+        }
+
         return Result[Block].Ok(block);
     }
 
@@ -1737,8 +1980,16 @@ def Meta of DotNet_Module {
 
     fun compileMethod(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
         if (definition is function of FunctionSyntax) {
+            // An accessor is the method of its property that reads or writes it.
+            let name = function.Name;
+            if (name == null) name = "";
+            if (definition is accessor of AccessorSyntax) {
+                name = "get " + accessor.Name;
+                if (accessor.IsSetter) name = "set " + accessor.Name;
+            }
+
             let filler = MethodFiller(compiler, function, self, Meta.members(compiler));
-            return Result[CompiledDefinition].Ok(CompiledDefinition(self, Bodies.Construct(Method as Instance, StringLiteral(function.Name)), Method as Instance, filler.fill, null));
+            return Result[CompiledDefinition].Ok(CompiledDefinition(self, Bodies.Construct(Method as Instance, StringLiteral(name)), Method as Instance, filler.fill, null));
         }
         return Result[CompiledDefinition].Error("A method is a fun.");
     }
@@ -1772,7 +2023,33 @@ def Meta of DotNet_Module {
             index = index + 1;
         }
 
+        let invalid = Meta.invalidProperty(node.Properties, "the class " + node.Name);
+        if (invalid != null) return Result[CompilerObject].Error(invalid);
+
         return Result[CompilerObject].Ok(Objects.ClassObject(node));
+    }
+
+    // A getter takes nothing and gives the property's value, and a setter takes its value
+    // and gives nothing, both of the objects or both not.
+    fun invalidProperty(properties: List[Property], owner: String): String {
+        let index = 0;
+        while (index < properties.Count) {
+            let property = properties[index];
+            if (property.Getter != null) {
+                if (property.Getter.Parameters.Count != 0) return "The getter of property " + property.Name + " of " + owner + " takes nothing and gives its value.";
+                if (property.Getter.ReturnType == null) return "The getter of property " + property.Name + " of " + owner + " takes nothing and gives its value.";
+            }
+            if (property.Setter != null) {
+                if (property.Setter.Parameters.Count != 1) return "The setter of property " + property.Name + " of " + owner + " takes one value and returns nothing.";
+                if (property.Setter.ReturnType != null) return "The setter of property " + property.Name + " of " + owner + " takes one value and returns nothing.";
+                if (property.Getter != null) {
+                    if (property.Getter.IsStatic != property.Setter.IsStatic) return "The accessors of property " + property.Name + " of " + owner + " are both static or both not.";
+                    if (property.Getter.IsClass != property.Setter.IsClass) return "The accessors of property " + property.Name + " of " + owner + " are both the class's or both not.";
+                }
+            }
+            index = index + 1;
+        }
+        return null;
     }
 
     fun loadMethod(node: Method): IResult[CompilerObject, Error] {
@@ -1802,6 +2079,9 @@ def Meta of DotNet_Module {
             if (node.Methods[index].Body != null) return Result[CompilerObject].Error("Method " + node.Methods[index].Name + " of the interface " + node.Name + " has no code.");
             index = index + 1;
         }
+
+        let invalid = Meta.invalidProperty(node.Properties, "the interface " + node.Name);
+        if (invalid != null) return Result[CompilerObject].Error(invalid);
 
         return Result[CompilerObject].Ok(Objects.InterfaceObject(node));
     }

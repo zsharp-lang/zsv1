@@ -153,7 +153,8 @@ namespace ZSharp.Platform.Runtime
             foreach (var function in structure.Module?.Functions ?? Enumerable.Empty<LIR.Function>())
                 if (function.Metadata.OfType<MethodOf>().Any(method => method.Owner == structure))
                 {
-                    var method = new ClassMethod(function.Name ?? "Method", isStatic: false, function) { IsAbstract = function.Body is null };
+                    // A function has a name only if it is given one, which the CLR needs.
+                    var method = new ClassMethod(function.Name is { Length: > 0 } name ? name : $"<unnamed>{definition.Methods.Count}", isStatic: false, function) { IsAbstract = function.Body is null };
 
                     polymorphicMethods[function] = method;
                     definition.Methods.Add(method);

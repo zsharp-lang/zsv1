@@ -43,6 +43,13 @@ namespace ZSharp.Compiler
 
             instances.Types.Register<HIR.Infer>(_ => Result.Error("A type was meant to be inferred, but wasn't."));
 
+            // The type of a value is what the compiler says it is: a value that has none, as
+            // a definition with no type object, has no type to give.
+            instances.Types.Register<HIR.Code.TypeOf>(node =>
+                code.LoadExpression(node.Value).Error(out var error, out var value)
+                    ? Result.Error(error)
+                    : Core.Compiler.ModuleScope.TS.TypeOf(value));
+
             instances.Definitions.Register<HIR.Code.Local>(local =>
             {
                 CompilerObject? init = null;
@@ -79,6 +86,11 @@ namespace ZSharp.Compiler
             instances.Instances.Register<HIR.Code.Local>(local => loader.LoadDefinition(local));
 
             expressions.Register<HIR.Code.Get>(get => loader.LoadInstance(get.Instance));
+
+            expressions.Register<HIR.Code.GetValue>(get =>
+                code.LoadExpression(get.Of).Error(out var error, out var value)
+                    ? Result.Error(error)
+                    : cg.Get(value));
 
             expressions.Register<HIR.Code.Unquote>(_ => Unquoted());
             mapped.Statements.Register<HIR.Code.UnquoteStatement>(_ => Unquoted());
