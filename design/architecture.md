@@ -775,6 +775,25 @@ a custom type gets into the language to be used as a meta-type.
   is the code's own.
 - A CLR definition's signature still takes only CLR types, so a function of a CLR module
   can't take a Z# class or interface yet; a Z# function can.
+- A member of a Z# class marked `@static`, which `std:oop` exports, is the class's own: a
+  static field is one variable, and a static method is a function, which takes no object
+  and isn't marked as a method. The decorator is a Z# function that sets the node's
+  `IsStatic`, run as the class is built, as any decorator is, and a decorated `let` in a
+  class's body is a field given to its decorators, which the members compiler handles. A
+  member is registered as what it is, whatever its decorators gave. Since a decorator runs
+  only once the member's code is compiled, a member is reached the same way whatever it
+  is: a field by its name, through the object, and the class's members tell a static one
+  apart as they are lowered. So a static member is reached through the class, through an
+  object, and by name in a method, and an object's own member through the class is an
+  error, as using the object in a static method is.
+- A static field lowers to an LIR global of the class's module, with a second one that
+  says whether it was given a value, and to a function that reads it and one that writes
+  it. The first read or write gives it its default value, so a target needs nothing that
+  runs before. A field is loaded from its node, as a method is, so it knows its class.
+- While a class is being built, a definition is its node, so a field's type is evaluated
+  where a class being built is a value: `Dictionary[String, Item]` as a field's type of a
+  class built with `Item` indexes `Dictionary` with a value. A generic CLR type given a
+  type's node would have to describe the instance, which nothing does yet.
 - What a definition written in Z# needs from code that uses a class still being loaded
   with it is general: such a class goes to the interfaces it implements, can be cast down
   to and tested for, has a `null`, can be given to a generic CLR type, and has its
@@ -1783,3 +1802,17 @@ lists what was chosen and the alternatives, for you to keep or change.
 - **Casts and type tests belong to Polymorphism.** `cast` and `test` were added to the
   capability, since knowing what an object is comes with objects reaching their class's
   methods. Alternative: a separate capability, such as runtime types.
+- **Static members are marked `@static`.** `std:oop` exports `static`, so a document that
+  uses the CLR's `static` too imports one under another name. Alternatives: a keyword, or
+  one decorator name that overloading resolves for both kinds of definition.
+- **A static field is given its default value when first used.** No target needs to run
+  anything before, and a field's initializer can use what is defined after it.
+  Alternatives: initializing every static field when the class loads, which needs a
+  capability for code that runs first, or allowing only constant default values.
+- **Static members are reached through objects too, and by name in methods.** That's
+  how Java and Python allow it, and it follows from decorators running after the member's
+  code is compiled. Alternative: only through the class, as in C#, which would need the
+  members compiler to know a member is static while it compiles it.
+- **Methods aren't reached by name in a method.** Only fields are, as before, whether
+  static or not; a method is called through `this` or the class. Alternative: binding
+  methods by name too.

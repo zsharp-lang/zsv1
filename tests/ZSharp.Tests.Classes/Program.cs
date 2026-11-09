@@ -4038,6 +4038,67 @@ Try("a value of a Z# interface is only cast to what implements it", () =>
         cast239(Some239());
         """) is { } e && e.Contains("only be cast to what implements it"));
 
+Try("a static field of a Z# class is one variable, given its default value when first used", () =>
+    ResetKept() && Run("""
+        import { static as static240 } from "std:oop";
+
+        def Counter240 {
+            @static240 let made: Int32 = 100;
+            let id: Int32;
+
+            new(this) { made = made + 1; this.id = made; }
+
+            fun describe(): String { return "counter " + id + " of " + made; }
+        }
+
+        let first240 = Counter240();
+        let second240 = Counter240();
+        Keep(second240.describe());
+        Keep(Counter240.made);
+        Counter240.made = 7;
+        Keep(first240.describe());
+        """) is null && Probe.Kept is ["counter 102 of 102", 102, "counter 101 of 7"]);
+
+Try("a static method of a Z# class is a function, with no object", () =>
+    ResetKept() && Run("""
+        import { static as static241 } from "std:oop";
+
+        def Point241 {
+            let x: Int32;
+            let y: Int32;
+
+            new(this, x: Int32, y: Int32) { this.x = x; this.y = y; }
+
+            @static241 fun origin(): Point241 { return Point241(0, 0); }
+            @static241 fun sum(a: Int32, b: Int32): Int32 { return a + b; }
+            fun total(this): Int32 { return Point241.sum(x, y); }
+        }
+
+        Keep(Point241.origin().total());
+        Keep(Point241(3, 4).total());
+        Keep(Point241.sum(20, 22));
+        """) is null && Probe.Kept is [0, 7, 42]);
+
+Try("a static method of a Z# class has no object", () =>
+    Run("""
+        import { static as static242 } from "std:oop";
+        def Thing242 {
+            let x: Int32 = 1;
+            new() { }
+            @static242 fun read(): Int32 { return x; }
+        }
+        Keep(Thing242.read());
+        """) is { } e && e.Contains("no object here"));
+
+Try("a field of a Z# class's objects isn't the class's", () =>
+    Run("""
+        def Thing243 {
+            let x: Int32 = 1;
+            new() { }
+        }
+        Keep(Thing243.x);
+        """) is { } e && e.Contains("is its objects'"));
+
 Try("the prelude brings the standard definitions", () =>
     Run("""import "std:prelude";""") is null);
 

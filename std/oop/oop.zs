@@ -6,16 +6,20 @@
 // its first parameter is `this`. A class or an interface lowers through the target's
 // capabilities: a target with polymorphism gets it as an object type with methods.
 //
+// A member marked `@static` is the class's own, not its objects': a static field is one
+// variable, and a static method is a function, with no object.
+//
 // Importing it makes `def` a Z# class wherever nothing else compiles one, and
 // `def Name of Interface` a Z# interface.
 
-import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Interface, explicitThis, static } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Interface, explicitThis, static as clrStatic } from "core:runtime";
 import { Instance, Definition, Variable, Type } from "std:zsharp/hir";
-import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement } from "std:zsharp/hir/code";
+import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement, Cast as CastCode } from "std:zsharp/hir/code";
 import {
     Function as FunctionSyntax, Definition as DefinitionSyntax, TypeDefinition as TypeSyntax,
     Constructor as ConstructorSyntax, LetExpression as LetSyntax, Expression as ExpressionSyntax,
-    Signature as SignatureSyntax, Parameter as ParameterSyntax
+    Signature as SignatureSyntax, Parameter as ParameterSyntax, Statement as StatementSyntax,
+    DecoratedStatement as DecoratedSyntax, ExpressionStatement as ExpressionStatementSyntax
 } from "std:zsharp/lang/ast";
 import { CompilerObject } from "std:zsharp/mir";
 import { Error, Result, IResult } from "std:zsharp/common";
@@ -24,13 +28,14 @@ import { ICTCallable, ICTGetMember, ICTSet, ICTCastTo } from "std:zsharp/compile
 import { IRTGetMember, IRTCastTo, IRTTypeMatch } from "std:zsharp/compiler/cg/typed";
 import { ICompileIRExpression, ICompileIRType, ICompileIRStatement } from "std:zsharp/compiler/ir";
 import { ITyped, IAssignableTo } from "std:zsharp/compiler/ts";
-import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTDefinition, Context } from "std:zsharp/compiler/ast";
+import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTDefinition, CompileASTStatement, Context } from "std:zsharp/compiler/ast";
 import {
     Function as LIRFunction, Parameter as LIRParameter, Local as LIRLocal, Signature, Call as LIRCall,
     GetLocal, SetLocal, Return as LIRReturn, New as LIRNew, GetField, SetField, Constant, Structure,
+    Global as LIRGlobal, GetGlobal, SetGlobal, If as LIRIf, Block as LIRBlock,
     Field as LIRField, Module as LIRModule, Expression as LIRExpression, Statement as LIRStatement, Code as LIRCode, Evaluate, Type as LIRType
 } from "std:zsharp/lir";
-import { Bodies, ContainerCompiler, CapabilityContext } from "std:zsharp/lang";
+import { Bodies, ContainerCompiler, CapabilityContext, Language } from "std:zsharp/lang";
 import { CodeLoaders } from "std:zsharp/compiler/code";
 import { Positional, Named, ParameterObject } from "std:functions";
 import { Polymorphism } from "std:zsharp/capabilities";
@@ -50,6 +55,8 @@ def Field : Instance, Definition {
     let Name: String;
     let Type: Type;
     let DefaultValue: Expression;
+    let IsStatic: Boolean;
+    let Owner: Instance;
 
     @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
 }
@@ -62,6 +69,7 @@ def Method : Instance, Definition {
     let ReturnType: Type;
     let Body: Code;
     let This: Receiver;
+    let IsStatic: Boolean;
 
     @explicitThis new(this, name: String) {
         this.Name = name;
@@ -176,7 +184,7 @@ module Objects {
         @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
             if (this.parameters.ContainsKey(target)) return Result[LIRExpression].Ok(GetLocal(this.parameters[target]));
             if (this.locals.ContainsKey(target)) return Result[LIRExpression].Ok(GetLocal(this.locals[target]));
-            return Result[LIRExpression].Error("The object is only known in the code of its method.");
+            return Result[LIRExpression].Error("There is no object here: only a method that isn't static has one.");
         }
     }
 
@@ -193,7 +201,7 @@ module Objects {
         }
 
         @explicitThis fun get_Type(this): CompilerObject {
-            return hirLoader.LoadType(this.owner.node.Fields[this.index].Type).Unwrap();
+            return hirLoader.LoadType(this.owner.fields()[this.index].Type).Unwrap();
         }
 
         @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
@@ -232,9 +240,104 @@ module Objects {
         }
     }
 
+    // A static field: one variable of the class, which its default value is given the
+    // first time the field is read or written, so it needs nothing to run before.
+    def StaticField : CompilerObject, ICompileIRExpression, ICTSet, ITyped {
+        let owner: ClassObject;
+        let node: Field;
+        let getters: Dictionary[Object, LIRFunction];
+        let setters: Dictionary[Object, LIRFunction];
+
+        @explicitThis new(this, owner: ClassObject, node: Field) {
+            this.owner = owner;
+            this.node = node;
+            this.getters = Dictionary[Object, LIRFunction]();
+            this.setters = Dictionary[Object, LIRFunction]();
+        }
+
+        @explicitThis fun get_Type(this): CompilerObject {
+            return hirLoader.LoadType(this.node.Type).Unwrap();
+        }
+
+        // The variable, whether it was given a value, and the functions that read and
+        // write it, all in the class's module.
+        @explicitThis fun lower(this, target: Object): Boolean {
+            if (this.getters.ContainsKey(target)) return true;
+            if (this.owner.structure(target) == null) return false;
+
+            let container = this.owner.modules[target];
+            let type = ir.CompileType(this.get_Type(), target).Unwrap();
+            let boolean = ir.CompileType(Matching.boolean(), target).Unwrap();
+
+            let value = LIRGlobal(type);
+            value.Name = this.owner.node.Name + "." + this.node.Name;
+            container.Globals.Add(value);
+
+            let given = LIRGlobal(boolean);
+            given.Name = value.Name + ".given";
+            container.Globals.Add(given);
+
+            let initialize = LIRBlock([]);
+            initialize.Statements.Add(SetGlobal(given, Constant(boolean, true)));
+            initialize.Statements.Add(SetGlobal(value, this.owner.defaultValue(this.node, target)));
+
+            let getter = LIRFunction(Signature());
+            getter.Signature.ReturnType = type;
+            getter.Name = "get_" + this.node.Name;
+            getter.Body = LIRCode();
+            getter.Body.Block.Statements.Add(LIRIf(GetGlobal(given), LIRBlock([]), initialize));
+            getter.Body.Block.Statements.Add(LIRReturn(GetGlobal(value)));
+            container.Functions.Add(getter);
+
+            let signature = Signature();
+            let assigned = LIRParameter(type);
+            assigned.Name = "value";
+            signature.Parameters.Add(assigned);
+
+            let setter = LIRFunction(signature);
+            setter.Name = "set_" + this.node.Name;
+            setter.Body = LIRCode();
+            setter.Body.Block.Statements.Add(SetGlobal(given, Constant(boolean, true)));
+            setter.Body.Block.Statements.Add(SetGlobal(value, GetLocal(assigned)));
+            container.Functions.Add(setter);
+
+            this.getters[target] = getter;
+            this.setters[target] = setter;
+            return true;
+        }
+
+        @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+            if (this.lower(target) == false) return Result[LIRExpression].Error(this.owner.failure(target));
+            return Result[LIRExpression].Ok(LIRCall(this.getters[target], []));
+        }
+
+        @explicitThis fun Set(this, value: CompilerObject): IResult[CompilerObject, Error] {
+            let converted = cg.ImplicitCast(value, this.get_Type());
+            if (converted.IsError) return converted;
+
+            return Result[CompilerObject].Ok(StaticFieldSet(this, converted.Unwrap()));
+        }
+    }
+
+    def StaticFieldSet : CompilerObject, ICompileIRStatement {
+        let field: StaticField;
+        let value: CompilerObject;
+
+        @explicitThis new(this, field: StaticField, value: CompilerObject) { this.field = field; this.value = value; }
+
+        @explicitThis fun CompileIRStatement(this, target: Object): IResult[LIRStatement, Error] {
+            if (this.field.lower(target) == false) return Result[LIRStatement].Error(this.field.owner.failure(target));
+
+            let value = ir.CompileExpression(this.value, target);
+            if (value.IsError) return Result[LIRStatement].Error(value.UnwrapError());
+
+            return Result[LIRStatement].Ok(Evaluate(LIRCall(this.field.setters[target], [value.Unwrap()])));
+        }
+    }
+
     // Matching arguments to parameters, as a function does.
     def Matching {
-        @static fun values(parameters: List[Definition], arguments: Argument[]): List[CompilerObject] {
+        @clrStatic fun values(parameters: List[Definition], arguments: Argument[]): List[CompilerObject] {
             let stream = ArgumentStream(arguments);
             let values = List[CompilerObject]();
 
@@ -250,24 +353,24 @@ module Objects {
             return values;
         }
 
-        @static fun parameter(node: Definition, target: Object): LIRParameter {
+        @clrStatic fun parameter(node: Definition, target: Object): LIRParameter {
             return (hirLoader.LoadDefinition(node).Unwrap() as ParameterObject).parameter(target);
         }
 
-        @static fun receiver(node: Receiver): ReceiverObject {
+        @clrStatic fun receiver(node: Receiver): ReceiverObject {
             return hirLoader.LoadDefinition(node).Unwrap() as ReceiverObject;
         }
 
-        @static fun typeOf(node: Definition): CompilerObject {
+        @clrStatic fun typeOf(node: Definition): CompilerObject {
             return (hirLoader.LoadDefinition(node).Unwrap() as ParameterObject).get_Type();
         }
 
-        @static fun boolean(): CompilerObject {
+        @clrStatic fun boolean(): CompilerObject {
             return hirLoader.LoadType(Boolean as Type).Unwrap();
         }
 
         // Whether two types are the same, as each goes to the other.
-        @static fun same(first: CompilerObject, second: CompilerObject): Boolean {
+        @clrStatic fun same(first: CompilerObject, second: CompilerObject): Boolean {
             if (first == null) return second == null;
             if (second == null) return false;
             if (ts.IsAssignableTo(first, second) == false) return false;
@@ -275,7 +378,7 @@ module Objects {
         }
 
         // Lowers code into a function, giving why it can't, or null.
-        @static fun lower(body: Code, function: LIRFunction, returned: CompilerObject, target: Object): Error {
+        @clrStatic fun lower(body: Code, function: LIRFunction, returned: CompilerObject, target: Object): Error {
             let outer = CodeLoaders.Returns;
             CodeLoaders.Returns = returned;
             let loaded = hirCodeLoader.LoadStatement(body.Block);
@@ -317,7 +420,8 @@ module Objects {
             let returned = this.returnType();
             if (returned != null) signature.ReturnType = ir.CompileType(returned, target).Unwrap();
 
-            signature.Parameters.Add(Matching.receiver(this.node.This).parameter(target));
+            // A static method is a function: it takes no object.
+            if (this.node.IsStatic == false) signature.Parameters.Add(Matching.receiver(this.node.This).parameter(target));
 
             let index = 0;
             while (index < this.node.Parameters.Count) {
@@ -353,7 +457,8 @@ module Objects {
         }
     }
 
-    // A method reached through an object: calling it calls the method with the object.
+    // A method reached through an object: calling it calls the method with the object. A
+    // static method is called with no object, however it is reached.
     def BoundMethod : CompilerObject, ICTCallable {
         let method: MethodObject;
         let object: CompilerObject;
@@ -364,7 +469,7 @@ module Objects {
             let values = Matching.values(this.method.node.Parameters, arguments);
             if (values == null) return Result[CompilerObject].Error(this.method.node.Name + " can't be called with these arguments.");
 
-            values.Insert(0, this.object);
+            if (this.method.node.IsStatic == false) values.Insert(0, this.object);
             return Result[CompilerObject].Ok(Invocation(this.method, null, values));
         }
     }
@@ -405,9 +510,10 @@ module Objects {
             function.Body.Block.Locals.Add(receiver);
 
             let fields = List[LIRExpression]();
+            let declared = this.owner.fields();
             let field = 0;
-            while (field < structure.Fields.Count) {
-                fields.Add(this.owner.defaultValue(field, target));
+            while (field < declared.Count) {
+                fields.Add(this.owner.defaultValue(declared[field], target));
                 field = field + 1;
             }
 
@@ -495,7 +601,7 @@ module Objects {
     // What describes a definition is its node: casting the definition to what describes
     // it, which is reflection, gives the node.
     def Description {
-        @static fun of(node: Object, described: CompilerObject, type: CompilerObject): IResult[CompilerObject, Error] {
+        @clrStatic fun of(node: Object, described: CompilerObject, type: CompilerObject): IResult[CompilerObject, Error] {
             if (ts.IsAssignableTo(type, described)) return Result[CompilerObject].Ok(Known(node, described));
             return Result[CompilerObject].Error("A definition is only described by its node.");
         }
@@ -683,6 +789,21 @@ module Objects {
             this.failures = Dictionary[Object, String]();
         }
 
+        // The fields each object has, in order.
+        @explicitThis fun fields(this): List[Field] {
+            let fields = List[Field]();
+            let index = 0;
+            while (index < this.node.Fields.Count) {
+                if (this.node.Fields[index].IsStatic == false) fields.Add(this.node.Fields[index]);
+                index = index + 1;
+            }
+            return fields;
+        }
+
+        @explicitThis fun staticField(this, node: Field): StaticField {
+            return hirLoader.LoadDefinition(node).Unwrap() as StaticField;
+        }
+
         @explicitThis fun name(this): String { return "The class " + this.node.Name; }
 
         @explicitThis fun failure(this, target: Object): String {
@@ -742,10 +863,11 @@ module Objects {
                 this.modules[target] = container;
                 this.structures[target] = structure;
 
+                let fields = this.fields();
                 let index = 0;
-                while (index < this.node.Fields.Count) {
-                    let field = LIRField(ir.CompileType(hirLoader.LoadType(this.node.Fields[index].Type).Unwrap(), target).Unwrap());
-                    field.Name = this.node.Fields[index].Name;
+                while (index < fields.Count) {
+                    let field = LIRField(ir.CompileType(hirLoader.LoadType(fields[index].Type).Unwrap(), target).Unwrap());
+                    field.Name = fields[index].Name;
                     structure.Fields.Add(field);
                     index = index + 1;
                 }
@@ -763,8 +885,7 @@ module Objects {
             return null;
         }
 
-        @explicitThis fun defaultValue(this, index: Int32, target: Object): LIRExpression {
-            let field = this.node.Fields[index];
+        @explicitThis fun defaultValue(this, field: Field, target: Object): LIRExpression {
             let type = ir.CompileType(hirLoader.LoadType(field.Type).Unwrap(), target).Unwrap();
 
             if (field.DefaultValue == null) return Constant(type, null);
@@ -810,7 +931,7 @@ module Objects {
                 let method = this.method(index);
                 let function = method.function(target);
                 container.Functions.Add(function);
-                polymorphism.method(function, structure);
+                if (method.node.IsStatic == false) polymorphism.method(function, structure);
                 methods.Add(method);
                 index = index + 1;
             }
@@ -878,16 +999,48 @@ module Objects {
             return constructor.Call(arguments);
         }
 
+        // The class's members are its named constructors and its static fields and
+        // methods.
         @explicitThis fun Member(this, name: String): IResult[CompilerObject, Error] {
             let constructor = this.named(name);
-            if (constructor == null) return Result[CompilerObject].Error("The class " + this.node.Name + " has no constructor named " + name + ".");
-            return Result[CompilerObject].Ok(constructor);
-        }
+            if (constructor != null) return Result[CompilerObject].Ok(constructor);
 
-        @explicitThis fun Member(this, object: CompilerObject, name: String): IResult[CompilerObject, Error] {
             let index = 0;
             while (index < this.node.Fields.Count) {
-                if (this.node.Fields[index].Name == name) return Result[CompilerObject].Ok(FieldValue(this, object, index));
+                let field = this.node.Fields[index];
+                if (field.Name == name) {
+                    if (field.IsStatic) return Result[CompilerObject].Ok(this.staticField(field));
+                    return Result[CompilerObject].Error("Field " + name + " of the class " + this.node.Name + " is its objects'.");
+                }
+                index = index + 1;
+            }
+
+            index = 0;
+            while (index < this.node.Methods.Count) {
+                let method = this.node.Methods[index];
+                if (method.Name == name) {
+                    if (method.IsStatic) return Result[CompilerObject].Ok(BoundMethod(this.method(index), null));
+                    return Result[CompilerObject].Error("Method " + name + " of the class " + this.node.Name + " is its objects'.");
+                }
+                index = index + 1;
+            }
+
+            return Result[CompilerObject].Error("The class " + this.node.Name + " has no member named " + name + ".");
+        }
+
+        // A value's members are its fields and methods, and the class's static ones, which
+        // are the same whatever object reaches them.
+        @explicitThis fun Member(this, object: CompilerObject, name: String): IResult[CompilerObject, Error] {
+            let fields = this.fields();
+            let index = 0;
+            while (index < fields.Count) {
+                if (fields[index].Name == name) return Result[CompilerObject].Ok(FieldValue(this, object, index));
+                index = index + 1;
+            }
+
+            index = 0;
+            while (index < this.node.Fields.Count) {
+                if (this.node.Fields[index].Name == name) return Result[CompilerObject].Ok(this.staticField(this.node.Fields[index]));
                 index = index + 1;
             }
 
@@ -916,6 +1069,8 @@ def Members {
     let definitions: CompileASTDefinition;
     let owner: Context;
 
+    let statements: CompileASTStatement;
+
     @explicitThis new(this, self: Local, isClass: Boolean, compiler: ASTCompiler) {
         this.self = self;
         this.isClass = isClass;
@@ -923,15 +1078,35 @@ def Members {
         this.fork = compiler.Fork();
         this.expressions = this.fork.Expression;
         this.definitions = this.fork.Definition;
+        this.statements = this.fork.Statement;
         this.owner = Bodies.DefinitionOf(compiler.Contexts.Current);
     }
 
     @explicitThis fun expression(this, compiler: ASTCompiler, node: ExpressionSyntax): IResult[Expression, Error] {
-        if (node is local of LetSyntax) {
-            if (this.isClass) return this.field(compiler, local);
-            return Result[Expression].Error("An interface has no fields, as " + local.Name + " would be.");
-        }
+        if (node is local of LetSyntax) return this.field(compiler, local, List[Expression]());
         return this.expressions(compiler, node);
+    }
+
+    // A field can be decorated, as a member defined with `fun` can: its decorators are
+    // given the field as it is built, before it is added.
+    @explicitThis fun statement(this, compiler: ASTCompiler, node: StatementSyntax): IResult[Statement, Error] {
+        if (node is decorated of DecoratedSyntax) {
+            let decorators: List[ExpressionSyntax] = null;
+            let inner = Language.Undecorate(decorated, decorators);
+
+            if (inner is expression of ExpressionStatementSyntax) {
+                if (expression.Expression is local of LetSyntax) {
+                    let compiled = Language.CompileDecorators(compiler, decorators);
+                    if (compiled.IsError) return Result[Statement].Error(compiled.UnwrapError());
+
+                    let field = this.field(compiler, local, compiled.Unwrap());
+                    if (field.IsError) return Result[Statement].Error(field.UnwrapError());
+                    return Result[Statement].Ok(ExpressionStatement(field.Unwrap()));
+                }
+            }
+        }
+
+        return this.statements(compiler, node);
     }
 
     @explicitThis fun definition(this, compiler: ASTCompiler, node: DefinitionSyntax): IResult[CompiledDefinition, Error] {
@@ -946,7 +1121,8 @@ def Members {
     }
 
     // A field: code that builds it and adds it to the class. Its default value is code.
-    @explicitThis fun field(this, compiler: ASTCompiler, local: LetSyntax): IResult[Expression, Error] {
+    @explicitThis fun field(this, compiler: ASTCompiler, local: LetSyntax, decorators: List[Expression]): IResult[Expression, Error] {
+        if (this.isClass == false) return Result[Expression].Error("An interface has no fields, as " + local.Name + " would be.");
         if (local.Type == null) return Result[Expression].Error("Field " + local.Name + " needs a type.");
 
         let type = bodies.Described[Type](compiler, local.Type);
@@ -975,17 +1151,30 @@ def Members {
             block.Statements.Add(ExpressionStatement(set));
         }
 
-        block.Statements.Add(ExpressionStatement(Bodies.Add(this.self, "Fields", Get(field))));
+        let owner = Set();
+        owner.Target = Bodies.Member(field, "Owner");
+        owner.Value = Get(this.self);
+        block.Statements.Add(ExpressionStatement(owner));
+
+        block.Statements.Add(ExpressionStatement(Bodies.Add(this.self, "Fields", Members.kind(Language.Decorate(Get(field), decorators), Field as Instance))));
         block.Result = Get(field);
         this.fields.Add(local.Name);
 
         return Result[Expression].Ok(block);
     }
 
+    // A member is added as what it is, whatever its decorators gave.
     @explicitThis fun register(this, member: CompiledDefinition, value: Expression): Statement {
         let list = "Methods";
         if (member.UnderlyingType == Constructor as Instance) list = "Constructors";
-        return ExpressionStatement(Bodies.Add(this.self, list, value));
+        return ExpressionStatement(Bodies.Add(this.self, list, Members.kind(value, member.UnderlyingType)));
+    }
+
+    @clrStatic fun kind(value: Expression, type: Instance): Expression {
+        let cast = CastCode();
+        cast.Value = value;
+        cast.Type = Get(type);
+        return cast;
     }
 }
 
@@ -993,7 +1182,7 @@ def Members {
 // `this` if its first parameter says so, and the class's fields by name, unless a
 // parameter has the name.
 def Receivers {
-    @static fun receiver(compiler: ASTCompiler, block: Block, self: Local, members: Members, signature: SignatureSyntax): SignatureSyntax {
+    @clrStatic fun receiver(compiler: ASTCompiler, block: Block, self: Local, members: Members, signature: SignatureSyntax): SignatureSyntax {
         let receiver = Local("this", Receiver as Type);
         receiver.Init = Bodies.Member(self, "This");
         block.Statements.Add(Declare(receiver));
@@ -1046,7 +1235,7 @@ def Receivers {
         return rest;
     }
 
-    @static fun count(parameters: List[ParameterSyntax]): Int32 {
+    @clrStatic fun count(parameters: List[ParameterSyntax]): Int32 {
         if (parameters == null) return 0;
         return parameters.Count;
     }
@@ -1163,6 +1352,7 @@ def ClassFiller {
         this.members = Members(this.self, this.isClass, this.compiler);
         this.members.fork.Expression = this.members.expression;
         this.members.fork.Definition = this.members.definition;
+        this.members.fork.Statement = this.members.statement;
 
         let filled = this.compiler.Contexts.Within[IResult[Block, Error]](CapabilityContext(this.compiler.Contexts.Current, this.members), this.compileMembers);
         if (filled.IsError) return filled;
@@ -1233,6 +1423,14 @@ module Meta {
         return Result[CompilerObject].Ok(Objects.ConstructorObject(owner.Unwrap() as Objects.ClassObject, node));
     }
 
+    // A field is loaded as the class's own, since only a static field is one thing
+    // apart from an object.
+    fun loadField(node: Field): IResult[CompilerObject, Error] {
+        let owner = hirLoader.LoadDefinition(node.Owner as Definition);
+        if (owner.IsError) return owner;
+        return Result[CompilerObject].Ok(Objects.StaticField(owner.Unwrap() as Objects.ClassObject, node));
+    }
+
     fun loadInterface(node: Interface): IResult[CompilerObject, Error] { return Result[CompilerObject].Ok(Objects.InterfaceObject(node)); }
 
     fun loadReceiver(node: Receiver): IResult[CompilerObject, Error] { return Result[CompilerObject].Ok(Objects.ReceiverObject(node)); }
@@ -1247,6 +1445,16 @@ module Meta {
     fun instanceOfReceiver(node: Receiver): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
 }
 
+// ---- Decorators
+
+// Marks a field or a method of a class as the class's own, not its objects'.
+@export
+fun static(member: Instance): Instance {
+    if (member is method of Method) method.IsStatic = true;
+    if (member is field of Field) field.IsStatic = true;
+    return member;
+}
+
 // ---- Installing it
 
 mappedLoader.Definitions.Register[Class](Meta.loadClass);
@@ -1254,6 +1462,7 @@ mappedLoader.Definitions.Register[Method](Meta.loadMethod);
 mappedLoader.Definitions.Register[Constructor](Meta.loadConstructor);
 mappedLoader.Definitions.Register[Receiver](Meta.loadReceiver);
 mappedLoader.Definitions.Register[Interface](Meta.loadInterface);
+mappedLoader.Definitions.Register[Field](Meta.loadField);
 mappedLoader.Instances.Register[Interface](Meta.instanceOfInterface);
 mappedLoader.Types.Register[Interface](Meta.typeOfInterface);
 mappedLoader.Instances.Register[Class](Meta.instanceOfClass);
