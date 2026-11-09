@@ -7,7 +7,11 @@
 // capabilities: a target with polymorphism gets it as an object type with methods.
 //
 // A member marked `@static` is the class's own, not its objects': a static field is one
-// variable, and a static method is a function, with no object.
+// variable, and a static method is a function, with no object. A member marked `@class`
+// is the class's type object's: a class is a value, the one object of its metaclass,
+// whose fields are the class fields and whose methods are the class methods, which run on
+// it. An interface can declare class methods too, which the class of each value of it
+// has, so `Shape.Class` is the type of any class that implements `Shape`.
 //
 // Importing it makes `def` a Z# class wherever nothing else compiles one, and
 // `def Name of Interface` a Z# interface.
@@ -44,10 +48,12 @@ import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader } from "core:compile
 
 // ---- The HIR
 
-// The object a method or constructor runs on.
+// The object a method or constructor runs on, which is the class's type object for a
+// class method.
 @export
 def Receiver : Instance, Definition, Variable {
     let Owner: Instance;
+    let IsClass: Boolean;
 }
 
 @export
@@ -56,6 +62,7 @@ def Field : Instance, Definition {
     let Type: Type;
     let DefaultValue: Expression;
     let IsStatic: Boolean;
+    let IsClass: Boolean;
     let Owner: Instance;
 
     @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
@@ -70,6 +77,7 @@ def Method : Instance, Definition {
     let Body: Code;
     let This: Receiver;
     let IsStatic: Boolean;
+    let IsClass: Boolean;
 
     @explicitThis new(this, name: String) {
         this.Name = name;
@@ -127,6 +135,15 @@ def Interface : Instance, Definition, Type {
     }
 }
 
+// The type of a class's or an interface's type object: the class's metaclass, or the
+// interface's class shape.
+@export
+def ClassOf : Instance, Definition, Type {
+    let Of: Type;
+
+    @explicitThis new(this, of: Type) { this.Of = of; }
+}
+
 // ---- The COs
 
 module Objects {
@@ -141,6 +158,9 @@ module Objects {
 
         // Why it didn't lower for the target.
         fun failure(target: Object): String;
+
+        // The type of its type object, whose methods are its class methods.
+        fun metaclass(): CompilerObject;
     }
 
     // The object a method or constructor runs on, as its code uses it. It owns its LIR
@@ -158,7 +178,9 @@ module Objects {
         }
 
         @explicitThis fun get_Type(this): CompilerObject {
-            return hirLoader.LoadDefinition(this.node.Owner as Definition).Unwrap();
+            let owner = hirLoader.LoadDefinition(this.node.Owner as Definition).Unwrap();
+            if (this.node.IsClass) return (owner as MethodOwner).metaclass();
+            return owner;
         }
 
         @explicitThis fun parameter(this, target: Object): LIRParameter {
@@ -188,25 +210,28 @@ module Objects {
         }
     }
 
-    // A field of an object, read and written.
+    // A field of an object, read and written: the field of the object's structure at its
+    // index. A class field is a field of the type object.
     def FieldValue : CompilerObject, ICompileIRExpression, ICTSet, ITyped {
-        let owner: ClassObject;
+        let owner: MethodOwner;
         let object: CompilerObject;
+        let node: Field;
         let index: Int32;
 
-        @explicitThis new(this, owner: ClassObject, object: CompilerObject, index: Int32) {
+        @explicitThis new(this, owner: MethodOwner, object: CompilerObject, node: Field, index: Int32) {
             this.owner = owner;
             this.object = object;
+            this.node = node;
             this.index = index;
         }
 
         @explicitThis fun get_Type(this): CompilerObject {
-            return hirLoader.LoadType(this.owner.fields()[this.index].Type).Unwrap();
+            return hirLoader.LoadType(this.node.Type).Unwrap();
         }
 
         @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
             let structure = this.owner.structure(target);
-            if (structure == null) return Result[LIRExpression].Error("The class " + this.owner.node.Name + " can't be lowered for this target.");
+            if (structure == null) return Result[LIRExpression].Error(this.owner.failure(target));
 
             let object = ir.CompileExpression(this.object, target);
             if (object.IsError) return object;
@@ -582,6 +607,223 @@ module Objects {
         }
     }
 
+    // A class's metaclass: the type of its type object, which is one object for each
+    // target, made the first time it is used. Its fields are the class fields, and its
+    // methods the class methods. It implements the class shape of each interface its
+    // class implements.
+    def Metaclass : CompilerObject, MethodOwner, ICompileIRType, ICTCastTo, IRTGetMember[String], IAssignableTo {
+        let owner: ClassObject;
+        let node: ClassOf;
+        let structures: Dictionary[Object, Structure];
+        let instances: Dictionary[Object, LIRFunction];
+
+        @explicitThis new(this, owner: ClassObject) {
+            this.owner = owner;
+            this.node = ClassOf(owner.node);
+            this.structures = Dictionary[Object, Structure]();
+            this.instances = Dictionary[Object, LIRFunction]();
+        }
+
+        @explicitThis fun Cast(this, type: CompilerObject): IResult[CompilerObject, Error] {
+            return Description.of(this.node, hirLoader.LoadType(ClassOf as Type).Unwrap(), type);
+        }
+
+        @explicitThis fun name(this): String { return "The class of " + this.owner.node.Name; }
+
+        @explicitThis fun failure(this, target: Object): String { return this.owner.failure(target); }
+
+        @explicitThis fun metaclass(this): CompilerObject { return this; }
+
+        @explicitThis fun fields(this): List[Field] {
+            let fields = List[Field]();
+            let index = 0;
+            while (index < this.owner.node.Fields.Count) {
+                if (this.owner.node.Fields[index].IsClass) fields.Add(this.owner.node.Fields[index]);
+                index = index + 1;
+            }
+            return fields;
+        }
+
+        @explicitThis fun IsAssignableTo(this, target: CompilerObject): Boolean {
+            if (target is other of Metaclass) return other.owner.node == this.owner.node;
+            if (target is shape of InterfaceMetaclass) return this.owner.implements(shape.owner);
+            return false;
+        }
+
+        @explicitThis fun structure(this, target: Object): Structure {
+            if (this.structures.ContainsKey(target)) return this.structures[target];
+            if (this.owner.structure(target) == null) return null;
+
+            let polymorphism = target as Polymorphism;
+            let structure = Structure();
+            structure.Name = this.owner.node.Name + ".Class";
+            polymorphism.objects(structure);
+            this.owner.modules[target].Structures.Add(structure);
+            this.structures[target] = structure;
+
+            let fields = this.fields();
+            let index = 0;
+            while (index < fields.Count) {
+                let field = LIRField(ir.CompileType(hirLoader.LoadType(fields[index].Type).Unwrap(), target).Unwrap());
+                field.Name = fields[index].Name;
+                structure.Fields.Add(field);
+                index = index + 1;
+            }
+
+            index = 0;
+            while (index < this.owner.node.Interfaces.Count) {
+                let shape = this.owner.interface(index).meta.structure(target);
+                if (shape != null) polymorphism.implements(structure, shape);
+                index = index + 1;
+            }
+
+            return structure;
+        }
+
+        // Its class methods are declared with its class.
+        @explicitThis fun lower(this, target: Object): Boolean { return this.owner.lower(target); }
+
+        @explicitThis fun CompileIRType(this, target: Object): IResult[LIRType, Error] {
+            if (this.lower(target) == false) return Result[LIRType].Error(this.failure(target));
+            return Result[LIRType].Ok(this.structure(target));
+        }
+
+        // The function that gives the type object, which makes it the first time, with
+        // its class fields' default values.
+        @explicitThis fun instance(this, target: Object): LIRFunction {
+            if (this.instances.ContainsKey(target)) return this.instances[target];
+
+            let structure = this.structure(target);
+            let container = this.owner.modules[target];
+            let boolean = ir.CompileType(Matching.boolean(), target).Unwrap();
+
+            let value = LIRGlobal(structure);
+            value.Name = structure.Name;
+            container.Globals.Add(value);
+
+            let made = LIRGlobal(boolean);
+            made.Name = structure.Name + ".made";
+            container.Globals.Add(made);
+
+            let defaults = List[LIRExpression]();
+            let fields = this.fields();
+            let index = 0;
+            while (index < fields.Count) {
+                defaults.Add(this.owner.defaultValue(fields[index], target));
+                index = index + 1;
+            }
+
+            let make = LIRBlock([]);
+            make.Statements.Add(SetGlobal(made, Constant(boolean, true)));
+            make.Statements.Add(SetGlobal(value, LIRNew(structure, defaults)));
+
+            let function = LIRFunction(Signature());
+            function.Signature.ReturnType = structure;
+            function.Name = "get_" + structure.Name;
+            function.Body = LIRCode();
+            function.Body.Block.Statements.Add(LIRIf(GetGlobal(made), LIRBlock([]), make));
+            function.Body.Block.Statements.Add(LIRReturn(GetGlobal(value)));
+            container.Functions.Add(function);
+
+            this.instances[target] = function;
+            return function;
+        }
+
+        // The type object's members are the class fields and methods, and the class's
+        // static ones.
+        @explicitThis fun Member(this, object: CompilerObject, name: String): IResult[CompilerObject, Error] {
+            let fields = this.fields();
+            let index = 0;
+            while (index < fields.Count) {
+                if (fields[index].Name == name) return Result[CompilerObject].Ok(FieldValue(this, object, fields[index], index));
+                index = index + 1;
+            }
+
+            index = 0;
+            while (index < this.owner.node.Methods.Count) {
+                let method = this.owner.node.Methods[index];
+                if (method.Name == name) {
+                    if (method.IsClass) return Result[CompilerObject].Ok(BoundMethod(this.owner.method(index), object));
+                    if (method.IsStatic) return Result[CompilerObject].Ok(BoundMethod(this.owner.method(index), null));
+                }
+                index = index + 1;
+            }
+
+            index = 0;
+            while (index < this.owner.node.Fields.Count) {
+                let field = this.owner.node.Fields[index];
+                if (field.Name == name) {
+                    if (field.IsStatic) return Result[CompilerObject].Ok(this.owner.staticField(field));
+                    return Result[CompilerObject].Error("There is no object here: field " + name + " is the objects' of the class " + this.owner.node.Name + ", and a class method runs on the class.");
+                }
+                index = index + 1;
+            }
+
+            return Result[CompilerObject].Error("The class " + this.owner.node.Name + " has no class member named " + name + ".");
+        }
+    }
+
+    // An interface's class shape: the type of the type object of any class that
+    // implements the interface, whose methods are the interface's class methods.
+    def InterfaceMetaclass : CompilerObject, MethodOwner, ICompileIRType, ICTCastTo, IRTGetMember[String], IAssignableTo {
+        let owner: InterfaceObject;
+        let node: ClassOf;
+        let structures: Dictionary[Object, Structure];
+
+        @explicitThis new(this, owner: InterfaceObject) {
+            this.owner = owner;
+            this.node = ClassOf(owner.node);
+            this.structures = Dictionary[Object, Structure]();
+        }
+
+        @explicitThis fun Cast(this, type: CompilerObject): IResult[CompilerObject, Error] {
+            return Description.of(this.node, hirLoader.LoadType(ClassOf as Type).Unwrap(), type);
+        }
+
+        @explicitThis fun name(this): String { return "The class shape of " + this.owner.node.Name; }
+
+        @explicitThis fun failure(this, target: Object): String { return this.owner.failure(target); }
+
+        @explicitThis fun metaclass(this): CompilerObject { return this; }
+
+        @explicitThis fun IsAssignableTo(this, target: CompilerObject): Boolean {
+            if (target is other of InterfaceMetaclass) return other.owner.node == this.owner.node;
+            return false;
+        }
+
+        @explicitThis fun structure(this, target: Object): Structure {
+            if (this.structures.ContainsKey(target)) return this.structures[target];
+            if (this.owner.structure(target) == null) return null;
+
+            let structure = Structure();
+            structure.Name = this.owner.node.Name + ".Class";
+            (target as Polymorphism).interfaces(structure);
+            this.owner.modules[target].Structures.Add(structure);
+            this.structures[target] = structure;
+            return structure;
+        }
+
+        @explicitThis fun lower(this, target: Object): Boolean { return this.owner.lower(target); }
+
+        @explicitThis fun CompileIRType(this, target: Object): IResult[LIRType, Error] {
+            if (this.lower(target) == false) return Result[LIRType].Error(this.failure(target));
+            return Result[LIRType].Ok(this.structure(target));
+        }
+
+        @explicitThis fun Member(this, object: CompilerObject, name: String): IResult[CompilerObject, Error] {
+            let index = 0;
+            while (index < this.owner.node.Methods.Count) {
+                let method = this.owner.node.Methods[index];
+                if (method.Name == name) {
+                    if (method.IsClass) return Result[CompilerObject].Ok(BoundMethod(this.owner.method(index), object));
+                }
+                index = index + 1;
+            }
+
+            return Result[CompilerObject].Error("The interface " + this.owner.node.Name + " has no class method named " + name + ".");
+        }
+    }
+
     // A value that exists as the code is compiled, as the node a definition is.
     def Known : CompilerObject, ICompileIRExpression, ITyped {
         let value: Object;
@@ -661,17 +903,27 @@ module Objects {
     // A Z# interface. As a type, it is the object type of any class that implements it,
     // which its target's polymorphism makes. A value of it has its methods as members, and
     // is cast down to, and tested for, what implements it.
-    def InterfaceObject : CompilerObject, MethodOwner, ICompileIRType, ICTCastTo, IRTGetMember[String], IRTCastTo, IRTTypeMatch, IAssignableTo {
+    def InterfaceObject : CompilerObject, MethodOwner, ICompileIRType, ICTCastTo, ICTGetMember[String], IRTGetMember[String], IRTCastTo, IRTTypeMatch, IAssignableTo {
         let node: Interface;
         let structures: Dictionary[Object, Structure];
         let modules: Dictionary[Object, LIRModule];
         let lowerings: Dictionary[Object, Boolean];
+        let meta: InterfaceMetaclass;
 
         @explicitThis new(this, node: Interface) {
             this.node = node;
             this.structures = Dictionary[Object, Structure]();
             this.modules = Dictionary[Object, LIRModule]();
             this.lowerings = Dictionary[Object, Boolean]();
+            this.meta = InterfaceMetaclass(this);
+        }
+
+        @explicitThis fun metaclass(this): CompilerObject { return this.meta; }
+
+        // `Shape.Class` is the type of any class that implements it.
+        @explicitThis fun Member(this, name: String): IResult[CompilerObject, Error] {
+            if (name == "Class") return Result[CompilerObject].Ok(this.meta);
+            return Result[CompilerObject].Error("The interface " + this.node.Name + " has no member named " + name + ".");
         }
 
         @explicitThis fun name(this): String { return "The interface " + this.node.Name; }
@@ -720,9 +972,11 @@ module Objects {
 
             let index = 0;
             while (index < this.node.Methods.Count) {
-                let function = this.method(index).function(target);
+                let method = this.method(index);
+                let function = method.function(target);
                 container.Functions.Add(function);
-                polymorphism.method(function, structure);
+                if (method.node.IsClass) polymorphism.method(function, this.meta.structure(target));
+                else polymorphism.method(function, structure);
                 index = index + 1;
             }
 
@@ -741,7 +995,10 @@ module Objects {
         @explicitThis fun Member(this, object: CompilerObject, name: String): IResult[CompilerObject, Error] {
             let index = 0;
             while (index < this.node.Methods.Count) {
-                if (this.node.Methods[index].Name == name) return Result[CompilerObject].Ok(BoundMethod(this.method(index), object));
+                let method = this.node.Methods[index];
+                if (method.Name == name) {
+                    if (method.IsClass == false) return Result[CompilerObject].Ok(BoundMethod(this.method(index), object));
+                }
                 index = index + 1;
             }
 
@@ -772,8 +1029,9 @@ module Objects {
     // A Z# class. As a type, it is the object type its target lowers it to; calling it
     // runs its unnamed constructor, and its named constructors are its members. A value
     // of it has its fields and methods as members.
-    def ClassObject : CompilerObject, MethodOwner, ICompileIRType, ICTCallable, ICTCastTo, ICTGetMember[String], IRTGetMember[String], IAssignableTo {
+    def ClassObject : CompilerObject, MethodOwner, ICompileIRType, ICTCallable, ICTCastTo, ICTGetMember[String], IRTGetMember[String], IAssignableTo, ICompileIRExpression, ITyped {
         let node: Class;
+        let meta: Metaclass;
         let structures: Dictionary[Object, Structure];
         let modules: Dictionary[Object, LIRModule];
         // Whether the class lowers for each target, which it is taken to while it does,
@@ -787,6 +1045,17 @@ module Objects {
             this.modules = Dictionary[Object, LIRModule]();
             this.lowerings = Dictionary[Object, Boolean]();
             this.failures = Dictionary[Object, String]();
+            this.meta = Metaclass(this);
+        }
+
+        @explicitThis fun metaclass(this): CompilerObject { return this.meta; }
+
+        // A class used as a value is its type object.
+        @explicitThis fun get_Type(this): CompilerObject { return this.meta; }
+
+        @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+            if (this.lower(target) == false) return Result[LIRExpression].Error(this.failure(target));
+            return Result[LIRExpression].Ok(LIRCall(this.meta.instance(target), []));
         }
 
         // The fields each object has, in order.
@@ -794,7 +1063,10 @@ module Objects {
             let fields = List[Field]();
             let index = 0;
             while (index < this.node.Fields.Count) {
-                if (this.node.Fields[index].IsStatic == false) fields.Add(this.node.Fields[index]);
+                let field = this.node.Fields[index];
+                if (field.IsStatic == false) {
+                    if (field.IsClass == false) fields.Add(field);
+                }
                 index = index + 1;
             }
             return fields;
@@ -842,7 +1114,9 @@ module Objects {
             while (index < this.node.Methods.Count) {
                 if (this.node.Methods[index].Name == method.node.Name) {
                     let found = this.method(index);
-                    if (found.matches(method)) return found;
+                    if (found.node.IsClass == method.node.IsClass) {
+                        if (found.matches(method)) return found;
+                    }
                 }
                 index = index + 1;
             }
@@ -931,7 +1205,8 @@ module Objects {
                 let method = this.method(index);
                 let function = method.function(target);
                 container.Functions.Add(function);
-                if (method.node.IsStatic == false) polymorphism.method(function, structure);
+                if (method.node.IsClass) polymorphism.method(function, this.meta.structure(target));
+                else if (method.node.IsStatic == false) polymorphism.method(function, structure);
                 methods.Add(method);
                 index = index + 1;
             }
@@ -999,9 +1274,12 @@ module Objects {
             return constructor.Call(arguments);
         }
 
-        // The class's members are its named constructors and its static fields and
-        // methods.
+        // The class's members are its named constructors, its static fields and methods,
+        // and its class fields and methods, reached through its type object. `Class` is
+        // the type of its type object.
         @explicitThis fun Member(this, name: String): IResult[CompilerObject, Error] {
+            if (name == "Class") return Result[CompilerObject].Ok(this.meta);
+
             let constructor = this.named(name);
             if (constructor != null) return Result[CompilerObject].Ok(constructor);
 
@@ -1010,6 +1288,7 @@ module Objects {
                 let field = this.node.Fields[index];
                 if (field.Name == name) {
                     if (field.IsStatic) return Result[CompilerObject].Ok(this.staticField(field));
+                    if (field.IsClass) return this.meta.Member(this, name);
                     return Result[CompilerObject].Error("Field " + name + " of the class " + this.node.Name + " is its objects'.");
                 }
                 index = index + 1;
@@ -1020,6 +1299,7 @@ module Objects {
                 let method = this.node.Methods[index];
                 if (method.Name == name) {
                     if (method.IsStatic) return Result[CompilerObject].Ok(BoundMethod(this.method(index), null));
+                    if (method.IsClass) return Result[CompilerObject].Ok(BoundMethod(this.method(index), this));
                     return Result[CompilerObject].Error("Method " + name + " of the class " + this.node.Name + " is its objects'.");
                 }
                 index = index + 1;
@@ -1028,25 +1308,34 @@ module Objects {
             return Result[CompilerObject].Error("The class " + this.node.Name + " has no member named " + name + ".");
         }
 
-        // A value's members are its fields and methods, and the class's static ones, which
-        // are the same whatever object reaches them.
+        // A value's members are its fields and methods, and the class's static and class
+        // ones, which are the same whatever object reaches them: with no inheritance, a
+        // value of a class is of that class, so its type object is the class's.
         @explicitThis fun Member(this, object: CompilerObject, name: String): IResult[CompilerObject, Error] {
             let fields = this.fields();
             let index = 0;
             while (index < fields.Count) {
-                if (fields[index].Name == name) return Result[CompilerObject].Ok(FieldValue(this, object, index));
+                if (fields[index].Name == name) return Result[CompilerObject].Ok(FieldValue(this, object, fields[index], index));
                 index = index + 1;
             }
 
             index = 0;
             while (index < this.node.Fields.Count) {
-                if (this.node.Fields[index].Name == name) return Result[CompilerObject].Ok(this.staticField(this.node.Fields[index]));
+                let field = this.node.Fields[index];
+                if (field.Name == name) {
+                    if (field.IsClass) return this.meta.Member(this, name);
+                    return Result[CompilerObject].Ok(this.staticField(field));
+                }
                 index = index + 1;
             }
 
             index = 0;
             while (index < this.node.Methods.Count) {
-                if (this.node.Methods[index].Name == name) return Result[CompilerObject].Ok(BoundMethod(this.method(index), object));
+                let method = this.node.Methods[index];
+                if (method.Name == name) {
+                    if (method.IsClass) return Result[CompilerObject].Ok(BoundMethod(this.method(index), this));
+                    return Result[CompilerObject].Ok(BoundMethod(this.method(index), object));
+                }
                 index = index + 1;
             }
 
@@ -1431,6 +1720,13 @@ module Meta {
         return Result[CompilerObject].Ok(Objects.StaticField(owner.Unwrap() as Objects.ClassObject, node));
     }
 
+    // A metaclass is its definition's, so its node gives the one its definition has.
+    fun typeOfClassOf(node: ClassOf): IResult[CompilerObject, Error] {
+        let of = hirLoader.LoadType(node.Of);
+        if (of.IsError) return of;
+        return Result[CompilerObject].Ok((of.Unwrap() as Objects.MethodOwner).metaclass());
+    }
+
     fun loadInterface(node: Interface): IResult[CompilerObject, Error] { return Result[CompilerObject].Ok(Objects.InterfaceObject(node)); }
 
     fun loadReceiver(node: Receiver): IResult[CompilerObject, Error] { return Result[CompilerObject].Ok(Objects.ReceiverObject(node)); }
@@ -1455,6 +1751,19 @@ fun static(member: Instance): Instance {
     return member;
 }
 
+// Marks a field or a method of a class as its type object's: a class field is one for
+// the class, and a class method runs on the class. An interface's class method is one
+// the class of each of its values has.
+@export
+fun class(member: Instance): Instance {
+    if (member is method of Method) {
+        method.IsClass = true;
+        method.This.IsClass = true;
+    }
+    if (member is field of Field) field.IsClass = true;
+    return member;
+}
+
 // ---- Installing it
 
 mappedLoader.Definitions.Register[Class](Meta.loadClass);
@@ -1463,6 +1772,7 @@ mappedLoader.Definitions.Register[Constructor](Meta.loadConstructor);
 mappedLoader.Definitions.Register[Receiver](Meta.loadReceiver);
 mappedLoader.Definitions.Register[Interface](Meta.loadInterface);
 mappedLoader.Definitions.Register[Field](Meta.loadField);
+mappedLoader.Types.Register[ClassOf](Meta.typeOfClassOf);
 mappedLoader.Instances.Register[Interface](Meta.instanceOfInterface);
 mappedLoader.Types.Register[Interface](Meta.typeOfInterface);
 mappedLoader.Instances.Register[Class](Meta.instanceOfClass);

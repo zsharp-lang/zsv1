@@ -100,11 +100,13 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// Whether a cast goes down from this type to another, as in C#: to a type that
         /// derives from this one, or between an interface and a type that isn't sealed,
         /// which might implement it. A type that isn't a CLR type, as a class being loaded
-        /// with the code, is one the cast goes down to if it goes to this type.
+        /// with the code, is one the cast goes down to if it goes to this type, or if it is
+        /// an interface and this type isn't sealed.
         /// </summary>
         private bool GoesDown(CompilerObject type, Type? to)
             => to is null
                 ? Core.Compiler.ModuleScope.TS.IsAssignableTo(this, type)
+                    || (!IL.IsSealed && type.Is<IDefinedClass>(out var defined) && loader.IsInterface(defined.Node))
                 : to.IsAssignableTo(IL) || (to.IsInterface && !IL.IsSealed) || (IL.IsInterface && !to.IsSealed);
 
         /// <summary>

@@ -774,7 +774,8 @@ a custom type gets into the language to be used as a meta-type.
   a parameter's or a base's type. A failed lowering keeps why, so the error a call gives
   is the code's own.
 - A CLR definition's signature still takes only CLR types, so a function of a CLR module
-  can't take a Z# class or interface yet; a Z# function can.
+  can't take a Z# class or interface yet; a Z# function can. A cast from a CLR class to
+  an interface still being loaded goes down as C# allows, if the class isn't sealed.
 - A member of a Z# class marked `@static`, which `std:oop` exports, is the class's own: a
   static field is one variable, and a static method is a function, which takes no object
   and isn't marked as a method. The decorator is a Z# function that sets the node's
@@ -790,6 +791,23 @@ a custom type gets into the language to be used as a meta-type.
   says whether it was given a value, and to a function that reads it and one that writes
   it. The first read or write gives it its default value, so a target needs nothing that
   runs before. A field is loaded from its node, as a method is, so it knows its class.
+- A class is a value: its type object, the one object of its metaclass for each target,
+  made the first time it is used. A member marked `@class`, which `std:oop` exports, is the
+  type object's: a class field is a field of the metaclass, and a class method a method of
+  it, which runs on the type object, named `this` if its first parameter says so. An
+  interface declares class methods too, on its class shape, the metaclass every class that
+  implements it has, so a class implements an interface's class methods with class
+  methods, and a call on a value of `Shape.Class`, the type of any class that implements
+  `Shape`, calls what that class has. A metaclass and a class shape lower to structures
+  the target's polymorphism makes an object type and an interface, in the class's or
+  interface's module, and a class's metaclass implements its interfaces' class shapes. A
+  class's type object is an LIR global, made by the function that gives it, as a static
+  field is given its value. `ClassOf` is the node that describes a metaclass, so it can be
+  written in a signature.
+- With no inheritance, a value of a class is of that class, so a class member reached
+  through it, or by name in one of its methods, is its class's type object's. Only a value
+  of an interface could be of any class, so what class it is would come from the object,
+  which isn't reachable yet.
 - While a class is being built, a definition is its node, so a field's type is evaluated
   where a class being built is a value: `Dictionary[String, Item]` as a field's type of a
   class built with `Item` indexes `Dictionary` with a value. A generic CLR type given a
@@ -1816,3 +1834,15 @@ lists what was chosen and the alternatives, for you to keep or change.
 - **Methods aren't reached by name in a method.** Only fields are, as before, whether
   static or not; a method is called through `this` or the class. Alternative: binding
   methods by name too.
+- **Class members are marked `@class`.** As Python's class methods, a class method runs
+  on the class, which is a value. Alternatives: `@classmethod`, or a keyword.
+- **The type of a class's type object is written `Shape.Class`.** It is a member of the
+  class or interface, so it reads as the class of a `Shape`. Alternatives: `Type[Shape]`,
+  or `type(Shape)` as a function.
+- **A class's type object is made the first time it is used.** As a static field is given
+  its value, so no target needs code that runs first.
+- **A value of an interface doesn't give its class yet.** `shape.Class` would need each
+  object to reach its type object, as a method every class has, or a field of every
+  object. Left until something needs it.
+- **A class method of a class has no object, and an object's field isn't the class's.**
+  Using one in a class method is an error, as using the object in a static method is.

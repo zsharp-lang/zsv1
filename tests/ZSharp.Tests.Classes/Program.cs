@@ -4099,6 +4099,83 @@ Try("a field of a Z# class's objects isn't the class's", () =>
         Keep(Thing243.x);
         """) is { } e && e.Contains("is its objects'"));
 
+Try("a class method of a Z# class runs on the class, and a class field is the class's", () =>
+    ResetKept() && Run("""
+        import { class as class244 } from "std:oop";
+
+        def Pool244 {
+            @class244 let opened: Int32 = 10;
+            let id: Int32;
+
+            new(this, id: Int32) { this.id = id; }
+
+            @class244 fun open(this): Pool244 {
+                opened = opened + 1;
+                return Pool244(opened);
+            }
+
+            @class244 fun count(): Int32 { return opened; }
+        }
+
+        Keep(Pool244.open().id);
+        Keep(Pool244.open().id);
+        Keep(Pool244.count());
+        Keep(Pool244.opened);
+        """) is null && Probe.Kept is [11, 12, 12, 12]);
+
+Try("a class is a value, and an interface's class methods are what each class has", () =>
+    ResetKept() && Run("""
+        import { Interface, class as class245 } from "std:oop";
+
+        def Shape245 of Interface {
+            @class245 fun unit(): Shape245;
+            @class245 fun kind(): String;
+            fun area(): Int32;
+        }
+
+        def Square245 : Shape245 {
+            let side: Int32;
+            new(this, side: Int32) { this.side = side; }
+            @class245 fun unit(): Shape245 { return Square245(2); }
+            @class245 fun kind(): String { return "square"; }
+            fun area(): Int32 { return side * side; }
+        }
+
+        def Circle245 : Shape245 {
+            let radius: Int32;
+            new(this, radius: Int32) { this.radius = radius; }
+            @class245 fun unit(): Shape245 { return Circle245(1); }
+            @class245 fun kind(): String { return "circle"; }
+            fun area(): Int32 { return 3 * radius * radius; }
+        }
+
+        fun describe245(shape: Shape245.Class): String { return shape.kind() + " " + shape.unit().area(); }
+
+        Keep(describe245(Square245));
+        Keep(describe245(Circle245));
+        let kind245: Shape245.Class = Circle245;
+        Keep(kind245.kind());
+        """) is null && Probe.Kept is ["square 4", "circle 3", "circle"]);
+
+Try("a Z# class implements an interface's class methods with class methods", () =>
+    Run("""
+        import { Interface, class as class246 } from "std:oop";
+        def Made246 of Interface { @class246 fun make(): Int32; }
+        def Plain246 : Made246 { new() { } fun make(): Int32 { return 1; } }
+        let made246: Made246 = Plain246();
+        """) is { } e && e.Contains("Made246.make isn't one of its methods"));
+
+Try("a class method of a Z# class has no object", () =>
+    Run("""
+        import { class as class247 } from "std:oop";
+        def Thing247 {
+            let x: Int32 = 1;
+            new() { }
+            @class247 fun read(): Int32 { return x; }
+        }
+        Keep(Thing247.read());
+        """) is { } e && e.Contains("a class method runs on the class"));
+
 Try("the prelude brings the standard definitions", () =>
     Run("""import "std:prelude";""") is null);
 
