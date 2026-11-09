@@ -122,10 +122,13 @@ module Objects {
     def FunctionObject : CompilerObject, ICTCallable {
         let node: Function;
         let lowered: Dictionary[Object, LIRFunction];
+        // Why its code didn't lower for each target it didn't.
+        let failures: Dictionary[Object, Error];
 
         @explicitThis new(this, node: Function) {
             this.node = node;
             this.lowered = Dictionary[Object, LIRFunction]();
+            this.failures = Dictionary[Object, Error]();
         }
 
         @explicitThis fun parameter(this, index: Int32): ParameterObject {
@@ -165,12 +168,14 @@ module Objects {
 
             if (loaded.IsError) {
                 this.lowered.Remove(target);
+                this.failures[target] = loaded.UnwrapError();
                 return null;
             }
 
             let statement = ir.CompileStatement(loaded.Unwrap(), target);
             if (statement.IsError) {
                 this.lowered.Remove(target);
+                this.failures[target] = statement.UnwrapError();
                 return null;
             }
 
@@ -212,7 +217,10 @@ module Objects {
 
         @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
             let function = this.callee.function(target);
-            if (function == null) return Result[LIRExpression].Error("The code of " + this.callee.node.Name + " can't be lowered.");
+            if (function == null) {
+                if (this.callee.failures.ContainsKey(target)) return Result[LIRExpression].Error(this.callee.failures[target]);
+                return Result[LIRExpression].Error("The code of " + this.callee.node.Name + " can't be lowered.");
+            }
 
             let values = List[LIRExpression]();
 

@@ -13,4 +13,4 @@ import "std:zsharp/clr";
 
 // Z#'s own classes. It comes last, as it makes `def` a Z# class, and the libraries
 // before it write their CLR classes with `def`.
-import { Class } from "std:oop";
+import { Class, Interface } from "std:oop";

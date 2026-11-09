@@ -3950,6 +3950,94 @@ Try("a Z# class has named constructors, and fields with default values", () =>
         Keep(Counter230().next() + Counter230.from(100).next());
         """) is null && Kept() is 107);
 
+Try("a call through a Z# interface runs what the object's class has", () =>
+    ResetKept() && Run("""
+        import { Interface } from "std:oop";
+
+        def Shape235 of Interface {
+            fun area(): Int32;
+            fun named(): String;
+        }
+
+        def Square235 : Shape235 {
+            let side: Int32;
+            new(this, side: Int32) { this.side = side; }
+            fun area(): Int32 { return side * side; }
+            fun named(): String { return "square"; }
+        }
+
+        def Rectangle235 : Shape235 {
+            let width: Int32;
+            let height: Int32;
+            new(this, width: Int32, height: Int32) { this.width = width; this.height = height; }
+            fun area(): Int32 { return width * height; }
+            fun named(): String { return "rectangle"; }
+        }
+
+        fun describe235(shape: Shape235): String { return shape.named() + " " + shape.area(); }
+
+        let shape235: Shape235 = Square235(3);
+        Keep(describe235(shape235));
+        Keep(describe235(Rectangle235(2, 5)));
+        """) is null && Probe.Kept is ["square 9", "rectangle 10"]);
+
+Try("a value of a Z# interface is cast down to, and tested for, a class", () =>
+    ResetKept() && Run("""
+        import { Interface } from "std:oop";
+
+        def Named236 of Interface { fun name(): String; }
+
+        def Cat236 : Named236 {
+            let lives: Int32 = 9;
+            new() { }
+            fun name(): String { return "cat"; }
+        }
+
+        def Dog236 : Named236 {
+            new() { }
+            fun name(): String { return "dog"; }
+        }
+
+        fun lives236(named: Named236): Int32 {
+            if (named is cat of Cat236) return cat.lives;
+            return 0;
+        }
+
+        let named236: Named236 = Cat236();
+        Keep(lives236(named236));
+        Keep(lives236(Dog236()));
+        Keep((named236 as Cat236).lives);
+        Keep(named236 is of Dog236);
+        """) is null && Probe.Kept is [9, 0, 9, false]);
+
+Try("a Z# class must have each method of the interfaces it implements", () =>
+    Run("""
+        import { Interface } from "std:oop";
+        def Sized237 of Interface { fun size(): Int32; }
+        def Box237 : Sized237 { new() { } fun size(): String { return "big"; } }
+        let sized237: Sized237 = Box237();
+        """) is { } e && e.Contains("doesn't have every method"));
+
+Try("a Z# interface has no fields, constructors or code", () =>
+    Run("""
+        import { Interface } from "std:oop";
+        def Fielded238 of Interface { let x: Int32; }
+        """) is { } fields && fields.Contains("no fields")
+    && Run("""
+        import { Interface } from "std:oop";
+        def Coded238 of Interface { fun f(): Int32 { return 1; } }
+        """) is { } code && code.Contains("has no code"));
+
+Try("a value of a Z# interface is only cast to what implements it", () =>
+    Run("""
+        import { Interface } from "std:oop";
+        def Thing239 of Interface { fun f(): Int32; }
+        def Some239 : Thing239 { new() { } fun f(): Int32 { return 1; } }
+        def Other239 { new() { } }
+        fun cast239(thing: Thing239): Other239 { return thing as Other239; }
+        cast239(Some239());
+        """) is { } e && e.Contains("only be cast to what implements it"));
+
 Try("the prelude brings the standard definitions", () =>
     Run("""import "std:prelude";""") is null);
 

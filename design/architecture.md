@@ -753,8 +753,28 @@ a custom type gets into the language to be used as a meta-type.
   values, runs its code on it, and gives it. Calling the class runs its unnamed
   constructor, a named one is a member of the class, and a value has its fields and
   methods as members. Importing it makes `def` a Z# class, so the prelude imports it
-  last. A target without polymorphism, interfaces, static and class members, and type
-  objects come next.
+  last. A target without polymorphism, static and class members, and type objects come
+  next.
+- A Z# interface is written `def Shape of Interface { fun area(): Int32; }`: an
+  `Interface` node has methods with no code, and no fields or constructors. A class
+  implements the interfaces it is given as bases, `def Square : Shape`, and must have each
+  of their methods, with the name and the parameter and return types; it has no
+  inheritance. A class and an interface are both what methods belong to, a `MethodOwner`,
+  so a method and a call of one are the same for either. An interface lowers to a
+  structure the target's polymorphism makes the type of any object that implements it,
+  with its methods declared with no code, and a class's structure is marked as
+  implementing it, so a call through an interface calls what the object's class has. A
+  class goes to the interfaces it implements, and a value of an interface is cast down
+  to, and tested for, a class that implements it or another interface. Polymorphism has
+  `cast` and `test` for that: an object knows what it is, so the capability marks a
+  function with no code as the platform's cast or test, which the runtime emits in place
+  as `castclass` or `isinst`. LIR still has no cast nodes.
+- A Z# class or interface is described by its node: casting its CO to what describes
+  it, as a type written in a signature is, gives the node, so a Z# type can be a field's,
+  a parameter's or a base's type. A failed lowering keeps why, so the error a call gives
+  is the code's own.
+- A CLR definition's signature still takes only CLR types, so a function of a CLR module
+  can't take a Z# class or interface yet; a Z# function can.
 - What a definition written in Z# needs from code that uses a class still being loaded
   with it is general: such a class goes to the interfaces it implements, can be cast down
   to and tested for, has a `null`, can be given to a generic CLR type, and has its
@@ -1739,3 +1759,27 @@ The first target is parity with `zsv1`: importing `print` and calling it.
   is a future milestone.
 - Which `Package.DotNet` entities are needed to fully describe the CTS, including how
   a value type becomes an object.
+
+## Decisions made while you were away
+
+Choices made without you on 2026-11-09, taking the most conservative general option. Each
+lists what was chosen and the alternatives, for you to keep or change.
+
+- **Interface syntax.** `def Shape of Interface { ... }`, with `Interface` imported from
+  `std:oop`, as any meta-type is given with `of`. Alternatives: an `interface` keyword, or
+  a decorator.
+- **What implements an interface.** A class's bases are the interfaces it implements, as
+  `def Square : Shape`, since a Z# class has no inheritance. Alternative: a separate
+  clause, such as `implements`.
+- **Interface methods have no code.** A method written in an interface with code is an
+  error, as is a field or a constructor. Alternatives: default methods, or interface
+  fields as properties.
+- **Interfaces don't extend interfaces yet.** An interface given bases is an error. The
+  runtime's `Polymorphic.Interfaces` already allows an interface to extend others.
+- **Matching an implementation.** A class's method implements an interface's if it has
+  the name, the number of parameters, and types that each go to the other, the return
+  type included. Parameter names aren't compared. Alternatives: matching by assignability
+  in one direction (variance), or by explicit implementation.
+- **Casts and type tests belong to Polymorphism.** `cast` and `test` were added to the
+  capability, since knowing what an object is comes with objects reaching their class's
+  methods. Alternative: a separate capability, such as runtime types.

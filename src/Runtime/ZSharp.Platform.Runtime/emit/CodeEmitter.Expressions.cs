@@ -87,7 +87,7 @@ namespace ZSharp.Platform.Runtime
         {
             // A built type calls a standalone function through its delegate, which goes
             // under the arguments.
-            if (node.Callable is LIR.Function { Module: null } callee && !standalone)
+            if (node.Callable is LIR.Function { Module: null } callee && !standalone && !Runtime.IsOperation(callee))
             {
                 var (index, type) = runtime.StandaloneDelegate(callee);
 

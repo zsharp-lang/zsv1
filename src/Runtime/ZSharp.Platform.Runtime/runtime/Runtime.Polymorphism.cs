@@ -26,8 +26,54 @@ namespace ZSharp.Platform.Runtime
         public LIR.Structure Owner { get; } = owner;
     }
 
+    /// <summary>
+    /// This platform's mark on a function with no code that casts an object down to a
+    /// type it might be of, failing if it isn't. Calling it is the cast.
+    /// </summary>
+    public sealed class CastDown(LIR.Type target)
+        : LIR.Metadata
+    {
+        public LIR.Type Target { get; } = target;
+    }
+
+    /// <summary>
+    /// This platform's mark on a function with no code that tells whether an object is of
+    /// a type. Calling it is the test, and <c>null</c> is of no type.
+    /// </summary>
+    public sealed class TypeTest(LIR.Type target)
+        : LIR.Metadata
+    {
+        public LIR.Type Target { get; } = target;
+    }
+
     partial class Runtime
     {
+        /// <summary>
+        /// Whether a function is an operation of the platform, which a call emits in place
+        /// rather than calling anything.
+        /// </summary>
+        internal static bool IsOperation(LIR.Function function)
+            => function.Metadata.Any(metadata => metadata is CastDown or TypeTest);
+
+        private bool EmitOperation(Emit.ILGenerator il, LIR.Function function)
+        {
+            foreach (var metadata in function.Metadata)
+                switch (metadata)
+                {
+                    case CastDown cast:
+                        var type = ImportType(cast.Target);
+                        il.Emit(type.IsValueType ? Emit.OpCodes.Unbox_Any : Emit.OpCodes.Castclass, type);
+                        return true;
+                    case TypeTest test:
+                        il.Emit(Emit.OpCodes.Isinst, ImportType(test.Target));
+                        il.Emit(Emit.OpCodes.Ldnull);
+                        il.Emit(Emit.OpCodes.Cgt_Un);
+                        return true;
+                }
+
+            return false;
+        }
+
         private readonly Dictionary<LIR.Structure, ClassDefinition> polymorphicClasses = [];
         private readonly Dictionary<LIR.Structure, ClassConstructor> polymorphicConstructors = [];
         private readonly Dictionary<LIR.Field, ClassField> polymorphicFields = [];

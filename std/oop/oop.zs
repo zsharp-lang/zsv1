@@ -1,13 +1,15 @@
 // std:oop — Z#'s own classes, defined in Z#.
 //
-// A Z# class has no inheritance. It has fields, methods and named constructors. A
-// method reaches the object's fields by name, and names the object `this` if its first
-// parameter is `this`. A class lowers through the target's capabilities: a target with
-// polymorphism gets the class as an object type with methods.
+// A Z# class has no inheritance. It has fields, methods and named constructors, and it
+// implements interfaces, which declare methods a value of any class that implements
+// them has. A method reaches the object's fields by name, and names the object `this` if
+// its first parameter is `this`. A class or an interface lowers through the target's
+// capabilities: a target with polymorphism gets it as an object type with methods.
 //
-// Importing it makes `def` a Z# class wherever nothing else compiles one.
+// Importing it makes `def` a Z# class wherever nothing else compiles one, and
+// `def Name of Interface` a Z# interface.
 
-import { String, Object, Boolean, Int32, List, Dictionary, explicitThis, static } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Interface, explicitThis, static } from "core:runtime";
 import { Instance, Definition, Variable, Type } from "std:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement } from "std:zsharp/hir/code";
 import {
@@ -17,9 +19,9 @@ import {
 } from "std:zsharp/lang/ast";
 import { CompilerObject } from "std:zsharp/mir";
 import { Error, Result, IResult } from "std:zsharp/common";
-import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
-import { ICTCallable, ICTGetMember, ICTSet } from "std:zsharp/compiler/cg/direct";
-import { IRTGetMember } from "std:zsharp/compiler/cg/typed";
+import { Argument, ArgumentStream, MatchResult } from "std:zsharp/compiler/cg";
+import { ICTCallable, ICTGetMember, ICTSet, ICTCastTo } from "std:zsharp/compiler/cg/direct";
+import { IRTGetMember, IRTCastTo, IRTTypeMatch } from "std:zsharp/compiler/cg/typed";
 import { ICompileIRExpression, ICompileIRType, ICompileIRStatement } from "std:zsharp/compiler/ir";
 import { ITyped, IAssignableTo } from "std:zsharp/compiler/ts";
 import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTDefinition, Context } from "std:zsharp/compiler/ast";
@@ -93,18 +95,46 @@ def Class : Instance, Definition, Type {
     let Fields: List[Field];
     let Methods: List[Method];
     let Constructors: List[Constructor];
+    let Interfaces: List[Type];
 
     @explicitThis new(this, name: String) {
         this.Name = name;
         this.Fields = List[Field]();
         this.Methods = List[Method]();
         this.Constructors = List[Constructor]();
+        this.Interfaces = List[Type]();
+    }
+}
+
+// An interface: methods with no code, which a value of any class that implements it
+// has.
+@export
+def Interface : Instance, Definition, Type {
+    let Name: String;
+    let Methods: List[Method];
+
+    @explicitThis new(this, name: String) {
+        this.Name = name;
+        this.Methods = List[Method]();
     }
 }
 
 // ---- The COs
 
 module Objects {
+    // What methods belong to, a class or an interface, as the object type it lowers to.
+    def MethodOwner of DotNet_Interface {
+        fun name(): String;
+
+        fun structure(target: Object): Structure;
+
+        // Declares its functions for the target, and lowers their code.
+        fun lower(target: Object): Boolean;
+
+        // Why it didn't lower for the target.
+        fun failure(target: Object): String;
+    }
+
     // The object a method or constructor runs on, as its code uses it. It owns its LIR
     // variable for each target: a method takes it as its first parameter, and a
     // constructor makes it in a local, each asking for it as it lowers.
@@ -228,27 +258,46 @@ module Objects {
             return hirLoader.LoadDefinition(node).Unwrap() as ReceiverObject;
         }
 
-        @static fun lower(body: Code, function: LIRFunction, returned: CompilerObject, target: Object): Boolean {
+        @static fun typeOf(node: Definition): CompilerObject {
+            return (hirLoader.LoadDefinition(node).Unwrap() as ParameterObject).get_Type();
+        }
+
+        @static fun boolean(): CompilerObject {
+            return hirLoader.LoadType(Boolean as Type).Unwrap();
+        }
+
+        // Whether two types are the same, as each goes to the other.
+        @static fun same(first: CompilerObject, second: CompilerObject): Boolean {
+            if (first == null) return second == null;
+            if (second == null) return false;
+            if (ts.IsAssignableTo(first, second) == false) return false;
+            return ts.IsAssignableTo(second, first);
+        }
+
+        // Lowers code into a function, giving why it can't, or null.
+        @static fun lower(body: Code, function: LIRFunction, returned: CompilerObject, target: Object): Error {
             let outer = CodeLoaders.Returns;
             CodeLoaders.Returns = returned;
             let loaded = hirCodeLoader.LoadStatement(body.Block);
             CodeLoaders.Returns = outer;
-            if (loaded.IsError) return false;
+            if (loaded.IsError) return loaded.UnwrapError();
 
             let statement = ir.CompileStatement(loaded.Unwrap(), target);
-            if (statement.IsError) return false;
+            if (statement.IsError) return statement.UnwrapError();
 
             function.Body.Block.Statements.Add(statement.Unwrap());
-            return true;
+            return null;
         }
     }
 
+    // A method of a class or an interface. A method of an interface has no code: calling
+    // it calls what the object's class has.
     def MethodObject : CompilerObject {
-        let owner: ClassObject;
+        let owner: MethodOwner;
         let node: Method;
         let lowered: Dictionary[Object, LIRFunction];
 
-        @explicitThis new(this, owner: ClassObject, node: Method) {
+        @explicitThis new(this, owner: MethodOwner, node: Method) {
             this.owner = owner;
             this.node = node;
             this.lowered = Dictionary[Object, LIRFunction]();
@@ -278,14 +327,29 @@ module Objects {
 
             let function = LIRFunction(signature);
             function.Name = this.node.Name;
-            function.Body = LIRCode();
+            if (this.node.Body != null) function.Body = LIRCode();
             this.lowered[target] = function;
 
             return function;
         }
 
-        @explicitThis fun lowerBody(this, target: Object): Boolean {
+        @explicitThis fun lowerBody(this, target: Object): Error {
+            if (this.node.Body == null) return null;
             return Matching.lower(this.node.Body, this.function(target), this.returnType(), target);
+        }
+
+        // Whether it takes and gives what another method does, so it can be that method.
+        @explicitThis fun matches(this, other: MethodObject): Boolean {
+            if (this.node.Parameters.Count != other.node.Parameters.Count) return false;
+            if (Matching.same(this.returnType(), other.returnType()) == false) return false;
+
+            let index = 0;
+            while (index < this.node.Parameters.Count) {
+                if (Matching.same(Matching.typeOf(this.node.Parameters[index]), Matching.typeOf(other.node.Parameters[index])) == false) return false;
+                index = index + 1;
+            }
+
+            return true;
         }
     }
 
@@ -301,7 +365,7 @@ module Objects {
             if (values == null) return Result[CompilerObject].Error(this.method.node.Name + " can't be called with these arguments.");
 
             values.Insert(0, this.object);
-            return Result[CompilerObject].Ok(Invocation(this.method.owner, this.method, null, values));
+            return Result[CompilerObject].Ok(Invocation(this.method, null, values));
         }
     }
 
@@ -352,33 +416,32 @@ module Objects {
             return function;
         }
 
-        @explicitThis fun lowerBody(this, target: Object): Boolean {
+        @explicitThis fun lowerBody(this, target: Object): Error {
             let function = this.function(target);
             if (this.node.Body != null) {
-                if (Matching.lower(this.node.Body, function, null, target) == false) return false;
+                let failed = Matching.lower(this.node.Body, function, null, target);
+                if (failed != null) return failed;
             }
 
             function.Body.Block.Statements.Add(LIRReturn(GetLocal(Matching.receiver(this.node.This).local(target))));
-            return true;
+            return null;
         }
 
         @explicitThis fun Call(this, arguments: Argument[]): IResult[CompilerObject, Error] {
             let values = Matching.values(this.node.Parameters, arguments);
             if (values == null) return Result[CompilerObject].Error("A constructor of " + this.owner.node.Name + " can't be called with these arguments.");
 
-            return Result[CompilerObject].Ok(Invocation(this.owner, null, this, values));
+            return Result[CompilerObject].Ok(Invocation(null, this, values));
         }
     }
 
     // A call of a method or a constructor.
     def Invocation : CompilerObject, ICompileIRExpression, ITyped {
-        let owner: ClassObject;
         let method: MethodObject;
         let constructor: ConstructorObject;
         let arguments: List[CompilerObject];
 
-        @explicitThis new(this, owner: ClassObject, method: MethodObject, constructor: ConstructorObject, arguments: List[CompilerObject]) {
-            this.owner = owner;
+        @explicitThis new(this, method: MethodObject, constructor: ConstructorObject, arguments: List[CompilerObject]) {
             this.method = method;
             this.constructor = constructor;
             this.arguments = arguments;
@@ -386,15 +449,19 @@ module Objects {
 
         @explicitThis fun get_Type(this): CompilerObject {
             if (this.method != null) return this.method.returnType();
-            return this.owner;
+            return this.constructor.owner;
         }
 
         @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
-            if (this.owner.lower(target) == false) return Result[LIRExpression].Error("The class " + this.owner.node.Name + " can't be lowered for this target.");
-
             let function: LIRFunction = null;
-            if (this.method != null) function = this.method.function(target);
-            else function = this.constructor.function(target);
+
+            if (this.method != null) {
+                if (this.method.owner.lower(target) == false) return Result[LIRExpression].Error(this.method.owner.failure(target));
+                function = this.method.function(target);
+            } else {
+                if (this.constructor.owner.lower(target) == false) return Result[LIRExpression].Error(this.constructor.owner.failure(target));
+                function = this.constructor.function(target);
+            }
 
             let values = List[LIRExpression]();
             let index = 0;
@@ -409,31 +476,260 @@ module Objects {
         }
     }
 
-    // A Z# class. As a type, it is the object type its target lowers it to; calling it
-    // runs its unnamed constructor, and its named constructors are its members. A value
-    // of it has its fields and methods as members.
-    def ClassObject : CompilerObject, ICompileIRType, ICTCallable, ICTGetMember[String], IRTGetMember[String], IAssignableTo {
-        let node: Class;
+    // A value that exists as the code is compiled, as the node a definition is.
+    def Known : CompilerObject, ICompileIRExpression, ITyped {
+        let value: Object;
+        let type: CompilerObject;
+
+        @explicitThis new(this, value: Object, type: CompilerObject) { this.value = value; this.type = type; }
+
+        @explicitThis fun get_Type(this): CompilerObject { return this.type; }
+
+        @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+            let type = ir.CompileType(this.type, target);
+            if (type.IsError) return Result[LIRExpression].Error(type.UnwrapError());
+            return Result[LIRExpression].Ok(Constant(type.Unwrap(), this.value));
+        }
+    }
+
+    // What describes a definition is its node: casting the definition to what describes
+    // it, which is reflection, gives the node.
+    def Description {
+        @static fun of(node: Object, described: CompilerObject, type: CompilerObject): IResult[CompilerObject, Error] {
+            if (ts.IsAssignableTo(type, described)) return Result[CompilerObject].Ok(Known(node, described));
+            return Result[CompilerObject].Error("A definition is only described by its node.");
+        }
+    }
+
+    // A value of an interface cast down to a class or another interface, or tested for
+    // being of it. The object knows what it is, so the platform's polymorphism casts and
+    // tests it, through a function with no code that the capability marks.
+    def Narrowing : CompilerObject, ICompileIRExpression, ITyped {
+        let value: CompilerObject;
+        let origin: CompilerObject;
+        let to: CompilerObject;
+        let test: Boolean;
+
+        @explicitThis new(this, value: CompilerObject, origin: CompilerObject, to: CompilerObject, test: Boolean) {
+            this.value = value;
+            this.origin = origin;
+            this.to = to;
+            this.test = test;
+        }
+
+        @explicitThis fun get_Type(this): CompilerObject {
+            if (this.test) return Matching.boolean();
+            return this.to;
+        }
+
+        @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+            if (target is polymorphism of Polymorphism) {
+                let object = ir.CompileExpression(this.value, target);
+                if (object.IsError) return object;
+
+                let to = ir.CompileType(this.to, target);
+                if (to.IsError) return Result[LIRExpression].Error(to.UnwrapError());
+
+                let source = ir.CompileType(this.origin, target);
+                if (source.IsError) return Result[LIRExpression].Error(source.UnwrapError());
+
+                let signature = Signature();
+                signature.Parameters.Add(LIRParameter(source.Unwrap()));
+                let function = LIRFunction(signature);
+
+                if (this.test) {
+                    signature.ReturnType = ir.CompileType(Matching.boolean(), target).Unwrap();
+                    polymorphism.test(function, to.Unwrap() as Structure);
+                } else {
+                    signature.ReturnType = to.Unwrap();
+                    polymorphism.cast(function, to.Unwrap() as Structure);
+                }
+
+                return Result[LIRExpression].Ok(LIRCall(function, [object.Unwrap()]));
+            }
+
+            return Result[LIRExpression].Error("Only a target with polymorphism knows what an object is.");
+        }
+    }
+
+    // A Z# interface. As a type, it is the object type of any class that implements it,
+    // which its target's polymorphism makes. A value of it has its methods as members, and
+    // is cast down to, and tested for, what implements it.
+    def InterfaceObject : CompilerObject, MethodOwner, ICompileIRType, ICTCastTo, IRTGetMember[String], IRTCastTo, IRTTypeMatch, IAssignableTo {
+        let node: Interface;
         let structures: Dictionary[Object, Structure];
         let modules: Dictionary[Object, LIRModule];
-        // Whether the class lowers for each target, which it is taken to while it does,
-        // since its functions are declared before any of their code is lowered.
         let lowerings: Dictionary[Object, Boolean];
 
-        @explicitThis new(this, node: Class) {
+        @explicitThis new(this, node: Interface) {
             this.node = node;
             this.structures = Dictionary[Object, Structure]();
             this.modules = Dictionary[Object, LIRModule]();
             this.lowerings = Dictionary[Object, Boolean]();
         }
 
+        @explicitThis fun name(this): String { return "The interface " + this.node.Name; }
+
+        @explicitThis fun failure(this, target: Object): String {
+            return "The interface " + this.node.Name + " can't be lowered for a target without polymorphism.";
+        }
+
+        @explicitThis fun Cast(this, type: CompilerObject): IResult[CompilerObject, Error] {
+            return Description.of(this.node, hirLoader.LoadType(Interface as Type).Unwrap(), type);
+        }
+
         @explicitThis fun IsAssignableTo(this, target: CompilerObject): Boolean {
-            if (target is other of ClassObject) return other.node == this.node;
+            if (target is other of InterfaceObject) return other.node == this.node;
             return false;
         }
 
+        @explicitThis fun structure(this, target: Object): Structure {
+            if (this.structures.ContainsKey(target)) return this.structures[target];
+
+            if (target is polymorphism of Polymorphism) {
+                let container = LIRModule(this.node.Name);
+                let structure = Structure();
+                structure.Name = this.node.Name;
+                polymorphism.interfaces(structure);
+                container.Structures.Add(structure);
+                this.modules[target] = container;
+                this.structures[target] = structure;
+                return structure;
+            }
+
+            return null;
+        }
+
+        // Its methods are declared, with no code.
+        @explicitThis fun lower(this, target: Object): Boolean {
+            if (this.lowerings.ContainsKey(target)) return this.lowerings[target];
+
+            let structure = this.structure(target);
+            if (structure == null) return false;
+            if (this.lowerings.ContainsKey(target)) return this.lowerings[target];
+
+            this.lowerings[target] = true;
+            let container = this.modules[target];
+            let polymorphism = target as Polymorphism;
+
+            let index = 0;
+            while (index < this.node.Methods.Count) {
+                let function = this.method(index).function(target);
+                container.Functions.Add(function);
+                polymorphism.method(function, structure);
+                index = index + 1;
+            }
+
+            return true;
+        }
+
+        @explicitThis fun method(this, index: Int32): MethodObject {
+            return hirLoader.LoadDefinition(this.node.Methods[index]).Unwrap() as MethodObject;
+        }
+
+        @explicitThis fun CompileIRType(this, target: Object): IResult[LIRType, Error] {
+            if (this.lower(target) == false) return Result[LIRType].Error(this.failure(target));
+            return Result[LIRType].Ok(this.structure(target));
+        }
+
+        @explicitThis fun Member(this, object: CompilerObject, name: String): IResult[CompilerObject, Error] {
+            let index = 0;
+            while (index < this.node.Methods.Count) {
+                if (this.node.Methods[index].Name == name) return Result[CompilerObject].Ok(BoundMethod(this.method(index), object));
+                index = index + 1;
+            }
+
+            return Result[CompilerObject].Error("The interface " + this.node.Name + " has no member named " + name + ".");
+        }
+
+        // What a value of it might be: a class that implements it, or another interface.
+        @explicitThis fun narrows(this, type: CompilerObject): Boolean {
+            if (type is other of InterfaceObject) return true;
+            if (type is implementer of ClassObject) return implementer.implements(this);
+            return false;
+        }
+
+        @explicitThis fun Cast(this, value: CompilerObject, type: CompilerObject): IResult[CompilerObject, Error] {
+            if (this.narrows(type)) return Result[CompilerObject].Ok(Narrowing(value, this, type, false));
+            return Result[CompilerObject].Error("A value of the interface " + this.node.Name + " can only be cast to what implements it.");
+        }
+
+        @explicitThis fun Match(this, value: CompilerObject, type: CompilerObject): IResult[MatchResult, Error] {
+            if (this.narrows(type) == false) return Result[MatchResult].Error("A value of the interface " + this.node.Name + " can only be matched against what implements it.");
+
+            let result = MatchResult();
+            result.Match = Narrowing(value, this, type, true);
+            return Result[MatchResult].Ok(result);
+        }
+    }
+
+    // A Z# class. As a type, it is the object type its target lowers it to; calling it
+    // runs its unnamed constructor, and its named constructors are its members. A value
+    // of it has its fields and methods as members.
+    def ClassObject : CompilerObject, MethodOwner, ICompileIRType, ICTCallable, ICTCastTo, ICTGetMember[String], IRTGetMember[String], IAssignableTo {
+        let node: Class;
+        let structures: Dictionary[Object, Structure];
+        let modules: Dictionary[Object, LIRModule];
+        // Whether the class lowers for each target, which it is taken to while it does,
+        // since its functions are declared before any of their code is lowered.
+        let lowerings: Dictionary[Object, Boolean];
+        let failures: Dictionary[Object, String];
+
+        @explicitThis new(this, node: Class) {
+            this.node = node;
+            this.structures = Dictionary[Object, Structure]();
+            this.modules = Dictionary[Object, LIRModule]();
+            this.lowerings = Dictionary[Object, Boolean]();
+            this.failures = Dictionary[Object, String]();
+        }
+
+        @explicitThis fun name(this): String { return "The class " + this.node.Name; }
+
+        @explicitThis fun failure(this, target: Object): String {
+            if (this.failures.ContainsKey(target)) return this.failures[target];
+            return "The class " + this.node.Name + " can't be lowered for a target without polymorphism.";
+        }
+
+        @explicitThis fun Cast(this, type: CompilerObject): IResult[CompilerObject, Error] {
+            return Description.of(this.node, hirLoader.LoadType(Class as Type).Unwrap(), type);
+        }
+
+        // A class goes to itself and to the interfaces it implements.
+        @explicitThis fun IsAssignableTo(this, target: CompilerObject): Boolean {
+            if (target is other of ClassObject) return other.node == this.node;
+            if (target is implemented of InterfaceObject) return this.implements(implemented);
+            return false;
+        }
+
+        @explicitThis fun interface(this, index: Int32): InterfaceObject {
+            return hirLoader.LoadType(this.node.Interfaces[index]).Unwrap() as InterfaceObject;
+        }
+
+        @explicitThis fun implements(this, implemented: InterfaceObject): Boolean {
+            let index = 0;
+            while (index < this.node.Interfaces.Count) {
+                if (this.interface(index).node == implemented.node) return true;
+                index = index + 1;
+            }
+            return false;
+        }
+
+        // The method that is the interface's method, as it has the name and takes and
+        // gives what the interface's does, or null.
+        @explicitThis fun implementation(this, method: MethodObject): MethodObject {
+            let index = 0;
+            while (index < this.node.Methods.Count) {
+                if (this.node.Methods[index].Name == method.node.Name) {
+                    let found = this.method(index);
+                    if (found.matches(method)) return found;
+                }
+                index = index + 1;
+            }
+            return null;
+        }
+
         // The object type: a structure the target's polymorphism makes the type of
-        // objects, with its fields.
+        // objects, with its fields, that implements its interfaces.
         @explicitThis fun structure(this, target: Object): Structure {
             if (this.structures.ContainsKey(target)) return this.structures[target];
 
@@ -451,6 +747,13 @@ module Objects {
                     let field = LIRField(ir.CompileType(hirLoader.LoadType(this.node.Fields[index].Type).Unwrap(), target).Unwrap());
                     field.Name = this.node.Fields[index].Name;
                     structure.Fields.Add(field);
+                    index = index + 1;
+                }
+
+                index = 0;
+                while (index < this.node.Interfaces.Count) {
+                    let implemented = this.interface(index).structure(target);
+                    if (implemented != null) polymorphism.implements(structure, implemented);
                     index = index + 1;
                 }
 
@@ -477,14 +780,32 @@ module Objects {
 
             let structure = this.structure(target);
             if (structure == null) return false;
+            if (this.lowerings.ContainsKey(target)) return this.lowerings[target];
 
             this.lowerings[target] = true;
             let container = this.modules[target];
             let polymorphism = target as Polymorphism;
+
+            // It has each method of each interface it implements.
+            let index = 0;
+            while (index < this.node.Interfaces.Count) {
+                let implemented = this.interface(index);
+                if (implemented.lower(target) == false) return this.failed(target, implemented.failure(target));
+
+                let method = 0;
+                while (method < implemented.node.Methods.Count) {
+                    let required = implemented.method(method);
+                    if (this.implementation(required) == null) return this.failed(target, "The class " + this.node.Name + " doesn't have every method of the interfaces it implements: " + implemented.node.Name + "." + required.node.Name + " isn't one of its methods.");
+                    method = method + 1;
+                }
+
+                index = index + 1;
+            }
+
             let methods = List[MethodObject]();
             let constructors = List[ConstructorObject]();
 
-            let index = 0;
+            index = 0;
             while (index < this.node.Methods.Count) {
                 let method = this.method(index);
                 let function = method.function(target);
@@ -504,21 +825,24 @@ module Objects {
 
             index = 0;
             while (index < methods.Count) {
-                if (methods[index].lowerBody(target) == false) return this.failed(target);
+                let failed = methods[index].lowerBody(target);
+                if (failed != null) return this.failed(target, failed.ToString());
                 index = index + 1;
             }
 
             index = 0;
             while (index < constructors.Count) {
-                if (constructors[index].lowerBody(target) == false) return this.failed(target);
+                let failed = constructors[index].lowerBody(target);
+                if (failed != null) return this.failed(target, failed.ToString());
                 index = index + 1;
             }
 
             return true;
         }
 
-        @explicitThis fun failed(this, target: Object): Boolean {
+        @explicitThis fun failed(this, target: Object, why: String): Boolean {
             this.lowerings[target] = false;
+            this.failures[target] = why;
             return false;
         }
 
@@ -530,9 +854,12 @@ module Objects {
             return hirLoader.LoadDefinition(this.node.Constructors[index]).Unwrap() as ConstructorObject;
         }
 
+        // A class used as a type is lowered with it, so whatever has its objects has its
+        // methods.
         @explicitThis fun CompileIRType(this, target: Object): IResult[LIRType, Error] {
             let structure = this.structure(target);
-            if (structure == null) return Result[LIRType].Error("The class " + this.node.Name + " can't be lowered for a target without polymorphism.");
+            if (structure == null) return Result[LIRType].Error(this.failure(target));
+            if (this.lower(target) == false) return Result[LIRType].Error(this.failure(target));
             return Result[LIRType].Ok(structure);
         }
 
@@ -577,19 +904,21 @@ module Objects {
 
 // ---- The meta-compilers
 
-// What the members of a class are compiled with: a let is a field, and a fun or a new
-// written directly in it is a method or a constructor. A definition inside a member is
-// the member's to compile.
+// What the members of a class or an interface are compiled with: a let is a field, and a
+// fun or a new written directly in it is a method or a constructor. An interface has only
+// methods, with no code. A definition inside a member is the member's to compile.
 def Members {
     let self: Local;
+    let isClass: Boolean;
     let fields: List[String];
     let fork: ASTCompiler;
     let expressions: CompileASTExpression;
     let definitions: CompileASTDefinition;
     let owner: Context;
 
-    @explicitThis new(this, self: Local, compiler: ASTCompiler) {
+    @explicitThis new(this, self: Local, isClass: Boolean, compiler: ASTCompiler) {
         this.self = self;
+        this.isClass = isClass;
         this.fields = List[String]();
         this.fork = compiler.Fork();
         this.expressions = this.fork.Expression;
@@ -598,14 +927,20 @@ def Members {
     }
 
     @explicitThis fun expression(this, compiler: ASTCompiler, node: ExpressionSyntax): IResult[Expression, Error] {
-        if (node is local of LetSyntax) return this.field(compiler, local);
+        if (node is local of LetSyntax) {
+            if (this.isClass) return this.field(compiler, local);
+            return Result[Expression].Error("An interface has no fields, as " + local.Name + " would be.");
+        }
         return this.expressions(compiler, node);
     }
 
     @explicitThis fun definition(this, compiler: ASTCompiler, node: DefinitionSyntax): IResult[CompiledDefinition, Error] {
         if (Bodies.DefinitionOf(compiler.Contexts.Current) == this.owner) {
             if (node is function of FunctionSyntax) return metaTypes.Compile(compiler, node, Method as Instance);
-            if (node is constructor of ConstructorSyntax) return metaTypes.Compile(compiler, node, Constructor as Instance);
+            if (node is constructor of ConstructorSyntax) {
+                if (this.isClass) return metaTypes.Compile(compiler, node, Constructor as Instance);
+                return Result[CompiledDefinition].Error("An interface has no constructors.");
+            }
         }
         return this.definitions(compiler, node);
     }
@@ -747,6 +1082,14 @@ def MethodFiller {
             block.Statements.Add(ExpressionStatement(set));
         }
 
+        // A method of a class has code, and one of an interface has none.
+        if (this.function.Body == null) {
+            if (this.members.isClass) return Result[Block].Error("Method " + this.function.Name + " of a class needs code.");
+            return Result[Block].Ok(block);
+        }
+
+        if (this.members.isClass == false) return Result[Block].Error("Method " + this.function.Name + " of an interface has no code.");
+
         let failed = bodies.Body(bodies.WithLocals(this.compiler, block, this.self, "Locals", null), block, this.self, this.function.Body);
         if (failed != null) return Result[Block].Error(failed);
 
@@ -783,28 +1126,49 @@ def ConstructorFiller {
     }
 }
 
-// A class's members are compiled within a context that is its members, which is how
-// the meta-compiler of a method or constructor in it finds them.
+// A class's or an interface's members are compiled within a context that is its members,
+// which is how the meta-compiler of a method or constructor in it finds them. What a
+// class is given as its bases are the interfaces it implements.
 def ClassFiller {
     let compiler: ASTCompiler;
     let definition: TypeSyntax;
     let self: Local;
+    let isClass: Boolean;
     let members: Members;
 
-    @explicitThis new(this, compiler: ASTCompiler, definition: TypeSyntax, self: Local) {
+    @explicitThis new(this, compiler: ASTCompiler, definition: TypeSyntax, self: Local, isClass: Boolean) {
         this.compiler = compiler;
         this.definition = definition;
         this.self = self;
+        this.isClass = isClass;
     }
 
     @explicitThis fun fill(this): IResult[Block, Error] {
-        if (this.definition.Content == null) return Result[Block].Ok(Block([]));
+        let block = Block([]);
 
-        this.members = Members(this.self, this.compiler);
+        if (this.definition.Bases != null) {
+            if (this.isClass == false) return Result[Block].Error("The interface " + this.definition.Name + " can't be given bases.");
+
+            let index = 0;
+            while (index < this.definition.Bases.Count) {
+                let implemented = bodies.Described[Type](this.compiler, this.definition.Bases[index]);
+                if (implemented.IsError) return Result[Block].Error(implemented.UnwrapError());
+                block.Statements.Add(ExpressionStatement(Bodies.Add(this.self, "Interfaces", implemented.Unwrap())));
+                index = index + 1;
+            }
+        }
+
+        if (this.definition.Content == null) return Result[Block].Ok(block);
+
+        this.members = Members(this.self, this.isClass, this.compiler);
         this.members.fork.Expression = this.members.expression;
         this.members.fork.Definition = this.members.definition;
 
-        return this.compiler.Contexts.Within[IResult[Block, Error]](CapabilityContext(this.compiler.Contexts.Current, this.members), this.compileMembers);
+        let filled = this.compiler.Contexts.Within[IResult[Block, Error]](CapabilityContext(this.compiler.Contexts.Current, this.members), this.compileMembers);
+        if (filled.IsError) return filled;
+
+        block.Statements.Add(filled.Unwrap());
+        return Result[Block].Ok(block);
     }
 
     @explicitThis fun compileMembers(this): IResult[Block, Error] {
@@ -822,10 +1186,18 @@ module Meta {
 
     fun compileClass(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
         if (definition is type of TypeSyntax) {
-            let filler = ClassFiller(compiler, type, self);
+            let filler = ClassFiller(compiler, type, self, true);
             return Result[CompiledDefinition].Ok(CompiledDefinition(self, Bodies.Construct(Class as Instance, StringLiteral(type.Name)), Class as Instance, filler.fill, null));
         }
         return Result[CompiledDefinition].Error("A class is a type definition.");
+    }
+
+    fun compileInterface(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
+        if (definition is type of TypeSyntax) {
+            let filler = ClassFiller(compiler, type, self, false);
+            return Result[CompiledDefinition].Ok(CompiledDefinition(self, Bodies.Construct(Interface as Instance, StringLiteral(type.Name)), Interface as Instance, filler.fill, null));
+        }
+        return Result[CompiledDefinition].Error("An interface is a type definition.");
     }
 
     fun compileMethod(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
@@ -852,7 +1224,7 @@ module Meta {
     fun loadMethod(node: Method): IResult[CompilerObject, Error] {
         let owner = hirLoader.LoadDefinition(node.This.Owner as Definition);
         if (owner.IsError) return owner;
-        return Result[CompilerObject].Ok(Objects.MethodObject(owner.Unwrap() as Objects.ClassObject, node));
+        return Result[CompilerObject].Ok(Objects.MethodObject(owner.Unwrap() as Objects.MethodOwner, node));
     }
 
     fun loadConstructor(node: Constructor): IResult[CompilerObject, Error] {
@@ -861,11 +1233,15 @@ module Meta {
         return Result[CompilerObject].Ok(Objects.ConstructorObject(owner.Unwrap() as Objects.ClassObject, node));
     }
 
+    fun loadInterface(node: Interface): IResult[CompilerObject, Error] { return Result[CompilerObject].Ok(Objects.InterfaceObject(node)); }
+
     fun loadReceiver(node: Receiver): IResult[CompilerObject, Error] { return Result[CompilerObject].Ok(Objects.ReceiverObject(node)); }
 
     // A node used as an instance, or as a type, is the one CO its definition gives.
     fun instanceOfClass(node: Class): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
     fun typeOfClass(node: Class): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
+    fun instanceOfInterface(node: Interface): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
+    fun typeOfInterface(node: Interface): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
     fun instanceOfMethod(node: Method): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
     fun instanceOfConstructor(node: Constructor): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
     fun instanceOfReceiver(node: Receiver): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
@@ -877,6 +1253,9 @@ mappedLoader.Definitions.Register[Class](Meta.loadClass);
 mappedLoader.Definitions.Register[Method](Meta.loadMethod);
 mappedLoader.Definitions.Register[Constructor](Meta.loadConstructor);
 mappedLoader.Definitions.Register[Receiver](Meta.loadReceiver);
+mappedLoader.Definitions.Register[Interface](Meta.loadInterface);
+mappedLoader.Instances.Register[Interface](Meta.instanceOfInterface);
+mappedLoader.Types.Register[Interface](Meta.typeOfInterface);
 mappedLoader.Instances.Register[Class](Meta.instanceOfClass);
 mappedLoader.Instances.Register[Method](Meta.instanceOfMethod);
 mappedLoader.Instances.Register[Constructor](Meta.instanceOfConstructor);
@@ -886,4 +1265,5 @@ mappedLoader.Types.Register[Class](Meta.typeOfClass);
 metaTypes.Register(Class as Instance, Meta.compileClass);
 metaTypes.Register(Method as Instance, Meta.compileMethod);
 metaTypes.Register(Constructor as Instance, Meta.compileConstructor);
+metaTypes.Register(Interface as Instance, Meta.compileInterface);
 metaTypes.Default[TypeSyntax](Class as Instance);

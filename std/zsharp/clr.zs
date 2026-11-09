@@ -3,7 +3,7 @@
 
 import { Polymorphism } from "std:zsharp/capabilities";
 import { Implementation } from "std:traits";
-import { Runtime, Polymorphic, MethodOf, explicitThis } from "core:runtime";
+import { Runtime, Polymorphic, MethodOf, CastDown, TypeTest, explicitThis } from "core:runtime";
 import { Structure, Function } from "std:zsharp/lir";
 
 // The CLR has polymorphism: a polymorphic structure is a CLR class or interface, and a
@@ -33,5 +33,13 @@ def RuntimePolymorphism of Implementation[Polymorphism, Runtime] {
 
     @explicitThis fun method(this, function: Function, owner: Structure) {
         function.Metadata.Add(MethodOf(owner));
+    }
+
+    @explicitThis fun cast(this, function: Function, to: Structure) {
+        function.Metadata.Add(CastDown(to));
+    }
+
+    @explicitThis fun test(this, function: Function, target: Structure) {
+        function.Metadata.Add(TypeTest(target));
     }
 }

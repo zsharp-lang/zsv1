@@ -26,4 +26,12 @@ def Polymorphism of DotNet_Interface {
     // The function is a method of the class or interface: it takes the object first,
     // and calling it calls what the object's class has.
     fun method(function: Function, owner: Structure);
+
+    // The function, which has no code, casts an object down to the class or interface,
+    // failing if the object isn't of it, since an object knows what it is.
+    fun cast(function: Function, to: Structure);
+
+    // The function, which has no code, tells whether an object is of the class or
+    // interface.
+    fun test(function: Function, target: Structure);
 }

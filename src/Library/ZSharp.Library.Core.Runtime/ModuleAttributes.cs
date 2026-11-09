@@ -35,6 +35,8 @@ using ZSharp.Importer.ILLoader;
 [module: ImportType(typeof(ZSharp.Platform.Runtime.Runtime), Alias = "Runtime")]
 [module: ImportType(typeof(ZSharp.Platform.Runtime.Polymorphic), Alias = "Polymorphic")]
 [module: ImportType(typeof(ZSharp.Platform.Runtime.MethodOf), Alias = "MethodOf")]
+[module: ImportType(typeof(ZSharp.Platform.Runtime.CastDown), Alias = "CastDown")]
+[module: ImportType(typeof(ZSharp.Platform.Runtime.TypeTest), Alias = "TypeTest")]
 
 [module: ImportType(typeof(Package.DotNet.Module), Alias = "DotNet_Module")]
 [module: ImportType(typeof(Package.DotNet.Class), Alias = "DotNet_Class")]

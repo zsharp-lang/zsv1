@@ -9,8 +9,9 @@ namespace ZSharp.Importer.ILLoader.Objects
     {
         public IResult Member(MemberName member)
         {
-            // A class is found as a type, which it is while it is still being loaded too.
-            if (node.Definitions.OfType<Package.DotNet.Class>().FirstOrDefault(@class => @class.Name == member) is { } found)
+            // A class or an interface is found as a type, which it is while it is still
+            // being loaded too.
+            if (node.Definitions.OfType<Package.DotNet.TypeReference>().FirstOrDefault(type => Named(type, member)) is { } found)
                 return Core.Compiler.ModuleScope.HIRLoader.LoadType(found);
 
             var functions = node.Methods
@@ -27,5 +28,13 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             return Result.Error(new UnsupportedError($"Module {node.Name} has no member named {member}."));
         }
+
+        private static bool Named(Package.DotNet.TypeReference type, string name)
+            => type switch
+            {
+                Package.DotNet.Class @class => @class.Name == name,
+                Package.DotNet.Interface @interface => @interface.Name == name,
+                _ => false
+            };
     }
 }

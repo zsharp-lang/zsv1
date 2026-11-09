@@ -122,9 +122,8 @@ namespace ZSharp.Platform.Runtime
             foreach (var field in definition.Fields)
                 classFields[field] = builder.DefineField(field.Name, ImportType(field.Type), IL.FieldAttributes.Public);
 
-            if (definition.GenericParameters.Count > 0)
-                foreach (var member in definition.Fields.Cast<object>().Concat(definition.Constructors).Concat(definition.Methods))
-                    owners[member] = definition;
+            foreach (var member in definition.Fields.Cast<object>().Concat(definition.Constructors).Concat(definition.Methods))
+                owners[member] = definition;
 
             foreach (var constructor in definition.Constructors)
                 classConstructors[constructor] = builder.DefineConstructor(
@@ -197,22 +196,38 @@ namespace ZSharp.Platform.Runtime
 
         /// <summary>
         /// A member as code refers to it. A member of a generic class is referred to
-        /// through the class's self instance.
+        /// through the class's self instance. Once its class exists, a member is the one
+        /// the class has, which any code can refer to, a standalone function's too.
         /// </summary>
         internal IL.FieldInfo Referenced(ClassField field)
             => owners.TryGetValue(field, out var owner) && selves.TryGetValue(owner, out var self)
                 ? Emit.TypeBuilder.GetField(self, classFields[field])
+                : IsCreated(field)
+                ? CreatedField(classFields[field])
                 : classFields[field];
 
         internal IL.MethodInfo Referenced(ClassMethod method)
             => owners.TryGetValue(method, out var owner) && selves.TryGetValue(owner, out var self)
                 ? Emit.TypeBuilder.GetMethod(self, classMethods[method])
+                : IsCreated(method)
+                ? (IL.MethodInfo)Created(classMethods[method])
                 : classMethods[method];
 
         internal IL.ConstructorInfo Referenced(ClassConstructor constructor)
             => owners.TryGetValue(constructor, out var owner) && selves.TryGetValue(owner, out var self)
                 ? Emit.TypeBuilder.GetConstructor(self, classConstructors[constructor])
+                : IsCreated(constructor)
+                ? (IL.ConstructorInfo)Created(classConstructors[constructor])
                 : classConstructors[constructor];
+
+        private bool IsCreated(object member)
+            => owners.TryGetValue(member, out var owner) && classes.TryGetValue(owner, out var type) && type is not Emit.TypeBuilder;
+
+        private IL.FieldInfo CreatedField(IL.FieldInfo builder)
+            => classes.Values
+                .First(type => type is not Emit.TypeBuilder && type.MetadataToken == builder.DeclaringType!.MetadataToken)
+                .GetFields(IL.BindingFlags.Public | IL.BindingFlags.NonPublic | IL.BindingFlags.Instance | IL.BindingFlags.Static | IL.BindingFlags.DeclaredOnly)
+                .First(member => member.MetadataToken == builder.MetadataToken);
 
         private IL.ConstructorInfo BaseConstructor(ClassDefinition definition, Type parent)
         {
