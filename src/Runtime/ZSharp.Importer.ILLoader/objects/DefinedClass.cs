@@ -20,6 +20,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTCastTo
         , ICTImplicitCastTo
         , ICTGetIndex
+        , ICompileIRDefinitionIn<LIR.Module>
         , IDefinedClass
         , IAssignableTo
         , ICompileIRExpression
@@ -47,18 +48,34 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? Result<LIR.Expression>.Error(error)
                 : Result<LIR.Expression>.Ok(new LIR.Call(loader.TypeOf(lowered!.Definition), []));
 
+        /// <summary>
+        /// A class held by a module, as a Z# module holds its definitions, is the module's:
+        /// the module defines it for the target, which writes it with the module.
+        /// </summary>
+        public Error? CompileIRDefinition(LIR.Module owner, object? target)
+        {
+            if (For(target).When(out var lowered).Error(out var error))
+                return error;
+
+            if (!owner.Metadata.OfType<DefinesClass>().Any(defined => defined.Definition == lowered!.Definition))
+                owner.Metadata.Add(new DefinesClass(lowered!.Definition));
+
+            return null;
+        }
+
         public IResult<LIR.Type, Error> CompileIRType(object? target)
             => For(target).When(out var lowered).Error(out var error)
                 ? Result<LIR.Type>.Error(error)
                 : Result<LIR.Type>.Ok(lowered!.Definition);
 
         /// <summary>
-        /// Casting a class to what describes it is reflection, as for any type: it is its
-        /// HIR node.
+        /// Casting a class to what describes it is reflection, as for any type: code that
+        /// describes the type it is where the code runs, which is its HIR node in the
+        /// process that defined it.
         /// </summary>
         public IResult Cast(CompilerObject targetType)
             => loader.Description(Node) is var described && Scope.TS.IsAssignableTo(targetType, loader.Class(described.GetType()))
-                ? Result.Ok(new Literal(described, described.GetType(), loader))
+                ? loader.Described(this, targetType)
                 : Result.Error(new UnsupportedError($"{Name} can't be cast to that type."));
 
         /// <summary>

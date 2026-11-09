@@ -11,16 +11,17 @@ import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "std:
 import { CompilerObject } from "std:zsharp/mir";
 import { Error, Result, IResult } from "std:zsharp/common";
 import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
-import { ICTCallable, ICTMatchParameter } from "std:zsharp/compiler/cg/direct";
+import { ICTCallable, ICTMatchParameter, ICTCastTo } from "std:zsharp/compiler/cg/direct";
 import { ICompileIRExpression, ICompileIRDefinitionIn, ICompileIRReference } from "std:zsharp/compiler/ir";
 import { ITyped } from "std:zsharp/compiler/ts";
+import { FunctionHandle, Constant } from "std:zsharp/lir";
 import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
 import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode, Module as LIRModule, ICallable } from "std:zsharp/lir";
 import { Bodies } from "std:zsharp/lang";
 import { CodeLoaders } from "std:zsharp/compiler/code";
 import { Holder, Held } from "std:zsharp/lowering";
 import { metaTypes, bodies, export } from "core:zsharp";
-import { cg, ir, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
+import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
 
 // ---- The HIR
 
@@ -120,34 +121,99 @@ def ParameterObject of DotNet_Class : CompilerObject, ICTMatchParameter, ICompil
 }
 
 def Objects of DotNet_Module {
+    // What each declared function, one with no code of its own, is premapped to: a
+    // definition it lowers as, wherever it is called.
+    let premapped: Dictionary[Function, Instance] = Dictionary[Function, Instance]();
+
+    // A value that exists as the code is compiled, as the node a definition is.
+    def Known of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
+        let value: Object;
+        let type: CompilerObject;
+
+        @explicitThis new(this, value: Object, type: CompilerObject) { this.value = value; this.type = type; }
+
+        @explicitThis fun get_Type(this): CompilerObject { return this.type; }
+
+        @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+            let type = ir.CompileType(this.type, target);
+            if (type.IsError) return Result[LIRExpression].Error(type.UnwrapError());
+            return Result[LIRExpression].Ok(Constant(type.Unwrap(), this.value));
+        }
+    }
+
     // A Z# function as a CO: calling it matches the arguments to its parameters, and it
     // is lowered once for each target, to an LIR function of its own: a function of what
     // holds it, as a module, if something does.
-    def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, Held, ICompileIRDefinitionIn[LIRModule], ICompileIRReference[ICallable] {
+    def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Held, ICompileIRDefinitionIn[LIRModule], ICompileIRReference[ICallable] {
         let node: Function;
         let holder: Holder;
         let lowered: Dictionary[Object, LIRFunction];
+        let handles: Dictionary[Object, FunctionHandle];
         // Why its code didn't lower for each target it didn't.
         let failures: Dictionary[Object, Error];
 
         @explicitThis new(this, node: Function) {
             this.node = node;
+            this.handles = Dictionary[Object, FunctionHandle]();
             this.lowered = Dictionary[Object, LIRFunction]();
             this.failures = Dictionary[Object, Error]();
         }
 
         @explicitThis fun hold(this, holder: Holder) { this.holder = holder; }
 
-        // It is referred to as its function, as a delegate of it is.
+        // It is referred to as what a call of it calls, as a delegate of it is.
         @explicitThis fun CompileIRReference(this, target: Object): IResult[ICallable, Error] {
-            let function = this.function(target);
-            if (function == null) return Result[ICallable].Error(this.failures[target]);
-            return Result[ICallable].Ok(function);
+            return this.callable(target);
         }
 
         @explicitThis fun CompileIRDefinition(this, owner: LIRModule, target: Object): Error {
+            if (this.declared()) return null;
             if (this.function(target) != null) return null;
             return this.failures[target];
+        }
+
+        // A function with no code of its own is declared: what the platform provides, or
+        // what it is premapped to.
+        @explicitThis fun declared(this): Boolean { return this.node.Body == null; }
+
+        // What a call of it calls, for a target: what it is premapped to, or a declared
+        // function's handle, which the platform maps, or its own function.
+        @explicitThis fun callable(this, target: Object): IResult[ICallable, Error] {
+            if (premapped.ContainsKey(this.node)) {
+                let to = hirLoader.LoadInstance(premapped[this.node]);
+                if (to.IsError) return Result[ICallable].Error(to.UnwrapError());
+                return ir.CompileReference[ICallable](to.Unwrap(), target);
+            }
+
+            if (this.declared()) {
+                if (this.handles.ContainsKey(target) == false) this.handles[target] = FunctionHandle(this.signature(target));
+                return Result[ICallable].Ok(this.handles[target]);
+            }
+
+            let function = this.function(target);
+            if (function != null) return Result[ICallable].Ok(function);
+            if (this.failures.ContainsKey(target)) return Result[ICallable].Error(this.failures[target]);
+            return Result[ICallable].Error("The code of " + this.node.Name + " can't be lowered.");
+        }
+
+        @explicitThis fun signature(this, target: Object): Signature {
+            let signature = Signature();
+            let returned = this.returnType();
+            if (returned != null) signature.ReturnType = ir.CompileType(returned, target).Unwrap();
+
+            let index = 0;
+            while (index < this.node.Parameters.Count) {
+                signature.Parameters.Add(this.parameter(index).parameter(target));
+                index = index + 1;
+            }
+            return signature;
+        }
+
+        // What describes the function is its node, as code compiled where it is knows it.
+        @explicitThis fun Cast(this, type: CompilerObject): IResult[CompilerObject, Error] {
+            let described = hirLoader.LoadType(Function as Type).Unwrap();
+            if (ts.IsAssignableTo(type, described)) return Result[CompilerObject].Ok(Known(this.node, described));
+            return Result[CompilerObject].Error("A function is only described by its node.");
         }
 
         @explicitThis fun parameter(this, index: Int32): ParameterObject {
@@ -245,11 +311,9 @@ def Objects of DotNet_Module {
         @explicitThis fun get_Type(this): CompilerObject { return this.callee.returnType(); }
 
         @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
-            let function = this.callee.function(target);
-            if (function == null) {
-                if (this.callee.failures.ContainsKey(target)) return Result[LIRExpression].Error(this.callee.failures[target]);
-                return Result[LIRExpression].Error("The code of " + this.callee.node.Name + " can't be lowered.");
-            }
+            let called = this.callee.callable(target);
+            if (called.IsError) return Result[LIRExpression].Error(called.UnwrapError());
+            let function = called.Unwrap();
 
             let values = List[LIRExpression]();
 
@@ -296,8 +360,11 @@ def Filler of DotNet_Class {
             block.Statements.Add(ExpressionStatement(set));
         }
 
-        let failed = bodies.Body(bodies.WithLocals(this.compiler, block, this.self, "Locals", null), block, this.self, this.function.Body);
-        if (failed != null) return Result[Block].Error(failed);
+        // A function with no body is declared, and has no code of its own.
+        if (this.function.Body != null) {
+            let failed = bodies.Body(bodies.WithLocals(this.compiler, block, this.self, "Locals", null), block, this.self, this.function.Body);
+            if (failed != null) return Result[Block].Error(failed);
+        }
 
         return Result[Block].Ok(block);
     }
@@ -349,3 +416,8 @@ mappedLoader.Instances.Register[Named](Meta.instanceOfNamed);
 
 metaTypes.Register(Function as Instance, Meta.compile);
 metaTypes.Default[FunctionSyntax](Function as Instance);
+
+// Makes a declared function lower as a definition, wherever it is called: what provides
+// it, as the prelude makes `reflect` the IL loader's description of a type.
+@export
+fun premap(declared: Instance, to: Instance) { Objects.premapped[declared as Function] = to; }

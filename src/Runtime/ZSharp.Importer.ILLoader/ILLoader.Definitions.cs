@@ -32,6 +32,22 @@ namespace ZSharp.Importer.ILLoader
         private static readonly object NoTarget = new();
 
         /// <summary>
+        /// The description of a type the runtime made of a class defined in Z#: the class's,
+        /// or none, if it isn't one.
+        /// </summary>
+        private Package.DotNet.TypeReference? DefinedAs(Type type)
+        {
+            if (runtime.DefinitionOf(type) is not { } definition)
+                return null;
+
+            foreach (var @class in defined.Values)
+                if (@class.Lowerings.TryGetValue(runtime, out var lowered) && lowered.Definition == definition)
+                    return Description(@class.Node);
+
+            return null;
+        }
+
+        /// <summary>
         /// What describes a class defined in Z#: an interface, for the class-shaped view an
         /// interface is defined through.
         /// </summary>

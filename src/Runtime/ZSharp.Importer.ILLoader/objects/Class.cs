@@ -309,7 +309,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             var node = loader.Load(IL);
 
             return Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(node.GetType()))
-                ? Result.Ok(new Literal(node, node.GetType(), loader))
+                ? loader.Described(this, targetType)
                 : Result.Error(new UnsupportedError($"{IL.Name} can't be cast to that type."));
         }
 

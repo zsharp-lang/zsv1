@@ -5,8 +5,10 @@
 //
 // In a root, a package named `a/b` is a file, `a/b.dll` or `a/b/b.dll`, or a document,
 // `a/b.zs` or `a/b/b.zs`, which are imported as files are, or a project, a directory
-// `a/b` whose module file is in it or in its `src`. What imports a project is what can
-// compile one, which is given to the package manager. In NuGet's packages, `Name` is the
+// `a/b` whose module file is in it or in its `src`. A project built as an assembly, into
+// `a/b/build/b.dll`, is that assembly, loaded from its bytes so it can be built again
+// while it is in use; one that isn't is compiled by what can compile one, which is given
+// to the package manager. In NuGet's packages, `Name` is the
 // newest version installed, and `Name@1.2.3` that version, of the assembly of the target
 // framework most like the running one's.
 
@@ -32,6 +34,9 @@ fun initialRoots(): List[String] {
 let roots: List[String] = initialRoots();
 let nuget: String = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
 let projects: Func[String, IResult[Instance, Error]] = null;
+
+// The folders of the built packages loaded, where what they need was put.
+let bundled: List[String] = List[String]();
 
 // Adds a root, after those there are.
 fun add(root: String) { roots.Add(Path.GetFullPath(root)); }
@@ -84,6 +89,15 @@ fun inRoot(root: String, name: String): IResult[Instance, Error] {
     if (File.Exists(Path.Combine(path, ".zs"))) project = path;
     else if (File.Exists(Path.Combine(path, "src", ".zs"))) project = Path.Combine(path, "src");
 
+    let built = Path.Combine(path, "build", last + ".dll");
+    if (project != null) {
+        if (File.Exists(built)) {
+            let folder = Path.GetDirectoryName(built);
+            if (bundled.Contains(folder) == false) bundled.Add(folder);
+            return Result[Instance].Ok(ilLoader.Load(Assembly.Load(File.ReadAllBytes(built)).ManifestModule));
+        }
+    }
+
     if (project != null) {
         if (projects == null) return Result[Instance].Error("The package " + name + " is a project, and nothing compiles projects for the package manager.");
         return projects(project);
@@ -126,6 +140,25 @@ fun inNuGet(name: String, version: String): String {
         index = index + 1;
     }
     return null;
+}
+
+// The assembly of a package an assembly refers to, which the running .NET asks for when
+// it has none of that name, as an assembly built against a package refers to it by its
+// name and version: the one its build put next to it, or else the version NuGet
+// installed, or else the newest one.
+fun resolveAssembly(context: AssemblyLoadContext, name: AssemblyName): Assembly {
+    let index = 0;
+    while (index < bundled.Count) {
+        let copy = Path.Combine(bundled[index], name.Name + ".dll");
+        if (File.Exists(copy)) return context.LoadFromAssemblyPath(copy);
+        index = index + 1;
+    }
+
+    let found: String = null;
+    if (name.Version != null) found = inNuGet(name.Name, name.Version.Major + "." + name.Version.Minor + "." + name.Version.Build);
+    if (found == null) found = inNuGet(name.Name, null);
+    if (found == null) return null;
+    return context.LoadFromAssemblyPath(found);
 }
 
 // The newest version of a package that isn't a preview.

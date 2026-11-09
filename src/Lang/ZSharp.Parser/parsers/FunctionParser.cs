@@ -56,7 +56,8 @@ namespace ZSharp.Parser
             if (parser.Is(TokenType.Colon, eat: true))
                 returnType = parser.Parse<Expression>();
 
-            var body = ParseFunctionBody(parser);
+            // A function with no body is declared: what provides it is elsewhere.
+            Statement? body = parser.Is(TokenType.Semicolon, eat: true) ? null : ParseFunctionBody(parser);
 
             return new(new()
             {

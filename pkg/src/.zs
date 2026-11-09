@@ -5,10 +5,10 @@
 // What its sources use is imported here, once.
 
 import { compile, emit } from "core:project";
-import { Object, String, Boolean, Int32, Type, List, Func, Path, Directory, File, Environment } from "core:runtime";
+import { Object, String, Boolean, Int32, Type, List, Func, Path, Directory, File, Environment, Assembly, ilLoader } from "core:runtime";
 
 let objectType: Type = Object;
-import { AppContext, Version, StringComparison } from objectType.Assembly.Location;
+import { AppContext, Version, AssemblyName, AssemblyLoadContext } from objectType.Assembly.Location;
 
 import { Instance } from "std:zsharp/hir";
 import { Error, Result, IResult } from "std:zsharp/common";

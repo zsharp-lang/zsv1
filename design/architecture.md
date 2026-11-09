@@ -317,7 +317,9 @@ runtime what its handles mean:
   are all `ClrCode`. ECMA-335 makes them uniform: `unbox.any` casts a reference type as
   `castclass` does, and `box` does nothing to a reference.
 - The CLR's own LIR, a class definition and its members, and the address of a variable,
-  are in it too, as only CLR platforms realize them. Something only a CLR platform can
+  are in it too, as only CLR platforms realize them. A module that defines a class, as a
+  Z# module holding a CLR class does, is marked `DefinesClass`, so a platform that writes
+  the module writes the class with it; LIR modules have no classes of their own. Something only a CLR platform can
   lower lowers for a target that is a `ClrPlatform`.
 - `Reflected` describes reflection's objects as these handles, each entity once.
 - Live values stay the running process's: a document's frame is a constant of the
@@ -674,7 +676,8 @@ the AST compiler needs no context-dependent handlers.
 A definition statement runs its build code once, so a name means one object, and
 the object is loaded right after. Casting a type to what describes it, as in
 `String as Type` with the HIR marker, is reflection. It gives the type's node, which
-is how a field's type gets into the HIR being built.
+is how a field's type gets into the HIR being built. That is an operation of the code
+as it runs, as **Reflection** describes, not a node the code holds.
 
 The `std:` libraries are written separately in Z#, as a proof of concept, and are
 compiled to DLLs or a custom file format that the CLI loads dynamically.
@@ -716,6 +719,12 @@ a custom type gets into the language to be used as a meta-type.
   no metadata token, so the runtime calls one through a delegate there. A generic one
   goes in a type of its own, since a `DynamicMethod` can't be generic. Precompiling is
   another platform, on Mono.Cecil, so it doesn't constrain this one.
+- A `fun` with no body, `fun reflect(type: Type): Instance;`, is **declared**: it has no
+  code of its own, and lowers as a function handle, for the platform to map. Or it is
+  premapped: `premap(declared as Instance, to)`, from `std:functions`, makes every call
+  of it, and every reference to it, lower as what the definition `to` lowers to, for any
+  target. A function cast to `Instance` gives its node, a value the code knows as it is
+  compiled.
 - Z#'s object model isn't designed yet, but some of it is settled. A Z# class has no
   inheritance, and implements interfaces. It has named constructors, and static methods
   and fields as well as class methods and fields. Its value is a type object, as in
@@ -1949,6 +1958,27 @@ The `as` cast marking such a definition is not settled.
   import that runs only as a definition is constructed has nothing to reach yet, so its
   names are checked when they are used.
 
+## Reflection
+
+What describes a type is asked as the code runs, wherever it runs, so it isn't part of
+what a definition is, and a definition doesn't encode its HIR node.
+
+- **A description is a function call.** A CO's `Cast` to what describes it decides what
+  that is. The IL loader's casts of CLR types and of classes defined in Z# call its static
+  `DescribeType(Type)`, given the type's type object, which the loader of the process that
+  runs answers. A Z# class's cast in `std:oop` gives its node as a known value instead.
+- **One type, one description.** The loader describes a type the runtime made of a class
+  defined in Z# as that definition, so `reflect` and a cast give the same object however
+  the type is reached.
+- **`std:reflection`** declares `reflect(type: Type): Instance`, with no code. The prelude
+  premaps it onto the loader's `DescribeType`, so the loader knows nothing of
+  `std:reflection`, and `std:reflection` nothing of the loader. A platform whose code
+  can't reflect leaves it unmapped.
+- **Code that runs elsewhere describes types there.** An assembly the Cecil platform
+  writes calls `DescribeType` of the loader that runs it, which it refers to as any
+  other assembly. For a target without reflection, code that rebuilds a description,
+  reified or serialized at build time, is the fallback.
+
 ## Projects
 
 `std:project` is a minimal project compiler, written in Z#, to bootstrap the real one.
@@ -2024,12 +2054,34 @@ into the running platform, and gives it LIR:
   as the runtime emits it, and the CLR handles are what they describe.
 - **Live values** can't be written: a constant that is an object only the running
   process has fails, as does a type the running process made, which has no file.
+- **It writes itself.** `packages/cecil/build.zs` builds it into
+  `packages/cecil/build/cecil.dll`, with the platform `pkg:cecil` gives: the project,
+  compiled, the first time, and the assembly after.
+- **Builds are deterministic.** A module's identity is of its content and an assembly
+  has no time of its own, so the same LIR is written as the same bytes, and a platform
+  that builds itself builds what it was.
+- **What a build needs goes with it.** `dependencies()` gives the files of the
+  assemblies the written one needs that neither .NET nor the running toolchain has, as
+  Mono.Cecil, with what they need in turn, and `std:dotnet`'s `bundle` copies them into
+  the build's folder, leaving one already there the same, as it may be in use.
 - **Not yet:**
   - A CLR method with a local function, whose captures only the running process has.
   - A Z# class's constructor is a function of its module, not a CLR constructor, and a
     class method is a method of its metaclass, so code outside Z# makes an object by
     calling the module's function. A capability for constructors could make them the
     class's own, as the platform realizes them.
+
+## Bootstrapping
+
+`bootstrap.zs` builds the toolchain's Z# projects from their sources, as an installer
+would, and checks the build. It starts from the sources every time, so a change no older
+build has can't be needed by one: it removes what earlier bootstraps built before it
+imports the prelude, which then compiles the package manager from its source. The Cecil
+platform then builds itself, compiled from its source first and then as what it built,
+until two generations are the same, which they are from the first, and the package
+manager is built with it. `tests/run.sh` bootstraps before the tests run, so they run
+with what a bootstrap builds, and a platform that doesn't build itself the same fails
+the run.
 
 ## Packages
 
@@ -2046,9 +2098,16 @@ built, compiles the project, which is how it is built the first time. Either is
   adds one after them.
 - **What a package is.** In a root, `a/b` is a file, `a/b.dll` or `a/b/b.dll`, or a
   document, `a/b.zs` or `a/b/b.zs`, imported as files are, or a project, the directory
-  `a/b` with its module file in it or in its `src`. A project is compiled by what the
-  package manager is given, `compileProjectsWith`, which `std:packages` gives the project
-  compiler, and what it emits first is the package.
+  `a/b` with its module file in it or in its `src`. A project built as an assembly into
+  `a/b/build/b.dll` is that assembly, loaded from its bytes so it can be built again while
+  in use. One that isn't is compiled by what the package manager is given,
+  `compileProjectsWith`, which `std:packages` gives the project compiler, and what it
+  emits first is the package.
+- **Dependencies.** An assembly refers to what it was built against by name and version,
+  as the Cecil platform's refers to Mono.Cecil. The running .NET asks the package manager
+  for an assembly it has none of that name of, and the package manager gives the one a
+  build put next to a built package it loaded, or else the one NuGet installed of that
+  version, or else the newest.
 - **NuGet.** What no root has is looked for in the packages NuGet installed: `Name` is
   the newest version that isn't a preview, `Name@1.2.3` that one, and the assembly is that
   of the target framework most like the running one's. Nothing is downloaded yet.

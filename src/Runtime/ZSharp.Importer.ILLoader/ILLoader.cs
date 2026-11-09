@@ -56,6 +56,8 @@ namespace ZSharp.Importer.ILLoader
 
         public void Install(MappedLoader loader, MappedCodeLoader code)
         {
+            running = this;
+
             loader.Instances.Register<Package.DotNet.Method>(LoadMethod);
             loader.Definitions.Register<Package.DotNet.Method>(LoadMethod);
 
@@ -138,15 +140,51 @@ namespace ZSharp.Importer.ILLoader
             return result;
         }
 
+        /// <summary>
+        /// The description of a type: of one the runtime made of a definition defined in Z#,
+        /// the definition, so a type has one description however it is reached.
+        /// </summary>
         public Package.DotNet.TypeReference Load(Type type)
         {
             if (!typeNodes.TryGetValue(type, out var result))
             {
+                if (DefinedAs(type) is { } defined)
+                    return typeNodes[type] = defined;
+
                 typeNodes[type] = result = Describe(type);
                 nodeTypes[result] = type;
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// The loader of the process that runs, which code describing a type asks.
+        /// </summary>
+        private static ILLoader? running;
+
+        /// <summary>
+        /// The description of a type, as code asks for it as it runs, wherever it runs: the
+        /// loader of that process describes the type there. A description of a type is a
+        /// call of this, given the type's type object.
+        /// </summary>
+        public static Package.DotNet.TypeReference DescribeType(Type type)
+            => (running ?? throw new InvalidOperationException("No loader describes types in this process.")).Load(type);
+
+        private static readonly MethodInfo describeType = typeof(ILLoader).GetMethod(nameof(DescribeType))!;
+
+        /// <summary>
+        /// The description of a type, as code: a call of <see cref="DescribeType"/>, given the
+        /// type's type object, cast to the type asked for if it is narrower.
+        /// </summary>
+        internal IResult Described(CompilerObject type, CompilerObject targetType)
+        {
+            var description = Class(typeof(Package.DotNet.TypeReference));
+            var call = new Objects.Call(Handle(describeType), [type], () => description);
+
+            return Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, description)
+                ? Result.Ok(call)
+                : Core.Compiler.ModuleScope.CG.Cast(call, targetType);
         }
 
         public Package.DotNet.Method Load(MethodInfo method)

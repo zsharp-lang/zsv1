@@ -168,4 +168,14 @@ namespace ZSharp.LIR.CLR
             base.SetItem(index, item);
         }
     }
+
+    /// <summary>
+    /// A CLR platform's mark on a module that defines a class, which is the module's as its
+    /// functions are: a platform that writes the module writes the class with it.
+    /// </summary>
+    public sealed class DefinesClass(ClassDefinition definition)
+        : LIR.Metadata
+    {
+        public ClassDefinition Definition { get; } = definition;
+    }
 }

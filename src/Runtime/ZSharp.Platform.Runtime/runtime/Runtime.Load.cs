@@ -426,6 +426,18 @@ namespace ZSharp.Platform.Runtime
         private readonly HashSet<ClassDefinition> uncreated = [];
 
         /// <summary>
+        /// The class definition a type this runtime made is, if it is one.
+        /// </summary>
+        public ClassDefinition? DefinitionOf(Type type)
+        {
+            foreach (var (definition, made) in classes)
+                if (made == type)
+                    return definition;
+
+            return null;
+        }
+
+        /// <summary>
         /// The method a class method became, once its class is loaded.
         /// </summary>
         public IL.MethodBase Defined(ClassMethod method)

@@ -5,10 +5,10 @@
 // platform's own are, and what importing it gives is its module, whose members are its
 // public types, by their names.
 
-import { String, Path, DotNet_Module, Assembly, AppDomain, ilLoader } from "core:runtime";
+import { Object, String, Type, Path, File, List, DotNet_Module, Assembly, AppDomain, ilLoader } from "core:runtime";
 import { Instance } from "std:zsharp/hir";
 import { Error, Result, IResult } from "std:zsharp/common";
-import { files } from "core:zsharp";
+import { files, export } from "core:zsharp";
 
 def Assemblies of DotNet_Module {
     fun load(path: String): IResult[Instance, Error] {
@@ -32,3 +32,20 @@ def Assemblies of DotNet_Module {
 }
 
 files.Register(".dll", Assemblies.load);
+
+let objectType: Type = Object;
+import { Convert } from objectType.Assembly.Location;
+
+// Copies the assemblies a build needs into the directory it is built into, so it runs
+// where they aren't installed. One already there, the same, is left, as it may be in use.
+@export
+fun bundle(assemblies: List[String], directory: String) {
+    let index = 0;
+    while (index < assemblies.Count) {
+        let copy = Path.Combine(directory, Path.GetFileName(assemblies[index]));
+        let same = false;
+        if (File.Exists(copy)) same = Convert.ToBase64String(File.ReadAllBytes(copy)) == Convert.ToBase64String(File.ReadAllBytes(assemblies[index]));
+        if (same == false) File.Copy(assemblies[index], copy, true);
+        index = index + 1;
+    }
+}

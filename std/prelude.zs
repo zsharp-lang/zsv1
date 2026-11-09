@@ -19,6 +19,13 @@ import { Module } from "std:modules";
 import { Class, Interface } from "std:oop";
 import { Type } from "std:types";
 
+// Reflection, as the IL loader describes a type in the process that runs.
+import { reflect } from "std:reflection";
+import { premap } from "std:functions";
+import { ilLoader } from "core:runtime";
+import { Instance } from "std:zsharp/hir";
+premap(reflect as Instance, ilLoader.Load(ilLoader.GetType().GetMethod("DescribeType")));
+
 // .NET assemblies as files, and packages, as `pkg:`, from the package manager.
 import "std:dotnet";
 import "std:packages";

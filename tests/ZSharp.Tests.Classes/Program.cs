@@ -1,4 +1,4 @@
-using CommonZ;
+﻿using CommonZ;
 using ZSharp.Compiler;
 using ZSharp.Importer.ILLoader;
 using ZSharp.Lang;
@@ -4711,6 +4711,60 @@ Try("a module file emits anything, as a type, which it is given as what describe
         import { discover as discover284, Compiler as Compiler284 } from "std:project";
         Keep(Compiler284(discover284("{{root.Replace('\\', '/')}}")).compile()[0]);
         """) is null && ReferenceEquals(Kept(), il.Load(typeof(int)));
+});
+
+Try("reflect describes a type as the code runs, as what a description cast gives", () =>
+    ResetKept() && Run("""
+        import { Instance as Instance287 } from "std:zsharp/hir";
+        import { reflect as reflect287 } from "std:reflection";
+        import { Type as Type287 } from "core:runtime";
+        let type287: Type287 = String;
+        Keep(reflect287(type287));
+        Keep(String as Instance287);
+        """) is null && Probe.Kept is [var reflected, var cast] && ReferenceEquals(reflected, il.Load(typeof(string))) && ReferenceEquals(cast, reflected));
+
+Try("a declared function is called as what it is premapped to", () =>
+    ResetKept() && Run("""
+        import { Instance as Instance288 } from "std:zsharp/hir";
+        import { premap as premap288 } from "std:functions";
+        fun answer288(): Int32;
+        fun given288(): Int32 { return 42; }
+        premap288(answer288 as Instance288, given288 as Instance288);
+        Keep(answer288());
+        """) is null && Kept() is 42);
+
+Try("an assembly the Cecil platform writes describes types where it runs", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-described-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Described289"));
+        """);
+    File.WriteAllText(Path.Combine(source, "described.zs"), """
+        import { String, Type, Object } from "core:runtime";
+        import { Instance } from "std:zsharp/hir";
+        import { reflect } from "std:reflection";
+        fun direct(): Object { return String as Instance; }
+        fun reflected(type: Type): Object { return reflect(type); }
+        """);
+
+    var written = Path.Combine(root, "Described289.dll").Replace('\\', '/');
+
+    return ResetKept() && Run($$"""
+        import { discover as discover289, Compiler as Compiler289 } from "std:project";
+        import { Module as Module289, lower as lower289 } from "std:modules";
+        import { Cecil as Cecil289 } from "pkg:cecil";
+        import { Type as Type289 } from "core:runtime";
+        let target289 = Cecil289("Described289", "net8.0");
+        target289.add(lower289(Compiler289(discover289("{{source.Replace('\\', '/')}}")).compile()[0] as Module289, target289));
+        target289.write("{{written}}");
+        import { direct as direct289, reflected as reflected289 } from "{{written}}";
+        let type289: Type289 = String;
+        Keep(direct289());
+        Keep(reflected289(type289));
+        """) is null && Probe.Kept is [var direct, var reflected] && ReferenceEquals(direct, il.Load(typeof(string))) && ReferenceEquals(reflected, direct);
 });
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)

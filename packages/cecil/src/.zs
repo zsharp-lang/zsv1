@@ -13,7 +13,7 @@ import {
 } from "core:runtime";
 
 let objectType: Type = Object;
-import { BindingFlags, Convert, Enum, Version, Module as ReflectedModule } from objectType.Assembly.Location;
+import { BindingFlags, Convert, Enum, Version, AppContext, Module as ReflectedModule } from objectType.Assembly.Location;
 
 import {
     AssemblyDefinition, AssemblyNameDefinition, ModuleDefinition, ModuleKind,
@@ -22,7 +22,7 @@ import {
     GenericInstanceType, GenericInstanceMethod, GenericParameter, GenericParameterType,
     ArrayType, ByReferenceType, PointerType, RequiredModifierType, OptionalModifierType,
     CallSite, OpCode, OpCodes, ILProcessor, Instruction, VariableDefinition, InterfaceImplementation, CustomAttribute,
-    PropertyDefinition, PropertyAttributes
+    PropertyDefinition, PropertyAttributes, WriterParameters
 } from "pkg:Mono.Cecil@0.11.6";
 
 import {
@@ -38,8 +38,8 @@ import {
 import {
     ClrEntity, ClrType, ClrArrayType, ClrPointerType, ClrGenericParameter, ClrMethod, ClrField, ClrCode, ClrLocal,
     ByRefType, AddressOf, CastDown, TypeTest, MethodOf, Polymorphic, Reflected,
-    ClassDefinition, ClassMethod, ClassConstructor, ClassField, ClassFieldAccess, ClassGenericParameter, ClassProperty
+    ClassDefinition, ClassMethod, ClassConstructor, ClassField, ClassFieldAccess, ClassGenericParameter, ClassProperty, DefinesClass
 } from "std:zsharp/lir/clr";
 import { Error, Result, IResult } from "std:zsharp/common";
 
-emit(compile("Cecil"));
+emit(compile("CecilPlatform"));

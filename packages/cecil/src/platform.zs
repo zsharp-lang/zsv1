@@ -139,12 +139,75 @@ def Cecil of DotNet_Class : ClrPlatform {
             index = index + 1;
         }
 
+        // The CLR classes the module defines are written with it.
+        index = 0;
+        while (index < unit.Metadata.Count) {
+            if (unit.Metadata[index] is defines of DefinesClass) this.classDefinition(defines.Definition);
+            index = index + 1;
+        }
+
         this.flush();
     }
 
+    // The assembly is written the same each time it is built from the same LIR: its
+    // module's identity is of its content, and it has no time of its own.
     @explicitThis fun write(this, path: String) {
         this.flush();
-        this.assembly.Write(path);
+        let parameters = WriterParameters();
+        parameters.DeterministicMvid = true;
+        parameters.Timestamp = Convert.ToUInt32(0);
+        this.assembly.Write(path, parameters);
+    }
+
+    // The files of the assemblies the written one needs that neither .NET nor the toolchain
+    // that runs it has, as a package's, with those they need in turn: what a build puts
+    // next to it, so it runs where they aren't installed.
+    @explicitThis fun dependencies(this): List[String] {
+        this.flush();
+        let found = List[String]();
+        let index = 0;
+        while (index < this.main.AssemblyReferences.Count) {
+            this.depend(this.main.AssemblyReferences[index].Name, found);
+            index = index + 1;
+        }
+        return found;
+    }
+
+    @explicitThis fun depend(this, name: String, found: List[String]) {
+        let core: Type = Object;
+        let framework = Path.GetDirectoryName(core.Assembly.Location);
+        let toolchain = Path.GetDirectoryName(Path.GetFullPath(AppContext.BaseDirectory));
+
+        let assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        let index = 0;
+        while (index < assemblies.Length) {
+            let assembly = assemblies[index];
+            if (assembly.GetName().Name == name) {
+                if (this.bundles(assembly, framework, toolchain, found)) {
+                    found.Add(assembly.Location);
+
+                    let referenced = assembly.GetReferencedAssemblies();
+                    let each = 0;
+                    while (each < referenced.Length) {
+                        this.depend(referenced[each].Name, found);
+                        each = each + 1;
+                    }
+                }
+                index = assemblies.Length;
+            }
+            index = index + 1;
+        }
+    }
+
+    // Whether an assembly goes with a build: one with a file of its own, that neither .NET
+    // nor the toolchain has, and that isn't with it already.
+    @explicitThis fun bundles(this, assembly: Assembly, framework: String, toolchain: String, found: List[String]): Boolean {
+        if (assembly.IsDynamic) return false;
+        if (assembly.Location == "") return false;
+        let directory = Path.GetDirectoryName(assembly.Location);
+        if (directory == framework) return false;
+        if (directory == toolchain) return false;
+        return found.Contains(assembly.Location) == false;
     }
 
     // A name for something LIR names or doesn't, once in the assembly.

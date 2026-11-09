@@ -1,7 +1,9 @@
 // std:packages — `pkg:`, from the package manager. The package manager is a project of
 // the toolchain's, in `pkg`: its assembly, once it is built into `pkg/build`, or else
 // the project, compiled now. Either is `core:packages`, whose roots code can add to, and
-// a package that is a project is compiled by the project compiler.
+// a package that is a project is compiled by the project compiler. An assembly the
+// running .NET can't find, as one a package's assembly refers to, it asks the package
+// manager for.
 
 import { Object, String, Type, Path, File, Directory, Assembly, ilLoader } from "core:runtime";
 import { Instance } from "std:zsharp/hir";
@@ -11,7 +13,7 @@ import "std:dotnet";
 import { discover, Compiler } from "std:project";
 
 let objectType: Type = Object;
-import { AppContext } from objectType.Assembly.Location;
+import { AppContext, AssemblyLoadContext } from objectType.Assembly.Location;
 
 module Bootstrap {
     // Where the toolchain is: the directory the standard library is in.
@@ -42,6 +44,7 @@ module Bootstrap {
 
 core.Add("packages", Bootstrap.manager());
 
-import { load, compileProjectsWith } from "core:packages";
+import { load, compileProjectsWith, resolveAssembly } from "core:packages";
 compileProjectsWith(Bootstrap.project);
 importers.Register("pkg", load);
+AssemblyLoadContext.Default.Resolving.add(resolveAssembly);

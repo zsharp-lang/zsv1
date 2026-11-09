@@ -4,6 +4,7 @@
 // its source, which is what builds it the first time.
 import "std:prelude";
 import { print } from "std:io";
+import { bundle } from "std:dotnet";
 import { Path, Directory } from "core:runtime";
 import { discover, Compiler } from "std:project";
 import { Module, lower } from "std:modules";
@@ -17,4 +18,5 @@ target.add(lower(packages, target));
 Directory.CreateDirectory("pkg/build");
 let written = Path.GetFullPath("pkg/build/Packages.dll");
 target.write(written);
+bundle(target.dependencies(), Path.GetDirectoryName(written));
 print("wrote " + written);
