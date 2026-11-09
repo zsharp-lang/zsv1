@@ -110,6 +110,15 @@ namespace ZSharp.Platform.Runtime
                 else
                     Expression(argument);
 
+            // A standalone function can only call a method that exists, so the module of a
+            // function it calls is loaded first.
+            if (standalone && node.Callable is LIR.Function { Module: not null } function
+                && !Runtime.IsOperation(function) && !runtime.TryMethod(function, out _))
+            {
+                il.Emit(Emit.OpCodes.Call, runtime.LoadMethod(function));
+                return;
+            }
+
             runtime.EmitCall(il, node.Callable);
         }
 

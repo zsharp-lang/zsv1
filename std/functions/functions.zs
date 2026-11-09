@@ -258,7 +258,7 @@ def Filler {
         if (invalid != null) return Result[Block].Error(invalid);
 
         if (this.function.ReturnType != null) {
-            let type = bodies.Described[Type](this.compiler, this.function.ReturnType);
+            let type = this.compiler.CompileExpression(this.function.ReturnType);
             if (type.IsError) return Result[Block].Error(type.UnwrapError());
 
             let set = Set();

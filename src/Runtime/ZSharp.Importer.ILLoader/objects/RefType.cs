@@ -12,6 +12,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICompileIRExpression
         , ITyped
         , ICTImplicitCastFrom
+        , ICTImplicitCastTo
         , IAssignableTo
         , ICTCastTo
     {
@@ -52,6 +53,12 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? Result.Ok(new Literal(node, node.GetType(), loader))
                 : Result.Error(new UnsupportedError($"A reference can't be cast to that type."));
         }
+
+        /// <summary>
+        /// A reference type goes where an HIR type is expected as what describes it.
+        /// </summary>
+        IResult ICTImplicitCastTo.ImplicitCast(CompilerObject targetType)
+            => loader.Describes(targetType) ? Cast(targetType) : Result.Error(new UnsupportedError("A reference type isn't a description."));
 
         public IResult ImplicitCast(CompilerObject @object)
         {

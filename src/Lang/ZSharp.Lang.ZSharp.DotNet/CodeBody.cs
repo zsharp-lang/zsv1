@@ -28,9 +28,6 @@ namespace ZSharp.Lang.DotNet
         /// </summary>
         public Bodies Bodies { get; } = new(language, type => il.Load(type), value => il.Expose(value), il.Load(typeof(Nodes)), evaluate);
 
-        public IResult<Code.Expression, Error> Described<T>(ASTCompiler compiler, AST.Expression type)
-            => Bodies.Described<T>(compiler, type);
-
         /// <summary>
         /// A compiler for the members of a CLR class, interface or module: a <c>fun</c> in it
         /// is a CLR method, whatever <c>fun</c> is elsewhere. A definition inside a member
@@ -96,7 +93,7 @@ namespace ZSharp.Lang.DotNet
             if (let.Type is null)
                 return Result<Code.Expression>.Error($"Field {let.Name} needs a type.");
 
-            if (Described<HIR.Type>(compiler, let.Type).When(out var type).Error(out var error))
+            if (compiler.CompileExpression(let.Type).When(out var type).Error(out var error))
                 return Result<Code.Expression>.Error(error);
 
             var fieldType = il.Load(typeof(Package.DotNet.Field));

@@ -23,16 +23,6 @@ namespace ZSharp.Lang
     )
     {
         /// <summary>
-        /// Compiles a type and casts it to what describes it, as in <c>I32 as Type</c>
-        /// where <c>Type</c> is the HIR marker. An existing type is reflected, and a
-        /// definition being built already is its description.
-        /// </summary>
-        public IResult<Code.Expression, Error> Described<T>(ASTCompiler compiler, AST.Expression type)
-            => compiler.CompileExpression(type).When(out var compiled).Error(out var error)
-                ? Result<Code.Expression>.Error(error)
-                : Result<Code.Expression>.Ok(new Code.Cast { Value = compiled!, Type = new Code.Get(describe(typeof(T))) });
-
-        /// <summary>
         /// Adds code that builds each parameter as a node of the given kinds, and binds its
         /// name. In <c>(a, b, {c, d})</c>, <c>a</c> and <c>b</c> are positional only and
         /// <c>c</c> and <c>d</c> named only. A parameter written <c>external as internal</c>
@@ -63,7 +53,7 @@ namespace ZSharp.Lang
             // A parameter with no type is completed by a rule or is an error, which the code
             // it belongs to decides when it is loaded.
             if (parameter.Type is not null)
-                if (Described<HIR.Type>(compiler, parameter.Type).When(out var type).Error(out var error))
+                if (compiler.CompileExpression(parameter.Type).When(out var type).Error(out var error))
                     return error;
                 else
                     arguments = [.. arguments, type!];
@@ -248,7 +238,7 @@ namespace ZSharp.Lang
             Code.Expression type = new Code.Get(expose(HIR.Infer.Value));
 
             if (let.Type is not null)
-                if (Described<HIR.Type>(compiler, let.Type).When(out var described).Error(out var error))
+                if (compiler.CompileExpression(let.Type).When(out var described).Error(out var error))
                     return Result<Code.Expression>.Error(error);
                 else
                     type = described!;

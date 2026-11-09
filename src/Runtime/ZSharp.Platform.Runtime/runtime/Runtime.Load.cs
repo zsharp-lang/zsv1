@@ -24,6 +24,12 @@ namespace ZSharp.Platform.Runtime
         private readonly Queue<Action> bodies = [];
         private readonly List<LIR.Structure> pendingStructures = [];
         private readonly List<LIR.Global> pendingGlobals = [];
+
+        /// <summary>
+        /// The globals with initializers declared in each module's holder since it was last
+        /// completed, which the holder's type initializer gives their values.
+        /// </summary>
+        private readonly Dictionary<LIR.Module, List<LIR.Global>> initialized = [];
         private readonly List<LIR.Function> pendingFunctions = [];
 
         /// <summary>
@@ -347,6 +353,14 @@ namespace ZSharp.Platform.Runtime
             globals[global] = field;
             pendingGlobals.Add(global);
 
+            if (global.Initializer is not null)
+            {
+                if (!initialized.TryGetValue(global.Module!, out var declared))
+                    initialized[global.Module!] = declared = [];
+
+                declared.Add(global);
+            }
+
             return field;
         }
 
@@ -370,8 +384,37 @@ namespace ZSharp.Platform.Runtime
             return method;
         }
 
+        /// <summary>
+        /// A holder's globals are given their initial values by its type initializer, which
+        /// the CLR runs before any of them is first used. What an initializer reaches is
+        /// declared and emitted with it.
+        /// </summary>
+        private void EmitInitializers()
+        {
+            while (initialized.Count > 0)
+            {
+                var pending = initialized.ToList();
+                initialized.Clear();
+
+                foreach (var (owner, declared) in pending)
+                {
+                    var initializer = new LIR.Function(new LIR.Signature()) { Name = ".cctor", Body = new LIR.Code() };
+
+                    foreach (var global in declared)
+                        initializer.Body.Block.Statements.Add(new LIR.SetGlobal(global, global.Initializer!));
+
+                    new CodeEmitter(this, Holder(owner).DefineTypeInitializer().GetILGenerator(), initializer).EmitBody();
+                }
+
+                while (bodies.TryDequeue(out var body))
+                    body();
+            }
+        }
+
         private void Complete()
         {
+            EmitInitializers();
+
             var completed = new HashSet<LIR.Structure>();
 
             foreach (var structure in pendingStructures)

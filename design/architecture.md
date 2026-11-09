@@ -169,6 +169,11 @@ To be designed. Settled so far:
   structure, and layout is inferred from field order.
 - Concepts such as a method are metadata attached to a `Function`. A target may
   interpret metadata, but it is not strictly required for functionality.
+- A `Global` can have an initializer, the value it has before it is first read or
+  written: evaluated once, a module's in the order of its globals. Every target
+  initializes what it loads, as the CLR's type initializers, a JS module's body or LLVM's
+  global constructors, so it is a core concept. The CLR runtime gives each module's
+  holder type an initializer that sets its globals.
 - `Reference` is a core LIR type that holds its target type. The lowerer (a CO,
   for example) decides the exact type of a field, and so whether it is stored
   inline. It can move out of the core if more targets show it isn't common.
@@ -769,30 +774,43 @@ a custom type gets into the language to be used as a meta-type.
   `cast` and `test` for that: an object knows what it is, so the capability marks a
   function with no code as the platform's cast or test, which the runtime emits in place
   as `castclass` or `isinst`. LIR still has no cast nodes.
-- A Z# class or interface is described by its node: casting its CO to what describes
-  it, as a type written in a signature is, gives the node, so a Z# type can be a field's,
-  a parameter's or a base's type. A failed lowering keeps why, so the error a call gives
-  is the code's own.
-- A CLR definition's signature still takes only CLR types, so a function of a CLR module
-  can't take a Z# class or interface yet; a Z# function can. A cast from a CLR class to
-  an interface still being loaded goes down as C# allows, if the class isn't sealed.
+- A type written in a signature is evaluated, as any expression is: there is no
+  compile-time, only code that runs, and the code that builds a definition is code like
+  any other. Typing is part of structure, so a type's value where an HIR type is expected
+  is HIR, and composing types is ordinary code that builds HIR. A type converts implicitly
+  to what describes it where an `HIR.Type` is expected, which is what a signature's slots
+  are; anywhere else it is its type object, and `Foo as Class` is reflection.
+  `Dictionary[String, Item]` is `CG.Index` on `Dictionary`: given types, it is the
+  instance as a type, which converts to its description, a generic instance node of the
+  definition and what describes each argument; given values that describe types, as a
+  class still being built is in the code that builds it, it builds that node as the code
+  runs. A generic instance node's arguments are any `HIR.Type`, so a CLR generic instance
+  can be over a Z# class. So `let items: listOf(Item)`, where `listOf` is a function from
+  a type to a type, is a field's type like any other.
+- So any type goes anywhere a type does: a CLR method's parameters, return type and
+  fields are `HIR.Type`s, which the IL loader loads to COs and lowers to the LIR the
+  runtime realizes, whatever the type is. A failed lowering keeps why, so the error a
+  call gives is the code's own. A cast from a CLR class to an interface still being
+  loaded goes down as C# allows, if the class isn't sealed.
 - A member of a Z# class marked `@static`, which `std:oop` exports, is the class's own: a
   static field is one variable, and a static method is a function, which takes no object
   and isn't marked as a method. The decorator is a Z# function that sets the node's
   `IsStatic`, run as the class is built, as any decorator is, and a decorated `let` in a
   class's body is a field given to its decorators, which the members compiler handles. A
-  member is registered as what it is, whatever its decorators gave. Since a decorator runs
-  only once the member's code is compiled, a member is reached the same way whatever it
-  is: a field by its name, through the object, and the class's members tell a static one
-  apart as they are lowered. So a static member is reached through the class, through an
-  object, and by name in a method, and an object's own member through the class is an
-  error, as using the object in a static method is.
-- A static field lowers to an LIR global of the class's module, with a second one that
-  says whether it was given a value, and to a function that reads it and one that writes
-  it. The first read or write gives it its default value, so a target needs nothing that
-  runs before. A field is loaded from its node, as a method is, so it knows its class.
-- A class is a value: its type object, the one object of its metaclass for each target,
-  made the first time it is used. A member marked `@class`, which `std:oop` exports, is the
+  member is registered as what it is, whatever its decorators gave.
+- HIR describes structure and MIR behavior, so a member's code holds references, and
+  only loading it, once the class is complete, says what they mean. In a method, each of
+  the class's members, a field or a method, is reached by its name, bound through the
+  object the method runs on, unless a parameter has the name: `bar()` binds and
+  `Foo.bar()` doesn't, so the binding is in the code. What binding means is the member's
+  CO's to say: an object's member is reached through the object, binding a static member
+  does nothing, and a class member is reached through the class's type object. Using the
+  object where there is none, in a static or class method, is an error when the code is
+  loaded.
+- A static field lowers to an LIR global of the class's module, initialized with the
+  field's default value. A field is loaded from its node, as a method is, so it knows its
+  class.
+- A class is a value: its type object, the one object of its metaclass for each target. A member marked `@class`, which `std:oop` exports, is the
   type object's: a class field is a field of the metaclass, and a class method a method of
   it, which runs on the type object, named `this` if its first parameter says so. An
   interface declares class methods too, on its class shape, the metaclass every class that
@@ -801,17 +819,13 @@ a custom type gets into the language to be used as a meta-type.
   `Shape`, calls what that class has. A metaclass and a class shape lower to structures
   the target's polymorphism makes an object type and an interface, in the class's or
   interface's module, and a class's metaclass implements its interfaces' class shapes. A
-  class's type object is an LIR global, made by the function that gives it, as a static
-  field is given its value. `ClassOf` is the node that describes a metaclass, so it can be
-  written in a signature.
+  class's type object is an LIR global of its module, initialized with a new object of its
+  metaclass. `ClassOf` is the node that describes a metaclass, so it can be written in a
+  signature.
 - With no inheritance, a value of a class is of that class, so a class member reached
   through it, or by name in one of its methods, is its class's type object's. Only a value
   of an interface could be of any class, so what class it is would come from the object,
   which isn't reachable yet.
-- While a class is being built, a definition is its node, so a field's type is evaluated
-  where a class being built is a value: `Dictionary[String, Item]` as a field's type of a
-  class built with `Item` indexes `Dictionary` with a value. A generic CLR type given a
-  type's node would have to describe the instance, which nothing does yet.
 - What a definition written in Z# needs from code that uses a class still being loaded
   with it is general: such a class goes to the interfaces it implements, can be cast down
   to and tested for, has a `null`, can be given to a generic CLR type, and has its
@@ -825,9 +839,14 @@ a custom type gets into the language to be used as a meta-type.
 - The runtime counts how deep it is loading. What a load reaches while code is emitted,
   as a class first used by that code, loads inside it, and only the outermost load
   finishes, so nothing is completed while code is still being emitted.
-- In building code, `Get(node)` is the entity the node stands for. A definition that
-  needs the node itself, as a type's description, casts the entity to what describes it,
-  which is reflection.
+- A definition has three representations: its meta-type's instance, the HIR that is its
+  structure, for reflection and code generation; its CO, for what it does with other
+  things; and its type object, what it is as a value, whose shape is the meta-type's to
+  say. For `def Foo of Class`, they are a `Class`, a `CompilerObject` and a `Class[Foo]`.
+  In the code that builds a definition, its name is bound to the local holding its node,
+  since the definition doesn't exist yet: loaded, it is a variable of the meta-type, and
+  reading it gives the node. A definition that exists is its CO, whose value is its type
+  object, which converts to the node where an HIR type is expected.
 - A CLR class, interface or module compiles a `fun` written directly in it as a CLR
   method, through `CodeBody.WithMethods`, whatever the default for `fun` is: the meta-type
   of its members is the container's to choose.
@@ -1797,10 +1816,12 @@ The first target is parity with `zsv1`: importing `print` and calling it.
 - Which `Package.DotNet` entities are needed to fully describe the CTS, including how
   a value type becomes an object.
 
-## Decisions made while you were away
+## Choices and restrictions from 2026-11-09
 
-Choices made without you on 2026-11-09, taking the most conservative general option. Each
-lists what was chosen and the alternatives, for you to keep or change.
+Made without you on 2026-11-09. The choices are design for you to keep or change; the
+restrictions are what isn't supported yet, with what it would take.
+
+Choices:
 
 - **Interface syntax.** `def Shape of Interface { ... }`, with `Interface` imported from
   `std:oop`, as any meta-type is given with `of`. Alternatives: an `interface` keyword, or
@@ -1808,41 +1829,29 @@ lists what was chosen and the alternatives, for you to keep or change.
 - **What implements an interface.** A class's bases are the interfaces it implements, as
   `def Square : Shape`, since a Z# class has no inheritance. Alternative: a separate
   clause, such as `implements`.
-- **Interface methods have no code.** A method written in an interface with code is an
-  error, as is a field or a constructor. Alternatives: default methods, or interface
-  fields as properties.
-- **Interfaces don't extend interfaces yet.** An interface given bases is an error. The
-  runtime's `Polymorphic.Interfaces` already allows an interface to extend others.
 - **Matching an implementation.** A class's method implements an interface's if it has
   the name, the number of parameters, and types that each go to the other, the return
-  type included. Parameter names aren't compared. Alternatives: matching by assignability
-  in one direction (variance), or by explicit implementation.
+  type included, and is a class method if the interface's is. Alternatives: matching by
+  assignability in one direction (variance), or by explicit implementation.
 - **Casts and type tests belong to Polymorphism.** `cast` and `test` were added to the
   capability, since knowing what an object is comes with objects reaching their class's
   methods. Alternative: a separate capability, such as runtime types.
-- **Static members are marked `@static`.** `std:oop` exports `static`, so a document that
-  uses the CLR's `static` too imports one under another name. Alternatives: a keyword, or
-  one decorator name that overloading resolves for both kinds of definition.
-- **A static field is given its default value when first used.** No target needs to run
-  anything before, and a field's initializer can use what is defined after it.
-  Alternatives: initializing every static field when the class loads, which needs a
-  capability for code that runs first, or allowing only constant default values.
-- **Static members are reached through objects too, and by name in methods.** That's
-  how Java and Python allow it, and it follows from decorators running after the member's
-  code is compiled. Alternative: only through the class, as in C#, which would need the
-  members compiler to know a member is static while it compiles it.
-- **Methods aren't reached by name in a method.** Only fields are, as before, whether
-  static or not; a method is called through `this` or the class. Alternative: binding
-  methods by name too.
-- **Class members are marked `@class`.** As Python's class methods, a class method runs
-  on the class, which is a value. Alternatives: `@classmethod`, or a keyword.
+- **Decorator names.** `@static` and `@class`, exported by `std:oop`, so a document that
+  uses the CLR's `static` too imports one under another name. Alternatives: other names,
+  or one decorator that overloading resolves for each kind of definition.
 - **The type of a class's type object is written `Shape.Class`.** It is a member of the
-  class or interface, so it reads as the class of a `Shape`. Alternatives: `Type[Shape]`,
-  or `type(Shape)` as a function.
-- **A class's type object is made the first time it is used.** As a static field is given
-  its value, so no target needs code that runs first.
-- **A value of an interface doesn't give its class yet.** `shape.Class` would need each
-  object to reach its type object, as a method every class has, or a field of every
-  object. Left until something needs it.
-- **A class method of a class has no object, and an object's field isn't the class's.**
-  Using one in a class method is an error, as using the object in a static method is.
+  class or interface. Alternatives: `Type[Shape]`, or a function of the type.
+
+Restrictions:
+
+- **An interface's methods have no code, and an interface has no fields.** Default
+  methods would lower as methods of the interface the runtime realizes; fields would be
+  properties, which `std:oop` doesn't have yet.
+- **An interface doesn't extend interfaces.** The runtime's `Polymorphic.Interfaces`
+  already allows it; `std:oop` would need an interface's bases and assignability through
+  them.
+- **A value of an interface doesn't give its class.** `shape.Class` would take each
+  object reaching its type object, which a polymorphism operation, as `cast` and `test`
+  are, could give.
+- **Only one target has polymorphism.** Lowering for each target is kept by target, but
+  nothing yet lowers a class for a target without polymorphism.

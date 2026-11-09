@@ -18,7 +18,23 @@ namespace ZSharp.Importer.ILLoader.Objects
         , IRTGetIndex
         , IRTSetIndex
         , IAssignableTo
+        , ICTImplicitCastTo
+        , ICTCastTo
     {
+        /// <summary>
+        /// An instance goes where an HIR type is expected as what describes it: the
+        /// definition's description given what describes each argument. Casting it to what
+        /// describes it is reflection, as for any type.
+        /// </summary>
+        public IResult ImplicitCast(CompilerObject targetType)
+            => loader.Describes(targetType) ? Cast(targetType) : Result.Error(new UnsupportedError($"{definition.Name} isn't a description."));
+
+        public IResult Cast(CompilerObject targetType)
+            => Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(typeof(Package.DotNet.GenericInstance)))
+                && loader.DescribeInstance(definition, arguments) is { } described
+                ? described
+                : Result.Error(new UnsupportedError($"{definition.Name} can't be cast to that type."));
+
         private LIR.GenericInstance? lowered;
 
         public Type Definition => definition;

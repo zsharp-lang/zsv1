@@ -71,7 +71,7 @@ namespace ZSharp.Lang.DotNet
             var index = 0;
 
             foreach (var @base in definition.Bases ?? [])
-                if (body.Described<Package.DotNet.TypeReference>(compiler, @base).When(out var type).Error(out var error))
+                if (compiler.CompileExpression(@base).When(out var type).Error(out var error))
                     return error;
                 else
                     block.Statements.Insert(index++, new Code.ExpressionStatement(new Code.Call

@@ -701,6 +701,35 @@ namespace ZSharp.Importer.ILLoader
         internal bool IsInterface(Package.DotNet.Class node) => viewed.ContainsKey(node);
 
         /// <summary>
+        /// Whether a type is one that describes types, as an HIR type is: where a type goes
+        /// as what describes it, as in a signature, rather than as its type object.
+        /// </summary>
+        internal bool Describes(CompilerObject type)
+            => Core.Compiler.ModuleScope.TS.IsAssignableTo(Class(typeof(ZSharp.HIR.Type)), type);
+
+        /// <summary>
+        /// The description of a generic type's instance, as code that builds it from what
+        /// describes each argument, or <see langword="null"/> if an argument has no
+        /// description.
+        /// </summary>
+        internal IResult? DescribeInstance(Type definition, IEnumerable<CompilerObject> arguments)
+        {
+            var description = Class(typeof(ZSharp.HIR.Type));
+            var described = new List<Argument>();
+
+            foreach (var argument in arguments)
+                if (Core.Compiler.ModuleScope.CG.ImplicitCast(argument, description).When(out var converted).Error(out _))
+                    return null;
+                else
+                    described.Add(new Argument(converted!));
+
+            return Core.Compiler.ModuleScope.CG.Call(
+                new Objects.Method(this, typeof(Package.DotNet.GenericInstance).GetMethod(nameof(Package.DotNet.GenericInstance.Of))!, null),
+                [new Argument(new Objects.Literal(Load(definition), typeof(Package.DotNet.TypeReference), this)), .. described]
+            );
+        }
+
+        /// <summary>
         /// A generic type given its arguments, made from the types its parts stand for.
         /// </summary>
         private IResult Instantiate(Package.DotNet.GenericInstance node)
@@ -711,7 +740,7 @@ namespace ZSharp.Importer.ILLoader
             var arguments = new List<CompilerObject>();
 
             foreach (var argument in node.Arguments)
-                if (LoadType(argument).When(out var loaded).Error(out error))
+                if (Core.Compiler.ModuleScope.HIRLoader.LoadType(argument).When(out var loaded).Error(out error))
                     return Result.Error(error);
                 else
                     arguments.Add(loaded!);

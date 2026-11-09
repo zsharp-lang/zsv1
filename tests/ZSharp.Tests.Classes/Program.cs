@@ -3019,6 +3019,20 @@ Try("a class's own method is a delegate in its own code", () =>
         Keep(Holder234().run());
         """) is null && Kept() is 42);
 
+Try("a generic CLR type given a class still being built is the description of its instance", () =>
+    Run("""
+        module M248 {
+            import { Dictionary } from "core:runtime";
+            def Item248 { @explicitThis new(this) { } }
+            def Bag248 {
+                let items: Dictionary[String, Item248];
+                @explicitThis new(this) { this.items = Dictionary[String, Item248](); }
+                @explicitThis fun size(this): Int32 { this.items["x"] = Item248(); return this.items.Count; }
+            }
+        }
+        Keep(M248.Bag248().size());
+        """) is null && Kept() is 1);
+
 // ---- CLR value types
 
 Try("a struct's property is read from a struct a method returns", () =>
@@ -4174,6 +4188,83 @@ Try("a class method of a Z# class has no object", () =>
             @class247 fun read(): Int32 { return x; }
         }
         Keep(Thing247.read());
+        """) is { } e && e.Contains("a class method runs on the class"));
+
+Try("a Z# class's fields are of generic CLR types over Z# classes", () =>
+    Run("""
+        import { Dictionary as Dictionary249, List as List249 } from "core:runtime";
+
+        def Item249 {
+            let value: Int32;
+            new(this, value: Int32) { this.value = value; }
+        }
+
+        def Bag249 {
+            let items: Dictionary249[String, Item249];
+            let order: List249[Item249];
+            new(this) { this.items = Dictionary249[String, Item249](); this.order = List249[Item249](); }
+            fun put(this, name: String, value: Int32) {
+                let item = Item249(value);
+                this.items[name] = item;
+                this.order.Add(item);
+            }
+            fun total(this): Int32 { return this.items["a"].value + this.order[1].value; }
+        }
+
+        let bag249 = Bag249();
+        bag249.put("a", 40);
+        bag249.put("b", 2);
+        Keep(bag249.total());
+        """) is null && Kept() is 42);
+
+Try("a type written in a signature is any code that gives a type", () =>
+    Run("""
+        import { List as List250 } from "core:runtime";
+        import { Type as HIRType250 } from "std:zsharp/hir";
+
+        fun listOf250(element: HIRType250): HIRType250 { return List250[element]; }
+
+        def Item250 { new() { } }
+
+        def Shelf250 {
+            let items: listOf250(Item250);
+            new(this) { this.items = List250[Item250](); }
+            fun count(this): Int32 { this.items.Add(Item250()); return this.items.Count; }
+        }
+
+        Keep(Shelf250().count());
+        """) is null && Kept() is 1);
+
+Try("a method of a Z# class reaches each member by its name, whatever the member is", () =>
+    ResetKept() && Run("""
+        import { static as static251, class as class251 } from "std:oop";
+
+        def Meter251 {
+            @static251 let scale: Int32 = 10;
+            @class251 let made: Int32 = 0;
+            let value: Int32;
+
+            new(this, value: Int32) { made = made + 1; this.value = value; }
+
+            fun scaled(): Int32 { return value * scale; }
+            fun doubled(): Int32 { return scaled() * 2; }
+            @static251 fun times(by: Int32): Int32 { return scale * by; }
+            @class251 fun describe(): String { return "made " + made + ", times " + times(3); }
+            fun summary(): String { return doubled() + " " + describe(); }
+        }
+
+        Keep(Meter251(2).summary());
+        """) is null && Kept() is "40 made 1, times 30");
+
+Try("a class method of a Z# class can't call its objects' methods by name", () =>
+    Run("""
+        import { class as class252 } from "std:oop";
+        def Thing252 {
+            new() { }
+            fun own(): Int32 { return 1; }
+            @class252 fun shared(): Int32 { return own(); }
+        }
+        Keep(Thing252.shared());
         """) is { } e && e.Contains("a class method runs on the class"));
 
 Try("the prelude brings the standard definitions", () =>

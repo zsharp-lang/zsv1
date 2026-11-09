@@ -106,7 +106,11 @@ namespace ZSharp.Lang.DotNet
         }
 
         public HIR.Code.Expression Described(HIR.Code.Expression type)
-            => new HIR.Code.Cast { Value = type, Type = new HIR.Code.Get(il.Load(typeof(HIR.Type))) };
+        {
+            var described = new HIR.Code.Local(string.Empty, (HIR.Type)il.Load(typeof(HIR.Type))) { Init = type };
+
+            return new HIR.Code.BlockExpression { Statements = [new HIR.Code.Declare(described)], Result = new HIR.Code.Get(described) };
+        }
 
         public Error? Load(HIR.Instance definition) => load(definition);
 

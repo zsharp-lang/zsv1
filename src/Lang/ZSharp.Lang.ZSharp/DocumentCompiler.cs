@@ -24,7 +24,8 @@ namespace ZSharp.Lang
         public IResult<object?, Error> Evaluate(Package.ZSharp.Document document, HIRExpression expression);
 
         /// <summary>
-        /// Code that gives the HIR type that code evaluating to a type describes.
+        /// Code that gives the value of code written as a type where an HIR type goes, so
+        /// it converts as any value going there does: a type to what describes it.
         /// </summary>
         public HIRExpression Described(HIRExpression type);
 

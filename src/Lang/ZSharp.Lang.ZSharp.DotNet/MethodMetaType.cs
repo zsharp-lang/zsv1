@@ -52,7 +52,7 @@ namespace ZSharp.Lang.DotNet
 
             if (function.ReturnType is not null)
             {
-                if (body.Described<HIR.Type>(compiler, function.ReturnType).When(out var type).Error(out error))
+                if (compiler.CompileExpression(function.ReturnType).When(out var type).Error(out error))
                     return Result<Code.Block>.Error(error);
 
                 block.Statements.Add(new Code.ExpressionStatement(new Code.Set

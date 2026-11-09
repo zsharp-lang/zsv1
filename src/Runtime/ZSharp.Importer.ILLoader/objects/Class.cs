@@ -11,6 +11,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICompileIRType
         , ICTCallable
         , ICTCastTo
+        , ICTImplicitCastTo
         , ICTGetMember<MemberName>
         , IRTGetMember<MemberName>
         , IRTCallable
@@ -209,6 +210,18 @@ namespace ZSharp.Importer.ILLoader.Objects
         }
 
         /// <summary>
+        /// A generic type given values that are types' descriptions, as a class still
+        /// being built is in the code that builds it, is the description of its instance,
+        /// built as the code runs. Types are part of structure, so this is how types
+        /// compose: the instance's arguments are anything that describes a type. Returns
+        /// <see langword="null"/> if an argument isn't a description.
+        /// </summary>
+        private IResult? Described(Argument[] arguments)
+            => !IL.IsGenericTypeDefinition || arguments.Length != IL.GetGenericArguments().Length || arguments.Any(argument => argument.Name is not null)
+                ? null
+                : loader.DescribeInstance(IL, arguments.Select(argument => argument.Object));
+
+        /// <summary>
         /// Giving a type values, as in <c>Int32[4]</c>, makes an array of that length, with
         /// a dimension for each value, as in <c>Int32[2, 3]</c>, through the constructor the
         /// CLR gives the array type, so the values are matched as a call's arguments are.
@@ -240,7 +253,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (loader.Types(arguments, IL.IsGenericTypeDefinition ? IL.GetGenericArguments() : []) is not { } types)
                 return Instantiated(arguments) is { } instantiation
                     ? Result.Ok(instantiation)
-                    : NewArray(arguments);
+                    : Described(arguments) ?? NewArray(arguments);
 
             if (!IL.IsGenericTypeDefinition)
                 return Result.Error(new UnsupportedError($"{IL.Name} is not generic."));
@@ -277,6 +290,13 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? Result.Ok(new Literal(node, node.GetType(), loader))
                 : Result.Error(new UnsupportedError($"{IL.Name} can't be cast to that type."));
         }
+
+        /// <summary>
+        /// A type goes where an HIR type is expected, as in a signature, as what describes
+        /// it. Anywhere else it is its type object.
+        /// </summary>
+        public IResult ImplicitCast(CompilerObject targetType)
+            => loader.Describes(targetType) ? Cast(targetType) : Result.Error(new UnsupportedError($"{IL.Name} isn't a description."));
 
         /// <summary>
         /// A value of a value type becomes an object by boxing it, when it goes to a type
