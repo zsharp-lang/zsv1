@@ -6,7 +6,16 @@ namespace ZSharp.Importer.ILLoader.Objects
     internal sealed class DefinedModule(ILLoader loader, Package.DotNet.Module node)
         : CompilerObject
         , ICTGetMember<MemberName>
+        , ICTCastTo
     {
+        /// <summary>
+        /// Casting a module to what describes it is reflection, as for a type.
+        /// </summary>
+        public IResult Cast(CompilerObject targetType)
+            => Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(node.GetType()))
+                ? Result.Ok(new Literal(node, node.GetType(), loader))
+                : Result.Error(new UnsupportedError("A module can't be cast to that type."));
+
         public IResult Member(MemberName member)
         {
             // A class or an interface is found as a type, which it is while it is still

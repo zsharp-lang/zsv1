@@ -32,6 +32,10 @@ using ZSharp.Importer.ILLoader;
 [module: ImportType(typeof(Action<,>), Alias = "Action")]
 [module: ImportType(typeof(Action<,,>), Alias = "Action")]
 
+[module: ImportType(typeof(System.IO.Directory), Alias = "Directory")]
+[module: ImportType(typeof(System.IO.File), Alias = "File")]
+[module: ImportType(typeof(System.IO.Path), Alias = "Path")]
+
 [module: ImportType(typeof(ZSharp.Platform.Runtime.Runtime), Alias = "Runtime")]
 [module: ImportType(typeof(ZSharp.Platform.Runtime.Polymorphic), Alias = "Polymorphic")]
 [module: ImportType(typeof(ZSharp.Platform.Runtime.MethodOf), Alias = "MethodOf")]

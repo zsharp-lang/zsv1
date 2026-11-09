@@ -17,7 +17,7 @@
 // Importing it makes `def` a Z# class wherever nothing else compiles one, and
 // `def Name of Interface` a Z# interface.
 
-import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Interface, explicitThis, static as clrStatic, DotNet_Class, DotNet_Module } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Dictionary, HashSet, DotNet_Interface, explicitThis, static as clrStatic, DotNet_Class, DotNet_Module } from "core:runtime";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, OperatorDefinition } from "std:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement, Cast as CastCode } from "std:zsharp/hir/code";
 import {
@@ -1230,9 +1230,13 @@ def Objects of DotNet_Module {
         // since its functions are declared before any of their code is lowered.
         let lowerings: Dictionary[Object, Boolean];
         let failures: Dictionary[Object, String];
+        // The targets its structure is being built for: it exists, so a field's type can
+        // be the class, but it has none of its fields yet.
+        let building: HashSet[Object];
 
         @explicitThis new(this, node: Class) {
             this.node = node;
+            this.building = HashSet[Object]();
             this.structures = Dictionary[Object, Structure]();
             this.modules = Dictionary[Object, LIRModule]();
             this.lowerings = Dictionary[Object, Boolean]();
@@ -1363,6 +1367,7 @@ def Objects of DotNet_Module {
                 container.Structures.Add(structure);
                 this.modules[target] = container;
                 this.structures[target] = structure;
+                this.building.Add(target);
 
                 let fields = this.fields();
                 let index = 0;
@@ -1372,6 +1377,8 @@ def Objects of DotNet_Module {
                     structure.Fields.Add(field);
                     index = index + 1;
                 }
+
+                this.building.Remove(target);
 
                 index = 0;
                 while (index < this.node.Interfaces.Count) {
@@ -1488,9 +1495,12 @@ def Objects of DotNet_Module {
 
         // A class used as a type is lowered with it, so whatever has its objects has its
         // methods.
+        // While its structure is being built, as for a field of a type that has the class
+        // in it, the class is only its structure: what builds it lowers it once it can.
         @explicitThis fun CompileIRType(this, target: Object): IResult[LIRType, Error] {
             let structure = this.structure(target);
             if (structure == null) return Result[LIRType].Error(this.failure(target));
+            if (this.building.Contains(target)) return Result[LIRType].Ok(structure);
             if (this.lower(target) == false) return Result[LIRType].Error(this.failure(target));
             return Result[LIRType].Ok(structure);
         }

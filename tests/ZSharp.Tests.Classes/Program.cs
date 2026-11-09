@@ -96,6 +96,7 @@ var core = new ZSharp.Importer.String.LibraryImporter("core");
 core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
 core.Add("compiler", il.Load(typeof(Scope).Module));
+Core.ZSharp.ModuleScope.Libraries = core;
 
 var std = new ZSharp.Importer.String.LibraryImporter("standard");
 
@@ -4556,6 +4557,61 @@ Try("a module is any definition of Module", () =>
 
 Try("the prelude brings the standard definitions", () =>
     Run("""import "std:prelude";""") is null);
+
+Try("inside its module, a function's name is all of its overloads", () =>
+    ResetKept() && Run("""
+        def Overloads280 of DotNet_Module {
+            fun name(): String { return name("none"); }
+            fun name(given: String): String { return "named " + given; }
+            fun other(): String { return name("other"); }
+        }
+        Keep(Overloads280.name());
+        Keep(Overloads280.other());
+        """) is null && Probe.Kept is ["named none", "named other"]);
+
+Try("a Z# field's type can be made of its own class", () =>
+    ResetKept() && Run("""
+        import { List as List281 } from "core:runtime";
+        def Tree281 {
+            let children: List281[Tree281];
+            new(this) { this.children = List281[Tree281](); }
+        }
+        let tree281 = Tree281();
+        tree281.children.Add(Tree281());
+        Keep(tree281.children.Count);
+        """) is null && Kept() is 1);
+
+Try("a CLR module cast to what it is gives what describes it", () =>
+    ResetKept() && Run("""
+        import { Instance as Instance282 } from "std:zsharp/hir";
+        def Described282 of DotNet_Module { fun one(): Int32 { return 1; } }
+        Keep(Described282 as Instance282);
+        """) is null && Kept() is Package.DotNet.Module { Name: "Described282" });
+
+Try("the project compiler gives what the module files emit, compiled from their sources", () =>
+    ResetKept() && Run("""
+        import { discover as discover283, Compiler as Compiler283 } from "std:project";
+        import { Module as Module283 } from "std:modules";
+        let emitted283 = Compiler283(discover283("examples/project/src")).compile();
+        Keep((emitted283[0] as Module283).Name);
+        Keep((emitted283[1] as Module283).Name);
+        Keep((emitted283[1] as Module283).Definitions.Count);
+        """) is null && Probe.Kept is ["greetings", "Shop", 3]);
+
+Try("a module file emits anything, as a type, which it is given as what describes it", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-project-").FullName;
+    File.WriteAllText(Path.Combine(root, ".zs"), """
+        import { emit } from "core:project";
+        import { Int32 } from "core:runtime";
+        emit(Int32);
+        """);
+
+    return ResetKept() && Run($$"""
+        import { discover as discover284, Compiler as Compiler284 } from "std:project";
+        Keep(Compiler284(discover284("{{root.Replace('\\', '/')}}")).compile()[0]);
+        """) is null && ReferenceEquals(Kept(), il.Load(typeof(int)));
+});
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;

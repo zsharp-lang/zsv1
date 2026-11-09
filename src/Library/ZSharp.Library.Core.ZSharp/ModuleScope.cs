@@ -33,6 +33,14 @@ namespace Core.ZSharp
         public static global::ZSharp.Lang.Bodies Bodies { get; set; } = null!;
 
         /// <summary>
+        /// The <c>core:</c> library, whose modules are bound to the toolchain that is
+        /// running. Z# adds its own to it, as a module of live objects is just their
+        /// descriptions.
+        /// </summary>
+        [Alias("core")]
+        public static global::ZSharp.Importer.String.LibraryImporter Libraries { get; set; } = null!;
+
+        /// <summary>
         /// What imports from a source, giving the imported value or why it can't.
         /// </summary>
         public static Func<string, IResult<global::ZSharp.HIR.Instance, CommonZ.Error>> Importer { get; set; } = null!;

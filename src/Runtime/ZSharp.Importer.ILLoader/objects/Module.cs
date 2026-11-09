@@ -9,7 +9,16 @@ namespace ZSharp.Importer.ILLoader.Objects
     internal sealed class Module(ILLoader loader, System.Reflection.Module il)
         : CompilerObject
         , ICTGetMember<MemberName>
+        , ICTCastTo
     {
+        /// <summary>
+        /// Casting a module to what describes it is reflection, as for a type.
+        /// </summary>
+        public IResult Cast(CompilerObject targetType)
+            => Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(loader.Load(il).GetType()))
+                ? Result.Ok(new Literal(loader.Load(il), loader.Load(il).GetType(), loader))
+                : Result.Error(new UnsupportedError("A module can't be cast to that type."));
+
         public IResult Member(MemberName member)
         {
             // Types imported under one name, such as the arities of a generic family, are

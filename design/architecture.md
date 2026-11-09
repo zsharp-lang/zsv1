@@ -1645,6 +1645,20 @@ HIR `OverloadGroup`, which loads to a CO that applies an operation to each overl
 keeps the one it succeeds on. `Scope` only stores names; every binding goes through the
 binder.
 
+Inside a definition, its own name means what binding it where it is gives: for a method,
+all the overloads it is one of. It is in a scope of its own, around the definition's
+names, and is bound again when the definition's contents are compiled, since by then a
+container has bound the definitions next to it too. Binding it there shadows what the
+name means outside, and the .NET meta-types register a shadow rule that a method
+shadowing methods overloads them, as the merge rule does in one scope; each overload is
+in a group once. Where nothing outside has the name, as at document level before the
+definition runs, the name is the definition alone.
+
+Code that is built refers to a definition still being built through the local of the
+building code that holds it, which reifying encodes as what the local holds when the
+code is built. An overload group is reified the same way, built of its items, so a group
+of definitions being built is a group of the definitions.
+
 ### Overloads
 
 In HIR, an overload is pure structure. A class doesn't hold overloads, it holds methods.
@@ -1853,7 +1867,8 @@ The `as` cast marking such a definition is not settled.
   `core:runtime`, which also keeps the CLR's types for now; `pkg:` is an external
   package installed by the package manager; `std:` is the standard library, its common
   APIs; and `std:zsharp/` is the standard API of the toolchain, its types, as
-  `std:zsharp/hir`, `std:zsharp/lang/ast` and `std:zsharp/lang/parser`. The CLR
+  `std:zsharp/hir`, `std:zsharp/lang/ast`, `std:zsharp/lang/tokenizer` and
+  `std:zsharp/lang/parser`. The CLR
   package's HIR, `std:zsharp/package/dotnet`, isn't standard: it is there until a package
   manager can give it as a `pkg:`.
 - A `std:` library is a CLR module, or else a document of the standard library written
@@ -1872,6 +1887,44 @@ The `as` cast marking such a definition is not settled.
   as code, `value.name`, so what they stand for is reached again where they are used. An
   import that runs only as a definition is constructed has nothing to reach yet, so its
   names are checked when they are used.
+
+## Projects
+
+`std:project` is a minimal project compiler, written in Z#, to bootstrap the real one.
+
+- **Discovery.** `discover(directory)` gives a `Project`, which holds its root
+  `Submodule`. A submodule is a directory with a module file, `.zs`. Its other `.zs`
+  files are its sources, and so are those of a directory in it without a module file;
+  a directory in it with one is a submodule of it. Files and directories are taken in the
+  order of their names.
+- **Compiling.** `Compiler(project).compile()` runs the root's module file as a
+  document, through the import system, and gives the `Instance`s that were emitted, in
+  the order they were.
+- **`core:project`.** A module file imports `compile` and `emit` from it. `std:project`
+  adds it to `core:`, from Z#, since a module of live objects is only their descriptions:
+  `core:zsharp` gives the `core:` library as `core`, and a CLR module cast to what it is,
+  `Live as Instance`, is its HIR node, as a type's is.
+- **`emit(x)`** adds an instance to what compiling gives. A type is given as what
+  describes it, through an overload for `HIR.Type`, so `emit(Int32)` emits the
+  description, as a type is where a type is expected.
+- **`compile()`** is a convenience, not a requirement:
+  - It is a plain call, so it runs as the module file runs, in the document's scope:
+    the sources see what the module file imported.
+  - It parses the running submodule's sources as one AST module, named after the
+    submodule's directory, or by `compile(name)`, and compiles it with the module
+    meta-compiler on a fork of the compiler.
+  - It builds the result and returns the `Module` HIR node, then runs the module file of
+    each of its submodules, which emit for themselves.
+  - Sources don't import one another, since they are one module.
+- **The build script** decides what to do with what was emitted, as loading it and
+  calling into it, or lowering it for a platform.
+- **Not yet:**
+  - Only the AST compiler is forked. The HIR loader and the import system are shared,
+    and a module file is a document, so it runs once per toolchain run.
+  - A path is relative to where the toolchain runs.
+  - A syntax error in a source stops the build with the parser's exception.
+  - There are no rules for names across submodules.
+  - Writing an LIR file, and building the platform as a submodule, come next.
 
 ## Project layout
 

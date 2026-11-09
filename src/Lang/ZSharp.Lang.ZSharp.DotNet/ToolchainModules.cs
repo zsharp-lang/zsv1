@@ -19,6 +19,7 @@ namespace ZSharp.Lang.DotNet
                 ("zsharp/lang", typeof(Language).Module),
                 ("zsharp/lang/ast", typeof(AST.Node).Module),
                 ("zsharp/lang/parser", typeof(Parser.Parser).Module),
+                ("zsharp/lang/tokenizer", typeof(Tokenizer.Tokenizer).Module),
                 ("zsharp/compiler", typeof(Compiler.UnsupportedError).Module),
                 ("zsharp/compiler/ast", typeof(Compiler.ASTCompiler).Module),
                 ("zsharp/compiler/cg", typeof(Compiler.CG).Module),

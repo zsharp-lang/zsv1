@@ -95,9 +95,12 @@ namespace ZSharp.Lang
             var name = NameOf(definition);
             var variable = new HIR.Code.Local(name, type);
 
-            var context = new DefinitionContext(compiler.Contexts.Current, new Scope(Language.Names(compiler)));
+            // The definition's own name is in a scope of its own, around its names.
+            var outer = Language.Names(compiler);
+            var own = new Scope(outer);
+            var context = new DefinitionContext(compiler.Contexts.Current, new Scope(own));
 
-            if (name.Length > 0 && language.Bind(context.Names, name, new HIR.Code.Get(variable)) is { } invalid)
+            if (name.Length > 0 && language.Bind(own, name, new HIR.Code.Get(variable)) is { } invalid)
                 return Result<CompiledDefinition>.Error(invalid);
 
             if (compiler.Contexts.Within(context, () => metaCompiler!(compiler, definition, variable)).When(out var compiled).Error(out error))
@@ -105,9 +108,29 @@ namespace ZSharp.Lang
 
             return Result<CompiledDefinition>.Ok(compiled! with
             {
-                Fill = () => compiler.Contexts.Within(context, compiled.Fill),
+                Fill = () =>
+                {
+                    if (name.Length > 0)
+                        Rebind(outer, own, name, variable);
+
+                    return compiler.Contexts.Within(context, compiled.Fill);
+                },
                 Name = name
             });
+        }
+
+        /// <summary>
+        /// Inside a definition, its name means what binding it where it is gives, as the
+        /// binder shadows what the name means outside: a method's name is all of its
+        /// overloads. By the time its contents are compiled, a container has bound the
+        /// definitions next to it too, so it is bound again then.
+        /// </summary>
+        private void Rebind(Scope? outer, Scope own, string name, HIR.Code.Local variable)
+        {
+            var again = new Scope(outer);
+
+            if (language.Bind(again, name, new HIR.Code.Get(variable)) is null && again.Local(name) is { } value)
+                own.Add(name, value);
         }
 
         /// <summary>

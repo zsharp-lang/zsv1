@@ -81,15 +81,24 @@ namespace ZSharp.Compiler
         /// A local of the code being reified gets a variable of its own in the code that
         /// builds it. A variable of that building code is read when the building code
         /// runs, and its value is encoded into the code being built. Any other instance is
-        /// placed as it is.
+        /// placed as it is. An overload group is built of its items, each as it is
+        /// alone: an item that is a variable of the building code, as a definition being
+        /// built is, is what it holds.
         /// </summary>
         private Reified Reify(Code.Get get)
             => Ok(get.Instance switch
             {
                 Code.Local local when declared.TryGetValue(local, out var holder) => Call("Get", new Code.Get(holder)),
                 HIR.Variable => Call("Encode", get),
+                Code.OverloadGroup group when group.Items.Any(item => item is HIR.Variable) => Call("Get", Grouped(group)),
                 _ => Call("Get", Constant(get.Instance))
             });
+
+        private Code.Expression Grouped(Code.OverloadGroup group)
+            => group.Items.Aggregate<HIR.Instance, Code.Expression>(
+                Call("Group"),
+                (built, item) => Call("With", built, item is HIR.Variable ? new Code.Get(item) : Constant(item))
+            );
 
         private Reified Reify(Code.NamedMember member)
             => Expression(member.Target).When(out var target).Error(out var error)

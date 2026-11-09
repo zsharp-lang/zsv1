@@ -99,6 +99,7 @@ core.Add("compiler", il.Load(typeof(Scope).Module));
 core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 core.Add("diagnostics", il.Load(typeof(ZSharp.Diagnostics.ModuleScope).Module));
 core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
+Core.ZSharp.ModuleScope.Libraries = core;
 
 foreach (var (name, module) in ZSharp.Lang.DotNet.ToolchainModules.All())
     std.Add(name, il.Load(module));

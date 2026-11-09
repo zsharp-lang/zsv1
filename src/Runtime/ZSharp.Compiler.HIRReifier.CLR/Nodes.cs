@@ -61,6 +61,15 @@ namespace ZSharp.Compiler
 
         public static Code.Call Call(Code.Expression callee) => new() { Callee = callee };
 
+        public static Code.OverloadGroup Group() => new();
+
+        public static Code.OverloadGroup With(Code.OverloadGroup group, HIR.Instance item)
+        {
+            group.Items.Add(item);
+
+            return group;
+        }
+
         public static Code.Call With(Code.Call call, Code.Expression value)
             => With(call, value, null);
 

@@ -79,7 +79,15 @@ namespace ZSharp.Lang.DotNet
 
             binding.Merges.Add((existing, value) =>
                 Overloads(existing, method) is { } before && Overloads(value, method) is { } after
-                    ? new Code.Get(Group([.. before, .. after]))
+                    ? Joined(existing, before, after)
+                    : null
+            );
+
+            // A method hides the methods of its name outside it by overloading them, as a
+            // method's own name, inside it, is the overloads it is one of.
+            binding.Shadows.Add((shadowed, value) =>
+                Overloads(shadowed, method) is { } before && Overloads(value, method) is { } after
+                    ? Joined(shadowed, before, after)
                     : null
             );
 
@@ -99,6 +107,16 @@ namespace ZSharp.Lang.DotNet
                 Code.Get { Instance: Package.DotNet.Method defined } => [defined],
                 _ => null
             };
+
+        /// <summary>
+        /// Overloads joined, each once: what a name already stands for, if it has them all.
+        /// </summary>
+        private static Code.Expression Joined(Code.Expression existing, List<HIR.Instance> before, List<HIR.Instance> after)
+        {
+            var added = after.Where(item => !before.Any(known => ReferenceEquals(known, item))).ToList();
+
+            return added.Count == 0 ? existing : new Code.Get(Group([.. before, .. added]));
+        }
 
         private static Code.OverloadGroup Group(List<HIR.Instance> items)
         {
