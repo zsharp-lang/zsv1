@@ -8,22 +8,18 @@
 
 import { Object, Boolean, DotNet_Interface, DotNet_Class, static } from "core:runtime";
 import { Module as LIRModule, Definition as LIRDefinition, Statement as LIRStatement, Initialized } from "std:zsharp/lir";
-import { export } from "core:zsharp";
 
 // What holds definitions, as its CO: they lower into its LIR module for a target, which
 // it lowers with them.
-@export
 def Holder of DotNet_Interface {
     fun module(target: Object): LIRModule;
 }
 
 // A definition that what holds it lowers, as its CO.
-@export
 def Held of DotNet_Interface {
     fun hold(holder: Holder);
 }
 
-@export
 def Initializing of DotNet_Class {
     // Adds code to what a definition is lowered into runs to initialize it, if it has an
     // initializer, which is a capability of it. Whether it does.

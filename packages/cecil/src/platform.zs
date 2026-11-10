@@ -33,7 +33,7 @@ def Body of DotNet_Class {
     // A method's object is its first parameter, which is `this` to the CLR.
     @explicitThis fun parameter(this, parameter: LIRParameter): ParameterDefinition {
         let index = this.function.Signature.Parameters.IndexOf(parameter);
-        if (index < 0) fail("A parameter isn't one of its function's.");
+        if (index < 0) fail("The parameter " + parameter.Name + " isn't one of " + this.function.Name + "'s.");
         if (this.method.HasThis) {
             if (index == 0) return this.method.Body.ThisParameter;
             return this.method.Parameters[index - 1];
@@ -139,10 +139,12 @@ def Cecil of DotNet_Class : ClrPlatform {
             index = index + 1;
         }
 
-        // The CLR classes the module defines are written with it.
+        // The CLR classes the module defines are written with it, and its entry point is
+        // marked as one, as the IL loader's importer reads it.
         index = 0;
         while (index < unit.Metadata.Count) {
             if (unit.Metadata[index] is defines of DefinesClass) this.classDefinition(defines.Definition);
+            if (unit.Metadata[index] is entry of LIREntryPoint) this.function(entry.Function).CustomAttributes.Add(CustomAttribute(this.attribute("ZSharp.Importer.ILLoader.EntryPointAttribute")));
             index = index + 1;
         }
 
@@ -238,11 +240,14 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A module's class is a module scope, as the IL loader reads one: its static members
     // are the module's, so importing the assembly gives the module.
-    @explicitThis fun moduleScope(this): MethodReference {
+    @explicitThis fun moduleScope(this): MethodReference { return this.attribute("ZSharp.Importer.ILLoader.ModuleScopeAttribute"); }
+
+    // The constructor of one of the IL loader's attributes, by its full name.
+    @explicitThis fun attribute(this, name: String): MethodReference {
         let assemblies = AppDomain.CurrentDomain.GetAssemblies();
         let index = 0;
         while (index < assemblies.Length) {
-            let found = assemblies[index].GetType("ZSharp.Importer.ILLoader.ModuleScopeAttribute");
+            let found = assemblies[index].GetType(name);
             if (found != null) return this.method(this.reflected.Method(found.GetConstructors()[0]));
             index = index + 1;
         }
@@ -1306,6 +1311,12 @@ def Cecil of DotNet_Class : ClrPlatform {
             else if (operand is method of ClrMethod) body.il.Emit(opcode, this.method(method));
             else if (operand is function of LIRFunction) body.il.Emit(opcode, this.function(function));
             else if (operand is defined of ClassMethod) body.il.Emit(opcode, this.classMethodOf(defined));
+            // The token of a class is of its definition, as a type object of a generic
+            // class with no arguments is.
+            else if (operand is token of ClassDefinition) {
+                if (opcode.Name == "ldtoken") body.il.Emit(opcode, this.classDefinition(token) as TypeReference);
+                else body.il.Emit(opcode, this.type(token));
+            }
             else if (operand is type of LIRType) body.il.Emit(opcode, this.type(type));
             else fail("The Cecil platform can't write an instruction whose operand is a " + operand.GetType().Name + " yet.");
             index = index + 1;

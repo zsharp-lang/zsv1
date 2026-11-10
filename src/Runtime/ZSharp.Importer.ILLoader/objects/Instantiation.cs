@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace ZSharp.Importer.ILLoader.Objects
 {
@@ -17,6 +17,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , IRTGetMember<MemberName>
         , IRTGetIndex
         , IRTSetIndex
+        , IRTCallable
         , IAssignableTo
         , ICTImplicitCastTo
         , ICTImplicitCastFrom
@@ -133,6 +134,15 @@ namespace ZSharp.Importer.ILLoader.Objects
 
         public IResult Member(CompilerObject @object, MemberName member)
             => Find(BindingFlags.Instance, member, @object);
+
+        /// <summary>
+        /// A value of a delegate type is called as its <c>Invoke</c> is, as one of a type
+        /// with no Z# argument is.
+        /// </summary>
+        public IResult Call(CompilerObject @object, Argument[] arguments)
+            => typeof(Delegate).IsAssignableFrom(definition) && definition.GetMethod("Invoke") is { } invoke
+                ? new InstantiationMember(loader, this, invoke, @object).Call(arguments)
+                : Result.Error(new UnsupportedError($"A value of {definition.Name} can't be called."));
 
         private IResult Find(BindingFlags kind, MemberName member, CompilerObject? receiver)
         {

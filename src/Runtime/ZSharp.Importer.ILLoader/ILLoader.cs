@@ -889,7 +889,7 @@ namespace ZSharp.Importer.ILLoader
             if (Signature(node.Parameters, signature, runtime) is { } invalid)
                 return Result<LIR.Function>.Error(invalid);
 
-            Bind(null, null, node.Parameters, [], [.. signature.Parameters.Skip(capturing)]);
+            Bind(null, null, node.Parameters, [], [.. signature.Parameters.Skip(capturing)], runtime);
 
             if (node.ReturnType is not null)
                 if (CompileType(node.ReturnType, runtime).When(out var type).Error(out var error))
@@ -941,7 +941,7 @@ namespace ZSharp.Importer.ILLoader
                 var cell = new LIR.Local(new LIR.Reference(compiled!)) { Name = parameter.Name };
 
                 function.Body!.Block.Locals.Add(cell);
-                function.Body.Block.Statements.Add(new LIR.SetLocal(cell, new LIR.Allocate(new LIR.GetLocal(variable.Lowered))));
+                function.Body.Block.Statements.Add(new LIR.SetLocal(cell, new LIR.Allocate(new LIR.GetLocal(variable.For(target)))));
                 variables[parameter] = new Objects.Cell(cell, type);
             }
 

@@ -123,8 +123,15 @@ Core.ZSharp.ModuleScope.Files = fileImporter;
 Core.ZSharp.ModuleScope.Importers = importer;
 Core.ZSharp.ModuleScope.Documents = documents;
 
+var assemblies = new Assemblies(il);
+fileImporter.Register(".dll", assemblies.ImportFile);
+
 if (ZSharp.Importer.String.DocumentLibrary.Above(AppContext.BaseDirectory, "std") is { } standard)
-    std.Fallback = new ZSharp.Importer.String.DocumentLibrary(standard, documents);
+{
+    var library = new ZSharp.Importer.String.DocumentLibrary(standard, documents, "std", path => CommonZ.Result<ZSharp.HIR.Instance>.Ok(assemblies.Import(Assemblies.Read(path))));
+    std.Fallback = library;
+    System.Runtime.Loader.AssemblyLoadContext.Default.Resolving += (_, name) => library.Assembly(name.Name!) is { } path ? Assemblies.Read(path) : null;
+}
 language.Install(mappedCompiler, IsUnderlying);
 Core.ZSharp.ModuleScope.Importer = importer.Import;
 Core.ZSharp.ModuleScope.MetaTypes = DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
@@ -4765,6 +4772,187 @@ Try("an assembly the Cecil platform writes describes types where it runs", () =>
         Keep(direct289());
         Keep(reflected289(type289));
         """) is null && Probe.Kept is [var direct, var reflected] && ReferenceEquals(direct, il.Load(typeof(string))) && ReferenceEquals(reflected, direct);
+});
+
+// A project that declares what it is to the environment that imports it: a loader, a
+// meta-type and an entry point, which counts how often it is entered, and adds 10 if the
+// declarations were registered by then.
+string Plugin(string name)
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-plugin-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), $$"""
+        import { compile, emit } from "core:project";
+        import { build } from "std:framework";
+        emit(build(compile("{{name}}")));
+        """);
+    File.WriteAllText(Path.Combine(source, "plugin.zs"), """
+        import { String, Int32, Boolean, DotNet_Class, explicitThis } from "core:runtime";
+        import { Instance, Definition } from "std:zsharp/hir";
+        import { Local } from "std:zsharp/hir/code";
+        import { CompilerObject } from "std:zsharp/mir";
+        import { Error, Result, IResult } from "std:zsharp/common";
+        import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
+        import { Definition as DefinitionSyntax } from "std:zsharp/lang/ast";
+        import { hirLoader } from "core:compiler";
+        import { metaTypes } from "core:zsharp";
+        import { entrypoint, definitionLoader, metaType } from "std:framework";
+
+        def Thing of DotNet_Class : Instance, Definition {
+            let Name: String;
+            @explicitThis new(this, name: String) { this.Name = name; }
+        }
+
+        let entered = 0;
+
+        @definitionLoader
+        fun loadThing(node: Thing): IResult[CompilerObject, Error] { return Result[CompilerObject].Error("thing " + node.Name); }
+
+        @metaType(Thing)
+        fun compileThing(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
+            return Result[CompiledDefinition].Error("compiled");
+        }
+
+        @entrypoint
+        fun count() {
+            entered = entered + 1;
+            if (registered()) entered = entered + 10;
+        }
+
+        fun times(): Int32 { return entered; }
+        fun probe(name: String): String { return hirLoader.LoadDefinition(Thing(name)).UnwrapError().ToString(); }
+        fun registered(): Boolean { return metaTypes.Registered(Thing as Instance).IsOk; }
+        """);
+    return root.Replace('\\', '/');
+}
+
+Try("a module compiled from its sources does what it declares when it is entered, once, and not before", () =>
+{
+    var root = Plugin("Plugin290");
+
+    return ResetKept() && Run($$"""
+        import { discover as discover290, Compiler as Compiler290 } from "std:project";
+        import { Module as Module290, enter as enter290 } from "std:modules";
+        import { core as core290 } from "core:zsharp";
+        let plugin290 = Compiler290(discover290("{{root}}/src")).compile()[0] as Module290;
+        core290.Add("plugin290", plugin290);
+        import { times as times290, probe as probe290 } from "core:plugin290";
+        Keep(times290());
+        enter290(plugin290);
+        enter290(plugin290);
+        Keep(times290());
+        Keep(probe290("x"));
+        """) is null && Probe.Kept is [0, 11, "thing x"];
+});
+
+Try("an assembly the Cecil platform writes does what its module declares when it is imported", () =>
+{
+    var root = Plugin("Plugin291");
+
+    return ResetKept() && Run($$"""
+        import { discover as discover291, Compiler as Compiler291 } from "std:project";
+        import { Module as Module291, lower as lower291 } from "std:modules";
+        import { Cecil as Cecil291 } from "pkg:cecil";
+        let plugin291 = Compiler291(discover291("{{root}}/src")).compile()[0] as Module291;
+        let target291 = Cecil291("Plugin291", "net8.0");
+        target291.add(lower291(plugin291, target291));
+        target291.write("{{root}}/Plugin291.dll");
+        import { times as times291, probe as probe291 } from "{{root}}/Plugin291.dll";
+        Keep(times291());
+        Keep(probe291("y"));
+        """) is null && Probe.Kept is [11, "thing y"];
+});
+
+Try("a value of a delegate type over a class defined in Z# is called", () =>
+    ResetKept() && Run("""
+        import { Func as Func292 } from "core:runtime";
+        def Box292 of DotNet_Class {
+            let value: Int32;
+            @explicitThis new(this, value: Int32) { this.value = value; }
+        }
+        module Doubling292 { fun twice(box: Box292): Box292 { return Box292(box.value * 2); } }
+        let doubled292: Func292[Box292, Box292] = Doubling292.twice;
+        Keep(doubled292(Box292(21)).value);
+        """) is null && Kept() is 42);
+
+Try("a class of a module lowered for the running process lowers again for the Cecil platform", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-twice-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Twice293"));
+        """);
+    File.WriteAllText(Path.Combine(source, "counter.zs"), """
+        import { Object, String, Int32, List, DotNet_Class, explicitThis } from "core:runtime";
+        def Counter of DotNet_Class {
+            @explicitThis new(this) { }
+            @explicitThis fun count(this, items: List[Object]): Int32 {
+                let found = 0;
+                let index = 0;
+                while (index < items.Count) {
+                    if (items[index] is text of String) found = found + 1;
+                    index = index + 1;
+                }
+                return found;
+            }
+        }
+        fun strings(): Int32 {
+            let items = List[Object]();
+            items.Add("a");
+            items.Add(items);
+            items.Add("b");
+            return Counter().count(items);
+        }
+        """);
+    var written = Path.Combine(root, "Twice293.dll").Replace('\\', '/');
+
+    return ResetKept() && Run($$"""
+        import { discover as discover293, Compiler as Compiler293 } from "std:project";
+        import { Module as Module293, lower as lower293, failures as failures293 } from "std:modules";
+        import { core as core293 } from "core:zsharp";
+        import { Cecil as Cecil293 } from "pkg:cecil";
+        let twice293 = Compiler293(discover293("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module293;
+        core293.Add("twice293", twice293);
+        import { strings as strings293 } from "core:twice293";
+        Keep(strings293());
+        let target293 = Cecil293("Twice293", null);
+        target293.add(lower293(twice293, target293));
+        Keep(failures293(twice293).Count);
+        target293.write("{{written}}");
+        import { strings as built293 } from "{{written}}";
+        Keep(built293());
+        """) is null && Probe.Kept is [2, 0, 2];
+});
+
+Try("what a module leaves out as it lowers is a failure of it, by the member's name", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-failing-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Failing294"));
+        """);
+    File.WriteAllText(Path.Combine(source, "failing.zs"), """
+        import { Int32 } from "core:runtime";
+        fun good(): Int32 { return 1; }
+        fun bad(): Int32 { return "one"; }
+        """);
+
+    return ResetKept() && Run($$"""
+        import { discover as discover294, Compiler as Compiler294 } from "std:project";
+        import { Module as Module294, lower as lower294, failures as failures294 } from "std:modules";
+        import { Cecil as Cecil294 } from "pkg:cecil";
+        let failing294 = Compiler294(discover294("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module294;
+        let target294 = Cecil294("Failing294", null);
+        lower294(failing294, target294);
+        let failed294 = failures294(failing294);
+        Keep(failed294.Count);
+        Keep(failed294[0].StartsWith("bad: "));
+        """) is null && Probe.Kept is [1, true];
 });
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)

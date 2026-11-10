@@ -409,3 +409,6 @@ FodyWeavers.xsd
 !/std/packages/*
 pkg/build/
 /packages/*/build/
+# A library of the standard library that is built is its seed, which a release ships,
+# not the sources.
+/std/**/build/

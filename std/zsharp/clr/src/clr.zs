@@ -3,7 +3,8 @@
 // CLR's metadata, which every CLR platform realizes.
 
 import { Polymorphism } from "std:zsharp/capabilities";
-import { Implementation } from "std:traits";
+import { Implementation, implement } from "std:traits";
+import { entrypoint } from "std:framework";
 import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest, explicitThis } from "core:runtime";
 import { Structure, Function } from "std:zsharp/lir";
 
@@ -44,3 +45,8 @@ def ClrPolymorphism of Implementation[Polymorphism, ClrPlatform] {
         function.Metadata.Add(TypeTest(target));
     }
 }
+
+// Importing it makes the implementation known, as loading its definition does where it
+// is built.
+@entrypoint
+fun install() { implement(Polymorphism, ClrPlatform, ClrPolymorphism); }

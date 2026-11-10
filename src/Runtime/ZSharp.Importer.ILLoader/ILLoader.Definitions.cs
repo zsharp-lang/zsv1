@@ -386,7 +386,7 @@ namespace ZSharp.Importer.ILLoader
 
             foreach (var (constructor, declared) in @class.Constructors.Zip(lowered.Constructors))
             {
-                Bind(@class, constructor.This, constructor.Parameters, constructor.CustomMetadata, lowered.Signatures[constructor]);
+                using var bound = Bind(@class, constructor.This, constructor.Parameters, constructor.CustomMetadata, lowered.Signatures[constructor], target);
 
                 foreach (var field in node.Fields)
                     if (field.DefaultValue is not null && Initialize(field, @class, constructor, declared, target) is { } error)
@@ -404,7 +404,7 @@ namespace ZSharp.Importer.ILLoader
                 if (method.Body is null)
                     return new ErrorMessage($"Method {method.Name} has no body.");
 
-                Bind(@class, method.IsStatic ? null : method.This, method.Parameters, method.CustomMetadata, lowered.Signatures[method]);
+                using var bound = Bind(@class, method.IsStatic ? null : method.This, method.Parameters, method.CustomMetadata, lowered.Signatures[method], target);
 
                 if (Lower(method.Body, declared.Function, method.ReturnType, method.Parameters, target) is { } error)
                     return error;
@@ -415,27 +415,31 @@ namespace ZSharp.Importer.ILLoader
 
         /// <summary>
         /// Makes a member's parameters the variables its code uses, as the target lowered
-        /// them: its object first, which an explicit this parameter is too.
+        /// them: its object first, which an explicit this parameter is too. They are its
+        /// until the binding is disposed, which gives back what they were before, as a
+        /// member lowered for one target can be lowered for another while it is.
         /// </summary>
-        private void Bind(
+        private Binding Bind(
             Objects.DefinedClass? @class,
             Package.DotNet.This? @this,
             List<HIR.Code.Parameter> parameters,
             List<Package.DotNet.CustomMetadata> metadata,
-            List<LIR.Parameter> lowered
+            List<LIR.Parameter> lowered,
+            object? target
         )
         {
             var called = CallParameters(parameters, metadata);
             var index = 0;
+            var binding = new Binding(variables);
 
             if (@this is not null && @class is not null)
             {
-                var receiver = new Objects.Variable(lowered[0], () => @class);
+                var receiver = new Objects.Variable(Lowered(@this, lowered[0], target), () => @class);
 
-                variables[@this] = receiver;
+                binding.Set(@this, receiver);
 
                 if (ExplicitThis(metadata) && parameters.Count > 0)
-                    variables[parameters[0]] = receiver;
+                    binding.Set(parameters[0], receiver);
 
                 index = 1;
             }
@@ -443,16 +447,59 @@ namespace ZSharp.Importer.ILLoader
             foreach (var parameter in called)
             {
                 var variable = new Objects.Variable(
-                    lowered[index++],
+                    Lowered(parameter, lowered[index++], target),
                     () => Scope.HIRLoader.LoadType(parameter.Type!).Unwrap()
                 );
 
                 // A parameter that takes a reference is, to its code, a variable of what
                 // the reference refers to.
-                variables[parameter] = parameter.Type is Package.DotNet.RefType reference
+                binding.Set(parameter, parameter.Type is Package.DotNet.RefType reference
                     && Scope.HIRLoader.LoadType(reference).Ok(out var loaded) && loaded is Objects.RefType referenced
                         ? new Objects.Referenced(this, variable, referenced.Element)
-                        : variable;
+                        : variable);
+            }
+
+            return binding;
+        }
+
+        /// <summary>
+        /// What each target lowered a parameter to, by its node, as its variable finds it.
+        /// </summary>
+        private readonly Dictionary<HIR.Instance, Dictionary<object, LIR.Variable>> parameterLowerings = new(ReferenceEqualityComparer.Instance);
+
+        private static readonly object NoParameterTarget = new();
+
+        private Func<object?, LIR.Variable> Lowered(HIR.Instance node, LIR.Variable variable, object? target)
+        {
+            if (!parameterLowerings.TryGetValue(node, out var lowerings))
+                parameterLowerings[node] = lowerings = [];
+
+            lowerings[target ?? NoParameterTarget] = variable;
+
+            return at => lowerings.TryGetValue(at ?? NoParameterTarget, out var found) ? found : variable;
+        }
+
+        /// <summary>
+        /// Variables set for a while, which disposing it sets back to what they were.
+        /// </summary>
+        private sealed class Binding(Dictionary<HIR.Instance, CompilerObject> variables)
+            : IDisposable
+        {
+            private readonly List<(HIR.Instance Node, CompilerObject? Was)> set = [];
+
+            public void Set(HIR.Instance node, CompilerObject value)
+            {
+                set.Add((node, variables.GetValueOrDefault(node)));
+                variables[node] = value;
+            }
+
+            public void Dispose()
+            {
+                for (var index = set.Count - 1; index >= 0; index--)
+                    if (set[index].Was is { } was)
+                        variables[set[index].Node] = was;
+                    else
+                        variables.Remove(set[index].Node);
             }
         }
 
@@ -607,7 +654,7 @@ namespace ZSharp.Importer.ILLoader
 
                 var function = lowered.Functions[method];
 
-                Bind(null, null, method.Parameters, [], [.. function.Signature.Parameters]);
+                using var bound = Bind(null, null, method.Parameters, [], [.. function.Signature.Parameters], target);
 
                 if (Lower(method.Body, function, method.ReturnType, method.Parameters, target) is { } error)
                     return error;

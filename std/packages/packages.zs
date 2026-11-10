@@ -11,6 +11,7 @@ import { Error, Result, IResult } from "std:zsharp/common";
 import { core, importers, Importer } from "core:zsharp";
 import "std:dotnet";
 import { discover, Compiler } from "std:project";
+import { Module, enter } from "std:modules";
 
 let objectType: Type = Object;
 import { AppContext, AssemblyLoadContext } from objectType.Assembly.Location;
@@ -34,10 +35,12 @@ module Bootstrap {
         return Compiler(discover(Path.Combine(toolchain(), "pkg", "src"))).compile()[0];
     }
 
-    // A package that is a project is what compiling it emits first.
+    // A package that is a project is what compiling it emits first, imported as a built
+    // one is: a module is entered.
     fun project(directory: String): IResult[Instance, Error] {
         let emitted = Compiler(discover(directory)).compile();
         if (emitted.Count == 0) return Result[Instance].Error("The project " + directory + " emits nothing.");
+        if (emitted[0] is built of Module) enter(built);
         return Result[Instance].Ok(emitted[0]);
     }
 }

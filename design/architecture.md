@@ -354,6 +354,11 @@ a Z# definition is, not a type of the running process:
   and lowers its code once whatever it reached is declared too, so definitions that
   reach each other, through their signatures or their code, are lowered together, by the
   first one asked for. A module lowers its classes with it.
+- A parameter is one variable of its code for every target, which each target's lowering
+  gives its LIR parameter: what refers to it, as a local's initial value, is loaded
+  once, as a local is a definition, so it is lowered for whichever target lowers it.
+- A delegate value is called as its `Invoke` is, whether its type is a CLR type or an
+  instance of one over classes defined in Z#.
 - A generic class given its arguments is an instance of it: its members are typed with
   its arguments in place of its type parameters, and called on the instance of the class
   each target has, as LIR `InstanceMember`s. A generic method given its arguments is a
@@ -719,6 +724,8 @@ a custom type gets into the language to be used as a meta-type.
   no metadata token, so the runtime calls one through a delegate there. A generic one
   goes in a type of its own, since a `DynamicMethod` can't be generic. Precompiling is
   another platform, on Mono.Cecil, so it doesn't constrain this one.
+- A `Function` is `Annotated`, so a decorator can say what it is, as **Frameworks**
+  describes.
 - A `fun` with no body, `fun reflect(type: Type): Instance;`, is **declared**: it has no
   code of its own, and lowers as a function handle, for the platform to map. Or it is
   premapped: `premap(declared as Instance, to)`, from `std:functions`, makes every call
@@ -1575,6 +1582,10 @@ gave in the statement's place: nothing for nothing, code as it is, and any other
 is a statement with no effect, so it is dropped. So `@ct print("Hello")` in a body
 compiles to building code that adds what `ct(Call(print, ["Hello"]))` gives.
 
+What a module's member's decorators give is registered as the kind of definition the
+member is, as a class's member is: it is cast to its underlying type, so a decorator
+can give `Instance` and be used anywhere.
+
 A parameter's decorators get its node as it is built, and what they give is the
 parameter: it is what the function's parameters hold and what its name is bound to, so
 a decorator can turn a parameter into another kind, such as an injected one.
@@ -1934,15 +1945,21 @@ The `as` cast marking such a definition is not settled.
   `std:zsharp/lang/parser`. The CLR
   package's HIR, `std:zsharp/package/dotnet`, isn't standard: it is there until a package
   manager can give it as a `pkg:`.
-- A `std:` library is a CLR module, or else a document of the standard library written
-  in Z#, found from where the toolchain runs: `std:name` is `std/name.zs`, or else
-  `std/name/name.zs`.
+- A `std:` library is a CLR module, or else a library of the standard library written
+  in Z#, found from where the toolchain runs: `std:name` is its build,
+  `std/name/build/name.dll`, an assembly named `std.name` (`std.zsharp.lowering` for
+  `std:zsharp/lowering`), or else a document, `std/name.zs` or `std/name/name.zs`. A
+  process keeps what `std:name` gave it the first time, so a library built while it runs
+  is what the next process loads. One built library's assembly finds another's by its
+  name.
 - A source with no prefix is a file, relative to the document importing it, and what
   imports it is what is registered for its extension in `core:zsharp`'s `files`: a
-  `.zs` file is a document. `std:dotnet`, in Z#, registers `.dll`: the assembly is
-  loaded into the running platform, and importing it gives its module, whose members
-  are its public types by their names, whatever their namespaces. So
-  `import { AssemblyDefinition } from "Mono.Cecil.dll"` reaches Mono.Cecil.
+  `.zs` file is a document. A `.dll` is an assembly, which the host imports, since what
+  the toolchain is built of has to be loaded before anything in Z# can be: it is loaded
+  into the running platform, unless it is already, and importing it gives its module,
+  whose members are its public types by their names, whatever their namespaces, once it
+  is entered. So `import { AssemblyDefinition } from "Mono.Cecil.dll"` reaches
+  Mono.Cecil.
 - Nothing is imported for a script. The prelude, `std:prelude`, imports what a script
   wants, so a script imports it first, `import "std:prelude";`, and gets the standard
   definitions, as Z# functions, through an ordinary import.
@@ -1978,6 +1995,49 @@ what a definition is, and a definition doesn't encode its HIR node.
   writes calls `DescribeType` of the loader that runs it, which it refers to as any
   other assembly. For a target without reflection, code that rebuilds a description,
   reified or serialized at build time, is the fallback.
+
+## Frameworks
+
+Code that builds a definition runs as it is built, at every level: a document, a
+module, a definition. So a library that installs itself into the environment that
+imports it, as one that registers a meta-type does, can't say so with code that runs as
+it is built, which would install it where it is built. It declares it instead, and a
+framework, a library a build uses, makes what is declared into what the module does
+when it is imported. `std:framework` is one.
+
+- **Declarations are annotations.** `Annotated`, an HIR capability, is a definition's
+  list of what has been said of it. A Z# function has one. A decorator of
+  `std:framework` adds an annotation and gives the definition, so a declaration is data,
+  for whatever reads the definition.
+- **What it declares.** `@entrypoint` says a function is called when its module is
+  imported. `@definitionLoader`, `@instanceLoader` and `@typeLoader` say a function is
+  what loads the nodes of the type of its parameter, in the registry of that name.
+  `@metaType(M)` says a function is the meta-compiler of `M`. Making `M` a default stays
+  code, in an `@entrypoint`.
+- **`build(module)`** reads the annotations of a module's functions and gives the module
+  an entry point, a function named `<entry>`, whose code does what each declares, in
+  their order, as `mappedLoader.Definitions.Register[T](f)` and `metaTypes.Register(M as
+  Instance, f)`, then calls the explicit entry points. A project's module file builds
+  what it emits: `emit(build(compile("Plugin")))`.
+- **A module's entry point** is `std:modules`' `Module.EntryPoint`: a function of it that
+  is called, with nothing, when the module is imported, and not when it is built. It
+  lowers as LIR `EntryPoint` metadata of the module, which the Cecil platform writes as
+  `[EntryPoint]` on the method. Importing an assembly calls each method marked so, the
+  first time it is imported. A module compiled from its sources is
+  imported with `enter(module)`, which calls it the first time, in the running process,
+  as `std:packages` does for a package that is a project. So a module does the same
+  built or from its sources.
+- **What its declarations name is described as it runs.** `@metaType(Thing)` registers
+  `Thing as Instance`, a description cast, so a built module registers the description
+  its process gives its own `Thing`, the same one code that imports it gets.
+- **Not yet:**
+  - A decorator that takes arguments gives a function of a bound method, as
+    `@metaType(M)` does, since a Z# function captures nothing. The argument is in
+    parentheses, not `@metaType[M]`, as a Z# function has no type parameters to index.
+  - A trait implementation is made known by loading its definition, which a built
+    module doesn't have, so a module that defines one makes it known in an
+    `@entrypoint`, with `std:traits`' `implement(trait, type, adapter)`, as
+    `std:zsharp/clr` does.
 
 ## Projects
 
@@ -2044,7 +2104,8 @@ into the running platform, and gives it LIR:
   parameters, as C# does.
 - **What it writes.** A module is a static class of its functions and globals, whose
   type initializer is the module's initializer, marked as a module scope, so importing
-  the assembly gives the module: `import { describe } from "Shop.dll"`. A function with
+  the assembly gives the module: `import { describe } from "Shop.dll"`. Its entry point,
+  if it has one, is marked `[EntryPoint]`. A function with
   no module is in a class of its own. A structure is a value type. A polymorphic one, as
   a Z# class or interface lowers to, is a CLR class or interface: its fields are its
   own, its objects start with no code of their own, as the code that makes one sets its
@@ -2074,14 +2135,41 @@ into the running platform, and gives it LIR:
 ## Bootstrapping
 
 `bootstrap.zs` builds the toolchain's Z# projects from their sources, as an installer
-would, and checks the build. It starts from the sources every time, so a change no older
-build has can't be needed by one: it removes what earlier bootstraps built before it
-imports the prelude, which then compiles the package manager from its source. The Cecil
-platform then builds itself, compiled from its source first and then as what it built,
-until two generations are the same, which they are from the first, and the package
-manager is built with it. `tests/run.sh` bootstraps before the tests run, so they run
-with what a bootstrap builds, and a platform that doesn't build itself the same fails
-the run.
+would, and checks the build.
+
+- **The standard library is its own seed.** A library of it is a project,
+  `std/name/src`, built into `std/name/build`, which is what `std:name` loads: so its
+  sources are compiled by the toolchain that loads its build, as a compiler that
+  compiles itself is. The builds aren't sources, so they aren't in git: a release ships
+  them, and a checkout is seeded from one.
+- **Generations.** Each run of the bootstrap is a generation. It builds each library, in
+  the order of what they need, with the libraries it loads, for the .NET that runs the
+  toolchain. If any of them built something else than what was loaded, a new process,
+  which loads what was built, is the next generation, until a generation builds what it
+  loads, which it must within four. A library is built only by a generation that loads
+  what it needs built, and none of them built differently by it, as its assembly refers
+  to theirs, so a library built for the first time from a document is built again by
+  the next generation from its build.
+- **A library is all of its module.** A member that fails to lower fails its build,
+  as `std:modules`' `failures(module)` says, so a broken library isn't a seed.
+- **A seed only has what was built.** The bootstrap runs on the seed, so it can only
+  use what the seed has: a feature the bootstrap needs is built into the seed by one
+  bootstrap and used by the next.
+- **The Cecil platform and the package manager** are built from their sources every
+  generation, so nothing an older build of them lacks is needed: what earlier bootstraps
+  built of them is removed before the prelude is imported, which then compiles the
+  package manager from its source. The Cecil platform then builds itself, compiled from
+  its source first and then as what it built, until two generations are the same, which
+  they are from the first, and the standard library is built with it. The package
+  manager is built once the standard library builds itself the same.
+- `tests/run.sh` bootstraps before the tests run, so they run with what a bootstrap
+  builds, and a library or platform that doesn't build itself the same fails the run.
+- **Not yet built:** `std:types`, whose `Type` is a Z# class with a class index
+  operator, which a built assembly gives as a CLR class; `std:reflection`, whose
+  declared `reflect` is premapped by the prelude, after it is built, so its build has no
+  `reflect`; and `std:project` and `std:packages`, whose classes are Z# classes, whose
+  constructors a built assembly gives as functions of their module. They are still
+  documents. The prelude is a document too.
 
 ## Packages
 

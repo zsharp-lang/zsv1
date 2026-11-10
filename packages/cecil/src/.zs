@@ -33,7 +33,7 @@ import {
     Expression as LIRExpression, Statement as LIRStatement, Block as LIRBlock, Evaluate, If as LIRIf, Loop as LIRLoop,
     Break as LIRBreak, Continue as LIRContinue, Return as LIRReturn, SetLocal, SetGlobal, SetField, Store,
     Constant, GetLocal, GetGlobal, GetField, GetFunction, Call as LIRCall, CallIndirect, New as LIRNew,
-    Allocate, Load as LIRLoad, Sequence
+    Allocate, Load as LIRLoad, Sequence, EntryPoint as LIREntryPoint
 } from "std:zsharp/lir";
 import {
     ClrEntity, ClrType, ClrArrayType, ClrPointerType, ClrGenericParameter, ClrMethod, ClrField, ClrCode, ClrLocal,

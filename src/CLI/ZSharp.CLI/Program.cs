@@ -171,13 +171,23 @@ var documents = new DocumentImporter(language, compiler, host);
 var fileImporter = new FileImporter(compiler);
 fileImporter.Register(".zs", documents.Import);
 importer.DefaultImporter = fileImporter;
+
+// A .dll file is an assembly, imported as its module. This is what the host loads, as
+// what the toolchain is built of has to be loaded before anything in Z# can be.
+var assemblies = new Assemblies(il);
+fileImporter.Register(".dll", assemblies.ImportFile);
 Core.ZSharp.ModuleScope.Files = fileImporter;
 Core.ZSharp.ModuleScope.Importers = importer;
 Core.ZSharp.ModuleScope.Documents = documents;
 
-// The standard library written in Z# is found from where the toolchain runs.
+// The standard library written in Z# is found from where the toolchain runs. A library
+// that is built is its assembly, and one built library's assembly finds another's.
 if (DocumentLibrary.Above(AppContext.BaseDirectory, "std") is { } standard)
-    std.Fallback = new DocumentLibrary(standard, documents);
+{
+    var library = new DocumentLibrary(standard, documents, "std", path => Result<ZSharp.HIR.Instance>.Ok(assemblies.Import(Assemblies.Read(path))));
+    std.Fallback = library;
+    System.Runtime.Loader.AssemblyLoadContext.Default.Resolving += (_, name) => library.Assembly(name.Name!) is { } path ? Assemblies.Read(path) : null;
+}
 
 if (documents.Run(files[0]).When(out _).Error(out var failure))
 {

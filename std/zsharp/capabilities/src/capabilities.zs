@@ -8,11 +8,9 @@
 
 import { Structure, Function } from "std:zsharp/lir";
 import { DotNet_Interface } from "core:runtime";
-import { export } from "core:zsharp";
 
 // Polymorphism: a structure's values are objects, which calls on them reach through
 // what each object is.
-@export
 def Polymorphism of DotNet_Interface {
     // The structure's values are objects of a class, with its fields.
     fun objects(structure: Structure);
