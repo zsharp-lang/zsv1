@@ -1,10 +1,5 @@
-// std:modules, as a project: its module, built. Its sources use what CoreLib has of
-// reflection, which binding a built global needs.
+// std:modules, as a project: its module, built.
 import { compile, emit } from "core:project";
 import { build } from "std:framework";
-import { Object, Type } from "core:runtime";
-
-let objectType: Type = Object;
-import { MemberInfo } from objectType.Assembly.Location;
 
 emit(build(compile("modules")));

@@ -3896,7 +3896,7 @@ Try("a condition sees the document locals", () =>
 // ---- std:functions: Z#'s own functions, defined in Z#. Installing it makes every fun
 // that nothing else compiles a Z# function, so these come last.
 
-Try("std:functions installs, by its name", () =>
+Try("std:functions installs what compiles its functions, by its name", () =>
     Run("""import { Function } from "std:functions";""") is null);
 
 Try("a fun in a document is a Z# function", () =>
@@ -4017,10 +4017,10 @@ Try("a Z# function given too few arguments is an error", () =>
 Try("a positional parameter isn't given by name", () =>
     Run("Keep(twice215(value: 1));") is { } e && e.Length > 0);
 
-// ---- std:oop: Z#'s own classes, defined in Z#. Installing it makes def a Z# class, so
-// these come after everything else.
+// ---- std:oop: Z#'s own classes, defined in Z#. Installing it, which installs
+// std:oop/compiler, makes def a Z# class, so these come after everything else.
 
-Try("std:oop installs", () =>
+Try("std:oop installs what compiles its classes", () =>
     Run("""import { Class } from "std:oop";""") is null);
 
 Try("a Z# class has fields, a constructor and methods", () =>
@@ -4461,7 +4461,7 @@ Try("a module has no type object, so it has no type", () =>
 // ---- std:modules: Z#'s own modules, defined in Z#. Installing it makes `module` a Z#
 // module, so only these tests and the prelude's come after it.
 
-Try("std:modules installs", () =>
+Try("std:modules installs what compiles its modules", () =>
     Run("""import { Module } from "std:modules";""") is null);
 
 Try("a Z# module's globals are initialized in their order, and its functions use them", () =>
@@ -4655,7 +4655,8 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
     return ResetKept() && Run($$"""
         import "std:dotnet";
         import { discover as discover286, Compiler as Compiler286 } from "std:project";
-        import { Module as Module286, lower as lower286 } from "std:modules";
+        import { Module as Module286 } from "std:modules";
+        import { lower as lower286 } from "std:modules/compiler";
         import { Cecil as Cecil286 } from "pkg:cecil";
         let target286 = Cecil286("Twice286", "net8.0");
         target286.add(lower286(Compiler286(discover286("{{source.Replace('\\', '/')}}")).compile()[0] as Module286, target286));
@@ -4735,7 +4736,7 @@ Try("reflect describes a type as the code runs, as what a description cast gives
 Try("a declared function is called as what it is premapped to", () =>
     ResetKept() && Run("""
         import { Instance as Instance288 } from "std:zsharp/hir";
-        import { premap as premap288 } from "std:functions";
+        import { premap as premap288 } from "std:functions/compiler";
         fun answer288(): Int32;
         fun given288(): Int32 { return 42; }
         premap288(answer288 as Instance288, given288 as Instance288);
@@ -4763,7 +4764,8 @@ Try("an assembly the Cecil platform writes describes types where it runs", () =>
 
     return ResetKept() && Run($$"""
         import { discover as discover289, Compiler as Compiler289 } from "std:project";
-        import { Module as Module289, lower as lower289 } from "std:modules";
+        import { Module as Module289 } from "std:modules";
+        import { lower as lower289 } from "std:modules/compiler";
         import { Cecil as Cecil289 } from "pkg:cecil";
         import { Type as Type289 } from "core:runtime";
         let target289 = Cecil289("Described289", "net8.0");
@@ -4835,7 +4837,8 @@ Try("a module compiled from its sources does what it declares when it is entered
 
     return ResetKept() && Run($$"""
         import { discover as discover290, Compiler as Compiler290 } from "std:project";
-        import { Module as Module290, enter as enter290 } from "std:modules";
+        import { Module as Module290 } from "std:modules";
+        import { enter as enter290 } from "std:modules/compiler";
         import { core as core290 } from "core:zsharp";
         let plugin290 = Compiler290(discover290("{{root}}/src")).compile()[0] as Module290;
         core290.Add("plugin290", plugin290);
@@ -4854,7 +4857,8 @@ Try("an assembly the Cecil platform writes does what its module declares when it
 
     return ResetKept() && Run($$"""
         import { discover as discover291, Compiler as Compiler291 } from "std:project";
-        import { Module as Module291, lower as lower291 } from "std:modules";
+        import { Module as Module291 } from "std:modules";
+        import { lower as lower291 } from "std:modules/compiler";
         import { Cecil as Cecil291 } from "pkg:cecil";
         let plugin291 = Compiler291(discover291("{{root}}/src")).compile()[0] as Module291;
         let target291 = Cecil291("Plugin291", "net8.0");
@@ -4913,7 +4917,8 @@ Try("a class of a module lowered for the running process lowers again for the Ce
 
     return ResetKept() && Run($$"""
         import { discover as discover293, Compiler as Compiler293 } from "std:project";
-        import { Module as Module293, lower as lower293, failures as failures293 } from "std:modules";
+        import { Module as Module293 } from "std:modules";
+        import { lower as lower293, failures as failures293 } from "std:modules/compiler";
         import { core as core293 } from "core:zsharp";
         import { Cecil as Cecil293 } from "pkg:cecil";
         let twice293 = Compiler293(discover293("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module293;
@@ -4946,7 +4951,8 @@ Try("what a module leaves out as it lowers is a failure of it, by the member's n
 
     return ResetKept() && Run($$"""
         import { discover as discover294, Compiler as Compiler294 } from "std:project";
-        import { Module as Module294, lower as lower294, failures as failures294 } from "std:modules";
+        import { Module as Module294 } from "std:modules";
+        import { lower as lower294, failures as failures294 } from "std:modules/compiler";
         import { Cecil as Cecil294 } from "pkg:cecil";
         let failing294 = Compiler294(discover294("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module294;
         let target294 = Cecil294("Failing294", null);
@@ -4983,7 +4989,8 @@ Try("an assembly that carries what was encoded of its module is imported as that
 
     return ResetKept() && Run($$"""
         import { discover as discover295, Compiler as Compiler295 } from "std:project";
-        import { Module as Module295, lower as lower295 } from "std:modules";
+        import { Module as Module295 } from "std:modules";
+        import { lower as lower295 } from "std:modules/compiler";
         import { encode as encode295 } from "std:encoding";
         import { reflect as reflect295 } from "std:reflection";
         import { importers as importers295 } from "core:zsharp";
@@ -5048,7 +5055,8 @@ Try("a Z# class of an assembly that carries what was encoded of it is that class
 
     return ResetKept() && Run($$"""
         import { discover as discover296, Compiler as Compiler296 } from "std:project";
-        import { Module as Module296, lower as lower296 } from "std:modules";
+        import { Module as Module296 } from "std:modules";
+        import { lower as lower296 } from "std:modules/compiler";
         import { encode as encode296 } from "std:encoding";
         import { Cecil as Cecil296 } from "pkg:cecil";
         import { Instance as Instance296 } from "std:zsharp/hir";
@@ -5191,7 +5199,8 @@ Try("overloads of a module the Cecil platform writes are imported as overloads, 
 
     return ResetKept() && Run($$"""
         import { discover as discover304, Compiler as Compiler304 } from "std:project";
-        import { Module as Module304, lower as lower304 } from "std:modules";
+        import { Module as Module304 } from "std:modules";
+        import { lower as lower304 } from "std:modules/compiler";
         import { encode as encode304 } from "std:encoding";
         import { Cecil as Cecil304 } from "pkg:cecil";
         let overloads304 = Compiler304(discover304("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module304;
@@ -5277,7 +5286,8 @@ Try("a Z# class the Cecil platform writes implements the CLR interfaces it does"
 
     return ResetKept() && Run($$"""
         import { discover as discover308, Compiler as Compiler308 } from "std:project";
-        import { Module as Module308, lower as lower308 } from "std:modules";
+        import { Module as Module308 } from "std:modules";
+        import { lower as lower308 } from "std:modules/compiler";
         import { Cecil as Cecil308 } from "pkg:cecil";
         import { IDisposable as IDisposable308 } from "core:runtime";
         let resources308 = Compiler308(discover308("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module308;
@@ -5357,7 +5367,8 @@ Try("classes the Cecil platform writes make each other as they are built, and pa
 
     return ResetKept() && Run($$"""
         import { discover as discover311, Compiler as Compiler311 } from "std:project";
-        import { Module as Module311, lower as lower311 } from "std:modules";
+        import { Module as Module311 } from "std:modules";
+        import { lower as lower311 } from "std:modules/compiler";
         import { Cecil as Cecil311 } from "pkg:cecil";
         let mutual311 = Compiler311(discover311("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module311;
         let target311 = Cecil311("Mutual311", null);

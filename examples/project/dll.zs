@@ -7,7 +7,8 @@ import "std:prelude";
 import { print } from "std:io";
 import { Path } from "core:runtime";
 import { discover, Compiler } from "std:project";
-import { Module, lower } from "std:modules";
+import { Module } from "std:modules";
+import { lower } from "std:modules/compiler";
 
 import { Cecil } from "pkg:cecil";
 

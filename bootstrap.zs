@@ -38,18 +38,21 @@ libraries.Add("zsharp/lowering"); needs.Add("");
 libraries.Add("zsharp/capabilities"); needs.Add("");
 libraries.Add("traits"); needs.Add("");
 libraries.Add("functions"); needs.Add("zsharp/lowering");
+libraries.Add("functions/compiler"); needs.Add("functions,zsharp/lowering");
 libraries.Add("traits/static"); needs.Add("traits");
 libraries.Add("traits/dynamic"); needs.Add("traits");
 libraries.Add("zsharp/clr"); needs.Add("traits,zsharp/capabilities");
 libraries.Add("modules"); needs.Add("zsharp/lowering");
+libraries.Add("modules/compiler"); needs.Add("modules,zsharp/lowering");
 libraries.Add("oop"); needs.Add("functions,zsharp/capabilities,zsharp/lowering");
+libraries.Add("oop/compiler"); needs.Add("oop,functions,zsharp/capabilities,zsharp/lowering");
 libraries.Add("framework"); needs.Add("functions,modules");
 libraries.Add("dotnet"); needs.Add("");
 libraries.Add("encoding"); needs.Add("");
 libraries.Add("reflection"); needs.Add("");
 libraries.Add("types"); needs.Add("oop");
-libraries.Add("project/core"); needs.Add("functions,modules,oop");
-libraries.Add("project"); needs.Add("project/core,oop");
+libraries.Add("project/core"); needs.Add("functions,modules,oop,oop/compiler");
+libraries.Add("project"); needs.Add("project/core,oop,oop/compiler");
 
 // Which libraries this generation loads built: those built before it started.
 let loaded = List[String]();
@@ -69,7 +72,8 @@ import "std:prelude";
 import { print } from "std:io";
 import { documents } from "core:zsharp";
 import { discover, Compiler } from "std:project";
-import { Module, lower, failures } from "std:modules";
+import { Module } from "std:modules";
+import { lower, failures } from "std:modules/compiler";
 import { encode } from "std:encoding";
 
 let objectAssembly = objectType.Assembly.Location;

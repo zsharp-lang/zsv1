@@ -910,12 +910,41 @@ a custom type gets into the language to be used as a meta-type.
   `def Retyped : CompilerObject, ICompileIRExpression, ITyped` in `std:oop` is, and the
   compiler calls it through its protocols; a target without the capability can't have
   such a class.
-- `std:oop`'s COs are Z# classes, built by `std:oop` itself: what loads a class, method,
+- A library of standard definitions is two: its structure and its compiler. `std:oop`,
+  `std:functions` and `std:modules` are their HIR nodes, which reflection needs alone,
+  and what only changes nodes, as the decorators `@static` and `@class` do;
+  `std:oop/compiler`, `std:functions/compiler` and `std:modules/compiler` are their COs,
+  meta-compilers, loaders and binders, and what lowers, as `lower` and `premap` are,
+  which importing them installs. A library keeps its name for its structure, since a
+  blob names a node's type by its assembly, so what was encoded before still decodes. So
+  the compilers depend on the structures and not on one another's COs, and the COs of
+  any of them can be Z# classes, which `std:oop/compiler` compiles, with no cycle.
+- The structures are the platform's own definitions, CLR classes, which a new runtime
+  reimplements: each is written with one meta-type, `Node`, which its library imports as
+  `DotNet_Class`, so reimplementing it is ideally giving that name another meta-type.
+  Their getters still say `@explicitThis`, which a CLR class needs and a Z# class doesn't.
+- `std:oop/compiler`'s COs are Z# classes, built by itself: what loads a class, method,
   constructor or interface, and the meta-compilers that compile them. What has no object,
   as matching arguments or finding what a built class was built as, is a function of its
-  module, since a module holds no module. Only its HIR nodes are still CLR definitions.
-  So a runtime other than the CLR's gets the COs with `std:oop`; the HIR nodes are the
-  next to move.
+  module, since a module holds no module. So a runtime other than the CLR's gets the COs
+  with it.
+- Importing a structure library installs its compiler: its entry point imports it by
+  name, as `std:project` installs `core:project`, so `import { Function } from
+  "std:functions"` makes `fun` a Z# function, and the structure's assembly doesn't refer
+  to the compiler's. A library is a module, whose root `Module` node only
+  `std:modules/compiler` loads, and its blob has modules' nodes, so importing any library
+  enters `std:modules`, which installs what loads it before its root is loaded. An entry
+  point is the toolchain's `import`, which installs a library into a compiler, not what
+  loading it does: a program that reflects loads the libraries its nodes are of, as a
+  native platform loads the library a type's metadata is in, and runs none of their
+  entry points, so it gets their structure alone. What has no blob, as a module built
+  without reflection, has none of it.
+- The decoder enters the assemblies of a unit's kinds of nodes once every node is made,
+  as entering one can import what refers to the unit's nodes, as a structure's entry
+  point imports its compiler, whose blob refers to the structure's.
+- A binder that replaces another binds again what the other bound, so while a library and
+  a newer one of it are both loaded, as when a library is split, every node is bound as
+  the newer one binds it.
 - What can be reflected on, or has its own semantics, is a definition of its own: a
   method, a constructor, a field, a parameter. What can appear in code is an instance,
   which needn't be a definition. A CO is only a handle, which interactions use. An

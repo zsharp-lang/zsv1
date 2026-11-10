@@ -28,24 +28,42 @@ namespace ZSharp.Compiler
 
         private readonly List<(object Node, object Entity)> waiting = [];
 
+        private readonly Dictionary<Type, List<(object Node, object Entity)>> bound = [];
+
         /// <summary>
         /// Registers a binder, replacing any for that type, and binds the nodes of that type
-        /// that were waiting for it.
+        /// that were waiting for it. A binder that replaces another binds again what the
+        /// other bound, so every node of the type is bound as the new one binds it, as
+        /// when a library that binds them is replaced by a newer one of it.
         /// </summary>
         public Error? Register<T>(Binder<T> binder)
             where T : class
         {
             binders[typeof(T)] = (node, entity) => binder((T)node, entity);
 
+            if (bound.TryGetValue(typeof(T), out var already))
+                foreach (var (node, entity) in already.ToList())
+                    if (binder((T)node, entity) is { } error)
+                        return error;
+
             foreach (var (node, entity) in waiting.Where(pair => pair.Node.GetType() == typeof(T)).ToList())
             {
                 waiting.Remove((node, entity));
+                Bound(node, entity);
 
                 if (binder((T)node, entity) is { } error)
                     return error;
             }
 
             return null;
+        }
+
+        private void Bound(object node, object entity)
+        {
+            if (!bound.TryGetValue(node.GetType(), out var nodes))
+                bound[node.GetType()] = nodes = [];
+
+            nodes.Add((node, entity));
         }
 
         /// <summary>
@@ -62,7 +80,10 @@ namespace ZSharp.Compiler
         public Error? Bind(object node, object entity)
         {
             if (binders.TryGetValue(node.GetType(), out var binder))
+            {
+                Bound(node, entity);
                 return binder(node, entity);
+            }
 
             waiting.Add((node, entity));
             return null;

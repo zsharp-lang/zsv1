@@ -1,7 +1,8 @@
 // The prelude: what a script imports first, so it gets the standard definitions
 // without the toolchain hardcoding any of them. Importing a library installs what it
-// defines, as std:functions makes `fun` a Z# function. A library says what its own
-// definitions are where it needs another meta-type than the default.
+// defines, as std:functions makes `fun` a Z# function, by importing what compiles it. A
+// library says what its own definitions are where it needs another meta-type than the
+// default.
 
 // A library that is built is imported as what its build describes, which std:encoding
 // decodes; and, as what it gives is a Z# module, std:modules comes next.
@@ -25,7 +26,7 @@ import { Type } from "std:types";
 // Reflection, as std:encoding gives again what it encoded, and as the IL loader describes
 // what carries nothing it encoded.
 import { reflect } from "std:reflection";
-import { premap } from "std:functions";
+import { premap } from "std:functions/compiler";
 import { describe } from "std:encoding";
 import { Instance } from "std:zsharp/hir";
 premap(reflect as Instance, describe as Instance);

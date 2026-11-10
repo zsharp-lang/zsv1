@@ -466,16 +466,6 @@ def Decoder of DotNet_Class {
             index = index + 1;
         }
 
-        // What a node means is its library's, so the assembly of each kind of node is
-        // entered first, as importing it would, but for the unit's own, which is being
-        // imported.
-        index = 0;
-        while (index < read.Count) {
-            let owner = read[index].Type.Assembly;
-            if (owner != this.unit.Assembly) enter(owner);
-            index = index + 1;
-        }
-
         // Every object is made first, so each can refer to any.
         index = 0;
         while (index < read.Count) {
@@ -489,6 +479,17 @@ def Decoder of DotNet_Class {
         index = 0;
         while (index < read.Count) {
             this.fill(read[index], this.objects[index]);
+            index = index + 1;
+        }
+
+        // What a node means is its library's, so the assembly of each kind of node is
+        // entered, as importing it would, but for the unit's own, which is being imported.
+        // That is once every node is made, as entering a library can import what refers to
+        // this unit's nodes, as a library's entry point imports what compiles its nodes.
+        index = 0;
+        while (index < read.Count) {
+            let owner = read[index].Type.Assembly;
+            if (owner != this.unit.Assembly) enter(owner);
             index = index + 1;
         }
 

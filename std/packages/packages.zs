@@ -11,7 +11,8 @@ import { Error, Result, IResult } from "std:zsharp/common";
 import { core, importers, Importer } from "core:zsharp";
 import "std:dotnet";
 import { discover, Compiler } from "std:project";
-import { Module, enter } from "std:modules";
+import { Module } from "std:modules";
+import { enter } from "std:modules/compiler";
 
 let objectType: Type = Object;
 import { AppContext, AssemblyLoadContext } from objectType.Assembly.Location;
