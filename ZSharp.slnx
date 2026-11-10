@@ -74,6 +74,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/ZSharp.Tests.Classes/ZSharp.Tests.Classes.csproj" />
     <Project Path="tests/ZSharp.Tests.Compiler/ZSharp.Tests.Compiler.csproj" />
+    <Project Path="tests/ZSharp.Tests.Docs/ZSharp.Tests.Docs.csproj" />
     <Project Path="tests/ZSharp.Tests.EndToEnd/ZSharp.Tests.EndToEnd.csproj" />
     <Project Path="tests/ZSharp.Tests.HIR/ZSharp.Tests.HIR.csproj" />
     <Project Path="tests/ZSharp.Tests.IR/ZSharp.Tests.IR.csproj" />
