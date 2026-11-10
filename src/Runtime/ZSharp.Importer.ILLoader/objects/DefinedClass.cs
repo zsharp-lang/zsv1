@@ -25,8 +25,48 @@ namespace ZSharp.Importer.ILLoader.Objects
         , IAssignableTo
         , ICompileIRExpression
         , ITyped
+        , IRTTypeMatch
+        , IRTCastTo
     {
+        /// <summary>
+        /// A value of this class or interface cast down to a type, as C# casts a reference:
+        /// checked as the code runs, both types as the target lowers them.
+        /// </summary>
+        public IResult Cast(CompilerObject value, CompilerObject type)
+            => type.Is<ICompileIRType>(out _)
+                ? Result.Ok(new Call(
+                    target => Scope.IR.CompileType(this, target).When(out var from).Error(out var error)
+                        ? Result<LIR.ICallable>.Error(error)
+                        : Scope.IR.CompileType(type, target).When(out var to).Error(out error)
+                            ? Result<LIR.ICallable>.Error(error)
+                            : Result<LIR.ICallable>.Ok(loader.Downcast(from!, to!)),
+                    [value],
+                    () => type
+                ))
+                : Result.Error(new UnsupportedError($"A value of {Name} can only be cast to a type."));
+
         public Package.DotNet.Class Node { get; } = node;
+
+        /// <summary>
+        /// Whether a value of this class or interface is of a type, as C# tells it with
+        /// <c>is</c>: a reference is checked as the code runs, both types as the target
+        /// lowers them.
+        /// </summary>
+        public IResult<MatchResult, Error> Match(CompilerObject value, CompilerObject pattern)
+            => pattern.Is<ICompileIRType>(out _)
+                ? Result<MatchResult>.Ok(new MatchResult
+                {
+                    Match = new Call(
+                        target => Scope.IR.CompileType(this, target).When(out var from).Error(out var error)
+                            ? Result<LIR.ICallable>.Error(error)
+                            : Scope.IR.CompileType(pattern, target).When(out var to).Error(out error)
+                                ? Result<LIR.ICallable>.Error(error)
+                                : Result<LIR.ICallable>.Ok(loader.IsOf(from!, to!)),
+                        [value],
+                        () => loader.Class(typeof(bool))
+                    )
+                })
+                : Result<MatchResult>.Error(new UnsupportedError($"A value of {Name} can only be matched against a type."));
 
         public string Name => Node.Name;
 

@@ -365,6 +365,9 @@ a Z# definition is, not a type of the running process:
   `MethodInstance` of the method each target has.
 - A method is a value, a delegate of its own signature, when every type in it is the
   CLR's.
+- A value of a class or interface defined in Z# is matched against a type and cast down
+  to one as a CLR reference is, `isinst` and a cast, with both types as the target lowers
+  them.
 - A document runs in the runtime, so a definition a document defines is lowered for the
   runtime and loaded into it as it is defined, which is when what it accepts is checked.
   Anything else is lowered for each platform as code using it is.
@@ -898,6 +901,12 @@ a custom type gets into the language to be used as a meta-type.
   through it, or by name in one of its methods, is its class's type object's. Only a value
   of an interface could be of any class, so what class it is would come from the object,
   which isn't reachable yet.
+- A class has no base, so a value of one has only its class's members, and goes only to
+  its class and to the interfaces it implements. That it is also an `Object` is the
+  running process's, which realizes it as a CLR class: `core:runtime` adds an implicit
+  cast to `Object`, which the host installs, and whose code compiles only for the
+  runtime, so a module that uses it can't be built for another platform. Put in the CLR
+  platforms' shared library, it would compile for any of them.
 - `def` isn't a class or a type: it is a definition, `def ID? (of META)? ...`, and
   `module` is `def` of `Module`. So a definition's body holds definitions as a module's
   does, and whether it takes each is its meta-type's to say; a CLR module is
@@ -1638,6 +1647,10 @@ act on the innermost loop, or on the one they name with `from`: `break from oute
 `continue from outer;`. A loop's `else` runs when its condition stops holding, but not
 when a `break` leaves it.
 
+A loop's body is parsed with what the loop is in: `break` and `continue` are the loop's,
+and any other statement, as a function's `return`, is for the parser of what holds the
+loop.
+
 A loop can be a statement or an expression. A loop statement's `else` is optional and
 its `break` has no value. A loop expression must have an `else`, which gives its value
 when its condition stops holding, and every `break` of it has a value, as in
@@ -1666,6 +1679,12 @@ with both operands. `=`, `.`, `as` and `is` stay syntax, since they aren't calls
 
 Equality binds looser than comparisons, `as` and `is`, as in C#: `a == b as T` is
 `a == (b as T)`, and `a < b == c` is `(a < b) == c`.
+
+An operator before its operand, as `-x`, is a call of the group of its syntax with the
+operand alone, so it is an overload that takes one, as `core:runtime`'s `Negate` is of
+`-` for `Int32`, `Int64`, `Single` and `Double`, and a CLR type's `op_UnaryNegation`. A
+minus before an operand binds tighter than `*` and looser than `**`, so `-2 ** 2` is
+`-(2 ** 2)`, and `5 - -3` is 8.
 
 A C# method marked `[Operator("+")]` is an overload of what `+` stands for, and
 `ILLoader.Operators` finds them in a type. For now the CLI adds those of `core:runtime`
@@ -1959,7 +1978,10 @@ The `as` cast marking such a definition is not settled.
   into the running platform, unless it is already, and importing it gives its module,
   whose members are its public types by their names, whatever their namespaces, once it
   is entered. So `import { AssemblyDefinition } from "Mono.Cecil.dll"` reaches
-  Mono.Cecil.
+  Mono.Cecil. A name with a type that isn't generic is that type, and indexing it with
+  type arguments gives the generic type of that name and arity, whatever its namespace,
+  as C# reads `IList` and `IList<T>`; a name of generic types only is its arities, as
+  overloads.
 - Nothing is imported for a script. The prelude, `std:prelude`, imports what a script
   wants, so a script imports it first, `import "std:prelude";`, and gets the standard
   definitions, as Z# functions, through an ordinary import.
@@ -2374,19 +2396,6 @@ The first target is parity with `zsv1`: importing `print` and calling it.
   which fails only when its handle is mapped. The fix is for the IL loader to describe
   the target's reference assemblies, without loading them, as `MetadataLoadContext`
   reads them.
-
-## Gaps found on 2026-11-10
-
-Found while writing `std:encoding` and binding built classes, and worked around:
-
-- **No unary minus.** `-1` doesn't parse; it is written `0 - 1`.
-- **A name two CLR types share** is imported as both, as `IList` is `IList` and
-  `IList<T>`, so a pattern or a cast of it fails, with an error that names something
-  else: `is x of IList` gives "Local can't be called with these arguments".
-- **A value of an interface defined in Z# can't be matched** against a class, as
-  `owner is c of ClassObject` with `owner: MethodOwner`.
-- **A value of a Z# class has none of `Object`'s members**, and doesn't go where an
-  `Object` is expected.
 
 ## Choices and restrictions from 2026-11-09
 

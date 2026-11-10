@@ -41,6 +41,7 @@ namespace ZSharp.Lang
             mapped.Expressions.Register<AST.CallExpression>(Compile);
             mapped.Expressions.Register<AST.IndexExpression>(Compile);
             mapped.Expressions.Register<AST.BinaryExpression>(Compile);
+            mapped.Expressions.Register<AST.UnaryExpression>(Compile);
             mapped.Expressions.Register<AST.CastExpression>(Compile);
             mapped.Expressions.Register<AST.IsOfExpression>(Compile);
             mapped.Expressions.Register<AST.ArrayLiteral>(Compile);
@@ -165,6 +166,25 @@ namespace ZSharp.Lang
             {
                 Callee = new HIR.Code.Get(function),
                 Arguments = [new() { Value = left! }, new() { Value = right! }]
+            });
+        }
+
+        /// <summary>
+        /// An operator before its operand is a call of the function it stands for, with the
+        /// operand alone: an overload of it that takes one, as `-` has for each number.
+        /// </summary>
+        private IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.UnaryExpression unary)
+        {
+            if (!Functions.TryGetValue(unary.Operator, out var function))
+                return Result<HIRExpression>.Error($"Operator ({unary.Operator}) is not defined.");
+
+            if (compiler.CompileExpression(unary.Operand).When(out var operand).Error(out var error))
+                return Result<HIRExpression>.Error(error);
+
+            return Result<HIRExpression>.Ok(new HIR.Code.Call
+            {
+                Callee = new HIR.Code.Get(function),
+                Arguments = [new() { Value = operand! }]
             });
         }
 

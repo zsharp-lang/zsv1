@@ -54,6 +54,7 @@ new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
 CodeLoaders.Register(codeLoader, loader, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
+Core.Runtime.Objects.Install(runtime, il);
 il.Install(loader, codeLoader);
 
 var reifier = new MappedReifier(Scope.HIRReifier);

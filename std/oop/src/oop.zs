@@ -1663,9 +1663,9 @@ fun bindConstructor(node: Constructor, entity: Object): Error {
     return null;
 }
 
-// A value as one of the CLR type a class was built as, whose members are what its
-// fields were built as.
-def BuiltValue of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
+// A value seen as one of another type, whose members are that type's: an object of a
+// built class as one of the CLR type it was built as.
+def Retyped of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
     let value: CompilerObject;
     let type: CompilerObject;
 
@@ -1724,10 +1724,10 @@ def Built of DotNet_Class {
     // CLR type it was built as has it, or null if the class wasn't built.
     @clrStatic fun field(owner: Object, object: CompilerObject, name: String): CompilerObject {
         if (owner is objects of ClassObject) {
-            if (builtClasses.ContainsKey(objects.node)) return cg.Member(BuiltValue(object, Built.type(builtClasses[objects.node])), name).Unwrap();
+            if (builtClasses.ContainsKey(objects.node)) return cg.Member(Retyped(object, Built.type(builtClasses[objects.node])), name).Unwrap();
         }
         if (owner is meta of Metaclass) {
-            if (builtClasses.ContainsKey(meta.owner.node)) return cg.Member(BuiltValue(object, Built.metaclass(builtClasses[meta.owner.node], meta.owner.node.Name)), name).Unwrap();
+            if (builtClasses.ContainsKey(meta.owner.node)) return cg.Member(Retyped(object, Built.metaclass(builtClasses[meta.owner.node], meta.owner.node.Name)), name).Unwrap();
         }
         return null;
     }

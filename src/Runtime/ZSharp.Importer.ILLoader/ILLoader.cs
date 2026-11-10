@@ -287,7 +287,7 @@ namespace ZSharp.Importer.ILLoader
         internal LIR.CLR.ClrCode Convert(Type from, Type to)
             => Instruction("convert", from, to, code => Conversions.Emit(code, from, to));
 
-        private readonly Dictionary<(Type, LIR.Type), LIR.CLR.ClrCode> downcasts = [];
+        private readonly Dictionary<(LIR.Type, LIR.Type), LIR.CLR.ClrCode> downcasts = [];
 
         /// <summary>
         /// The function that casts a value down to a type it might be of, which fails if it
@@ -295,29 +295,42 @@ namespace ZSharp.Importer.ILLoader
         /// does both. The type may be one a platform is still building.
         /// </summary>
         internal LIR.CLR.ClrCode Downcast(Type from, LIR.Type to)
+            => Downcast(Handle(from), to);
+
+        /// <summary>
+        /// The cast down of a value of a type, as a target lowers it, to another.
+        /// </summary>
+        internal LIR.CLR.ClrCode Downcast(LIR.Type from, LIR.Type to)
         {
             if (downcasts.TryGetValue((from, to), out var known))
                 return known;
 
             var signature = new LIR.Signature { ReturnType = to };
-            signature.Parameters.Add(new(Handle(from)) { Name = "value" });
+            signature.Parameters.Add(new(from) { Name = "value" });
 
             return downcasts[(from, to)] = new LIR.CLR.ClrCode(signature).Emit(System.Reflection.Emit.OpCodes.Unbox_Any, to);
         }
 
-        private readonly Dictionary<(Type, LIR.Type), LIR.CLR.ClrCode> typeTests = [];
+        private readonly Dictionary<(LIR.Type, LIR.Type), LIR.CLR.ClrCode> typeTests = [];
 
         /// <summary>
         /// The function that tells whether a value is of a type. <c>null</c> is of none.
         /// The type may be one a platform is still building.
         /// </summary>
         internal LIR.CLR.ClrCode IsOf(Type from, LIR.Type to)
+            => IsOf(Handle(from), to);
+
+        /// <summary>
+        /// A function that tells whether a value of a type, as a target lowers it, is of
+        /// another, as the CLR tells it with <c>isinst</c>.
+        /// </summary>
+        internal LIR.CLR.ClrCode IsOf(LIR.Type from, LIR.Type to)
         {
             if (typeTests.TryGetValue((from, to), out var known))
                 return known;
 
             var signature = new LIR.Signature { ReturnType = Handle(typeof(bool)) };
-            signature.Parameters.Add(new(Handle(from)) { Name = "value" });
+            signature.Parameters.Add(new(from) { Name = "value" });
 
             return typeTests[(from, to)] = new LIR.CLR.ClrCode(signature)
                 .Emit(System.Reflection.Emit.OpCodes.Isinst, to)
@@ -384,7 +397,7 @@ namespace ZSharp.Importer.ILLoader
                 ("+", "op_Addition"), ("-", "op_Subtraction"), ("*", "op_Multiply"), ("/", "op_Division"),
                 ("<", "op_LessThan"), (">", "op_GreaterThan"), ("<=", "op_LessThanOrEqual"), (">=", "op_GreaterThanOrEqual"),
                 ("==", "op_Equality"), ("!=", "op_Inequality"),
-                ("|", "op_BitwiseOr"), ("&", "op_BitwiseAnd"),
+                ("|", "op_BitwiseOr"), ("&", "op_BitwiseAnd"), ("-", "op_UnaryNegation"),
             }.Select(pair => (pair.Item1, (HIR.Instance)new Package.DotNet.Operator(pair.Item2)));
 
         /// <summary>

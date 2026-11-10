@@ -74,6 +74,10 @@ namespace ZSharp.Lang
             expressionParser.InfixL("/", 70);
             expressionParser.InfixL("**", 80);
 
+            // A minus before an operand negates it, binding tighter than `*`, as in C#, and
+            // looser than `**`, as `-2 ** 2` is `-(2 ** 2)`.
+            expressionParser.Prefix("-", 75);
+
             // Equality binds looser than comparisons and type tests, as in C#, so
             // `a == b as T` is `a == (b as T)` and `a < b == c` is `(a < b) == c`.
             expressionParser.InfixL("==", 18);

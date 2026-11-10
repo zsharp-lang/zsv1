@@ -108,7 +108,10 @@ namespace ZSharp.Parser
 
         private void InitializeLoopParser()
         {
-            Loop.DefaultContextItemParser = Statement;
+            // A loop's body has its own statements, break and continue, and what isn't one
+            // is for what the loop is in to parse, as return is a function's: what isn't a
+            // loop's statement fails here, and the stack goes on to the parser below.
+            Loop.DefaultContextItemParser = new FunctionalParser<AST.Statement>(_ => throw new ParseError());
 
             Loop.AddKeywordParser(
                 LangParser.Keywords.Break,

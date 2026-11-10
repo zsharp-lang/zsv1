@@ -54,8 +54,18 @@ namespace ZSharp.Importer.ILLoader.Objects
             }
 
             // A public type is found by its name, and a generic one by its name without its
-            // arity, so the arities of a name are its overloads, as imported ones are.
+            // arity. A name with a type that isn't generic is that type, which indexing with
+            // type arguments makes the one of that name and arity, as C# reads `IList` and
+            // `IList<T>`; a name of generic types only is its arities, as overloads.
             var found = types.Where(type => type.IsPublic && (type.Name.Split('`')[0]) == member).ToArray();
+
+            if (found.FirstOrDefault(type => !type.IsGenericTypeDefinition) is { } plain)
+            {
+                foreach (var generic in found.Where(type => type != plain))
+                    loader.Extensions.Add(generic);
+
+                return Result.Ok(Imported(plain));
+            }
 
             if (found.Length > 0)
                 return Result.Ok(OverloadGroup.Of(found.Select(Imported)));

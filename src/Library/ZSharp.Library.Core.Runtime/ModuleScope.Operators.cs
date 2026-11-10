@@ -29,6 +29,10 @@ namespace Core.Runtime
                 ? unchecked((ulong)Convert.ToInt64(value))
                 : Convert.ToUInt64(value);
         [Operator("-")] public static int Subtract(int left, int right) => left - right;
+        [Operator("-")] public static int Negate(int operand) => -operand;
+        [Operator("-")] public static long Negate(long operand) => -operand;
+        [Operator("-")] public static float Negate(float operand) => -operand;
+        [Operator("-")] public static double Negate(double operand) => -operand;
         [Operator("*")] public static int Multiply(int left, int right) => left * right;
         [Operator("/")] public static int Divide(int left, int right) => left / right;
         [Operator("<")] public static bool LessThan(int left, int right) => left < right;

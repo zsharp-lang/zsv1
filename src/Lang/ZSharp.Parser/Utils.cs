@@ -31,6 +31,26 @@ namespace ZSharp.Parser
                 };
             };
 
+        /// <summary>
+        /// An operator written before its operand, which binds it as tightly as the power
+        /// given: what follows it, up to an operator that binds less tightly.
+        /// </summary>
+        public static NudFunction Prefix(string @operator, int bindingPower)
+            => parser =>
+            {
+                parser.Eat(@operator);
+
+                var operand =
+                (parser.GetParserFor<Expression>() as ExpressionParser ?? throw new ParseError())
+                .ParseExpression(parser, bindingPower);
+
+                return new UnaryExpression()
+                {
+                    Operator = @operator,
+                    Operand = operand
+                };
+            };
+
         public static LedFunction InfixL(string @operator, int bindingPower)
             => (parser, left) =>
             {

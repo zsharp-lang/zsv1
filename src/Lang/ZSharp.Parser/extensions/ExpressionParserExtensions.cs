@@ -4,6 +4,9 @@ namespace ZSharp.Parser
 {
     public static class ExpressionParserExtensions
     {
+        public static void Prefix(this ExpressionParser expressionParser, string @operator, int bindingPower)
+            => expressionParser.Nud(@operator, Utils.Prefix(@operator, bindingPower));
+
         public static void InfixL(this ExpressionParser expressionParser, string @operator, int bindingPower)
             => expressionParser.Led(@operator, Utils.InfixL(@operator, bindingPower), bindingPower);
 

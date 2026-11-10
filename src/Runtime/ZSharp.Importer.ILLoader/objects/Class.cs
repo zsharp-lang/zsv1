@@ -267,10 +267,23 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// A type given nothing, as in <c>Int32[]</c>, is the type of its arrays, as C#
         /// writes it.
         /// </summary>
+        /// <summary>
+        /// The generic type of this type's name with that many type parameters, if its
+        /// assembly has one, whatever its namespace, as an import finds a type by its name.
+        /// </summary>
+        private Type? Arity(int count)
+            => IL.Assembly.GetExportedTypes().Where(type => type.Name == $"{IL.Name}`{count}").ToArray() is [var only] ? only : null;
+
         public IResult Index(Argument[] arguments)
         {
             if (arguments.Length == 0)
                 return Result.Ok(loader.Class(IL.MakeArrayType()));
+
+            // A type that isn't generic, given type arguments, is the generic type of its name
+            // and that many parameters, as `IList[T]` is `IList<T>`.
+            if (!IL.IsGenericTypeDefinition && Arity(arguments.Length) is { } generic
+                && loader.Types(arguments, generic.GetGenericArguments()) is not null)
+                return loader.Class(generic).Index(arguments);
 
             if (loader.Types(arguments, IL.IsGenericTypeDefinition ? IL.GetGenericArguments() : []) is not { } types)
                 return Instantiated(arguments) is { } instantiation

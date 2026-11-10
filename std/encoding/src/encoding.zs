@@ -87,7 +87,7 @@ fun fieldOf(type: Type, name: String): FieldInfo {
     return fail("A " + type.Name + " has no field named " + name + ".") as FieldInfo;
 }
 
-// The id kept on an entity, or less than 0.
+// The id kept on an entity, or -1.
 fun idOn(entity: Object): Int32 {
     let kept = Metadata.Of(Metadata.Entity(entity));
     let index = 0;
@@ -95,7 +95,7 @@ fun idOn(entity: Object): Int32 {
         if (kept[index] is id of ReflectionId) return id.Id;
         index = index + 1;
     }
-    return 0 - 1;
+    return -1;
 }
 
 // ---- Units, decoded
@@ -394,7 +394,7 @@ def Encoder of DotNet_Class {
         }
 
         w.Write(3);
-        let id = 0 - 1;
+        let id = -1;
         if (this.ids.ContainsKey(value)) id = this.ids[value];
         w.Write(id);
 
@@ -436,7 +436,7 @@ def Read of DotNet_Class {
     @explicitThis new(this, type: Type, kind: Int32) {
         this.Type = type;
         this.Kind = kind;
-        this.Id = 0 - 1;
+        this.Id = -1;
         this.Names = List[String]();
         this.Values = List[Object]();
     }

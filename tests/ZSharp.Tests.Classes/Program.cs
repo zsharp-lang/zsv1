@@ -50,6 +50,7 @@ new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
 CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
+Core.Runtime.Objects.Install(runtime, il);
 il.Install(mapped, mappedCode);
 
 // A kind of parameter defined outside the toolchain: it is injected, so a call gives it
@@ -1553,7 +1554,7 @@ Try("an operator is chosen by the types of its operands", () =>
     Run("""Keep(1.5 + 2.0); Keep("x" == "x");""") is null && Probe.Kept is [3.5, true]);
 
 Try("an operator with no overload for its operands is an error", () =>
-    Run("""Keep("a" - "b");""") is { } e && e.Contains("None of the 8 overloads applies"));
+    Run("""Keep("a" - "b");""") is { } e && e.Contains("None of the") && e.Contains("overloads applies"));
 
 Try("an operator nothing defines is an error", () =>
     Run("Keep(2 ** 3);") is { } e && e.Contains("Operator (**) is not defined"));
@@ -5065,6 +5066,96 @@ Try("a Z# class of an assembly that carries what was encoded of it is that class
         Keep(Counter296 as Instance296);
         """) is null && Probe.Kept is [42, 42, "counter", var described] && described.GetType().Name == "Class";
 });
+
+Try("a minus before an operand negates it, binding tighter than * and looser than **", () =>
+    ResetKept() && Run("""
+        let negative297 = -1;
+        Keep(negative297);
+        Keep(5 - -3);
+        Keep(-2 * 3);
+        Keep(-negative297);
+        """) is null && Probe.Kept is [-1, 8, -6, 1]);
+
+Try("a return inside a loop returns from what the loop is in", () =>
+    ResetKept() && Run("""
+        import { Boolean as Boolean298, DotNet_Module as DotNet_Module298 } from "core:runtime";
+        def Loops298 of DotNet_Module298 {
+            fun first(stop: Boolean298): Int32 {
+                let index = 0;
+                while (index < 3) {
+                    if (stop) return index;
+                    index = index + 1;
+                }
+                return index;
+            }
+        }
+        fun counted298(): Int32 {
+            let index = 0;
+            while (true) {
+                if (index == 2) return index;
+                index = index + 1;
+            }
+            return -1;
+        }
+        Keep(Loops298.first(true));
+        Keep(Loops298.first(false));
+        Keep(counted298());
+        """) is null && Probe.Kept is [0, 3, 2]);
+
+Try("a name a type that isn't generic shares with generic ones is that type, and indexed, the one of that arity", () =>
+    ResetKept() && Run("""
+        import { Object as Object299, Type as Type299, List as List299 } from "core:runtime";
+        let objectType299: Type299 = Object299;
+        import { IList as IList299 } from objectType299.Assembly.Location;
+        let numbers299 = List299[Int32]();
+        numbers299.Add(3);
+        let value299: Object299 = numbers299;
+        if (value299 is list299 of IList299) Keep(list299.Count);
+        let typed299: IList299[Int32] = numbers299;
+        Keep(typed299.Count);
+        Keep((value299 as IList299).Count);
+        """) is null && Probe.Kept is [1, 1, 1]);
+
+Try("a value of a CLR interface defined in Z# is matched against, and cast down to, a class", () =>
+    ResetKept() && Run("""
+        import { DotNet_Interface as DotNet_Interface300, DotNet_Module as DotNet_Module300 } from "core:runtime";
+        def Shape300 of DotNet_Interface300 { fun name(): String; }
+        def Square300 of DotNet_Class : Shape300 {
+            @explicitThis new(this) { }
+            @explicitThis fun name(this): String { return "square"; }
+        }
+        def Shapes300 of DotNet_Module300 {
+            fun kind(shape: Shape300): String {
+                if (shape is square of Square300) return "a " + square.name();
+                return "something";
+            }
+        }
+        Keep(Shapes300.kind(Square300()));
+        """) is null && Kept() is "a square");
+
+Try("a value of a Z# class goes where an Object is expected in the running process, which makes it one", () =>
+    ResetKept() && Run("""
+        import { Object as Object301 } from "core:runtime";
+        def Point301 {
+            let x: Int32;
+            new(this, x: Int32) { this.x = x; }
+        }
+        let point301 = Point301(3);
+        let held301: Object301 = point301;
+        Keep(held301.GetType().Name);
+        Keep(held301 == point301);
+        let type301: Object301 = Point301;
+        Keep(type301 != null);
+        """) is null && Probe.Kept is ["Point301", true, true]);
+
+Try("a value of a Z# class has no members of Object's, as a class has no base", () =>
+    Run("""
+        def Point302 {
+            let x: Int32;
+            new(this, x: Int32) { this.x = x; }
+        }
+        Keep(Point302(1).GetType());
+        """) is { } e && e.Contains("has no member named GetType"));
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;
