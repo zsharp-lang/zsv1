@@ -82,6 +82,9 @@ namespace ZSharp.Platform.Runtime
             foreach (var @interface in polymorphic.Interfaces)
                 definition.Interfaces.Add(ClassOf(@interface, batch));
 
+            foreach (var implemented in polymorphic.Implements)
+                definition.Interfaces.Add(implemented);
+
             if (!polymorphic.IsInterface)
             {
                 foreach (var (field, index) in structure.Fields.Select((field, index) => (field, index)))

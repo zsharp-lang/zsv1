@@ -681,6 +681,13 @@ def Cecil of DotNet_Class : ClrPlatform {
             index = index + 1;
         }
 
+        // The CLR's own types it implements, as the toolchain's interfaces.
+        index = 0;
+        while (index < mark.Implements.Count) {
+            type.Interfaces.Add(InterfaceImplementation(this.type(mark.Implements[index])));
+            index = index + 1;
+        }
+
         if (mark.IsInterface == false) {
             this.declareFields(structure, type);
 

@@ -6,7 +6,7 @@
 // definition. A platform that exists, as the CLR runtime, is given a capability by a
 // trait.
 
-import { Structure, Function } from "std:zsharp/lir";
+import { Structure, Function, Type } from "std:zsharp/lir";
 import { DotNet_Interface } from "core:runtime";
 
 // Polymorphism: a structure's values are objects, which calls on them reach through
@@ -32,4 +32,12 @@ def Polymorphism of DotNet_Interface {
     // The function, which has no code, tells whether an object is of the class or
     // interface.
     fun test(function: Function, target: Structure);
+}
+
+// What a platform's classes can implement of the platform's own: a type of it, as an
+// interface of the CLR's is, which a class whose bases are such types needs. A target
+// without it has classes that implement only Z# interfaces.
+def PlatformInterfaces of DotNet_Interface {
+    // The class implements the platform's type.
+    fun implements(structure: Structure, implemented: Type);
 }

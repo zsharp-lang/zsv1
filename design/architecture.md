@@ -901,12 +901,45 @@ a custom type gets into the language to be used as a meta-type.
   through it, or by name in one of its methods, is its class's type object's. Only a value
   of an interface could be of any class, so what class it is would come from the object,
   which isn't reachable yet.
+- A class's bases are what it implements: Z# interfaces, whose methods `std:oop` checks
+  it has, and types of a platform's own, as the CLR's interfaces, which `std:oop` asks
+  the target to implement through the capability `PlatformInterfaces`, of
+  `std:zsharp/capabilities`, and which the platform checks as it realizes the class. The
+  CLR platforms have it, by `std:zsharp/clr`: a polymorphic structure's `Implements`
+  are interfaces of the class they make of it. So a Z# class can be a CO, as
+  `def Retyped : CompilerObject, ICompileIRExpression, ITyped` in `std:oop` is, and the
+  compiler calls it through its protocols; a target without the capability can't have
+  such a class.
+- `std:oop`'s COs are Z# classes, built by `std:oop` itself: what loads a class, method,
+  constructor or interface, and the meta-compilers that compile them. What has no object,
+  as matching arguments or finding what a built class was built as, is a function of its
+  module, since a module holds no module. Only its HIR nodes and `MethodOwner`, an
+  interface of the CLR's that a Z# class implements as any other, are still CLR
+  definitions. So a runtime other than the CLR's gets the COs with `std:oop`; the HIR
+  nodes are the next to move.
+- Methods of one name overload, as functions do: `Method` is `Overloadable`, so binding a
+  second one adds to the first, and a member's name reaches all its methods as one CO.
+- A method reached through an object is a function bound to it, `ICompileIRReceiver`,
+  so a delegate of it is closed over the object, as the CLR closes one over a first
+  argument: `let f: Func[Int32, Int32] = adder.add`. That is how the meta-compilers give
+  their own methods to the compiler as hooks. A Z# object reaches what expects a value of
+  its own type everywhere, while going to `Object` is the runtime's, so what holds any
+  value takes it as its type, as `CapabilityContext.Of[T]` does.
+- While a class's structure is built, the types of its fields are lowered, and lowering a
+  class lowers its code, which may use a class whose structure has no fields yet, as a
+  metaclass's code uses its class's. So while any structure is being built for a target,
+  a class used as a type is only its structure, and it is lowered, in order, once none is.
+  And what lowers a function, or a parameter, makes it after compiling its types and finds
+  it again then, since compiling them can lower code that asks for it first.
 - A class has no base, so a value of one has only its class's members, and goes only to
-  its class and to the interfaces it implements. That it is also an `Object` is the
+  its class and to what it implements. That it is also an `Object` is the
   running process's, which realizes it as a CLR class: `core:runtime` adds an implicit
   cast to `Object`, which the host installs, and whose code compiles only for the
   runtime, so a module that uses it can't be built for another platform. Put in the CLR
-  platforms' shared library, it would compile for any of them.
+  platforms' shared library, it would compile for any of them, but whether a value goes
+  to `Object` is decided as code is generated, by lowering its type for the runtime,
+  which then lowers the type's module for the runtime while it is being built for
+  another target. That needs a way to tell a class without lowering it first.
 - `def` isn't a class or a type: it is a definition, `def ID? (of META)? ...`, and
   `module` is `def` of `Module`. So a definition's body holds definitions as a module's
   does, and whether it takes each is its meta-type's to say; a CLR module is
@@ -2408,6 +2441,11 @@ The first target is parity with `zsv1`: importing `print` and calling it.
   which fails only when its handle is mapped. The fix is for the IL loader to describe
   the target's reference assemblies, without loading them, as `MetadataLoadContext`
   reads them.
+- **A module's global whose type's code uses the global.** A global is declared once its
+  type is lowered, and lowering a class lowers its code, so a global of type
+  `List[ClassObject]` that `ClassObject`'s code uses isn't declared when that code asks
+  for it. `std:oop` types such a global by an interface instead. A global could be
+  declared before its type is complete, as a class's structure is.
 
 ## Choices and restrictions from 2026-11-09
 

@@ -93,6 +93,15 @@ namespace ZSharp.Lang
     {
         public object Capability { get; } = capability;
 
+        /// <summary>
+        /// A context whose capability is a value of any type, as an object of a Z# class
+        /// is, which goes where its own type is expected on any platform, as it may not go
+        /// where an <c>Object</c> is.
+        /// </summary>
+        public static CapabilityContext Of<T>(Compiler.Context? parent, T capability)
+            where T : class
+            => new(parent, capability);
+
         public new bool Is<T>([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out T? result) where T : class
             => (result = Capability as T) is not null || base.Is(out result);
     }

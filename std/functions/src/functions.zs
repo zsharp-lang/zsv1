@@ -97,7 +97,11 @@ def ParameterObject of DotNet_Class : CompilerObject, ICTMatchParameter, ICompil
     @explicitThis fun parameter(this, target: Object): LIRParameter {
         if (this.lowered.ContainsKey(target)) return this.lowered[target];
 
-        let parameter = LIRParameter(ir.CompileType(this.get_Type(), target).Unwrap());
+        let type = ir.CompileType(this.get_Type(), target).Unwrap();
+        // Its type can lower what asks for it, which made it first.
+        if (this.lowered.ContainsKey(target)) return this.lowered[target];
+
+        let parameter = LIRParameter(type);
         parameter.Name = this.name;
         this.lowered[target] = parameter;
 

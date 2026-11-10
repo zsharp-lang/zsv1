@@ -2,11 +2,11 @@
 // running process, or an assembly written for a version of .NET. Each marks LIR with the
 // CLR's metadata, which every CLR platform realizes.
 
-import { Polymorphism } from "std:zsharp/capabilities";
+import { Polymorphism, PlatformInterfaces } from "std:zsharp/capabilities";
 import { Implementation, implement } from "std:traits";
 import { entrypoint } from "std:framework";
 import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest, explicitThis } from "core:runtime";
-import { Structure, Function } from "std:zsharp/lir";
+import { Structure, Function, Type as LIRType } from "std:zsharp/lir";
 
 // The CLR has polymorphism: a polymorphic structure is a CLR class or interface, and a
 // method of one is a method of the class.
@@ -46,7 +46,26 @@ def ClrPolymorphism of Implementation[Polymorphism, ClrPlatform] {
     }
 }
 
-// Importing it makes the implementation known, as loading its definition does where it
-// is built.
+// A CLR class can implement the CLR's own interfaces, as the toolchain's are: the class
+// a polymorphic structure is implements them.
+def ClrInterfaces of Implementation[PlatformInterfaces, ClrPlatform] {
+    let value: ClrPlatform;
+
+    @explicitThis new(this, value: ClrPlatform) { this.value = value; }
+
+    @explicitThis fun implements(this, structure: Structure, implemented: LIRType) {
+        let index = 0;
+        while (index < structure.Metadata.Count) {
+            if (structure.Metadata[index] is mark of Polymorphic) mark.Implements.Add(implemented);
+            index = index + 1;
+        }
+    }
+}
+
+// Importing it makes the implementations known, as loading their definitions does where
+// it is built.
 @entrypoint
-fun install() { implement(Polymorphism, ClrPlatform, ClrPolymorphism); }
+fun install() {
+    implement(Polymorphism, ClrPlatform, ClrPolymorphism);
+    implement(PlatformInterfaces, ClrPlatform, ClrInterfaces);
+}

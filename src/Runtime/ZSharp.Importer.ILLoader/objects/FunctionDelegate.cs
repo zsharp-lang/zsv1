@@ -31,8 +31,15 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             var invoke = definition.GetMethod("Invoke")!;
 
-            if (invoke.GetParameters().Length != lowered.Signature.Parameters.Count)
-                return Result<LIR.Expression>.Error($"A {definition.Name} takes {invoke.GetParameters().Length} arguments, but the function takes {lowered.Signature.Parameters.Count}.");
+            // A function bound to an object takes it first, and the delegate is closed over it.
+            LIR.Expression? receiver = null;
+            if (function.Is<ICompileIRReceiver>(out var bound) && bound.Receiver is { } @object)
+                if (Core.Compiler.ModuleScope.IR.CompileExpression(@object, target).When(out receiver).Error(out error))
+                    return Result<LIR.Expression>.Error(error);
+
+            var taken = lowered.Signature.Parameters.Count - (receiver is null ? 0 : 1);
+            if (invoke.GetParameters().Length != taken)
+                return Result<LIR.Expression>.Error($"A {definition.Name} takes {invoke.GetParameters().Length} arguments, but the function takes {taken}.");
 
             if (Core.Compiler.ModuleScope.IR.CompileType(delegateType, target).When(out var type).Error(out error))
                 return Result<LIR.Expression>.Error(error);
@@ -52,12 +59,24 @@ namespace ZSharp.Importer.ILLoader.Objects
                     Parameters = constructor.Parameters,
                 };
 
-            var code = new LIR.CLR.ClrCode(new LIR.Signature { ReturnType = type })
-                .Emit(System.Reflection.Emit.OpCodes.Ldnull)
+            if (receiver is null)
+            {
+                var unbound = new LIR.CLR.ClrCode(new LIR.Signature { ReturnType = type })
+                    .Emit(System.Reflection.Emit.OpCodes.Ldnull)
+                    .Emit(System.Reflection.Emit.OpCodes.Ldftn, lowered)
+                    .Emit(System.Reflection.Emit.OpCodes.Newobj, constructor);
+
+                return Result<LIR.Expression>.Ok(new LIR.Call(unbound));
+            }
+
+            var signature = new LIR.Signature { ReturnType = type };
+            signature.Parameters.Add(new LIR.Parameter(lowered.Signature.Parameters[0].Type));
+
+            var closed = new LIR.CLR.ClrCode(signature)
                 .Emit(System.Reflection.Emit.OpCodes.Ldftn, lowered)
                 .Emit(System.Reflection.Emit.OpCodes.Newobj, constructor);
 
-            return Result<LIR.Expression>.Ok(new LIR.Call(code));
+            return Result<LIR.Expression>.Ok(new LIR.Call(closed, [receiver]));
         }
     }
 }

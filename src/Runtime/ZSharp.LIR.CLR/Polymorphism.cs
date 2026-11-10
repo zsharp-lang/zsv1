@@ -14,6 +14,12 @@ namespace ZSharp.LIR.CLR
         /// The interfaces the class implements, or the interface extends.
         /// </summary>
         public List<LIR.Structure> Interfaces { get; } = [];
+
+        /// <summary>
+        /// The CLR's own types the class implements, as an interface of the toolchain's,
+        /// which a CLR platform gives the class it realizes.
+        /// </summary>
+        public List<LIR.Type> Implements { get; } = [];
     }
 
     /// <summary>

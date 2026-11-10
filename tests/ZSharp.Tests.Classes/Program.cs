@@ -5215,6 +5215,159 @@ Try("inside a Z# function, its own name is the overloads it is one of", () =>
         Keep(Names305.greet());
         """) is null && Kept() is "hello world");
 
+Try("a Z# class implements a CLR interface, and goes where it is expected", () =>
+    ResetKept() && Run("""
+        import { IDisposable as IDisposable306 } from "core:runtime";
+        def Resource306 : IDisposable306 {
+            let closed: Int32;
+            new(this) { this.closed = 0; }
+            fun Dispose() { closed = closed + 1; }
+        }
+        let resource306 = Resource306();
+        let disposable306: IDisposable306 = resource306;
+        disposable306.Dispose();
+        disposable306.Dispose();
+        Keep(resource306.closed);
+        """) is null && Kept() is 2);
+
+Try("a Z# class is a CO, which the compiler calls through its protocols", () =>
+    ResetKept() && Run("""
+        import { Object as Object307, Type as Type307, runtime as runtime307, ilLoader as ilLoader307 } from "core:runtime";
+        import { CompilerObject as CompilerObject307 } from "std:zsharp/mir";
+        import { Error as Error307, Result as Result307, IResult as IResult307 } from "std:zsharp/common";
+        import { ICompileIRExpression as ICompileIRExpression307 } from "std:zsharp/compiler/ir";
+        import { ITyped as ITyped307 } from "std:zsharp/compiler/ts";
+        import { Constant as Constant307, Expression as LIRExpression307 } from "std:zsharp/lir";
+        import { ir as ir307, ts as ts307, hirLoader as hirLoader307 } from "core:compiler";
+        def Answer307 : CompilerObject307, ICompileIRExpression307, ITyped307 {
+            let type: CompilerObject307;
+            new(this) {
+                let int32: Type307 = Int32;
+                this.type = hirLoader307.LoadType(ilLoader307.Load(int32)).Unwrap();
+            }
+            fun CompileIRExpression(target: Object307): IResult307[LIRExpression307, Error307] {
+                return Result307[LIRExpression307].Ok(Constant307(ir307.CompileType(type, target).Unwrap(), 42));
+            }
+            fun get_Type(): CompilerObject307 { return type; }
+        }
+        let answer307: CompilerObject307 = Answer307();
+        Keep(ts307.TypeOf(answer307).IsOk);
+        Keep((ir307.CompileExpression(answer307, runtime307).Unwrap() as Constant307).Value);
+        """) is null && Probe.Kept is [true, 42]);
+
+Try("a Z# class the Cecil platform writes implements the CLR interfaces it does", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-implements-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Resources308"));
+        """);
+    File.WriteAllText(Path.Combine(source, "resource.zs"), """
+        import { Int32, IDisposable } from "core:runtime";
+        def Resource : IDisposable {
+            let closed: Int32;
+            new(this) { this.closed = 0; }
+            fun Dispose() { closed = closed + 1; }
+        }
+        fun disposable(): IDisposable { return Resource(); }
+        """);
+    var written = Path.Combine(root, "Resources308.dll").Replace('\\', '/');
+
+    return ResetKept() && Run($$"""
+        import { discover as discover308, Compiler as Compiler308 } from "std:project";
+        import { Module as Module308, lower as lower308 } from "std:modules";
+        import { Cecil as Cecil308 } from "pkg:cecil";
+        import { IDisposable as IDisposable308 } from "core:runtime";
+        let resources308 = Compiler308(discover308("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module308;
+        let target308 = Cecil308("Resources308", null);
+        target308.add(lower308(resources308, target308));
+        target308.write("{{written}}");
+        import { disposable as disposable308 } from "{{written}}";
+        let made308: IDisposable308 = disposable308();
+        made308.Dispose();
+        Keep(made308.GetType().GetInterfaces()[0].Name);
+        """) is null && Kept() is "IDisposable";
+});
+
+Try("methods of a Z# class of one name overload, as functions do", () =>
+    ResetKept() && Run("""
+        def Shapes309 {
+            new(this) { }
+            fun describe(this, side: Int32): String { return "a square of " + side; }
+            fun describe(this, name: String): String { return "a " + name; }
+            fun both(this): String { return describe(2) + ", " + describe("circle"); }
+        }
+        let shapes309 = Shapes309();
+        Keep(shapes309.describe(3));
+        Keep(shapes309.describe("triangle"));
+        Keep(shapes309.both());
+        """) is null && Probe.Kept is ["a square of 3", "a triangle", "a square of 2, a circle"]);
+
+Try("a method reached through a Z# object is a delegate bound to the object", () =>
+    ResetKept() && Run("""
+        import { Func as Func310 } from "core:runtime";
+        def Adder310 {
+            let by: Int32;
+            new(this, by: Int32) { this.by = by; }
+            fun add(this, value: Int32): Int32 { return value + by; }
+            fun adding(this): Func310[Int32, Int32] { return add; }
+        }
+        let add310: Func310[Int32, Int32] = Adder310(10).add;
+        Keep(add310(5));
+        Keep(Adder310(1).adding()(2));
+        """) is null && Probe.Kept is [15, 3]);
+
+Try("classes the Cecil platform writes make each other as they are built, and pass their methods as delegates", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-mutual-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Mutual311"));
+        """);
+    File.WriteAllText(Path.Combine(source, "mutual.zs"), """
+        import { Int32, String, Object, Dictionary, Func } from "core:runtime";
+        def Outer {
+            let name: String;
+            let inner: Inner;
+            let others: Dictionary[Object, Inner];
+            new(this, name: String) {
+                this.name = name;
+                this.others = Dictionary[Object, Inner]();
+                this.inner = Inner(this);
+            }
+            fun describe(this): String { return this.inner.describe(); }
+        }
+        def Inner {
+            let owner: Outer;
+            let label: String;
+            new(this, owner: Outer) { this.owner = owner; this.label = owner.name + "!"; }
+            fun describe(this): String { return this.label + " of " + this.owner.name; }
+            fun add(this, value: Int32): Int32 { return value + this.label.Length; }
+        }
+        fun run(): String {
+            let add: Func[Int32, Int32] = Outer("x").inner.add;
+            return Outer("x").describe() + " " + add(1);
+        }
+        """);
+    var written = Path.Combine(root, "Mutual311.dll").Replace('\\', '/');
+
+    return ResetKept() && Run($$"""
+        import { discover as discover311, Compiler as Compiler311 } from "std:project";
+        import { Module as Module311, lower as lower311 } from "std:modules";
+        import { Cecil as Cecil311 } from "pkg:cecil";
+        let mutual311 = Compiler311(discover311("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module311;
+        let target311 = Cecil311("Mutual311", null);
+        target311.add(lower311(mutual311, target311));
+        target311.write("{{written}}");
+        import { run as run311 } from "{{written}}";
+        Keep(run311());
+        """) is null && Kept() is "x! of x 3";
+});
+
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;
 
