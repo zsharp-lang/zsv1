@@ -19,9 +19,10 @@ import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
 import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode, Module as LIRModule, ICallable } from "std:zsharp/lir";
 import { Bodies } from "std:zsharp/lang";
 import { CodeLoaders } from "std:zsharp/compiler/code";
-import { Holder, Held } from "std:zsharp/lowering";
+import { Holder, Held, keep } from "std:zsharp/lowering";
 import { metaTypes, bodies } from "core:zsharp";
-import { entrypoint, definitionLoader, instanceLoader, metaType } from "std:framework";
+import { entrypoint, definitionLoader, instanceLoader, metaType, binder } from "std:framework";
+import { ilLoader } from "core:runtime";
 import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
 
 // ---- The HIR
@@ -249,6 +250,7 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
 
         // It is known before its code is lowered, so its code can call it.
         let function = LIRFunction(signature);
+        keep(this.node, function.Metadata);
         function.Name = this.node.Name;
         this.lowered[target] = function;
         if (container != null) container.Functions.Add(function);
@@ -419,3 +421,10 @@ fun install() { metaTypes.Default[FunctionSyntax](Function as Instance); }
 // Makes a declared function lower as a definition, wherever it is called: what provides
 // it, as the prelude makes `reflect` the IL loader's description of a type.
 fun premap(declared: Instance, to: Instance) { premapped[declared as Function] = to; }
+
+// A function that was built is premapped onto the method it was built as.
+@binder
+fun bindFunction(node: Function, entity: Object): Error {
+    premapped[node] = ilLoader.Load(entity as MethodInfo);
+    return null;
+}

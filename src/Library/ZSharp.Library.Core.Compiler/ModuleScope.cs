@@ -35,6 +35,13 @@ namespace Core.Compiler
         public static ZSharp.Compiler.MappedLoader MappedLoader { get; set; } = null!;
 
         /// <summary>
+        /// What binds each kind of node to what it was built as, which libraries register
+        /// for their nodes, and an importer of built definitions uses.
+        /// </summary>
+        [Alias("bindings")]
+        public static ZSharp.Compiler.Bindings Bindings { get; set; } = new();
+
+        /// <summary>
         /// What loads HIR code by the type of its nodes.
         /// </summary>
         [Alias("mappedCodeLoader")]

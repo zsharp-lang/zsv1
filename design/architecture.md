@@ -1996,6 +1996,121 @@ what a definition is, and a definition doesn't encode its HIR node.
   other assembly. For a target without reflection, code that rebuilds a description,
   reified or serialized at build time, is the fallback.
 
+### Reflection and importing
+
+Designed on 2026-11-10, and built, as **How it is built** says, but for what it lists
+as not yet. What follows replaces the IL loader as the one source of descriptions.
+
+Reflection and importing are two things. Reflection is getting the HIR node of a
+definition, which code generation also uses: a program can reflect and build HIR with
+only the HIR libraries, without the language's core. Importing is getting HIR for
+something imported, which needn't contain any: a native DLL or a foreign language's
+module gives HIR too. Where an importer's HIR comes from is its own business.
+
+- **Reflection is stored metadata.** An encoder, run by the build, stores what describes
+  the module somewhere, and `reflect` is matched to how it was stored, through mapping.
+  It is the composition of two halves:
+  - the platform's: a runtime object that carries metadata gives its metadata, and the
+    unit it was compiled into, as `Type.Module` is on the CLR;
+  - the encoder's: that metadata, in that unit, gives the HIR node.
+- **Any object that carries metadata** can be reflected, not only a type object, so a
+  type object carries it too. A Z# class's type object carries it through its runtime
+  class, its metaclass, which each class has of its own. `ClassOf` stays the canonical
+  node of a metaclass, as `Type[X]` is an expression, which makes a node each time.
+- **Encoding happens before lowering**, and can add to the HIR: it gives each node it
+  encodes its id, as metadata. A node with no-reflection metadata is skipped, and a node
+  it encodes that refers to a skipped one is written with an external reference, or
+  fails.
+- **The metadata is an id**, unique in its unit. The unit carries what was encoded, as
+  the platform gives it a place: on the CLR, by convention, a blob, `[ReflectionBlob]`,
+  or a file beside it, `[ReflectionSourceFile("name.hir")]`. A native target can reuse
+  either, as they are only what a decoder reads. A build that puts several modules into
+  one unit encodes them together.
+- **Annotations are the metadata.** An annotation's type is annotated with what keeps
+  it: *encoded*, which the encoder honours, and *kept at runtime*, which lowering
+  honours, carrying it onto the LIR of what the definition lowers to, which the platform
+  writes its own way, as custom attributes on the CLR. Others are dropped, as the
+  framework's `EntryPoint` is. A kept annotation's state is constants a platform can
+  write.
+- **Separate platforms, separate reflection.** Each module can be built by a platform
+  instance of its own, mapped onto its own encoder, so one program can hold modules
+  reflected different ways. A type with no metadata, as `String`, is described as the
+  IL loader describes it.
+- **Encoders.** A (de)serializer is registered at compile time, for each node type.
+  The structure of a type is inferred by reflection, and a type can supply its own
+  (de)serializer instead. Generated ones are what tests Z#'s code generation. The format
+  is HIR's, not a platform's: a graph, with ids for what is shared, and an external
+  reference, resolved by importing it, for each node another module owns. Bodies are an
+  encoder's choice.
+- **One node per definition per process.** The importer and `reflect` decode a unit
+  once, and give the same nodes.
+- **Importing doesn't load.** An importer gives HIR, and only that. A .NET DLL imported
+  in a module is read as metadata, and is loaded into the runtime when the importing
+  module is, as the runtime platform maps a handle into it. An import in a document is
+  loaded right away, and so is one that is evaluated as code compiles. A module's entry
+  point runs when the module is loaded into a runtime.
+- **The compile-time environment.** An import a module's build needs, as one whose entry
+  point installs a meta-type, is `@ct import`, or is at the document level, as in its
+  module file. `ct` has an overload for an import, which runs it as code compiles.
+- **An imported definition is bound to what it was built as.** The CLR importer walks
+  the unit's entities, reflects each, and so has each node with what it was compiled to,
+  which it premaps the node onto, so lowering it gives that and not a new definition.
+  Every definition kind can be premapped, as a declared function can.
+- **A kept annotation is one generic CLR attribute**, `[Metadata(type, names, values)]`:
+  its type, and each of its fields by name with its value. Made for each type, an
+  attribute class would be what C# reads best, which nothing needs yet.
+
+#### How it is built
+
+- **Annotations.** `Annotated` is on Z# functions, globals, modules, classes, methods and
+  constructors, and on CLR classes, interfaces and structures. The capabilities
+  `Kept` and `Encoded` of an annotation's type say what keeps it. `keep(node,
+  metadata)`, of `std:zsharp/lowering`, is how a CO carries a node's kept annotations
+  onto the LIR it makes, as LIR `KeptAnnotation`; the IL loader does it for a CLR class.
+  The Cecil platform writes each as `[Metadata]` on the method, field or type it writes.
+  The runtime platform doesn't yet, as what it makes is reflected in the process anyway.
+- **`std:encoding`** is the encoder and the decoder, in Z#. `encode(module)` gives each
+  annotated node it writes an id, kept as a `ReflectionId`, and gives the bytes. What it
+  writes is inferred from fields, a graph with each shared object once; code, a
+  `Code` or a list of locals, isn't written, and an annotation only if it is encoded.
+  A node another unit gave is written as that unit's, by its id; one that describes a
+  CLR entity, as that entity, by its names; a CLR definition of the module, as the
+  entity built of it, by its id. A registry of custom and generated (de)serializers is
+  not yet.
+- **The CLR convention.** The build gives the bytes to the platform:
+  `target.embed("ZSharp.Reflection", bytes, "std:encoding")`, an embedded resource and
+  `[ReflectionBlob(resource, decoder)]`, which names the library that decodes it.
+- **Importing.** What imports an assembly asks each describer in `core:zsharp`'s
+  `describers` for it, and the first that knows it gives what importing it gives, before
+  the assembly is entered; one none knows is the IL loader's view of its module. An
+  assembly whose blob names a decoder has the decoder imported first, so it is
+  described whatever was imported before it. A describer that fails leaves the assembly
+  to the IL loader, with a warning, so a seed built wrong still loads. `std:encoding`'s
+  describer decodes a unit once, entering the assembly of each kind of node it makes,
+  as what a node means is its library's, and binds each node to the entity that carries
+  its id.
+- **Binding.** `core:compiler`'s `bindings` maps a kind of node to what binds it, which a
+  library declares with `@binder`: a function is premapped onto its method, a global is
+  the static member it was built as, and a Z# class, its methods and its constructors are
+  the type and methods they were built as, which their COs are instead of lowering them
+  again. A node whose kind has no binder yet waits for one, as a library's nodes can be
+  decoded before the library that binds them is imported. A built class's metaclass is
+  found from it, as the type of its name and `.Class`, and its type object as the static
+  field of that type.
+- **Reflection.** `reflect(value)`, of `std:reflection`, is premapped by the prelude onto
+  `describe`, of `std:encoding`: what carries metadata gives its id and its unit, which
+  gives the node, and what carries none is described by the IL loader. A CLR method cast
+  to what describes it is a call of the loader's `DescribeMethod`, as a type's is of
+  `DescribeType`.
+- **Names with a dot.** The Cecil platform writes a type of a dotted name, as
+  `Shape.Class`, in the namespace before its last dot, so its full name is its name
+  however it is found, as a module Reflection.Emit builds finds a type by its namespace
+  and name.
+- **Not yet:** importing that reads metadata without loading; the runtime platform
+  writing kept annotations; a Z# interface built and imported; a description of a Z#
+  definition in code a platform writes, which is a known value of the process that
+  compiles it; and generated (de)serializers.
+
 ## Frameworks
 
 Code that builds a definition runs as it is built, at every level: a document, a
@@ -2146,15 +2261,16 @@ would, and checks the build.
   the order of what they need, with the libraries it loads, for the .NET that runs the
   toolchain. If any of them built something else than what was loaded, a new process,
   which loads what was built, is the next generation, until a generation builds what it
-  loads, which it must within four. A library is built only by a generation that loads
+  loads, which it must within eight. A library is built only by a generation that loads
   what it needs built, and none of them built differently by it, as its assembly refers
   to theirs, so a library built for the first time from a document is built again by
   the next generation from its build.
 - **A library is all of its module.** A member that fails to lower fails its build,
   as `std:modules`' `failures(module)` says, so a broken library isn't a seed.
 - **A seed only has what was built.** The bootstrap runs on the seed, so it can only
-  use what the seed has: a feature the bootstrap needs is built into the seed by one
-  bootstrap and used by the next.
+  use what the seed has: a feature the bootstrap, the prelude, or what the seed decodes
+  needs is built into the seed by one bootstrap and used by the next. A library that
+  becomes a project keeps its document for one bootstrap, which seeds it.
 - **The Cecil platform and the package manager** are built from their sources every
   generation, so nothing an older build of them lacks is needed: what earlier bootstraps
   built of them is removed before the prelude is imported, which then compiles the
@@ -2164,12 +2280,11 @@ would, and checks the build.
   manager is built once the standard library builds itself the same.
 - `tests/run.sh` bootstraps before the tests run, so they run with what a bootstrap
   builds, and a library or platform that doesn't build itself the same fails the run.
-- **Not yet built:** `std:types`, whose `Type` is a Z# class with a class index
-  operator, which a built assembly gives as a CLR class; `std:reflection`, whose
-  declared `reflect` is premapped by the prelude, after it is built, so its build has no
-  `reflect`; and `std:project` and `std:packages`, whose classes are Z# classes, whose
-  constructors a built assembly gives as functions of their module. They are still
-  documents. The prelude is a document too.
+- **Every library is encoded**, so importing its build gives the Z# module it was, as
+  **Reflection and importing** describes, bound to what it was built as.
+- **Not yet built:** `std:project`, whose `core:project` is a CLR module of its own,
+  `Live`, which a module can't hold, and `std:packages`, which needs it. They are still
+  documents, as is the prelude.
 
 ## Packages
 
@@ -2259,6 +2374,19 @@ The first target is parity with `zsv1`: importing `print` and calling it.
   which fails only when its handle is mapped. The fix is for the IL loader to describe
   the target's reference assemblies, without loading them, as `MetadataLoadContext`
   reads them.
+
+## Gaps found on 2026-11-10
+
+Found while writing `std:encoding` and binding built classes, and worked around:
+
+- **No unary minus.** `-1` doesn't parse; it is written `0 - 1`.
+- **A name two CLR types share** is imported as both, as `IList` is `IList` and
+  `IList<T>`, so a pattern or a cast of it fails, with an error that names something
+  else: `is x of IList` gives "Local can't be called with these arguments".
+- **A value of an interface defined in Z# can't be matched** against a class, as
+  `owner is c of ClassObject` with `owner: MethodOwner`.
+- **A value of a Z# class has none of `Object`'s members**, and doesn't go where an
+  `Object` is expected.
 
 ## Choices and restrictions from 2026-11-09
 

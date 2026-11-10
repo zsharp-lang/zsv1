@@ -174,7 +174,8 @@ importer.DefaultImporter = fileImporter;
 
 // A .dll file is an assembly, imported as its module. This is what the host loads, as
 // what the toolchain is built of has to be loaded before anything in Z# can be.
-var assemblies = new Assemblies(il);
+var assemblies = new Assemblies(il, Core.ZSharp.ModuleScope.Describers) { ImportLibrary = source => importer.Import(source) };
+Core.ZSharp.ModuleScope.Enter = assemblies.Enter;
 fileImporter.Register(".dll", assemblies.ImportFile);
 Core.ZSharp.ModuleScope.Files = fileImporter;
 Core.ZSharp.ModuleScope.Importers = importer;

@@ -45,6 +45,9 @@ libraries.Add("modules"); needs.Add("zsharp/lowering");
 libraries.Add("oop"); needs.Add("functions,zsharp/capabilities,zsharp/lowering");
 libraries.Add("framework"); needs.Add("functions,modules");
 libraries.Add("dotnet"); needs.Add("");
+libraries.Add("encoding"); needs.Add("");
+libraries.Add("reflection"); needs.Add("");
+libraries.Add("types"); needs.Add("oop");
 
 // Which libraries this generation loads built: those built before it started.
 let loaded = List[String]();
@@ -65,6 +68,7 @@ import { print } from "std:io";
 import { documents } from "core:zsharp";
 import { discover, Compiler } from "std:project";
 import { Module, lower, failures } from "std:modules";
+import { encode } from "std:encoding";
 
 let objectAssembly = objectType.Assembly.Location;
 import { Convert, AppContext } from objectAssembly;
@@ -143,7 +147,12 @@ def Libraries of DotNet_Module {
         let at = 0;
         while (at < emitted.Count) {
             let node = emitted[at] as Module;
+
+            // What describes it is encoded before it is lowered, which gives each of its
+            // definitions the id it is built with, and the assembly carries it.
+            let described = encode(node);
             target.add(lower(node, target));
+            target.embed("ZSharp.Reflection", described, "std:encoding");
 
             // A library is all of its module, so what lowering left out fails the build.
             let failed = failures(node);
@@ -175,7 +184,7 @@ while (index < libraries.Count) {
 }
 
 if (settled == false) {
-    if (generation == 4) {
+    if (generation == 8) {
         print("The standard library didn't build what it loads in " + generation + " generations.");
         Environment.Exit(1);
     }

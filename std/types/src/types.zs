@@ -11,9 +11,8 @@ import { Instance, Type as HIRType } from "std:zsharp/hir";
 import { Get, GetValue, TypeOf } from "std:zsharp/hir/code";
 import { Operator } from "std:zsharp/lang";
 import { class, Class } from "std:oop";
-import { export, operator } from "core:zsharp";
+import { operator } from "core:zsharp";
 
-@export
 def Type of Class {
     @class @operator(Operator.Index) fun(type: HIRType): HIRType {
         let value = GetValue();

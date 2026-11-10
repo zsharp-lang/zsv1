@@ -6,8 +6,9 @@
 // reaches, asks what holds it. Belonging is how a definition is lowered, so it is in the
 // COs, and the nodes stay structure.
 
-import { Object, Boolean, DotNet_Interface, DotNet_Class, static } from "core:runtime";
-import { Module as LIRModule, Definition as LIRDefinition, Statement as LIRStatement, Initialized } from "std:zsharp/lir";
+import { Object, Boolean, Int32, List, DotNet_Interface, DotNet_Class, static } from "core:runtime";
+import { Module as LIRModule, Definition as LIRDefinition, Statement as LIRStatement, Initialized, Metadata, KeptAnnotation } from "std:zsharp/lir";
+import { Annotated, Kept } from "std:zsharp/hir";
 
 // What holds definitions, as its CO: they lower into its LIR module for a target, which
 // it lowers with them.
@@ -29,5 +30,17 @@ def Initializing of DotNet_Class {
             return true;
         }
         return false;
+    }
+}
+
+// Keeps what is said of a node to keep, an annotation whose type is kept, on the metadata
+// of what it lowers to, which a platform writes its own way.
+fun keep(node: Object, metadata: List[Metadata]) {
+    if (node is annotated of Annotated) {
+        let index = 0;
+        while (index < annotated.Annotations.Count) {
+            if (annotated.Annotations[index] is kept of Kept) metadata.Add(KeptAnnotation(kept));
+            index = index + 1;
+        }
     }
 }

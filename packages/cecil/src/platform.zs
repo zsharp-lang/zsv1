@@ -213,6 +213,15 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     // A name for something LIR names or doesn't, once in the assembly.
+    // A type of a dotted name, as `Shape.Class`, is in the namespace of what is before its
+    // last dot, so its full name is that name however it is found: a module Reflection.Emit
+    // builds refers to a type by its namespace and name.
+    @explicitThis fun named(this, name: String, attributes: TypeAttributes, base: TypeReference): TypeDefinition {
+        let dot = name.LastIndexOf(".");
+        if (dot < 0) return TypeDefinition("", name, attributes, base);
+        return TypeDefinition(name.Substring(0, dot), name.Substring(dot + 1), attributes, base);
+    }
+
     @explicitThis fun unique(this, name: String, fallback: String): String {
         let given = name;
         if (given == null) given = fallback;
@@ -231,6 +240,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         let attributes = TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.Class;
         let holder = TypeDefinition("", this.unique(unit.Name, "Module"), attributes, this.system("System.Object"));
         holder.CustomAttributes.Add(CustomAttribute(this.moduleScope()));
+        this.annotate(holder, unit.Metadata);
         this.main.Types.Add(holder);
         this.holders[unit] = holder;
 
@@ -241,6 +251,77 @@ def Cecil of DotNet_Class : ClrPlatform {
     // A module's class is a module scope, as the IL loader reads one: its static members
     // are the module's, so importing the assembly gives the module.
     @explicitThis fun moduleScope(this): MethodReference { return this.attribute("ZSharp.Importer.ILLoader.ModuleScopeAttribute"); }
+
+    // What was kept of what a definition was lowered from, written as the IL loader reads
+    // it back: an attribute of the annotation's type, and each of its fields by name with
+    // its value, a constant.
+    @explicitThis fun annotate(this, target: ICustomAttributeProvider, metadata: List[LIRMetadata]) {
+        let index = 0;
+        while (index < metadata.Count) {
+            if (metadata[index] is kept of KeptAnnotation) target.CustomAttributes.Add(this.metadataOf(kept.Value));
+            index = index + 1;
+        }
+    }
+
+    @explicitThis fun metadataOf(this, annotation: Object): CustomAttribute {
+        let written = CustomAttribute(this.attribute("ZSharp.Importer.ILLoader.MetadataAttribute"));
+        let system = this.main.TypeSystem;
+        let fields = annotation.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+        let names = List[CustomAttributeArgument]();
+        let values = List[CustomAttributeArgument]();
+        let index = 0;
+        while (index < fields.Length) {
+            names.Add(CustomAttributeArgument(system.String, fields[index].Name));
+            values.Add(CustomAttributeArgument(system.Object, this.constant(fields[index].GetValue(annotation))));
+            index = index + 1;
+        }
+
+        let core: Type = Object;
+        written.ConstructorArguments.Add(CustomAttributeArgument(this.system("System.Type"), this.type(this.reflected.Type(annotation.GetType()))));
+        written.ConstructorArguments.Add(CustomAttributeArgument(ArrayType(system.String), names.ToArray()));
+        written.ConstructorArguments.Add(CustomAttributeArgument(ArrayType(system.Object), values.ToArray()));
+        return written;
+    }
+
+    // A constant of an attribute, as its own type gives it.
+    @explicitThis fun constant(this, value: Object): CustomAttributeArgument {
+        let system = this.main.TypeSystem;
+        if (value is text of String) return CustomAttributeArgument(system.String, text);
+        if (value is number of Int32) return CustomAttributeArgument(system.Int32, number);
+        if (value is long of Int64) return CustomAttributeArgument(system.Int64, long);
+        if (value is flag of Boolean) return CustomAttributeArgument(system.Boolean, flag);
+        return fail("An annotation kept as metadata has state that isn't a constant.") as CustomAttributeArgument;
+    }
+
+    // Carries bytes an encoder wrote in the assembly, as the resource of this name, which
+    // the assembly says it carries as its reflection blob.
+    @explicitThis fun embed(this, resource: String, bytes: Byte[], decoder: String) {
+        this.main.Resources.Add(EmbeddedResource(resource, ManifestResourceAttributes.Public, bytes));
+        let blob = CustomAttribute(this.blobAttribute());
+        blob.ConstructorArguments.Add(CustomAttributeArgument(this.main.TypeSystem.String, resource));
+        blob.ConstructorArguments.Add(CustomAttributeArgument(this.main.TypeSystem.String, decoder));
+        this.assembly.CustomAttributes.Add(blob);
+    }
+
+    // The constructor of the reflection blob attribute that names the decoder too.
+    @explicitThis fun blobAttribute(this): MethodReference {
+        let assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        let index = 0;
+        while (index < assemblies.Length) {
+            let found = assemblies[index].GetType("ZSharp.Importer.ILLoader.ReflectionBlobAttribute");
+            if (found != null) {
+                let constructors = found.GetConstructors();
+                let each = 0;
+                while (each < constructors.Length) {
+                    if (constructors[each].GetParameters().Length == 2) return this.method(this.reflected.Method(constructors[each]));
+                    each = each + 1;
+                }
+            }
+            index = index + 1;
+        }
+        return fail("The IL loader's attributes aren't loaded.") as MethodReference;
+    }
 
     // The constructor of one of the IL loader's attributes, by its full name.
     @explicitThis fun attribute(this, name: String): MethodReference {
@@ -273,6 +354,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         let field = FieldDefinition(this.unique(global.Name, "global"), FieldAttributes.Public | FieldAttributes.Static, this.type(global.Type));
         holder.Fields.Add(field);
         this.globals[global] = field;
+        this.annotate(field, global.Metadata);
         return field;
     }
 
@@ -298,6 +380,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
         holder.Methods.Add(method);
         this.functions[function] = method;
+        this.annotate(method, function.Metadata);
         this.pending.Add(function);
         return method;
     }
@@ -555,9 +638,10 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     @explicitThis fun valueType(this, structure: LIRStructure): TypeDefinition {
         let attributes = TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.SequentialLayout;
-        let type = TypeDefinition("", this.unique(structure.Name, "Structure"), attributes, this.system("System.ValueType"));
+        let type = this.named(this.unique(structure.Name, "Structure"), attributes, this.system("System.ValueType"));
         this.main.Types.Add(type);
         this.structures[structure] = type;
+        this.annotate(type, structure.Metadata);
         this.declareFields(structure, type);
         return type;
     }
@@ -586,9 +670,10 @@ def Cecil of DotNet_Class : ClrPlatform {
             base = null;
         }
 
-        let type = TypeDefinition("", this.unique(structure.Name, "Object"), attributes, base);
+        let type = this.named(this.unique(structure.Name, "Object"), attributes, base);
         this.main.Types.Add(type);
         this.structures[structure] = type;
+        this.annotate(type, structure.Metadata);
 
         let index = 0;
         while (index < mark.Interfaces.Count) {
@@ -645,6 +730,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
         type.Methods.Add(method);
         this.functions[function] = method;
+        this.annotate(method, function.Metadata);
         this.instanceMethods[function] = true;
         if (function.Body != null) this.pending.Add(function);
     }
@@ -722,6 +808,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         let type = TypeDefinition("", this.unique(definition.Name, "Class"), attributes, null);
         this.main.Types.Add(type);
         this.definitions[definition] = type;
+        this.annotate(type, definition.Metadata);
 
         let index = 0;
         while (index < definition.GenericParameters.Count) {

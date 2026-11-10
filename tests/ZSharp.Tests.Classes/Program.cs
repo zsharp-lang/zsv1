@@ -123,7 +123,8 @@ Core.ZSharp.ModuleScope.Files = fileImporter;
 Core.ZSharp.ModuleScope.Importers = importer;
 Core.ZSharp.ModuleScope.Documents = documents;
 
-var assemblies = new Assemblies(il);
+var assemblies = new Assemblies(il, Core.ZSharp.ModuleScope.Describers) { ImportLibrary = source => importer.Import(source) };
+Core.ZSharp.ModuleScope.Enter = assemblies.Enter;
 fileImporter.Register(".dll", assemblies.ImportFile);
 
 if (ZSharp.Importer.String.DocumentLibrary.Above(AppContext.BaseDirectory, "std") is { } standard)
@@ -4953,6 +4954,116 @@ Try("what a module leaves out as it lowers is a failure of it, by the member's n
         Keep(failed294.Count);
         Keep(failed294[0].StartsWith("bad: "));
         """) is null && Probe.Kept is [1, true];
+});
+
+Try("an assembly that carries what was encoded of its module is imported as that module, bound to its code, and reflected as it", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-encoded-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Encoded295"));
+        """);
+    File.WriteAllText(Path.Combine(source, "encoded.zs"), """
+        import { String, Int32, DotNet_Class, explicitThis } from "core:runtime";
+        def Thing of DotNet_Class {
+            let Name: String;
+            @explicitThis new(this, name: String) { this.Name = name; }
+        }
+        let count = 1;
+        fun bump(): Int32 {
+            count = count + 1;
+            return count;
+        }
+        fun named(name: String): String { return Thing(name).Name; }
+        """);
+    var written = Path.Combine(root, "Encoded295.dll").Replace('\\', '/');
+
+    return ResetKept() && Run($$"""
+        import { discover as discover295, Compiler as Compiler295 } from "std:project";
+        import { Module as Module295, lower as lower295 } from "std:modules";
+        import { encode as encode295 } from "std:encoding";
+        import { reflect as reflect295 } from "std:reflection";
+        import { importers as importers295 } from "core:zsharp";
+        import { Cecil as Cecil295 } from "pkg:cecil";
+        import { Type as Type295, Object as Object295 } from "core:runtime";
+        import { Instance as Instance295 } from "std:zsharp/hir";
+        let encoded295 = Compiler295(discover295("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module295;
+        let blob295 = encode295(encoded295);
+        let target295 = Cecil295("Encoded295", null);
+        target295.add(lower295(encoded295, target295));
+        target295.embed("ZSharp.Reflection", blob295, "std:encoding");
+        target295.write("{{written}}");
+        import { bump as bump295, named as named295, count as count295, Thing as Thing295 } from "{{written}}";
+        Keep(bump295());
+        Keep(bump295());
+        Keep(named295("x"));
+        let thing295: Type295 = Thing295;
+        Keep(reflect295(thing295));
+        Keep(Thing295 as Instance295);
+        let imported295: Object295 = importers295.Import("{{written}}").Unwrap();
+        Keep(imported295);
+        let methods295 = thing295.Assembly.GetTypes();
+        let found295: Object295 = null;
+        let index295 = 0;
+        while (index295 < methods295.Length) {
+            let method295 = methods295[index295].GetMethod("bump");
+            if (method295 != null) found295 = reflect295(method295);
+            index295 = index295 + 1;
+        }
+        Keep(found295);
+        """) is null && Probe.Kept is [2, 3, "x", var reflected, var cast, var module, var bump]
+        && ReferenceEquals(reflected, cast)
+        && module.GetType().Name == "Module"
+        && module.GetType().GetField("Definitions")!.GetValue(module) is System.Collections.IList definitions
+        && definitions.Cast<object>().Any(definition => ReferenceEquals(definition, bump));
+});
+
+Try("a Z# class of an assembly that carries what was encoded of it is that class, bound to what it was built as", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-built-class-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Counters296"));
+        """);
+    File.WriteAllText(Path.Combine(source, "counter.zs"), """
+        import { String, Int32 } from "core:runtime";
+        import { class } from "std:oop";
+
+        def Counter {
+            let count: Int32;
+            new(this, start: Int32) { this.count = start; }
+            fun bump(): Int32 {
+                count = count + 1;
+                return count;
+            }
+            @class fun kind(): String { return "counter"; }
+        }
+        """);
+    var written = Path.Combine(root, "Counters296.dll").Replace('\\', '/');
+
+    return ResetKept() && Run($$"""
+        import { discover as discover296, Compiler as Compiler296 } from "std:project";
+        import { Module as Module296, lower as lower296 } from "std:modules";
+        import { encode as encode296 } from "std:encoding";
+        import { Cecil as Cecil296 } from "pkg:cecil";
+        import { Instance as Instance296 } from "std:zsharp/hir";
+        let counters296 = Compiler296(discover296("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module296;
+        let blob296 = encode296(counters296);
+        let target296 = Cecil296("Counters296", null);
+        target296.add(lower296(counters296, target296));
+        target296.embed("ZSharp.Reflection", blob296, "std:encoding");
+        target296.write("{{written}}");
+        import { Counter as Counter296 } from "{{written}}";
+        let counter296 = Counter296(41);
+        Keep(counter296.bump());
+        Keep(counter296.count);
+        Keep(Counter296.kind());
+        Keep(Counter296 as Instance296);
+        """) is null && Probe.Kept is [42, 42, "counter", var described] && described.GetType().Name == "Class";
 });
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)

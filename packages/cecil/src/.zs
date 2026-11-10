@@ -13,7 +13,8 @@ import {
 } from "core:runtime";
 
 let objectType: Type = Object;
-import { BindingFlags, Convert, Enum, Version, AppContext, Module as ReflectedModule } from objectType.Assembly.Location;
+import { BindingFlags, Convert, Enum, Version, AppContext, Byte, Module as ReflectedModule } from objectType.Assembly.Location;
+import { Assemblies } from Path.Combine(AppContext.BaseDirectory, "ZSharp.Importer.ILLoader.dll");
 
 import {
     AssemblyDefinition, AssemblyNameDefinition, ModuleDefinition, ModuleKind,
@@ -22,7 +23,8 @@ import {
     GenericInstanceType, GenericInstanceMethod, GenericParameter, GenericParameterType,
     ArrayType, ByReferenceType, PointerType, RequiredModifierType, OptionalModifierType,
     CallSite, OpCode, OpCodes, ILProcessor, Instruction, VariableDefinition, InterfaceImplementation, CustomAttribute,
-    PropertyDefinition, PropertyAttributes, WriterParameters
+    PropertyDefinition, PropertyAttributes, WriterParameters,
+    CustomAttributeArgument, ICustomAttributeProvider, EmbeddedResource, ManifestResourceAttributes
 } from "pkg:Mono.Cecil@0.11.6";
 
 import {
@@ -33,7 +35,7 @@ import {
     Expression as LIRExpression, Statement as LIRStatement, Block as LIRBlock, Evaluate, If as LIRIf, Loop as LIRLoop,
     Break as LIRBreak, Continue as LIRContinue, Return as LIRReturn, SetLocal, SetGlobal, SetField, Store,
     Constant, GetLocal, GetGlobal, GetField, GetFunction, Call as LIRCall, CallIndirect, New as LIRNew,
-    Allocate, Load as LIRLoad, Sequence, EntryPoint as LIREntryPoint
+    Allocate, Load as LIRLoad, Sequence, EntryPoint as LIREntryPoint, KeptAnnotation, Metadata as LIRMetadata
 } from "std:zsharp/lir";
 import {
     ClrEntity, ClrType, ClrArrayType, ClrPointerType, ClrGenericParameter, ClrMethod, ClrField, ClrCode, ClrLocal,

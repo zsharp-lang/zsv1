@@ -214,6 +214,12 @@ namespace ZSharp.Importer.ILLoader
                 var node = @class.Node;
                 var lowered = new Objects.LoweredClass(new LIR.CLR.ClassDefinition(node.Name));
 
+                // What is said of the class to keep is kept on what it lowers to: of an
+                // interface, what is said of the interface, not of the view it is defined by.
+                foreach (var annotation in Description(node) is HIR.Annotated said ? said.Annotations : node.Annotations)
+                    if (annotation is HIR.Kept)
+                        lowered.Definition.Metadata.Add(new LIR.KeptAnnotation(annotation));
+
                 // A class's type parameters exist before its members are declared, which use them.
                 foreach (var parameter in node.GenericParameters)
                 {

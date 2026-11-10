@@ -10,7 +10,10 @@ namespace Package.DotNet
         : ClassReference
         , DotNetDefinition
         , ZSharp.HIR.Named
+        , ZSharp.HIR.Annotated
     {
+        public List<object> Annotations { get; } = [];
+
         public string Name { get; set; } = name;
 
         public bool IsAbstract { get; set; }

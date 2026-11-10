@@ -4,7 +4,10 @@ namespace Package.DotNet
         : InterfaceReference
         , DotNetDefinition
         , ZSharp.HIR.Named
+        , ZSharp.HIR.Annotated
     {
+        public List<object> Annotations { get; } = [];
+
         public string Name { get; set; } = name;
 
         /// <summary>

@@ -10,6 +10,12 @@ namespace ZSharp.LIR.CLR
     {
         public string Name { get; set; } = name;
 
+        /// <summary>
+        /// What a platform may interpret of the class, as the annotations kept of what it
+        /// was lowered from.
+        /// </summary>
+        public List<Metadata> Metadata { get; } = [];
+
         public LIR.Type? Base { get; set; }
 
         /// <summary>

@@ -57,6 +57,17 @@ namespace Core.ZSharp
         /// <summary>
         /// What runs documents, which can run one again, as a project's module file is.
         /// </summary>
+        /// <summary>
+        /// What describe an assembly as it is imported, each asked in turn, as one that
+        /// reads what an encoder wrote of it: the first that knows it gives what importing
+        /// it gives, and an assembly none knows is its module as the IL loader describes it.
+        /// </summary>
+        [Alias("enter")]
+        public static Action<System.Reflection.Assembly> Enter { get; set; } = _ => { };
+
+        [Alias("describers")]
+        public static List<Func<System.Reflection.Assembly, global::ZSharp.HIR.Instance?>> Describers { get; } = [];
+
         [Alias("documents")]
         public static global::ZSharp.Lang.DocumentImporter Documents { get; set; } = null!;
 

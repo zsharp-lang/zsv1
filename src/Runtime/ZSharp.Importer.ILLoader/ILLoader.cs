@@ -174,6 +174,33 @@ namespace ZSharp.Importer.ILLoader
         private static readonly MethodInfo describeType = typeof(ILLoader).GetMethod(nameof(DescribeType))!;
 
         /// <summary>
+        /// The description of a method, as code asks for it as it runs, as a type's is.
+        /// </summary>
+        public static Package.DotNet.Method DescribeMethod(MethodBase method)
+            => (running ?? throw new InvalidOperationException("No loader describes methods in this process.")).Load((MethodInfo)method);
+
+        private static readonly MethodInfo describeMethod = typeof(ILLoader).GetMethod(nameof(DescribeMethod))!;
+
+        /// <summary>
+        /// The description of a method, as code: a call of <see cref="DescribeMethod"/>,
+        /// given the method object its token gives, cast to the type asked for if it is
+        /// narrower.
+        /// </summary>
+        internal IResult DescribedMethod(MethodInfo method, CompilerObject targetType)
+        {
+            var description = Class(typeof(Package.DotNet.Method));
+            var token = new LIR.CLR.ClrCode(new LIR.Signature { ReturnType = Handle(typeof(MethodBase)) })
+                .Emit(System.Reflection.Emit.OpCodes.Ldtoken, Handle(method))
+                .Emit(System.Reflection.Emit.OpCodes.Call, Handle(typeof(MethodBase).GetMethod(nameof(MethodBase.GetMethodFromHandle), [typeof(RuntimeMethodHandle)])!));
+            var methodObject = new Objects.Call(token, [], () => Class(typeof(MethodBase)));
+            var call = new Objects.Call(Handle(describeMethod), [methodObject], () => description);
+
+            return Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, description)
+                ? Result.Ok(call)
+                : Core.Compiler.ModuleScope.CG.Cast(call, targetType);
+        }
+
+        /// <summary>
         /// The description of a type, as code: a call of <see cref="DescribeType"/>, given the
         /// type's type object, cast to the type asked for if it is narrower.
         /// </summary>
@@ -186,6 +213,21 @@ namespace ZSharp.Importer.ILLoader
                 ? Result.Ok(call)
                 : Core.Compiler.ModuleScope.CG.Cast(call, targetType);
         }
+
+        /// <summary>
+        /// The CLR entity a node describes, if it describes one: a type, a method, a
+        /// constructor or a module the loader described, or <see langword="null"/>, as for
+        /// a definition, which describes what it defines.
+        /// </summary>
+        public object? Described(HIR.Instance node)
+            => node switch
+            {
+                Package.DotNet.TypeReference type when nodeTypes.TryGetValue(type, out var found) => found,
+                Package.DotNet.Method method when methodInfos.TryGetValue(method, out var found) => found,
+                Package.DotNet.Constructor constructor when constructorInfos.TryGetValue(constructor, out var found) => found,
+                Package.DotNet.Module module when moduleInfos.TryGetValue(module, out var found) => found,
+                _ => null,
+            };
 
         public Package.DotNet.Method Load(MethodInfo method)
         {

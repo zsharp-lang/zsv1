@@ -95,7 +95,9 @@ def References of DotNet_Class {
     @explicitThis fun readLoaded(this, name: String) {
         if (this.read.ContainsKey(name)) return;
         this.read[name] = true;
-        this.add(ModuleDefinition.ReadModule(this.loaded(name).Location));
+        let file = Assemblies.FileOf(this.loaded(name));
+        if (file == null) fail("The assembly " + name + " has no file to read.");
+        this.add(ModuleDefinition.ReadModule(file));
     }
 
     @explicitThis fun loaded(this, name: String): Assembly {

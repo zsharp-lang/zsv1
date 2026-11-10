@@ -11,7 +11,7 @@
 // is `def` of Module. Its own definitions are the CLR's, as it says.
 
 import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Class, DotNet_Module, explicitThis, static } from "core:runtime";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition } from "std:zsharp/hir";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "std:zsharp/hir";
 import { Call } from "std:zsharp/hir/code";
 import { Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get, Declare, BlockExpression, Statement, Cast } from "std:zsharp/hir/code";
 import {
@@ -30,23 +30,30 @@ import {
     Expression as LIRExpression, Statement as LIRStatement, Function as LIRFunction, ICallable, EntryPoint as LIREntryPoint
 } from "std:zsharp/lir";
 import { Bodies, ContainerCompiler } from "std:zsharp/lang";
-import { Holder, Held, Initializing } from "std:zsharp/lowering";
+import { Holder, Held, Initializing, keep } from "std:zsharp/lowering";
 import { metaTypes, bodies, language, ct } from "core:zsharp";
-import { entrypoint, definitionLoader, instanceLoader, metaType } from "std:framework";
+import { entrypoint, definitionLoader, instanceLoader, metaType, binder } from "std:framework";
+import { ilLoader } from "core:runtime";
 import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
 
 // ---- The HIR
 
 // A global of a module: one variable, of the type written or of its initializer, which
 // is the code that gives its value.
-def Global of DotNet_Class : Instance, Definition, Variable, NamedDefinition {
+def Global of DotNet_Class : Instance, Definition, Variable, NamedDefinition, Annotated {
     let name: String;
     let Type: Type;
     let Initializer: Expression;
+    let annotations: List[Object];
 
-    @explicitThis new(this, name: String) { this.name = name; }
+    @explicitThis new(this, name: String) {
+        this.name = name;
+        this.annotations = List[Object]();
+    }
 
     @explicitThis get Name(this): String { return this.name; }
+
+    @explicitThis get Annotations(this): List[Object] { return this.annotations; }
 }
 
 // A module: its globals and its definitions. It is the root of what it holds, an
@@ -54,19 +61,23 @@ def Global of DotNet_Class : Instance, Definition, Variable, NamedDefinition {
 // entry point, if it has one, is a definition of it that is called, with nothing, when
 // the module is imported: what loads it into the environment that imports it, as a
 // plugin is. Building it, as compiling its project does, doesn't call it.
-def Module of DotNet_Class : Instance, NamedDefinition {
+def Module of DotNet_Class : Instance, NamedDefinition, Annotated {
     let name: String;
     let Globals: List[Global];
     let Definitions: List[Definition];
     let EntryPoint: Instance;
+    let annotations: List[Object];
 
     @explicitThis new(this, name: String) {
         this.name = name;
         this.Globals = List[Global]();
         this.Definitions = List[Definition]();
+        this.annotations = List[Object]();
     }
 
     @explicitThis get Name(this): String { return this.name; }
+
+    @explicitThis get Annotations(this): List[Object] { return this.annotations; }
 }
 
 // ---- The COs
@@ -95,11 +106,13 @@ def GlobalObject of DotNet_Class : CompilerObject, ICompileIRExpression, ICTSet,
     }
 
     @explicitThis fun CompileIRDefinition(this, owner: LIRModule, target: Object): Error {
+        if (bound.ContainsKey(this.node)) return null;
         if (this.globals.ContainsKey(target)) return null;
 
         let type = this.get_Type();
         let global = LIRGlobal(ir.CompileType(type, target).Unwrap());
         global.Name = this.node.Name;
+        keep(this.node, global.Metadata);
         owner.Globals.Add(global);
         this.globals[target] = global;
 
@@ -122,11 +135,14 @@ def GlobalObject of DotNet_Class : CompilerObject, ICompileIRExpression, ICTSet,
         return this.globals[target];
     }
 
+    // A global that was built is what it was built as.
     @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+        if (bound.ContainsKey(this.node)) return ir.CompileExpression(bound[this.node], target);
         return Result[LIRExpression].Ok(GetGlobal(this.global(target)));
     }
 
     @explicitThis fun Set(this, value: CompilerObject): IResult[CompilerObject, Error] {
+        if (bound.ContainsKey(this.node)) return cg.Set(bound[this.node], value);
         let converted = cg.ImplicitCast(value, this.get_Type());
         if (converted.IsError) return converted;
 
@@ -190,6 +206,7 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
         if (this.modules.ContainsKey(target)) return this.modules[target];
 
         let lowered = LIRModule(this.node.Name);
+        keep(this.node, lowered.Metadata);
         this.modules[target] = lowered;
 
         let index = 0;
@@ -398,6 +415,23 @@ fun loadGlobal(node: Global): IResult[CompilerObject, Error] {
 // A global used as an instance is the one CO its definition gives.
 @instanceLoader
 fun instanceOfGlobal(node: Global): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
+
+// The globals that were built, as what each was built as: the static member of the class
+// its module was built as.
+let bound: Dictionary[Global, CompilerObject] = Dictionary[Global, CompilerObject]();
+
+@binder
+fun bindGlobal(node: Global, entity: Object): Error {
+    let member = entity as MemberInfo;
+    let owner = hirLoader.LoadType(ilLoader.Load(member.DeclaringType));
+    if (owner.IsError) return owner.UnwrapError();
+
+    let built = cg.Member(owner.Unwrap(), member.Name);
+    if (built.IsError) return built.UnwrapError();
+
+    bound[node] = built.Unwrap();
+    return null;
+}
 
 // ---- Lowering
 

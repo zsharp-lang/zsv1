@@ -39,8 +39,15 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? Result.Ok(new MethodValue(loader, info, receiver, known.GetILType()))
                 : Result.Error(new UnsupportedError($"{method.Name} isn't a delegate of that type."));
 
+        /// <summary>
+        /// Casting a method to what describes it is reflection, as for a type: code that
+        /// describes the method where it runs. Any other cast is to a delegate type.
+        /// </summary>
         public IResult Cast(CompilerObject targetType)
-            => ImplicitCast(targetType);
+            => method is MethodInfo info && receiver is null
+                && Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(typeof(Package.DotNet.Method)))
+                ? loader.DescribedMethod(info, targetType)
+                : ImplicitCast(targetType);
 
         private Type? Natural()
             => method is MethodInfo info ? MethodValue.Natural(info) : null;

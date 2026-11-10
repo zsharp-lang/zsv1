@@ -35,6 +35,11 @@ def Loader of DotNet_Class {
     @explicitThis new(this, registry: String) { this.Registry = registry; }
 }
 
+// It is what binds a kind of node, the type of its first parameter, to what it was built
+// as, which it is given second, as an importer of built definitions binds them.
+def Binder of DotNet_Class {
+}
+
 // It is the meta-compiler of a meta-type, the definition it describes.
 def MetaType of DotNet_Class {
     let Type: Instance;
@@ -48,6 +53,8 @@ def MetaType of DotNet_Class {
 // ---- The decorators
 
 fun entrypoint(member: Instance): Instance { return say(member, EntryPoint()); }
+
+fun binder(member: Instance): Instance { return say(member, Binder()); }
 
 fun definitionLoader(member: Instance): Instance { return say(member, Loader("Definitions")); }
 
@@ -100,6 +107,18 @@ fun registerLoader(function: Function, registry: String): ExpressionStatement {
     return call(register, arguments);
 }
 
+// `bindings.Register[T](function)`, T the type of its first parameter.
+fun registerBinder(function: Function): ExpressionStatement {
+    let node = (function.Parameters[0] as Positional).Type as Instance;
+    let register = Index();
+    register.Target = member(library("compiler", "bindings"), "Register");
+    register.Arguments.Add(argument(Get(node)));
+
+    let arguments = List[Argument]();
+    arguments.Add(argument(Get(function)));
+    return call(register, arguments);
+}
+
 // `metaTypes.Register(M as Instance, function)`.
 fun registerMetaType(function: Function, type: Instance): ExpressionStatement {
     let described = Cast();
@@ -121,6 +140,7 @@ fun declared(function: Function, code: Block): Boolean {
         let annotation = function.Annotations[index];
         if (annotation is said of Loader) code.Statements.Add(registerLoader(function, said.Registry));
         if (annotation is meta of MetaType) code.Statements.Add(registerMetaType(function, meta.Type));
+        if (annotation is bound of Binder) code.Statements.Add(registerBinder(function));
         if (annotation is entry of EntryPoint) explicit = true;
         index = index + 1;
     }
