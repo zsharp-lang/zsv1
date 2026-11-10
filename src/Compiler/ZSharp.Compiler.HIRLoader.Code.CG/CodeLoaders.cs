@@ -12,6 +12,48 @@ namespace ZSharp.Compiler
         /// </summary>
         public static CompilerObject? Returns { get; set; }
 
+        private static readonly Dictionary<HIR.Instance, CompilerObject> variables = new(ReferenceEqualityComparer.Instance);
+
+        /// <summary>
+        /// Defines what a variable is to the code being loaded, as a parameter of the
+        /// function whose code it is, or its object: whatever lowers a function's code
+        /// defines its variables while it loads that code. Nothing else gives a variable a
+        /// meaning in code, so code that uses a variable its function doesn't have fails to
+        /// load. It gives what the variable was before, which <see cref="Restore"/> puts back
+        /// once the code is loaded, since one function's code can load another's.
+        /// </summary>
+        public static CompilerObject? Define(HIR.Instance variable, CompilerObject value)
+        {
+            var previous = variables.GetValueOrDefault(variable);
+            variables[variable] = value;
+            return previous;
+        }
+
+        /// <summary>
+        /// Puts back what a variable was before it was defined, or nothing.
+        /// </summary>
+        public static void Restore(HIR.Instance variable, CompilerObject? previous)
+        {
+            if (previous is null)
+                variables.Remove(variable);
+            else
+                variables[variable] = previous;
+        }
+
+        /// <summary>
+        /// What a variable is to the code being loaded, as its function defined it.
+        /// </summary>
+        public static IResult Variable(HIR.Instance variable)
+            => variables.TryGetValue(variable, out var value)
+                ? Result.Ok(value)
+                : Result.Error("A parameter can only be used by the code it belongs to.");
+
+        /// <summary>
+        /// What a variable is to the code being loaded, or null.
+        /// </summary>
+        public static CompilerObject? DefinedAs(HIR.Instance variable)
+            => variables.GetValueOrDefault(variable);
+
         /// <summary>
         /// A captured local lives where the functions that capture it can share it.
         /// </summary>

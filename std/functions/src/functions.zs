@@ -16,7 +16,7 @@ import { ICompileIRExpression, ICompileIRDefinitionIn, ICompileIRReference } fro
 import { ITyped } from "std:zsharp/compiler/ts";
 import { FunctionHandle, Constant } from "std:zsharp/lir";
 import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
-import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Code as LIRCode, Module as LIRModule, ICallable } from "std:zsharp/lir";
+import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Statement as LIRStatement, Code as LIRCode, Module as LIRModule, ICallable } from "std:zsharp/lir";
 import { Bodies } from "std:zsharp/lang";
 import { CodeLoaders } from "std:zsharp/compiler/code";
 import { Holder, Held, keep } from "std:zsharp/lowering";
@@ -74,8 +74,8 @@ def Named of DotNet_Class : Instance, Definition, Variable {
 
 // A parameter, as a call matches an argument to it and as its function's code uses it.
 // One CO is both, and it owns the LIR parameter the signature holds for each target, so
-// whatever lowers a function with it asks it for that parameter.
-def ParameterObject of DotNet_Class : CompilerObject, ICTMatchParameter, ICompileIRExpression, ITyped {
+// whatever lowers a function with it refers to it as that parameter.
+def ParameterObject of DotNet_Class : CompilerObject, ICTMatchParameter, ICompileIRExpression, ICompileIRReference[LIRParameter], ITyped {
     let name: String;
     let named: Boolean;
     let type: Type;
@@ -110,6 +110,11 @@ def ParameterObject of DotNet_Class : CompilerObject, ICTMatchParameter, ICompil
 
     @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
         return Result[LIRExpression].Ok(GetLocal(this.parameter(target)));
+    }
+
+    // It is referred to as the LIR parameter it is for the target, which a signature holds.
+    @explicitThis fun CompileIRReference(this, target: Object): IResult[LIRParameter, Error] {
+        return Result[LIRParameter].Ok(this.parameter(target));
     }
 
     // The argument with its name, or the next positional one, or else the default.
@@ -262,10 +267,16 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
 
         // Its code is loaded knowing what it returns, so a return converts its value to
         // that, and compiled into the function.
+        // Its parameters are what its code uses them as, while its code is lowered.
+        let defined = this.defineParameters();
         let outer = CodeLoaders.Returns;
         CodeLoaders.Returns = returned;
         let loaded = hirCodeLoader.LoadStatement(this.node.Body.Block);
         CodeLoaders.Returns = outer;
+
+        let statement: IResult[LIRStatement, Error] = null;
+        if (loaded.IsOk) statement = ir.CompileStatement(loaded.Unwrap(), target);
+        this.restoreParameters(defined);
 
         if (loaded.IsError) {
             this.lowered.Remove(target);
@@ -274,7 +285,6 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
             return null;
         }
 
-        let statement = ir.CompileStatement(loaded.Unwrap(), target);
         if (statement.IsError) {
             this.lowered.Remove(target);
             if (container != null) container.Functions.Remove(function);
@@ -286,6 +296,25 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
         function.Body.Block.Statements.Add(statement.Unwrap());
 
         return function;
+    }
+
+    // Defines each of its parameters as its code uses it, and gives what each was before.
+    @explicitThis fun defineParameters(this): List[CompilerObject] {
+        let previous = List[CompilerObject]();
+        let index = 0;
+        while (index < this.node.Parameters.Count) {
+            previous.Add(CodeLoaders.Define(this.node.Parameters[index] as Instance, this.parameter(index)));
+            index = index + 1;
+        }
+        return previous;
+    }
+
+    @explicitThis fun restoreParameters(this, previous: List[CompilerObject]) {
+        let index = 0;
+        while (index < this.node.Parameters.Count) {
+            CodeLoaders.Restore(this.node.Parameters[index] as Instance, previous[index]);
+            index = index + 1;
+        }
     }
 
     @explicitThis fun Call(this, arguments: Argument[]): IResult[CompilerObject, Error] {
@@ -412,10 +441,12 @@ fun loadNamed(node: Named): IResult[CompilerObject, Error] {
 // A node used as an instance is the one CO its definition gives.
 @instanceLoader
 fun instanceOfFunction(node: Function): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
+// A parameter in code is what the code's function defines it as, as it lowers the code:
+// nothing else gives it a meaning there.
 @instanceLoader
-fun instanceOfPositional(node: Positional): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
+fun instanceOfPositional(node: Positional): IResult[CompilerObject, Error] { return CodeLoaders.Variable(node); }
 @instanceLoader
-fun instanceOfNamed(node: Named): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
+fun instanceOfNamed(node: Named): IResult[CompilerObject, Error] { return CodeLoaders.Variable(node); }
 
 // ---- Installing it
 

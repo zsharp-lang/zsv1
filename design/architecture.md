@@ -913,18 +913,50 @@ a custom type gets into the language to be used as a meta-type.
 - `std:oop`'s COs are Z# classes, built by `std:oop` itself: what loads a class, method,
   constructor or interface, and the meta-compilers that compile them. What has no object,
   as matching arguments or finding what a built class was built as, is a function of its
-  module, since a module holds no module. Only its HIR nodes and `MethodOwner`, an
-  interface of the CLR's that a Z# class implements as any other, are still CLR
-  definitions. So a runtime other than the CLR's gets the COs with `std:oop`; the HIR
-  nodes are the next to move.
+  module, since a module holds no module. Only its HIR nodes are still CLR definitions.
+  So a runtime other than the CLR's gets the COs with `std:oop`; the HIR nodes are the
+  next to move.
+- What can be reflected on, or has its own semantics, is a definition of its own: a
+  method, a constructor, a field, a parameter. What can appear in code is an instance,
+  which needn't be a definition. A CO is only a handle, which interactions use. An
+  extension's COs can complement each other, but two things interact through a shared
+  language, as the REIs are: a CO is almost never matched by what it is, and asks the
+  other through an operation. So `std:oop` reaches a parameter as what it is referred to
+  as (`ICompileIRReference[Parameter]`, which `std:functions` gives it) and by its type
+  (`ts.TypeOf`), a type goes to another as the other is itself (one definition is one CO)
+  or as any of its bases goes to it, and the type of a definition's value is its
+  metaclass or class shape (`ts.TypeOf(cg.Get(definition))`).
+- What is allowed is defined, not what isn't checked for. A variable in code, a parameter
+  or a method's or constructor's object, is what the function whose code it is defines it
+  as while it lowers that code (`CodeLoaders.Define`, which the IL loader's methods, Z#
+  functions, methods and constructors use, and `Restore` after, since one function's
+  code can lower another's). Nothing else gives a variable a meaning in code, so code that
+  uses a variable its function doesn't have fails to load because nothing defines it,
+  with no check for it. A parameter as a definition is still what a call matches
+  arguments to, anywhere. A static method still defines its object, as what reaches its
+  class's static members, since its code reaches members by name through it; using it as
+  an object is what fails. A local is still its own definition wherever it is used, which
+  could move to what its declaration defines for the code after it.
+- A class or an interface holds its methods and constructors as a module holds its
+  definitions (`Holder`, `Held`), and lowers them as a module does, through
+  `ir.CompileDefinition`. Each declares itself when it is asked for, into what holds it,
+  as a function does: its function is made before its code is lowered, so code can call
+  it, and a method of an object is a method of its object's type's structure. A
+  constructor makes an object of its class's structure with the default values its
+  class's HIR gives its fields. A call is of what the callee is referred to as.
 - Methods of one name overload, as functions do: `Method` is `Overloadable`, so binding a
   second one adds to the first, and a member's name reaches all its methods as one CO.
-- A method reached through an object is a function bound to it, `ICompileIRReceiver`,
-  so a delegate of it is closed over the object, as the CLR closes one over a first
-  argument: `let f: Func[Int32, Int32] = adder.add`. That is how the meta-compilers give
-  their own methods to the compiler as hooks. A Z# object reaches what expects a value of
-  its own type everywhere, while going to `Object` is the runtime's, so what holds any
-  value takes it as its type, as `CapabilityContext.Of[T]` does.
+- A method is called with its object first. What is reached through an object is any
+  callee bound to it, `Bound`: calling it calls the callee with the object first, and
+  it is referred to as the callee, `ICompileIRReceiver`, so a delegate of it is closed
+  over the object, as the CLR closes one over a first argument:
+  `let f: Func[Int32, Int32] = adder.add`. That is how the meta-compilers give their own
+  methods to the compiler as hooks. A Z# object reaches what expects a value of its own
+  type everywhere, while going to `Object` is the runtime's, so what holds any value
+  takes it as its type, as `CapabilityContext.Of[T]` does.
+- A node type that dropped a field reads what was encoded of it before: the decoder
+  leaves out a field the type no longer has, as the standard library's builds are read
+  by the next build of the library that defines their nodes.
 - While a class's structure is built, the types of its fields are lowered, and lowering a
   class lowers its code, which may use a class whose structure has no fields yet, as a
   metaclass's code uses its class's. So while any structure is being built for a target,

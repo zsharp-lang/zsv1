@@ -29,7 +29,6 @@ namespace ZSharp.Importer.ILLoader
         /// </summary>
         private readonly Dictionary<Package.DotNet.GenericParameter, Objects.GenericParameterType> typeParameters = [];
         private readonly Dictionary<Package.DotNet.Class, Package.DotNet.Interface> viewed = [];
-        private readonly Dictionary<HIR.Instance, CompilerObject> variables = [];
 
         /// <summary>
         /// The local functions lowered so far.
@@ -985,7 +984,7 @@ namespace ZSharp.Importer.ILLoader
         {
             foreach (var parameter in parameters.Where(parameter => parameter.IsCaptured))
             {
-                if (!variables.TryGetValue(parameter, out var known) || known is not Objects.Variable variable)
+                if (CodeLoaders.DefinedAs(parameter) is not Objects.Variable variable)
                     continue;
 
                 var type = ((ITyped)variable).Type;
@@ -997,7 +996,7 @@ namespace ZSharp.Importer.ILLoader
 
                 function.Body!.Block.Locals.Add(cell);
                 function.Body.Block.Statements.Add(new LIR.SetLocal(cell, new LIR.Allocate(new LIR.GetLocal(variable.For(target)))));
-                variables[parameter] = new Objects.Cell(cell, type);
+                CodeLoaders.Define(parameter, new Objects.Cell(cell, type));
             }
 
             return null;
@@ -1037,9 +1036,7 @@ namespace ZSharp.Importer.ILLoader
                 : Result.Error("A constructor can only be reached through its class.");
 
         private IResult LoadVariable(HIR.Instance node)
-            => variables.TryGetValue(node, out var variable)
-                ? Result.Ok(variable)
-                : Result.Error("A parameter can only be used by the code it belongs to.");
+            => CodeLoaders.Variable(node);
 
         private IResult LoadExposed(Package.DotNet.ExposedObject node)
             => Result.Ok(new Objects.Literal(node.Value, nodeTypes[node.Type], this));

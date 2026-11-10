@@ -436,7 +436,7 @@ namespace ZSharp.Importer.ILLoader
         {
             var called = CallParameters(parameters, metadata);
             var index = 0;
-            var binding = new Binding(variables);
+            var binding = new Binding();
 
             if (@this is not null && @class is not null)
             {
@@ -488,24 +488,18 @@ namespace ZSharp.Importer.ILLoader
         /// <summary>
         /// Variables set for a while, which disposing it sets back to what they were.
         /// </summary>
-        private sealed class Binding(Dictionary<HIR.Instance, CompilerObject> variables)
+        private sealed class Binding()
             : IDisposable
         {
             private readonly List<(HIR.Instance Node, CompilerObject? Was)> set = [];
 
             public void Set(HIR.Instance node, CompilerObject value)
-            {
-                set.Add((node, variables.GetValueOrDefault(node)));
-                variables[node] = value;
-            }
+                => set.Add((node, CodeLoaders.Define(node, value)));
 
             public void Dispose()
             {
                 for (var index = set.Count - 1; index >= 0; index--)
-                    if (set[index].Was is { } was)
-                        variables[set[index].Node] = was;
-                    else
-                        variables.Remove(set[index].Node);
+                    CodeLoaders.Restore(set[index].Node, set[index].Was);
             }
         }
 

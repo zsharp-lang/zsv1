@@ -77,14 +77,15 @@ fun fieldsOf(type: Type): List[FieldInfo] {
     return found;
 }
 
-fun fieldOf(type: Type, name: String): FieldInfo {
+// A field of a type by its name, or null.
+fun foundField(type: Type, name: String): FieldInfo {
     let fields = fieldsOf(type);
     let index = 0;
     while (index < fields.Count) {
         if (fields[index].Name == name) return fields[index];
         index = index + 1;
     }
-    return fail("A " + type.Name + " has no field named " + name + ".") as FieldInfo;
+    return null;
 }
 
 // The id kept on an entity, or -1.
@@ -515,8 +516,12 @@ def Decoder of DotNet_Class {
             return;
         }
 
+        // A field the type no longer has is left out, so a type that dropped one reads
+        // what was encoded of it before, as the standard library's builds are read by the
+        // next build of the library that defines their nodes.
         while (index < read.Names.Count) {
-            fieldOf(read.Type, read.Names[index]).SetValue(made, this.resolve(read.Values[index]));
+            let field = foundField(read.Type, read.Names[index]);
+            if (field != null) field.SetValue(made, this.resolve(read.Values[index]));
             index = index + 1;
         }
 
