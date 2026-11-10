@@ -1759,6 +1759,17 @@ group is special in code generation and not in the structure of a class.
 Where one HIR value has to stand for many and there is no class, as in the operator
 table, an HIR `OverloadGroup` can be an `Instance`.
 
+Inside a definition of such a kind, its own name is the overloads it is one of, as a
+method's is.
+
+What overloads by its name is a kind of definition, by the HIR capability `Overloadable`
+of its node's type, as a Z# function's: a name bound in a scope to one such definition
+and then to another stands for both, as a group, as the binder merges them, in a module,
+a document or anywhere else names are bound, and a call chooses by its arguments. A
+definition being built is known by its kind, what describes its node's type, as a
+document's reference to one is too. A module keeps each definition of a name, and its
+member of that name is their group.
+
 Name-based overloading on the AST side is similar, since it also collapses multiple
 values into one object. Member access defers to the CO. A free name uses the same CO,
 through the method's `this`.
@@ -2188,10 +2199,11 @@ when it is imported. `std:framework` is one.
 - **Compiling.** `Compiler(project).compile()` runs the root's module file as a
   document, through the import system, and gives the `Instance`s that were emitted, in
   the order they were.
-- **`core:project`.** A module file imports `compile` and `emit` from it. `std:project`
-  adds it to `core:`, from Z#, since a module of live objects is only their descriptions:
-  `core:zsharp` gives the `core:` library as `core`, and a CLR module cast to what it is,
-  `Live as Instance`, is its HIR node, as a type's is.
+- **`core:project`.** A module file imports `compile` and `emit` from it. They are of
+  `std:project/core`, what a module file runs in: the submodule running, what was
+  emitted, and `compile` and `emit`, each two overloads. `std:project`'s entry point
+  adds that module to `core:`, as `core:project`, so a module file can reach the rest of
+  what it runs in too.
 - **`emit(x)`** adds an instance to what compiling gives. A type is given as what
   describes it, through an overload for `HIR.Type`, so `emit(Int32)` emits the
   description, as a type is where a type is expected.
@@ -2304,9 +2316,9 @@ would, and checks the build.
   builds, and a library or platform that doesn't build itself the same fails the run.
 - **Every library is encoded**, so importing its build gives the Z# module it was, as
   **Reflection and importing** describes, bound to what it was built as.
-- **Not yet built:** `std:project`, whose `core:project` is a CLR module of its own,
-  `Live`, which a module can't hold, and `std:packages`, which needs it. They are still
-  documents, as is the prelude.
+- **Not built, by what they are:** the prelude and `std:packages`, which assemble the
+  environment, as documents do: `std:packages` binds the package manager, which each
+  generation compiles from its sources, so a build of it couldn't refer to it.
 
 ## Packages
 

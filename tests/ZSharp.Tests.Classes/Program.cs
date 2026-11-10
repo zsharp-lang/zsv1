@@ -5157,6 +5157,64 @@ Try("a value of a Z# class has no members of Object's, as a class has no base", 
         Keep(Point302(1).GetType());
         """) is { } e && e.Contains("has no member named GetType"));
 
+Try("Z# functions of one name overload, in a module and in a document", () =>
+    ResetKept() && Run("""
+        module Shapes303 {
+            fun describe(side: Int32): String { return "a square of " + side; }
+            fun describe(name: String): String { return "a " + name; }
+            fun both(): String { return describe(2) + ", " + describe("circle"); }
+        }
+        fun twice303(value: Int32): Int32 { return value * 2; }
+        fun twice303(value: String): String { return value + value; }
+        Keep(Shapes303.describe(3));
+        Keep(Shapes303.describe("triangle"));
+        Keep(Shapes303.both());
+        Keep(twice303(4));
+        Keep(twice303("ab"));
+        """) is null && Probe.Kept is ["a square of 3", "a triangle", "a square of 2, a circle", 8, "abab"]);
+
+Try("overloads of a module the Cecil platform writes are imported as overloads, bound to what each was built as", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-overloads-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Overloads304"));
+        """);
+    File.WriteAllText(Path.Combine(source, "overloads.zs"), """
+        import { String, Int32 } from "core:runtime";
+        fun twice(value: Int32): Int32 { return value * 2; }
+        fun twice(value: String): String { return value + value; }
+        """);
+    var written = Path.Combine(root, "Overloads304.dll").Replace('\\', '/');
+
+    return ResetKept() && Run($$"""
+        import { discover as discover304, Compiler as Compiler304 } from "std:project";
+        import { Module as Module304, lower as lower304 } from "std:modules";
+        import { encode as encode304 } from "std:encoding";
+        import { Cecil as Cecil304 } from "pkg:cecil";
+        let overloads304 = Compiler304(discover304("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module304;
+        let blob304 = encode304(overloads304);
+        let target304 = Cecil304("Overloads304", null);
+        target304.add(lower304(overloads304, target304));
+        target304.embed("ZSharp.Reflection", blob304, "std:encoding");
+        target304.write("{{written}}");
+        import { twice as twice304 } from "{{written}}";
+        Keep(twice304(21));
+        Keep(twice304("ab"));
+        """) is null && Probe.Kept is [42, "abab"];
+});
+
+Try("inside a Z# function, its own name is the overloads it is one of", () =>
+    ResetKept() && Run("""
+        module Names305 {
+            fun greet(): String { return greet("world"); }
+            fun greet(name: String): String { return "hello " + name; }
+        }
+        Keep(Names305.greet());
+        """) is null && Kept() is "hello world");
+
 System.Reflection.MethodInfo Kept2Method(string type, string method)
     => Probe.LastType(type).GetMethod(method)!;
 

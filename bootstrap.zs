@@ -48,6 +48,8 @@ libraries.Add("dotnet"); needs.Add("");
 libraries.Add("encoding"); needs.Add("");
 libraries.Add("reflection"); needs.Add("");
 libraries.Add("types"); needs.Add("oop");
+libraries.Add("project/core"); needs.Add("functions,modules,oop");
+libraries.Add("project"); needs.Add("project/core,oop");
 
 // Which libraries this generation loads built: those built before it started.
 let loaded = List[String]();

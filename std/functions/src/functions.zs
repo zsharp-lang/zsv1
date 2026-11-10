@@ -5,7 +5,7 @@
 // makes it a CO, and makes it what `fun` is wherever nothing else compiles one.
 
 import { String, Object, Boolean, Int32, List, Dictionary, explicitThis, DotNet_Class, DotNet_Module } from "core:runtime";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "std:zsharp/hir";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get } from "std:zsharp/hir/code";
 import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "std:zsharp/lang/ast";
 import { CompilerObject } from "std:zsharp/mir";
@@ -28,8 +28,9 @@ import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader } from "core:compile
 // ---- The HIR
 
 // A Z# function. Its meta-compiler fills it through bodies, by these names. What is
-// said of it, as a decorator says it is an entry point, is its annotations.
-def Function of DotNet_Class : Instance, Definition, NamedDefinition, Annotated {
+// said of it, as a decorator says it is an entry point, is its annotations. Functions of
+// one name overload.
+def Function of DotNet_Class : Instance, Definition, NamedDefinition, Annotated, Overloadable {
     let name: String;
     let Parameters: List[Definition];
     let Locals: List[Local];

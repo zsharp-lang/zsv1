@@ -83,6 +83,22 @@ namespace ZSharp.Lang.DotNet
                     : null
             );
 
+            // Definitions of a kind that is overloadable, as Z# functions are, overload by
+            // their name, as methods do: what the kind is, its node's type says.
+            binding.Merges.Add((existing, value) =>
+                Overloadables(existing, il) is { } before && Overloadables(value, il) is { } after
+                    ? Joined(existing, before, after)
+                    : null
+            );
+
+            // Inside a definition of an overloadable kind, its own name is the overloads it
+            // is one of, as a method's is.
+            binding.Shadows.Add((shadowed, value) =>
+                Overloadables(shadowed, il) is { } before && Overloadables(value, il) is { } after
+                    ? Joined(shadowed, before, after)
+                    : null
+            );
+
             // A method hides the methods of its name outside it by overloading them, as a
             // method's own name, inside it, is the overloads it is one of.
             binding.Shadows.Add((shadowed, value) =>
@@ -111,6 +127,31 @@ namespace ZSharp.Lang.DotNet
         /// <summary>
         /// Overloads joined, each once: what a name already stands for, if it has them all.
         /// </summary>
+        /// <summary>
+        /// The definitions a name stands for that are of an overloadable kind: one being
+        /// built, whose local's type is its kind's description, one already defined, or a
+        /// group of them.
+        /// </summary>
+        private static List<HIR.Instance>? Overloadables(Code.Expression value, ILLoader il)
+            => value switch
+            {
+                Code.Get { Instance: Code.OverloadGroup group } when group.Items.All(item => Overloadable(item, il)) => group.Items,
+                Code.Get { Instance: Code.Local local } when Overloadable(local, il) => [local],
+                Code.Get { Instance: Code.Reference reference } when Overloadable(reference, il) => [reference],
+                Code.Get { Instance: var defined } when defined is HIR.Overloadable => [defined],
+                _ => null
+            };
+
+        private static bool Overloadable(HIR.Instance item, ILLoader il)
+            => item switch
+            {
+                HIR.Overloadable => true,
+                Code.Local { Type: HIR.Instance kind } => il.Described(kind) is Type type && typeof(HIR.Overloadable).IsAssignableFrom(type),
+                Code.Reference { Value: HIR.Overloadable } => true,
+                Code.Reference { Value: null, Kind: { } kind } => il.Described(kind) is Type type && typeof(HIR.Overloadable).IsAssignableFrom(type),
+                _ => false,
+            };
+
         private static Code.Expression Joined(Code.Expression existing, List<HIR.Instance> before, List<HIR.Instance> after)
         {
             var added = after.Where(item => !before.Any(known => ReferenceEquals(known, item))).ToList();

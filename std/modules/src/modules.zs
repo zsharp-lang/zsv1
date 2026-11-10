@@ -30,6 +30,7 @@ import {
     Expression as LIRExpression, Statement as LIRStatement, Function as LIRFunction, ICallable, EntryPoint as LIREntryPoint
 } from "std:zsharp/lir";
 import { Bodies, ContainerCompiler } from "std:zsharp/lang";
+import { OverloadGroup } from "std:zsharp/compiler/overloading";
 import { Holder, Held, Initializing, keep } from "std:zsharp/lowering";
 import { metaTypes, bodies, language, ct } from "core:zsharp";
 import { entrypoint, definitionLoader, instanceLoader, metaType, binder } from "std:framework";
@@ -168,13 +169,13 @@ def GlobalSet of DotNet_Class : CompilerObject, ICompileIRStatement {
 // into its LIR module, its globals first, in their order.
 def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] {
     let node: Module;
-    let members: Dictionary[String, Definition];
+    let members: Dictionary[String, List[Definition]];
     let modules: Dictionary[Object, LIRModule];
     let failures: List[String];
 
     @explicitThis new(this, node: Module) {
         this.node = node;
-        this.members = Dictionary[String, Definition]();
+        this.members = Dictionary[String, List[Definition]]();
         this.modules = Dictionary[Object, LIRModule]();
         this.failures = List[String]();
     }
@@ -195,7 +196,10 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
     }
 
     @explicitThis fun add(this, member: Definition) {
-        if (member is named of NamedDefinition) this.members[named.Name] = member;
+        if (member is named of NamedDefinition) {
+            if (this.members.ContainsKey(named.Name) == false) this.members[named.Name] = List[Definition]();
+            this.members[named.Name].Add(member);
+        }
 
         let loaded = hirLoader.LoadDefinition(member);
         if (loaded.IsError) return;
@@ -251,7 +255,21 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
     }
 
     @explicitThis fun Member(this, name: String): IResult[CompilerObject, Error] {
-        if (this.members.ContainsKey(name)) return hirLoader.LoadDefinition(this.members[name]);
+        // A name of several definitions, as overloads, is all of them.
+        if (this.members.ContainsKey(name)) {
+            let named = this.members[name];
+            if (named.Count == 1) return hirLoader.LoadDefinition(named[0]);
+
+            let loaded = List[CompilerObject]();
+            let index = 0;
+            while (index < named.Count) {
+                let each = hirLoader.LoadDefinition(named[index]);
+                if (each.IsError) return each;
+                loaded.Add(each.Unwrap());
+                index = index + 1;
+            }
+            return Result[CompilerObject].Ok(OverloadGroup.Of(loaded));
+        }
         return Result[CompilerObject].Error("Module " + this.node.Name + " has no member named " + name + ".");
     }
 }

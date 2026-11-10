@@ -493,7 +493,7 @@ namespace ZSharp.Lang
                 if (definition.Build().When(out var build).Error(out var error))
                     return Result<HIRExpression>.Error(error);
 
-                var result = new HIR.Code.Reference();
+                var result = new HIR.Code.Reference { Kind = definition.UnderlyingType };
 
                 Defined.Add(new Define(Language.Decorate(build!, decorators), result, definition.Name));
 
