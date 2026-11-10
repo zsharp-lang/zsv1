@@ -933,10 +933,18 @@ a custom type gets into the language to be used as a meta-type.
   code can lower another's). Nothing else gives a variable a meaning in code, so code that
   uses a variable its function doesn't have fails to load because nothing defines it,
   with no check for it. A parameter as a definition is still what a call matches
-  arguments to, anywhere. A static method still defines its object, as what reaches its
-  class's static members, since its code reaches members by name through it; using it as
-  an object is what fails. A local is still its own definition wherever it is used, which
+  arguments to, anywhere. A local is still its own definition wherever it is used, which
   could move to what its declaration defines for the code after it.
+- A method's object is its first parameter, `this`, of what it is a method of, as its
+  meta-compiler builds every method; `Method.ThisParameter` says which parameter it is.
+  `@static` removes it from the parameters and `@class` retypes it to the class's
+  metaclass, as decorators transform what was built. A static method's code still reaches
+  its class's members by name through it, so the method defines it for its code as the
+  class, with no object of it: a static member is reached, and an object's member fails
+  as it does through the class. So a method is called with its object as its first
+  argument, as any parameter is matched. A constructor's object is a `Receiver`, an
+  instance of the class it makes and not a definition, which the constructor defines for
+  its code as the object it makes, a local of its function.
 - A class or an interface holds its methods and constructors as a module holds its
   definitions (`Holder`, `Held`), and lowers them as a module does, through
   `ir.CompileDefinition`. Each declares itself when it is asked for, into what holds it,

@@ -53,11 +53,10 @@ import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader } from "core:compile
 
 // ---- The HIR
 
-// The object a method or constructor runs on, which is the class's type object for a
-// class method.
-def Receiver of DotNet_Class : Instance, Definition, Variable {
-    let Owner: Instance;
-    let IsClass: Boolean;
+// The object a constructor makes, as its code refers to it: an instance, of the class it
+// makes, and not a definition. (A method's object is its first parameter.)
+def Receiver of DotNet_Class : Instance {
+    let Type: Type;
 }
 
 def Field of DotNet_Class : Instance, Definition {
@@ -78,7 +77,9 @@ def Method of DotNet_Class : Instance, Definition, OperatorDefinition, Annotated
     let Locals: List[Local];
     let ReturnType: Type;
     let Body: Code;
-    let This: Receiver;
+    // Its object: its first parameter, of what it is a method of, unless it is static,
+    // whose code still reaches its class's members by name through it.
+    let ThisParameter: Positional;
     let IsStatic: Boolean;
     let IsClass: Boolean;
     let operator: Object;
@@ -88,7 +89,8 @@ def Method of DotNet_Class : Instance, Definition, OperatorDefinition, Annotated
         this.Name = name;
         this.Parameters = List[Definition]();
         this.Locals = List[Local]();
-        this.This = Receiver();
+        this.ThisParameter = Positional("this");
+        this.Parameters.Add(this.ThisParameter);
         this.annotations = List[Object]();
     }
 
@@ -193,61 +195,6 @@ def ClassOf of DotNet_Class : Instance, Definition, Type {
 }
 
 // ---- The COs
-
-// The object a method or constructor runs on, as its code uses it. It owns its LIR
-// variable for each target: a method takes it as its first parameter, and a
-// constructor makes it in a local, each asking for it as it lowers.
-def ReceiverObject : CompilerObject, ICompileIRExpression, ITyped {
-    let node: Receiver;
-    let parameters: Dictionary[Object, LIRParameter];
-    let locals: Dictionary[Object, LIRLocal];
-
-    new(this, node: Receiver) {
-        this.node = node;
-        this.parameters = Dictionary[Object, LIRParameter]();
-        this.locals = Dictionary[Object, LIRLocal]();
-    }
-
-    fun get_Type(this): CompilerObject {
-        let owner = hirLoader.LoadDefinition(this.node.Owner as Definition).Unwrap();
-        if (this.node.IsClass) return typeOfValue(owner);
-        return owner;
-    }
-
-    fun parameter(this, target: Object): LIRParameter {
-        if (this.parameters.ContainsKey(target)) return this.parameters[target];
-
-        let type = ir.CompileType(this.get_Type(), target).Unwrap();
-        // Its type can lower what asks for it, which made it first.
-        if (this.parameters.ContainsKey(target)) return this.parameters[target];
-
-        let parameter = LIRParameter(type);
-        parameter.Name = "this";
-        this.parameters[target] = parameter;
-
-        return parameter;
-    }
-
-    fun local(this, target: Object): LIRLocal {
-        if (this.locals.ContainsKey(target)) return this.locals[target];
-
-        let type = ir.CompileType(this.get_Type(), target).Unwrap();
-        // Its type can lower what asks for it, which made it first.
-        if (this.locals.ContainsKey(target)) return this.locals[target];
-
-        let local = LIRLocal(type);
-        local.Name = "this";
-        this.locals[target] = local;
-
-        return local;
-    }
-
-    fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
-        if (this.parameters.ContainsKey(target)) return Result[LIRExpression].Ok(GetLocal(this.parameters[target]));
-        if (this.locals.ContainsKey(target)) return Result[LIRExpression].Ok(GetLocal(this.locals[target]));
-        return Result[LIRExpression].Error("There is no object here: only a method that isn't static has one.");
-    }
-}
 
 // A field of an object, read and written: the field of the object's structure at its
 // index. A class field is a field of the type object. Of a built class, it is the field
@@ -393,17 +340,6 @@ fun withFirst(value: CompilerObject, arguments: Argument[]): Argument[] {
     return all.ToArray();
 }
 
-// Arguments after the first.
-fun withoutFirst(arguments: Argument[]): Argument[] {
-    let rest = List[Argument]();
-    let index = 1;
-    while (index < arguments.Length) {
-        rest.Add(arguments[index]);
-        index = index + 1;
-    }
-    return rest.ToArray();
-}
-
 fun matchArguments(parameters: List[Definition], arguments: Argument[]): List[CompilerObject] {
     let stream = ArgumentStream(arguments);
     let values = List[CompilerObject]();
@@ -424,10 +360,6 @@ fun parameterOf(node: Definition, target: Object): LIRParameter {
     return ir.CompileReference[LIRParameter](hirLoader.LoadDefinition(node).Unwrap(), target).Unwrap();
 }
 
-fun receiverOf(node: Receiver): ReceiverObject {
-    return hirLoader.LoadDefinition(node).Unwrap() as ReceiverObject;
-}
-
 fun parameterType(node: Definition): CompilerObject {
     return ts.TypeOf(hirLoader.LoadDefinition(node).Unwrap()).Unwrap();
 }
@@ -443,12 +375,26 @@ fun returnTypeOf(method: Method): CompilerObject {
     return hirLoader.LoadType(method.ReturnType).Unwrap();
 }
 
-// Whether two methods take and give the same, as their nodes say.
+// Whether a method takes its object, as its first parameter.
+fun takesObject(method: Method): Boolean {
+    if (method.ThisParameter == null) return false;
+    return method.Parameters.Contains(method.ThisParameter);
+}
+
+// How many values a method takes, besides its object.
+fun valuesTaken(method: Method): Int32 {
+    if (takesObject(method)) return method.Parameters.Count - 1;
+    return method.Parameters.Count;
+}
+
+// Whether two methods take and give the same, besides their objects, as their nodes say.
 fun sameSignature(first: Method, second: Method): Boolean {
+    if (takesObject(first) != takesObject(second)) return false;
     if (first.Parameters.Count != second.Parameters.Count) return false;
     if (sameType(returnTypeOf(first), returnTypeOf(second)) == false) return false;
 
     let index = 0;
+    if (takesObject(first)) index = 1;
     while (index < first.Parameters.Count) {
         if (sameType(parameterType(first.Parameters[index]), parameterType(second.Parameters[index])) == false) return false;
         index = index + 1;
@@ -493,25 +439,25 @@ fun sameType(first: CompilerObject, second: CompilerObject): Boolean {
 }
 
 // Lowers code into a function, giving why it can't, or null.
-// Lowers the code of a method or a constructor, whose variables are its object and its
-// parameters: each is what its code uses it as, while the code is lowered.
-fun lowerCode(body: Code, function: LIRFunction, returned: CompilerObject, receiver: Receiver, parameters: List[Definition], target: Object): Error {
-    let variables = List[Definition]();
-    variables.Add(receiver);
-    variables.AddRange(parameters);
-
+// Lowers the code of a method or a constructor, whose variables are its parameters, and
+// its object when that isn't one of them, as what its code reaches it as: each is what
+// its code uses it as, while the code is lowered.
+fun lowerCode(body: Code, function: LIRFunction, returned: CompilerObject, parameters: List[Definition], receiver: Instance, receiverValue: CompilerObject, target: Object): Error {
     let previous = List[CompilerObject]();
     let index = 0;
-    while (index < variables.Count) {
-        previous.Add(CodeLoaders.Define(variables[index] as Instance, hirLoader.LoadDefinition(variables[index]).Unwrap()));
+    while (index < parameters.Count) {
+        previous.Add(CodeLoaders.Define(parameters[index] as Instance, hirLoader.LoadDefinition(parameters[index]).Unwrap()));
         index = index + 1;
     }
+    let before: CompilerObject = null;
+    if (receiver != null) before = CodeLoaders.Define(receiver, receiverValue);
 
     let failed = lowerDefined(body, function, returned, target);
 
+    if (receiver != null) CodeLoaders.Restore(receiver, before);
     index = 0;
-    while (index < variables.Count) {
-        CodeLoaders.Restore(variables[index] as Instance, previous[index]);
+    while (index < parameters.Count) {
+        CodeLoaders.Restore(parameters[index] as Instance, previous[index]);
         index = index + 1;
     }
     return failed;
@@ -558,8 +504,8 @@ def MethodObject : CompilerObject, ICTCallable, ICompileIRReference[ICallable], 
 
         // The object's type is what it is a method of, which can lower what made it first.
         let receiver: LIRType = null;
-        if (this.node.IsStatic == false) {
-            let type = ir.CompileType(ts.TypeOf(hirLoader.LoadDefinition(this.node.This).Unwrap()).Unwrap(), target);
+        if (takesObject(this.node)) {
+            let type = ir.CompileType(parameterType(this.node.ThisParameter), target);
             if (type.IsError) {
                 this.failures[target] = type.UnwrapError();
                 return null;
@@ -583,9 +529,8 @@ def MethodObject : CompilerObject, ICTCallable, ICompileIRReference[ICallable], 
         let returned = this.returnType();
         if (returned != null) signature.ReturnType = ir.CompileType(returned, target).Unwrap();
 
-        // A static method is a function: it takes no object.
-        if (this.node.IsStatic == false) signature.Parameters.Add(receiverOf(this.node.This).parameter(target));
-
+        // Its object is its first parameter, unless it is static, which is a function that
+        // takes none.
         let index = 0;
         while (index < this.node.Parameters.Count) {
             signature.Parameters.Add(parameterOf(this.node.Parameters[index], target));
@@ -609,11 +554,26 @@ def MethodObject : CompilerObject, ICTCallable, ICompileIRReference[ICallable], 
 
         // Its code is lowered once it is known, so its code can call it.
         if (this.node.Body != null) {
-            let failed = lowerCode(this.node.Body, function, returned, this.node.This, this.node.Parameters, target);
+            let failed = lowerCode(this.node.Body, function, returned, this.node.Parameters, this.unparameterized(), this.classOfStatic(), target);
             if (failed != null) this.failures[target] = failed;
         }
 
         return function;
+    }
+
+    // Its object, when it isn't one of its parameters, as a static method's isn't.
+    fun unparameterized(this): Instance {
+        if (this.node.ThisParameter == null) return null;
+        if (takesObject(this.node)) return null;
+        return this.node.ThisParameter as Instance;
+    }
+
+    // What a static method's code reaches its class's members through: the class, with no
+    // object of it.
+    fun classOfStatic(this): CompilerObject {
+        let receiver = this.unparameterized();
+        if (receiver == null) return null;
+        return hirLoader.LoadType((receiver as Positional).Type).Unwrap();
     }
 
     fun CompileIRDefinition(this, owner: LIRModule, target: Object): Error {
@@ -622,17 +582,10 @@ def MethodObject : CompilerObject, ICTCallable, ICompileIRReference[ICallable], 
         return null;
     }
 
-    // Calling it calls its function, with the object first, unless it is static, which
-    // takes none.
+    // Calling it calls its function, with its object first, as its first parameter, unless
+    // it is static.
     fun Call(this, arguments: Argument[]): IResult[CompilerObject, Error] {
-        let values: List[CompilerObject] = null;
-        if (this.node.IsStatic) values = matchArguments(this.node.Parameters, arguments);
-        else {
-            if (arguments.Length > 0) {
-                values = matchArguments(this.node.Parameters, withoutFirst(arguments));
-                if (values != null) values.Insert(0, arguments[0].Object);
-            }
-        }
+        let values = matchArguments(this.node.Parameters, arguments);
         if (values == null) return Result[CompilerObject].Error(this.node.Name + " can't be called with these arguments.");
         return Result[CompilerObject].Ok(Invocation(this, this.returnType(), values));
     }
@@ -657,6 +610,7 @@ def MethodObject : CompilerObject, ICTCallable, ICompileIRReference[ICallable], 
 def ConstructorObject : CompilerObject, ICTCallable, ICompileIRReference[ICallable], Held, ICompileIRDefinitionIn[LIRModule] {
     let node: Constructor;
     let holder: Holder;
+    let object: Constructed;
     let lowered: Dictionary[Object, LIRFunction];
     let failures: Dictionary[Object, Error];
 
@@ -669,7 +623,13 @@ def ConstructorObject : CompilerObject, ICTCallable, ICompileIRReference[ICallab
     fun hold(this, holder: Holder) { this.holder = holder; }
 
     // The class it makes an object of.
-    fun made(this): Class { return this.node.This.Owner as Class; }
+    fun made(this): Class { return this.node.This.Type as Class; }
+
+    // The object it makes, as its code uses it.
+    fun receiver(this): Constructed {
+        if (this.object == null) this.object = Constructed(hirLoader.LoadDefinition(this.made()).Unwrap());
+        return this.object;
+    }
 
     fun function(this, target: Object): LIRFunction {
         if (this.lowered.ContainsKey(target)) return this.lowered[target];
@@ -708,7 +668,7 @@ def ConstructorObject : CompilerObject, ICTCallable, ICompileIRReference[ICallab
         this.lowered[target] = function;
         container.Functions.Add(function);
 
-        let receiver = receiverOf(this.node.This).local(target);
+        let receiver = ir.CompileReference[LIRLocal](this.receiver(), target).Unwrap();
         function.Body.Block.Locals.Add(receiver);
 
         let fields = List[LIRExpression]();
@@ -722,7 +682,7 @@ def ConstructorObject : CompilerObject, ICTCallable, ICompileIRReference[ICallab
         function.Body.Block.Statements.Add(SetLocal(receiver, LIRNew(structure, fields)));
 
         if (this.node.Body != null) {
-            let failed = lowerCode(this.node.Body, function, null, this.node.This, this.node.Parameters, target);
+            let failed = lowerCode(this.node.Body, function, null, this.node.Parameters, this.node.This, this.receiver(), target);
             if (failed != null) {
                 this.failures[target] = failed;
                 return function;
@@ -754,6 +714,43 @@ def ConstructorObject : CompilerObject, ICTCallable, ICompileIRReference[ICallab
         if (values == null) return Result[CompilerObject].Error("A constructor of " + this.made().Name + " can't be called with these arguments.");
 
         return Result[CompilerObject].Ok(Invocation(this, hirLoader.LoadDefinition(this.made()).Unwrap(), values));
+    }
+}
+
+// The object a constructor makes, as the constructor's code uses it: a local of its
+// function for each target, of the class it makes, which the constructor defines its
+// receiver as.
+def Constructed : CompilerObject, ICompileIRExpression, ICompileIRReference[LIRLocal], ITyped {
+    let type: CompilerObject;
+    let locals: Dictionary[Object, LIRLocal];
+
+    new(this, type: CompilerObject) {
+        this.type = type;
+        this.locals = Dictionary[Object, LIRLocal]();
+    }
+
+    fun get_Type(this): CompilerObject { return this.type; }
+
+    // It is referred to as its local.
+    fun CompileIRReference(this, target: Object): IResult[LIRLocal, Error] {
+        if (this.locals.ContainsKey(target)) return Result[LIRLocal].Ok(this.locals[target]);
+
+        let type = ir.CompileType(this.type, target);
+        if (type.IsError) return Result[LIRLocal].Error(type.UnwrapError());
+
+        // Its type can lower what asks for it, which made it first.
+        if (this.locals.ContainsKey(target)) return Result[LIRLocal].Ok(this.locals[target]);
+
+        let local = LIRLocal(type.Unwrap());
+        local.Name = "this";
+        this.locals[target] = local;
+        return Result[LIRLocal].Ok(local);
+    }
+
+    fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+        let local = this.CompileIRReference(target);
+        if (local.IsError) return Result[LIRExpression].Error(local.UnwrapError());
+        return Result[LIRExpression].Ok(GetLocal(local.Unwrap()));
     }
 }
 
@@ -1062,7 +1059,8 @@ def PropertyValue : CompilerObject, ICompileIRExpression, ICTSet, ITyped {
 
     fun get_Type(this): CompilerObject {
         if (this.property.Getter != null) return returnTypeOf(this.property.Getter);
-        return parameterType(this.property.Setter.Parameters[0]);
+        let setter = this.property.Setter;
+        return parameterType(setter.Parameters[setter.Parameters.Count - 1]);
     }
 
     fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
@@ -2113,15 +2111,16 @@ fun kindOf(value: Expression, type: Instance): Expression {
 // the code is loaded, once the class is complete. An object's member is reached through
 // it, binding a static member does nothing, and a class member is reached through the
 // class's type object.
-fun bindReceiver(compiler: ASTCompiler, block: Block, self: Local, members: Members, signature: SignatureSyntax): SignatureSyntax {
-    let receiver = Local("this", Receiver as Type);
-    receiver.Init = Bodies.Member(self, "This");
+fun bindReceiver(compiler: ASTCompiler, block: Block, self: Local, members: Members, signature: SignatureSyntax, slot: String, kind: Type): SignatureSyntax {
+    let receiver = Local("this", kind);
+    receiver.Init = Bodies.Member(self, slot);
     block.Statements.Add(Declare(receiver));
 
-    let owner = Set();
-    owner.Target = Bodies.Member(receiver, "Owner");
-    owner.Value = Get(members.self);
-    block.Statements.Add(ExpressionStatement(owner));
+    // It is of what it is the object of: the class, or the interface.
+    let typed = Set();
+    typed.Target = Bodies.Member(receiver, "Type");
+    typed.Value = Get(members.self);
+    block.Statements.Add(ExpressionStatement(typed));
 
     let names = List[String]();
     let rest = SignatureSyntax();
@@ -2186,7 +2185,7 @@ def MethodFiller {
 
     fun fill(this): IResult[Block, Error] {
         let block = Block([]);
-        let signature = bindReceiver(this.compiler, block, this.self, this.members, this.function.Signature);
+        let signature = bindReceiver(this.compiler, block, this.self, this.members, this.function.Signature, "ThisParameter", Positional as Type);
 
         let invalid = bodies.Parameters(this.compiler, block, this.self, "Parameters", signature, Positional as Instance, Named as Instance);
         if (invalid != null) return Result[Block].Error(invalid);
@@ -2225,7 +2224,7 @@ def ConstructorFiller {
 
     fun fill(this): IResult[Block, Error] {
         let block = Block([]);
-        let signature = bindReceiver(this.compiler, block, this.self, this.members, this.constructor.Signature);
+        let signature = bindReceiver(this.compiler, block, this.self, this.members, this.constructor.Signature, "This", Receiver as Type);
 
         let invalid = bodies.Parameters(this.compiler, block, this.self, "Parameters", signature, Positional as Instance, Named as Instance);
         if (invalid != null) return Result[Block].Error(invalid);
@@ -2401,11 +2400,11 @@ fun invalidProperty(properties: List[Property], owner: String): String {
     while (index < properties.Count) {
         let property = properties[index];
         if (property.Getter != null) {
-            if (property.Getter.Parameters.Count != 0) return "The getter of property " + property.Name + " of " + owner + " takes nothing and gives its value.";
+            if (valuesTaken(property.Getter) != 0) return "The getter of property " + property.Name + " of " + owner + " takes nothing and gives its value.";
             if (property.Getter.ReturnType == null) return "The getter of property " + property.Name + " of " + owner + " takes nothing and gives its value.";
         }
         if (property.Setter != null) {
-            if (property.Setter.Parameters.Count != 1) return "The setter of property " + property.Name + " of " + owner + " takes one value and returns nothing.";
+            if (valuesTaken(property.Setter) != 1) return "The setter of property " + property.Name + " of " + owner + " takes one value and returns nothing.";
             if (property.Setter.ReturnType != null) return "The setter of property " + property.Name + " of " + owner + " takes one value and returns nothing.";
             if (property.Getter != null) {
                 if (property.Getter.IsStatic != property.Setter.IsStatic) return "The accessors of property " + property.Name + " of " + owner + " are both static or both not.";
@@ -2449,8 +2448,6 @@ fun loadInterface(node: Interface): IResult[CompilerObject, Error] {
     return Result[CompilerObject].Ok(loaded);
 }
 
-@definitionLoader
-fun loadReceiver(node: Receiver): IResult[CompilerObject, Error] { return Result[CompilerObject].Ok(ReceiverObject(node)); }
 
 // A node used as an instance, or as a type, is the one CO its definition gives.
 @instanceLoader
@@ -2473,7 +2470,10 @@ fun instanceOfReceiver(node: Receiver): IResult[CompilerObject, Error] { return 
 
 // Marks a field or a method of a class as the class's own, not its objects'.
 fun static(member: Instance): Instance {
-    if (member is method of Method) method.IsStatic = true;
+    if (member is method of Method) {
+        method.IsStatic = true;
+        method.Parameters.Remove(method.ThisParameter);
+    }
     if (member is field of Field) field.IsStatic = true;
     return member;
 }
@@ -2484,7 +2484,8 @@ fun static(member: Instance): Instance {
 fun class(member: Instance): Instance {
     if (member is method of Method) {
         method.IsClass = true;
-        method.This.IsClass = true;
+        let receiver = method.ThisParameter as Positional;
+        receiver.Type = ClassOf(receiver.Type);
     }
     if (member is field of Field) field.IsClass = true;
     return member;

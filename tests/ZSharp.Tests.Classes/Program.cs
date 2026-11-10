@@ -4193,7 +4193,7 @@ Try("a static method of a Z# class has no object", () =>
             @static242 fun read(): Int32 { return x; }
         }
         Keep(Thing242.read());
-        """) is { } e && e.Contains("no object here"));
+        """) is { } e && e.Contains("Field x of the class Thing242 is its objects'"));
 
 Try("a field of a Z# class's objects isn't the class's", () =>
     Run("""
