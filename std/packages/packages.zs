@@ -1,9 +1,9 @@
 // std:packages — `pkg:`, from the package manager. The package manager is a project of
-// the toolchain's, in `pkg`: its assembly, once it is built into `pkg/build`, or else
-// the project, compiled now. Either is `core:packages`, whose roots code can add to, and
-// a package that is a project is compiled by the project compiler. An assembly the
-// running .NET can't find, as one a package's assembly refers to, it asks the package
-// manager for.
+// the toolchain's, in `packages/package-manager`: its assembly, once it is built into its
+// `build`, or else the project, compiled now. Either is `core:packages`, whose roots code
+// can add to, and a package that is a project is compiled by the project compiler. An
+// assembly the running .NET can't find, as one a package's assembly refers to, it asks
+// the package manager for.
 
 import { Object, String, Type, Path, File, Directory, Assembly, ilLoader } from "core:runtime";
 import { Instance } from "std:zsharp/hir";
@@ -31,9 +31,9 @@ module Bootstrap {
     // The assembly is loaded from its bytes, so building it again, while it is in use,
     // can write its file.
     fun manager(): Instance {
-        let built = Path.Combine(toolchain(), "pkg", "build", "Packages.dll");
+        let built = Path.Combine(toolchain(), "packages", "package-manager", "build", "Packages.dll");
         if (File.Exists(built)) return ilLoader.Load(Assembly.Load(File.ReadAllBytes(built)).ManifestModule);
-        return Compiler(discover(Path.Combine(toolchain(), "pkg", "src"))).compile()[0];
+        return Compiler(discover(Path.Combine(toolchain(), "packages", "package-manager", "src"))).compile()[0];
     }
 
     // A package that is a project is what compiling it emits first, imported as a built

@@ -72,6 +72,12 @@ namespace Core.ZSharp
         public static global::ZSharp.Lang.DocumentImporter Documents { get; set; } = null!;
 
         /// <summary>
+        /// What the script the host runs was given: what follows it on the command line.
+        /// </summary>
+        [Alias("arguments")]
+        public static IReadOnlyList<string> Arguments { get; set; } = [];
+
+        /// <summary>
         /// What imports from a source, giving the imported value or why it can't.
         /// </summary>
         public static Func<string, IResult<global::ZSharp.HIR.Instance, CommonZ.Error>> Importer { get; set; } = null!;

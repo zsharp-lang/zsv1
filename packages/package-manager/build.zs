@@ -1,4 +1,4 @@
-// Builds the package manager as an assembly, into pkg/build, with the Cecil platform,
+// Builds the package manager as an assembly, into packages/package-manager/build, with the Cecil platform,
 // for the .NET that runs the toolchain, which imports it. Run it from the toolchain's
 // directory. Until it is built, the standard library compiles the package manager from
 // its source, which is what builds it the first time.
@@ -11,13 +11,13 @@ import { Module } from "std:modules";
 import { lower } from "std:modules/compiler";
 import { Cecil } from "pkg:cecil";
 
-let packages = Compiler(discover("pkg/src")).compile()[0] as Module;
+let packages = Compiler(discover("packages/package-manager/src")).compile()[0] as Module;
 
 let target = Cecil("Packages", null);
 target.add(lower(packages, target));
 
-Directory.CreateDirectory("pkg/build");
-let written = Path.GetFullPath("pkg/build/Packages.dll");
+Directory.CreateDirectory("packages/package-manager/build");
+let written = Path.GetFullPath("packages/package-manager/build/Packages.dll");
 target.write(written);
 bundle(target.dependencies(), Path.GetDirectoryName(written));
 print("wrote " + written);

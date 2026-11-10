@@ -2424,9 +2424,10 @@ would, and checks the build.
 
 ## Packages
 
-`pkg:` imports a package, with the package manager, which is a project of the
-toolchain's in `pkg`, written in Z#. `pkg/build.zs` builds it as an assembly into
-`pkg/build` with the Cecil platform, and `std:packages`, which the prelude imports, loads
+`pkg:` imports a package, with the package manager, which is a package of the
+toolchain's, as the Cecil platform is, in `packages/package-manager`, written in Z#. Its
+`build.zs` builds it as an assembly into its `build` with the Cecil platform, and
+`std:packages`, which the prelude imports, loads
 that assembly, from its bytes so it can be built again while in use, or else, until it is
 built, compiles the project, which is how it is built the first time. Either is
 `core:packages`.
@@ -2447,6 +2448,9 @@ built, compiles the project, which is how it is built the first time. Either is
   for an assembly it has none of that name of, and the package manager gives the one a
   build put next to a built package it loaded, or else the one NuGet installed of that
   version, or else the newest.
+- **Versions.** A version of a package, `Name@1.2.3`, is in a root as an assembly in
+  `Name@1.2.3/Name.dll`, so a toolchain carries the packages its own packages need, as a
+  release carries Mono.Cecil for the Cecil platform.
 - **NuGet.** What no root has is looked for in the packages NuGet installed: `Name` is
   the newest version that isn't a preview, `Name@1.2.3` that one, and the assembly is that
   of the target framework most like the running one's. Nothing is downloaded yet.
@@ -2458,6 +2462,38 @@ converts a value that can be referred to as a function into one, and the instruc
 that points to the function takes the LIR function, which a CLR platform finds as the
 method it declared. A function of no module can't be pointed to in the runtime, which
 runs it as a dynamic method.
+
+## Releases and installing
+
+A release is what an install has, for a platform, as an archive that needs nothing else
+installed: `release.zs` builds one, `zs release.zs [--no-bootstrap] [platform...]`, each
+platform a .NET runtime identifier, as `win-x64`, `linux-x64` or `osx-arm64`, into
+`release`, a `.zip` for Windows and a `.tar.gz` elsewhere, which keeps what runs as a
+program. It runs the bootstrap first, so the seed is what the sources build.
+
+- **What it has.** The toolchain, published self-contained in `bin`; the standard
+  library's sources and builds, its seed; the toolchain's packages, with the versions of
+  packages they import, found in NuGet's packages where the release is built; the
+  bootstrap, so an install builds itself again from its sources; the design, the
+  documentation and the examples; and the installer. A file at its root,
+  `.zsharp-toolchain`, says it is a toolchain. `zs` finds the standard library above its
+  own folder, so nothing in it names where it is installed.
+- **The installer** is Z#, `install.zs`, which the release's own `zs` runs, through
+  `install.cmd` on Windows and `install.sh` elsewhere, so it is one installer for every
+  platform. `install [folder] [--no-path]` copies the toolchain to the folder, or to the
+  user's own programs (`%LOCALAPPDATA%\Programs\ZSharp`, or `~/.local/share/zsharp`),
+  and adds its `bin` to the user's PATH: on Windows the user's own variable, and
+  elsewhere marked lines in the shell's profiles. `install --uninstall [folder]` removes
+  both. A folder is replaced or removed only if it is a toolchain, so a folder of
+  anything else is never written over, and the PATH or a profile is written only if it
+  changes. What removes the toolchain that runs the uninstaller waits for it to exit,
+  as a running program's files can't go, and on Linux what it hasn't loaded yet would
+  be gone; a terminal whose folder is the toolchain keeps the folder, empty.
+- **Arguments.** What follows a script on the command line is its own, `core:zsharp`'s
+  `arguments`, as the release builder's platforms and the installer's folder are.
+- **Versions** are a decision to come: an install is one toolchain, in a layout that a
+  folder for each version can hold later. A failure, as a folder that can't be written,
+  ends the installer with the runtime's exception, as Z# has none yet.
 
 ## Project layout
 
@@ -2474,6 +2510,11 @@ src/
   Runtime/   IL loader, LIR -> IL
   CLI/
 tests/
+std/         The standard library: its sources, and its builds, the seed
+packages/    The toolchain's packages: the Cecil platform and the package manager
+bootstrap.zs Builds std and the packages from their sources
+release.zs   Builds a release; install.zs, with install.cmd and install.sh, installs one
+docs/        The documentation, every sample of which tests/ZSharp.Tests.Docs runs with zs
 ```
 
 Each project is designed and built separately. Only the CLI combines them.

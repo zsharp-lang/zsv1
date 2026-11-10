@@ -403,11 +403,10 @@ FodyWeavers.xsd
 # src/Packages holds Z# packages, not NuGet output.
 !src/Packages/*
 
-# packages holds the toolchain's Z# packages, and std/packages is std:packages, not NuGet
-# output, and pkg/build is what the package manager is built into.
+# packages holds the toolchain's Z# packages, as the package manager and the Cecil
+# platform, and std/packages is std:packages, not NuGet output.
 !/packages/*
 !/std/packages/*
-pkg/build/
 /packages/*/build/
 # A library of the standard library that is built is its seed, which a release ships,
 # not the sources.

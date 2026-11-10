@@ -17,15 +17,19 @@ using Scope = Core.Compiler.ModuleScope;
 // Diagnostics print to standard error, so a program's own output stays as it is.
 //   --trace-reification  prints the code each reification receives and produces.
 //   --dump-definitions   prints the HIR of each definition a document defines.
-var options = args.Where(arg => arg.StartsWith("--")).ToHashSet();
-var files = args.Where(arg => !arg.StartsWith("--")).ToArray();
+// What follows the script is the script's own, as `core:zsharp`'s `arguments`.
+var script = Array.FindIndex(args, arg => !arg.StartsWith("--"));
+var options = (script < 0 ? args : args[..script]).ToHashSet();
+var files = script < 0 ? [] : new[] { args[script] };
 
 if (files.Length != 1 || options.Except(["--trace-reification", "--dump-definitions"]).Any())
 {
-    Console.Error.WriteLine("Usage: zs [--trace-reification] [--dump-definitions] <file>");
+    Console.Error.WriteLine("Usage: zs [--trace-reification] [--dump-definitions] <file> [arguments...]");
 
     return 1;
 }
+
+Core.ZSharp.ModuleScope.Arguments = args[(script + 1)..];
 
 #region Toolchain
 

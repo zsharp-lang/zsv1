@@ -64,7 +64,7 @@ while (index < libraries.Count) {
 }
 
 let platformBuild = Path.Combine(root, "packages", "cecil", "build");
-let managerBuild = Path.Combine(root, "pkg", "build");
+let managerBuild = Path.Combine(root, "packages", "package-manager", "build");
 if (Directory.Exists(platformBuild)) Directory.Delete(platformBuild, true);
 if (Directory.Exists(managerBuild)) Directory.Delete(managerBuild, true);
 
@@ -200,5 +200,5 @@ if (settled == false) {
 
 print("Generation " + generation + ": the standard library builds itself, the same.");
 
-documents.Execute(Path.Combine(root, "pkg", "build.zs")).Unwrap();
+documents.Execute(Path.Combine(root, "packages", "package-manager", "build.zs")).Unwrap();
 print("Bootstrapped.");

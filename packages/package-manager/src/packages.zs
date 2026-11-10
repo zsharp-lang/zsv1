@@ -8,9 +8,10 @@
 // `a/b` whose module file is in it or in its `src`. A project built as an assembly, into
 // `a/b/build/b.dll`, is that assembly, loaded from its bytes so it can be built again
 // while it is in use; one that isn't is compiled by what can compile one, which is given
-// to the package manager. In NuGet's packages, `Name` is the
-// newest version installed, and `Name@1.2.3` that version, of the assembly of the target
-// framework most like the running one's.
+// to the package manager. A version of a package, `Name@1.2.3`, is in a root as an
+// assembly in `Name@1.2.3/Name.dll`, as a toolchain carries the packages its own packages
+// need. In NuGet's packages, `Name` is the newest version installed, and `Name@1.2.3`
+// that version, of the assembly of the target framework most like the running one's.
 
 // The project's packages, then the toolchain's, which are next to the standard library.
 fun initialRoots(): List[String] {
@@ -59,6 +60,13 @@ fun load(source: String): IResult[Instance, Error] {
         while (index < roots.Count) {
             let found = inRoot(roots[index], name);
             if (found != null) return found;
+            index = index + 1;
+        }
+    } else {
+        let index = 0;
+        while (index < roots.Count) {
+            let versioned = Path.Combine(roots[index], name + "@" + version, Path.GetFileName(name) + ".dll");
+            if (File.Exists(versioned)) return Importer(versioned);
             index = index + 1;
         }
     }
