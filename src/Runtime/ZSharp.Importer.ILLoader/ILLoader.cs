@@ -78,7 +78,7 @@ namespace ZSharp.Importer.ILLoader
             // A module is an instance, loaded to one CO, which LoadModule keeps.
             loader.Instances.Register<Package.DotNet.Module>(LoadModule);
 
-            loader.Instances.Register<Package.DotNet.ExposedObject>(LoadExposed);
+            loader.Instances.Register<ExposedObject>(LoadExposed);
             loader.Instances.Register<Package.DotNet.Operator>(node => Result.Ok(new Objects.ClrOperator(this, node.Name)));
             loader.Instances.Register<Package.DotNet.LiftedOperator>(node => Result.Ok(new Objects.LiftedOperator(this, node.Operator, node.Lifting)));
             loader.Instances.Register<Package.DotNet.RefFamily>(node => Result.Ok(new Objects.RefFamily(this, node.IsOut)));
@@ -427,7 +427,7 @@ namespace ZSharp.Importer.ILLoader
                     .Select(attribute => (attribute.Operator, (HIR.Instance)Load(method)))
                 );
 
-        public Package.DotNet.ExposedObject Expose(object value)
+        public ExposedObject Expose(object value)
             => new(value, Load(value.GetType()));
 
         internal Objects.Class Class(Type type)
@@ -712,10 +712,6 @@ namespace ZSharp.Importer.ILLoader
         }
 
         /// <summary>
-        /// Whether a type is one that describes types, as an HIR type is: where a type goes
-        /// as what describes it, as in a signature, rather than as its type object.
-        /// </summary>
-        /// <summary>
         /// A type as an instance of a generic definition has it: a type parameter is what
         /// it is given, and a type made of them is made of what they are given.
         /// </summary>
@@ -731,8 +727,14 @@ namespace ZSharp.Importer.ILLoader
             {
                 var arguments = type.GetGenericArguments().Select(argument => Substitute(argument, given)).ToArray();
 
-                return arguments.All(argument => argument.Is<IILType>(out _))
-                    ? Class(type.GetGenericTypeDefinition().MakeGenericType([.. arguments.Select(argument => argument.As<IILType>()!.GetILType())]))
+                var types = new List<Type>();
+
+                foreach (var substituted in arguments)
+                    if (substituted.Is<IILType>(out var il))
+                        types.Add(il.GetILType());
+
+                return types.Count == arguments.Length
+                    ? Class(type.GetGenericTypeDefinition().MakeGenericType([.. types]))
                     : new Objects.Instantiation(this, type.GetGenericTypeDefinition(), arguments);
             }
 
@@ -984,7 +986,7 @@ namespace ZSharp.Importer.ILLoader
         {
             foreach (var parameter in parameters.Where(parameter => parameter.IsCaptured))
             {
-                if (CodeLoaders.DefinedAs(parameter) is not Objects.Variable variable)
+                if (!CodeLoaders.Defined(parameter).Ok(out var defined) || defined is not Objects.Variable variable)
                     continue;
 
                 var type = ((ITyped)variable).Type;
@@ -1036,9 +1038,9 @@ namespace ZSharp.Importer.ILLoader
                 : Result.Error("A constructor can only be reached through its class.");
 
         private IResult LoadVariable(HIR.Instance node)
-            => CodeLoaders.Variable(node);
+            => CodeLoaders.Defined(node);
 
-        private IResult LoadExposed(Package.DotNet.ExposedObject node)
+        private IResult LoadExposed(ExposedObject node)
             => Result.Ok(new Objects.Literal(node.Value, nodeTypes[node.Type], this));
     }
 }

@@ -27,6 +27,12 @@ namespace ZSharp.Importer.ILLoader
         private readonly HashSet<object> draining = [];
 
         /// <summary>
+        /// The parameters of each constructor and method of a defined class, its object first,
+        /// as it was declared for a target, which its code is lowered with later.
+        /// </summary>
+        private readonly Dictionary<(object Member, object Target), List<LIR.Parameter>> signatures = [];
+
+        /// <summary>
         /// What stands for no target, for code lowered for none.
         /// </summary>
         private static readonly object NoTarget = new();
@@ -294,7 +300,7 @@ namespace ZSharp.Importer.ILLoader
 
                 definition.Constructors.Add(declared);
                 lowered.Constructors.Add(declared);
-                lowered.Signatures[constructor] = [.. code.Parameters];
+                signatures[(constructor, target ?? NoTarget)] = [.. code.Parameters];
             }
 
             foreach (var method in node.Methods)
@@ -343,7 +349,7 @@ namespace ZSharp.Importer.ILLoader
 
                 definition.Methods.Add(declared);
                 lowered.Methods[method] = declared;
-                lowered.Signatures[method] = [.. signature.Parameters];
+                signatures[(method, target ?? NoTarget)] = [.. signature.Parameters];
             }
 
             // A property is the methods of its accessors: a getter that takes nothing and
@@ -392,7 +398,7 @@ namespace ZSharp.Importer.ILLoader
 
             foreach (var (constructor, declared) in @class.Constructors.Zip(lowered.Constructors))
             {
-                using var bound = Bind(@class, constructor.This, constructor.Parameters, constructor.CustomMetadata, lowered.Signatures[constructor], target);
+                using var bound = Bind(@class, constructor.This, constructor.Parameters, constructor.CustomMetadata, signatures[(constructor, target ?? NoTarget)], target);
 
                 foreach (var field in node.Fields)
                     if (field.DefaultValue is not null && Initialize(field, @class, constructor, declared, target) is { } error)
@@ -410,7 +416,7 @@ namespace ZSharp.Importer.ILLoader
                 if (method.Body is null)
                     return new ErrorMessage($"Method {method.Name} has no body.");
 
-                using var bound = Bind(@class, method.IsStatic ? null : method.This, method.Parameters, method.CustomMetadata, lowered.Signatures[method], target);
+                using var bound = Bind(@class, method.IsStatic ? null : method.This, method.Parameters, method.CustomMetadata, signatures[(method, target ?? NoTarget)], target);
 
                 if (Lower(method.Body, declared.Function, method.ReturnType, method.Parameters, target) is { } error)
                     return error;
@@ -499,7 +505,7 @@ namespace ZSharp.Importer.ILLoader
             public void Dispose()
             {
                 for (var index = set.Count - 1; index >= 0; index--)
-                    CodeLoaders.Restore(set[index].Node, set[index].Was);
+                    CodeLoaders.Redefine(set[index].Node, set[index].Was);
             }
         }
 

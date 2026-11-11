@@ -9,7 +9,7 @@ namespace ZSharp.Lang.DotNet
     public static class Properties
     {
         public static string AccessorName(AST.Accessor accessor)
-            => (accessor.IsSetter ? "set_" : "get_") + accessor.Name;
+            => (accessor.Kind == AST.AccessorKind.Set ? "set_" : "get_") + accessor.Name;
 
         public static void Define(Package.DotNet.Class owner, string name)
         {

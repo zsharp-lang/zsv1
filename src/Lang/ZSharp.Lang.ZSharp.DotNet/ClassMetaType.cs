@@ -7,9 +7,13 @@ using Code = ZSharp.HIR.Code;
 namespace ZSharp.Lang.DotNet
 {
     /// <summary>
-    /// The CLR class meta-compiler. It compiles a <c>class</c> to code that builds a
-    /// <see cref="Package.DotNet.Class"/> as HIR, and registers each member in it:
-    /// a <c>let</c> becomes a field, and the rest of its members are definitions.
+    /// The meta-compiler of <c>DotNet_Class</c>, a class of the CLR's defined in Z#. A
+    /// definition of it compiles to code that, run where the definition is, builds the
+    /// class's HIR, a <see cref="Package.DotNet.Class"/>: its type parameters first, its
+    /// bases, then each member, a <c>let</c> as a field, a <c>fun</c> as a method, a
+    /// constructor as one, and any other definition as a nested one, and last a property
+    /// for each name its accessors have. Only a type definition is one: a function can be
+    /// given a meta-type too, so what isn't a type definition fails.
     /// </summary>
     public sealed class ClassMetaType(
         Language language,

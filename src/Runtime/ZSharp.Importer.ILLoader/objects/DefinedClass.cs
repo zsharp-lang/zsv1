@@ -277,12 +277,6 @@ namespace ZSharp.Importer.ILLoader.Objects
         public Dictionary<Package.DotNet.Field, ClassField> Fields { get; } = [];
 
         public Dictionary<Package.DotNet.GenericParameter, ClassGenericParameter> Parameters { get; } = [];
-
-        /// <summary>
-        /// The parameters of each constructor and method, its object first, which its code
-        /// is lowered with.
-        /// </summary>
-        public Dictionary<object, List<LIR.Parameter>> Signatures { get; } = [];
     }
 
     /// <summary>

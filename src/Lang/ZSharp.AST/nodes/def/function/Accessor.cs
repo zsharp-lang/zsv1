@@ -8,10 +8,10 @@ namespace ZSharp.AST
     /// </summary>
     public sealed class Accessor(FunctionTokens tokens) : Function(tokens)
     {
-        public required bool IsSetter { get; init; }
+        public required AccessorKind Kind { get; init; }
 
         public override string ToString()
-            => $"{(IsSetter ? "set" : "get")} {Name}({Signature}){(ReturnType is null ? string.Empty : $": {ReturnType}")}" +
+            => $"{(Kind == AccessorKind.Set ? "set" : "get")} {Name}({Signature}){(ReturnType is null ? string.Empty : $": {ReturnType}")}" +
             $"{(Body is null ? ";" : " {}")}";
     }
 }

@@ -270,7 +270,7 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
     @explicitThis fun restoreParameters(this, previous: List[CompilerObject]) {
         let index = 0;
         while (index < this.node.Parameters.Count) {
-            CodeLoaders.Restore(this.node.Parameters[index] as Instance, previous[index]);
+            CodeLoaders.Redefine(this.node.Parameters[index] as Instance, previous[index]);
             index = index + 1;
         }
     }
@@ -402,9 +402,9 @@ fun instanceOfFunction(node: Function): IResult[CompilerObject, Error] { return 
 // A parameter in code is what the code's function defines it as, as it lowers the code:
 // nothing else gives it a meaning there.
 @instanceLoader
-fun instanceOfPositional(node: Positional): IResult[CompilerObject, Error] { return CodeLoaders.Variable(node); }
+fun instanceOfPositional(node: Positional): IResult[CompilerObject, Error] { return CodeLoaders.Defined(node); }
 @instanceLoader
-fun instanceOfNamed(node: Named): IResult[CompilerObject, Error] { return CodeLoaders.Variable(node); }
+fun instanceOfNamed(node: Named): IResult[CompilerObject, Error] { return CodeLoaders.Defined(node); }
 
 // ---- Installing it
 

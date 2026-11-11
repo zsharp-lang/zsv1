@@ -3234,7 +3234,7 @@ Try("a value is encoded by its type", () =>
     && Scope.HIRReifier.EncodeValue(true).Unwrap() is C.BooleanLiteral { Value: true }
     && Scope.HIRReifier.EncodeValue(typeof(string)).Unwrap() is C.Get { Instance: Package.DotNet.Class { Name: "System.String" } }
     && Scope.HIRReifier.EncodeValue(il.Load(typeof(object))).Unwrap() is C.Get { Instance: Package.DotNet.Class { Name: "System.Object" } }
-    && Scope.HIRReifier.EncodeValue(new List<int>()).Unwrap() is C.Get { Instance: Package.DotNet.ExposedObject });
+    && Scope.HIRReifier.EncodeValue(new List<int>()).Unwrap() is C.Get { Instance: ZSharp.Importer.ILLoader.ExposedObject });
 
 Try("a class used as a value is its type object", () =>
     Run("def ClassValue {} Keep(ClassValue);") is null && Kept() is Type { Name: "ClassValue" });
@@ -4580,6 +4580,12 @@ Try("std:dotnet makes a .dll importable by its path, its public types its member
         Keep(ProbeFlags285.Low | ProbeFlags285.High);
         """) is null && Probe.Kept is [5, ProbeFlags.Low | ProbeFlags.High]);
 
+Try("two types of one name in different namespaces of an assembly are an error to import, not one of them", () =>
+    Run($$"""
+        import "std:dotnet";
+        import { Twin as Twin313 } from "{{typeof(GenericProbe).Assembly.Location.Replace('\\', '/')}}";
+        """) is { } error && error.Contains("more than one type named Twin") && error.Contains("Twins.A") && error.Contains("Twins.B"));
+
 Try("a file nothing is registered for can't be imported", () =>
     Run("""import { x } from "notes.txt";""") is { } error && error.Contains("nothing is registered"));
 
@@ -5629,4 +5635,20 @@ sealed class InjectedMatch(string value)
 {
     public IResult<ZSharp.MIR.CompilerObject, Error> Match(ArgumentStream arguments)
         => Scope.HIRCodeLoader.LoadExpression(new C.StringLiteral(value));
+}
+
+namespace Twins.A
+{
+    /// <summary>
+    /// One of two types of one name, in different namespaces.
+    /// </summary>
+    public static class Twin;
+}
+
+namespace Twins.B
+{
+    /// <summary>
+    /// The other.
+    /// </summary>
+    public static class Twin;
 }

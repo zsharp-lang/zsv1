@@ -53,7 +53,7 @@ namespace ZSharp.Parser
                 Name = parts.Name,
                 ReturnType = parts.ReturnType,
                 Signature = parts.Signature,
-                IsSetter = isSetter,
+                Kind = isSetter ? AccessorKind.Set : AccessorKind.Get,
             });
         }
 

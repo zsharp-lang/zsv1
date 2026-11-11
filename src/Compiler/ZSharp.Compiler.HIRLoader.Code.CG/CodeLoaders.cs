@@ -12,47 +12,47 @@ namespace ZSharp.Compiler
         /// </summary>
         public static CompilerObject? Returns { get; set; }
 
-        private static readonly Dictionary<HIR.Instance, CompilerObject> variables = new(ReferenceEqualityComparer.Instance);
+        /// <summary>
+        /// The code's scope: what each instance a function gives a meaning in its own code is
+        /// to the code being loaded, as its parameters, its object and their cells are.
+        /// Every other instance loads as itself.
+        /// </summary>
+        private static readonly Dictionary<HIR.Instance, CompilerObject> scope = new(ReferenceEqualityComparer.Instance);
 
         /// <summary>
-        /// Defines what a variable is to the code being loaded, as a parameter of the
-        /// function whose code it is, or its object: whatever lowers a function's code
-        /// defines its variables while it loads that code. Nothing else gives a variable a
-        /// meaning in code, so code that uses a variable its function doesn't have fails to
-        /// load. It gives what the variable was before, which <see cref="Restore"/> puts back
-        /// once the code is loaded, since one function's code can load another's.
+        /// Defines what an instance is to the code being loaded: whatever lowers a function's
+        /// code defines its parameters and its object while it loads that code. Nothing
+        /// else gives them a meaning in code, so code that uses a parameter its function
+        /// doesn't have fails to load. It gives what the instance was before, which
+        /// <see cref="Redefine"/> puts back once the code is loaded, since one function's code
+        /// can load another's.
         /// </summary>
-        public static CompilerObject? Define(HIR.Instance variable, CompilerObject value)
+        public static CompilerObject? Define(HIR.Instance instance, CompilerObject value)
         {
-            var previous = variables.GetValueOrDefault(variable);
-            variables[variable] = value;
+            var previous = scope.GetValueOrDefault(instance);
+            scope[instance] = value;
             return previous;
         }
 
         /// <summary>
-        /// Puts back what a variable was before it was defined, or nothing.
+        /// Defines an instance as what it was before, as <see cref="Define"/> gave it, or as
+        /// nothing.
         /// </summary>
-        public static void Restore(HIR.Instance variable, CompilerObject? previous)
+        public static void Redefine(HIR.Instance instance, CompilerObject? previous)
         {
             if (previous is null)
-                variables.Remove(variable);
+                scope.Remove(instance);
             else
-                variables[variable] = previous;
+                scope[instance] = previous;
         }
 
         /// <summary>
-        /// What a variable is to the code being loaded, as its function defined it.
+        /// What an instance is to the code being loaded, as its function defined it.
         /// </summary>
-        public static IResult Variable(HIR.Instance variable)
-            => variables.TryGetValue(variable, out var value)
+        public static IResult Defined(HIR.Instance instance)
+            => scope.TryGetValue(instance, out var value)
                 ? Result.Ok(value)
                 : Result.Error("A parameter can only be used by the code it belongs to.");
-
-        /// <summary>
-        /// What a variable is to the code being loaded, or null.
-        /// </summary>
-        public static CompilerObject? DefinedAs(HIR.Instance variable)
-            => variables.GetValueOrDefault(variable);
 
         /// <summary>
         /// A captured local lives where the functions that capture it can share it.
