@@ -1,0 +1,9 @@
+<Project>
+  <!-- The cores are distinct and unconnected: none may reference anything. -->
+  <Target Name="EnforceCoreIsolation" BeforeTargets="ResolveProjectReferences;CollectPackageReferences">
+    <Error Condition="'@(ProjectReference)' != ''"
+           Text="$(MSBuildProjectName) is a core and must not reference other projects: @(ProjectReference)" />
+    <Error Condition="'@(PackageReference)' != ''"
+           Text="$(MSBuildProjectName) is a core and must not reference packages: @(PackageReference)" />
+  </Target>
+</Project>

@@ -1,0 +1,20 @@
+[project]
+name = "zsharp-docs-site"
+version = "0.1.0"
+description = "Serves Z#'s documentation, in ../docs, as a website."
+requires-python = ">=3.10"
+dependencies = [
+    "mkdocs>=1.6,<2",
+    "mkdocs-material>=9.5,<10",
+]
+
+# Pygments has no Z# lexer, so this project brings one, which code blocks of `zs` use.
+[project.entry-points."pygments.lexers"]
+zs = "zsharp_docs.lexer:ZSharpLexer"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/zsharp_docs"]

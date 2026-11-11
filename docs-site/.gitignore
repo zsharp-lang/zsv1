@@ -1,0 +1,3 @@
+# What building and serving the site leave.
+site/
+.venv/

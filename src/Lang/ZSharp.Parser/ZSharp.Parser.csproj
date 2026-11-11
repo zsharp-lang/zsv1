@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\CommonZ\CommonZ.csproj" />
+    <ProjectReference Include="..\ZSharp.AST\ZSharp.AST.csproj" />
+    <ProjectReference Include="..\ZSharp.Tokenizer\ZSharp.Tokenizer.csproj" />
+  </ItemGroup>
+
+</Project>

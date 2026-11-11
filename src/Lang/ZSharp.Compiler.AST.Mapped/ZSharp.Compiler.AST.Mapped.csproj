@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.AST\ZSharp.Compiler.AST.csproj" />
+  </ItemGroup>
+
+</Project>
