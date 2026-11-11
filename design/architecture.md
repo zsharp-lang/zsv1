@@ -2572,6 +2572,34 @@ The first target is parity with `zsv1`: importing `print` and calling it.
   for it. `std:oop` types such a global by an interface instead. A global could be
   declared before its type is complete, as a class's structure is.
 
+## Decided in the review of 2026-11-12
+
+Decided in the review of the reimplementation, for the language features to come.
+
+- **`let` and `var`.** A `let` local can't be set again after its declaration, and a
+  `var` local can. This is the local's property, not its type's; any other form of
+  immutability, such as a `const`, is the type's or a decorator's. The seed takes it in
+  three bootstraps: `var` is added, every `let` that is set again becomes a `var`, and
+  then a `let`'s second `Set` fails.
+- **The prelude.** The CLI inserts `import "std:prelude";` into the single file it runs
+  as a script, as an AST node, unless it's given `--no-prelude`. Nothing else inserts it:
+  not the project compiler, and not a document a script imports.
+- **`|` with `Error`.** Errors live together as a value, but values and errors don't:
+  - `Error | Error` is `Error`;
+  - an `Error` with a subclass of `Error` is the ordinary union of the two;
+  - an `Error` with any other `T` is `IResult[T, Error]`.
+
+  `T` and `Error` both cast implicitly to `IResult[T, Error]`, and an error value always
+  converts as the error, even where `T` would take it too, as `Object` does.
+- **Indexing a property.** `map.height[2, 6]` errors if both an indexed `height` and the
+  value of a parameterless `height` take the index. This holds for now, and may change.
+- **Namespaces on import aren't decided.** They won't be modules, and for now an import
+  doesn't reach a namespace. Today an assembly's types are found by name alone, whatever
+  their namespace, so two types of one name in one assembly have to be an error rather
+  than one of them.
+- **Integers.** The integer concept is a set of operator functions and casts. A
+  fixed-width integer is a type of its own `Integer` meta-type, which gives its width.
+
 ## Choices and restrictions from 2026-11-09
 
 Made without you on 2026-11-09. The choices are design for you to keep or change; the
