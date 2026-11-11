@@ -59,6 +59,11 @@ namespace ZSharp.Importer.ILLoader.Objects
             // `IList<T>`; a name of generic types only is its arities, as overloads.
             var found = types.Where(type => type.IsPublic && (type.Name.Split('`')[0]) == member).ToArray();
 
+            // Namespaces aren't reached by an import yet, so two types of one name and arity
+            // in different namespaces can't be told apart: neither is chosen.
+            if (found.GroupBy(type => type.Name).FirstOrDefault(same => same.Count() > 1) is { } ambiguous)
+                return Result.Error($"Module {il.Name} has more than one type named {member}, in {string.Join(", ", ambiguous.Select(type => type.Namespace ?? "no namespace"))}, and an import can't choose between namespaces yet.");
+
             if (found.FirstOrDefault(type => !type.IsGenericTypeDefinition) is { } plain)
             {
                 foreach (var generic in found.Where(type => type != plain))

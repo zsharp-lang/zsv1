@@ -92,7 +92,7 @@ namespace ZSharp.Lang
             if (metaType is not HIR.Type type)
                 return Result<CompiledDefinition>.Error($"The meta-type of {NameOf(definition)} is not a type.");
 
-            var name = NameOf(definition);
+            var name = BoundNameOf(definition);
             var variable = new HIR.Code.Local(name, type);
 
             // The definition's own name is in a scope of its own, around its names.
@@ -148,15 +148,24 @@ namespace ZSharp.Lang
                 : Result<HIR.Instance>.Error($"A {definition.GetType().Name} has no default meta-type.");
         }
 
+        /// <summary>
+        /// A definition's own name, empty if it has none, as an anonymous type or function has.
+        /// </summary>
         private static string NameOf(AST.Definition definition)
             => definition switch
             {
                 AST.TypeDefinition type => type.Name,
                 AST.Module module => module.Name,
-                // An accessor is named by its property, which is what has the name.
-                AST.Accessor => string.Empty,
                 AST.Function function => function.Name ?? string.Empty,
                 _ => string.Empty
             };
+
+        /// <summary>
+        /// The name a definition is bound by where it is, empty if none. An accessor has its
+        /// property's name, but binds none of its own: the property binds it, which the
+        /// definition holding the accessors defines once they are both compiled.
+        /// </summary>
+        private static string BoundNameOf(AST.Definition definition)
+            => definition is AST.Accessor ? string.Empty : NameOf(definition);
     }
 }

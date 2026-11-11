@@ -57,6 +57,24 @@ nav:
   - Extending Z#:
       - Decorators and compile time: extending/decorators.md
       - New kinds of definitions: extending/definitions.md
+  # The toolchain's design document, which hooks.py adds from ../design.
+  - The architecture:
+      - Overview: architecture/README.md
+      - Principles and implementation: architecture/principles.md
+      - The three cores: architecture/cores.md
+      - REIs: architecture/rei.md
+      - The CLR target: architecture/clr.md
+      - Composition and execution: architecture/composition.md
+      - The Z# frontend: architecture/frontend.md
+      - Definitions and reification: architecture/definitions.md
+      - Documents, definitions and decorators: architecture/documents.md
+      - Code: architecture/code.md
+      - Diagnostics, extensions and metaclasses: architecture/extensions.md
+      - Imports and reflection: architecture/imports.md
+      - Frameworks and projects: architecture/projects.md
+      - The Cecil platform: architecture/cecil.md
+      - The toolchain: architecture/toolchain.md
+      - Open questions and decisions: architecture/decisions.md
 
 hooks:
   - hooks.py

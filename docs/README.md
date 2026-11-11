@@ -51,5 +51,5 @@ Z# does.
   - [New kinds of definitions](extending/definitions.md): a meta-type's node,
     meta-compiler, loader and CO.
 
-The record of every design decision is [`design/architecture.md`](../design/architecture.md),
+The record of every design decision is [`design/`](../design/README.md),
 and the [`examples`](../examples) show more.
