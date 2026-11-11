@@ -1,0 +1,77 @@
+# The Z# documentation as a website. The pages are the toolchain's, in ../docs, which
+# this reads as they are: what the site adds is here and in hooks.py.
+site_name: Z#
+site_description: The Z# language and toolchain.
+docs_dir: ../docs
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.instant
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Dark
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Light
+
+nav:
+  - Home: README.md
+  - Getting started: getting-started.md
+  - The language:
+      - Basics: language/basics.md
+      - Control flow: language/control-flow.md
+      - Functions: language/functions.md
+      - Classes: language/classes.md
+      - Interfaces: language/interfaces.md
+      - Modules and documents: language/modules.md
+      - Using .NET: language/dotnet.md
+      - What isn't there yet: language/not-yet.md
+  - The libraries:
+      - Overview: library/README.md
+      - The standard library: library/standard.md
+      - The core libraries: library/core.md
+  - The toolchain:
+      - The zs command: toolchain/cli.md
+      - Projects: toolchain/projects.md
+      - Reflection: toolchain/reflection.md
+      - The bootstrap and releases: toolchain/bootstrap.md
+  - The design:
+      - Principles: design/principles.md
+      - How Z# compiles: design/compiler.md
+  - Extending Z#:
+      - Decorators and compile time: extending/decorators.md
+      - New kinds of definitions: extending/definitions.md
+
+hooks:
+  - hooks.py
+
+markdown_extensions:
+  - tables
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+
+# The pages link to the toolchain's design and examples, which are outside the pages.
+validation:
+  links:
+    not_found: info
+    unrecognized_links: info

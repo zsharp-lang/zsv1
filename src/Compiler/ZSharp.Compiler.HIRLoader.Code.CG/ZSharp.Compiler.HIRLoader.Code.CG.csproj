@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.CG\ZSharp.Compiler.CG.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.HIRLoader.Code.Mapped\ZSharp.Compiler.HIRLoader.Code.Mapped.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.TS.Static\ZSharp.Compiler.TS.Static.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.Overloading.Static\ZSharp.Compiler.Overloading.Static.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.IR.Static\ZSharp.Compiler.IR.Static.csproj" />
+    <ProjectReference Include="..\..\Library\ZSharp.Library.Core.Compiler\ZSharp.Library.Core.Compiler.csproj" />
+  </ItemGroup>
+
+</Project>
