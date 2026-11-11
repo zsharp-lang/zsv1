@@ -4,7 +4,7 @@ namespace ZSharp.Compiler.CGDispatchers.Typed
     {
         public IResult Member(CompilerObject @object, MemberIndex index)
         {
-            var result = @base.GetMemberByIndex(@object, index);
+            var result = @base.Member(@object, index);
 
             if (result.IsUnsupported() && RuntimeDescriptors.Find(ts, @object, out var rtd) && rtd.Is<IRTGetMember<MemberIndex>>(out var member))
                 result = member.Member(@object, index);
@@ -14,7 +14,7 @@ namespace ZSharp.Compiler.CGDispatchers.Typed
 
         public IResult Member(CompilerObject @object, MemberIndex index, CompilerObject value)
         {
-            var result = @base.SetMemberByIndex(@object, index, value);
+            var result = @base.Member(@object, index, value);
 
             if (result.IsUnsupported() && RuntimeDescriptors.Find(ts, @object, out var rtd) && rtd.Is<IRTSetMember<MemberIndex>>(out var member))
                 result = member.Member(@object, index, value);
@@ -24,7 +24,7 @@ namespace ZSharp.Compiler.CGDispatchers.Typed
 
         public IResult Member(CompilerObject @object, MemberName name)
         {
-            var result = @base.GetMemberByName(@object, name);
+            var result = @base.Member(@object, name);
 
             if (result.IsUnsupported() && RuntimeDescriptors.Find(ts, @object, out var rtd) && rtd.Is<IRTGetMember<MemberName>>(out var member))
                 result = member.Member(@object, name);
@@ -34,7 +34,7 @@ namespace ZSharp.Compiler.CGDispatchers.Typed
 
         public IResult Member(CompilerObject @object, MemberName name, CompilerObject value)
         {
-            var result = @base.SetMemberByName(@object, name, value);
+            var result = @base.Member(@object, name, value);
 
             if (result.IsUnsupported() && RuntimeDescriptors.Find(ts, @object, out var rtd) && rtd.Is<IRTSetMember<MemberName>>(out var member))
                 result = member.Member(@object, name, value);

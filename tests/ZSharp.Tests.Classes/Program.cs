@@ -3234,7 +3234,7 @@ Try("a value is encoded by its type", () =>
     && Scope.HIRReifier.EncodeValue(true).Unwrap() is C.BooleanLiteral { Value: true }
     && Scope.HIRReifier.EncodeValue(typeof(string)).Unwrap() is C.Get { Instance: Package.DotNet.Class { Name: "System.String" } }
     && Scope.HIRReifier.EncodeValue(il.Load(typeof(object))).Unwrap() is C.Get { Instance: Package.DotNet.Class { Name: "System.Object" } }
-    && Scope.HIRReifier.EncodeValue(new List<int>()).Unwrap() is C.Get { Instance: Package.DotNet.ExposedObject });
+    && Scope.HIRReifier.EncodeValue(new List<int>()).Unwrap() is C.Get { Instance: ZSharp.Importer.ILLoader.ExposedObject });
 
 Try("a class used as a value is its type object", () =>
     Run("def ClassValue {} Keep(ClassValue);") is null && Kept() is Type { Name: "ClassValue" });

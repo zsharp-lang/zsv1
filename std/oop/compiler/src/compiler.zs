@@ -11,7 +11,7 @@ import { Instance, Definition, Variable, Type, Named as NamedDefinition, Operato
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement, Cast as CastCode } from "std:zsharp/hir/code";
 import {
     Function as FunctionSyntax, Definition as DefinitionSyntax, TypeDefinition as TypeSyntax,
-    Constructor as ConstructorSyntax, Accessor as AccessorSyntax, LetExpression as LetSyntax, Expression as ExpressionSyntax,
+    Constructor as ConstructorSyntax, Accessor as AccessorSyntax, AccessorKind, LetExpression as LetSyntax, Expression as ExpressionSyntax,
     Signature as SignatureSyntax, Parameter as ParameterSyntax, Statement as StatementSyntax, DefinitionStatement as DefinitionStatementSyntax,
     DecoratedStatement as DecoratedSyntax, ExpressionStatement as ExpressionStatementSyntax
 } from "std:zsharp/lang/ast";
@@ -19,9 +19,9 @@ import { CompilerObject } from "std:zsharp/mir";
 import { Error, ErrorMessage, Result, IResult } from "std:zsharp/common";
 import { Argument, ArgumentStream, MatchResult } from "std:zsharp/compiler/cg";
 import { UnsupportedError } from "std:zsharp/compiler";
-import { ICTCallable, ICTGetMember, ICTSet, ICTCastTo, ICTImplicitCastTo, ICTGetIndex, ICTGet } from "std:zsharp/compiler/cg/direct";
+import { ICTCallable, ICTBound, ICTGetMember, ICTSet, ICTCastTo, ICTImplicitCastTo, ICTGetIndex, ICTGet } from "std:zsharp/compiler/cg/direct";
 import { IRTGetMember, IRTCastTo, IRTTypeMatch, IRTGetIndex } from "std:zsharp/compiler/cg/typed";
-import { ICompileIRExpression, ICompileIRType, ICompileIRStatement, ICompileIRDefinitionIn, ICompileIRReference, ICompileIRReceiver } from "std:zsharp/compiler/ir";
+import { ICompileIRExpression, ICompileIRType, ICompileIRStatement, ICompileIRDefinitionIn, ICompileIRReference } from "std:zsharp/compiler/ir";
 import { ITyped, IAssignableTo } from "std:zsharp/compiler/ts";
 import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTDefinition, CompileASTStatement, Context } from "std:zsharp/compiler/ast";
 import {
@@ -301,10 +301,10 @@ fun lowerCode(body: Code, function: LIRFunction, returned: CompilerObject, param
 
     let failed = lowerDefined(body, function, returned, target);
 
-    if (receiver != null) CodeLoaders.Restore(receiver, before);
+    if (receiver != null) CodeLoaders.Redefine(receiver, before);
     index = 0;
     while (index < parameters.Count) {
-        CodeLoaders.Restore(parameters[index] as Instance, previous[index]);
+        CodeLoaders.Redefine(parameters[index] as Instance, previous[index]);
         index = index + 1;
     }
     return failed;
@@ -637,7 +637,7 @@ def Invocation : CompilerObject, ICompileIRExpression, ITyped {
 // the object first, and it is referred to as the callee, so a delegate of it is closed
 // over the object. Bound to nothing, as a static method is, it is the callee. It knows
 // nothing of what the callee is.
-def Bound : CompilerObject, ICTCallable, ICompileIRReference[ICallable], ICompileIRReceiver {
+def Bound : CompilerObject, ICTCallable, ICTBound, ICompileIRReference[ICallable] {
     let callee: CompilerObject;
     let object: CompilerObject;
 
@@ -2175,7 +2175,7 @@ fun compileMethod(compiler: ASTCompiler, definition: DefinitionSyntax, self: Loc
         if (name == null) name = "";
         if (definition is accessor of AccessorSyntax) {
             name = "get " + accessor.Name;
-            if (accessor.IsSetter) name = "set " + accessor.Name;
+            if (accessor.Kind == AccessorKind.Set) name = "set " + accessor.Name;
         }
 
         let filler = MethodFiller(compiler, function, self, members(compiler));
@@ -2297,7 +2297,7 @@ fun instanceOfMethod(node: Method): IResult[CompilerObject, Error] { return hirL
 fun instanceOfConstructor(node: Constructor): IResult[CompilerObject, Error] { return hirLoader.LoadDefinition(node); }
 // The object in code is what the code's method or constructor defines it as.
 @instanceLoader
-fun instanceOfReceiver(node: Receiver): IResult[CompilerObject, Error] { return CodeLoaders.Variable(node); }
+fun instanceOfReceiver(node: Receiver): IResult[CompilerObject, Error] { return CodeLoaders.Defined(node); }
 
 // ---- Installing it
 

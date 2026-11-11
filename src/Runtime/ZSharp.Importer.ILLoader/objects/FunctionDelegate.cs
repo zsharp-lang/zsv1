@@ -33,7 +33,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             // A function bound to an object takes it first, and the delegate is closed over it.
             LIR.Expression? receiver = null;
-            if (function.Is<ICompileIRReceiver>(out var bound) && bound.Receiver is { } @object)
+            if (Receiver(function) is { } @object)
                 if (ZSharp.Compiler.Current.IR.CompileExpression(@object, target).When(out receiver).Error(out error))
                     return Result<LIR.Expression>.Error(error);
 
@@ -78,5 +78,8 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             return Result<LIR.Expression>.Ok(new LIR.Call(closed, [receiver]));
         }
+
+        private static CompilerObject? Receiver(CompilerObject function)
+            => function.Is<ICTBound>(out var bound) ? bound.Receiver : null;
     }
 }

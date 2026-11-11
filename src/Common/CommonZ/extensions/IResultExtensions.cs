@@ -56,17 +56,4 @@ public static class IResultExtensions
 
         return map(result.Unwrap()).Else(e => e);
     }
-
-    //public static IResult<TResult, TError> Else<TResult, TError>(
-    //    this IResult<TResult, TError> result,
-    //    Action<TError> action
-    //)
-    //    where TResult : class?
-    //    where TError : class
-    //{
-    //    if (result.IsError)
-    //        action(result.UnwrapError());
-
-    //    return result;
-    //}
 }

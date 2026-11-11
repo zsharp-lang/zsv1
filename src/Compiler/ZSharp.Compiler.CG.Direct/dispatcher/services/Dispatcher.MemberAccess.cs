@@ -4,7 +4,7 @@ namespace ZSharp.Compiler.CGDispatchers.Direct
     {
         public IResult Member(CompilerObject @object, MemberIndex index)
         {
-            var result = @base.GetMemberByIndex(@object, index);
+            var result = @base.Member(@object, index);
 
             if (result.IsUnsupported() && @object.Is<ICTGetMember<MemberIndex>>(out var member))
                 result = member.Member(index);
@@ -14,7 +14,7 @@ namespace ZSharp.Compiler.CGDispatchers.Direct
 
         public IResult Member(CompilerObject @object, MemberIndex index, CompilerObject value)
         {
-            var result = @base.SetMemberByIndex(@object, index, value);
+            var result = @base.Member(@object, index, value);
 
             if (result.IsUnsupported() && @object.Is<ICTSetMember<MemberIndex>>(out var member))
                 result = member.Member(index, value);
@@ -24,7 +24,7 @@ namespace ZSharp.Compiler.CGDispatchers.Direct
 
         public IResult Member(CompilerObject @object, MemberName name)
         {
-            var result = @base.GetMemberByName(@object, name);
+            var result = @base.Member(@object, name);
 
             if (result.IsUnsupported() && @object.Is<ICTGetMember<MemberName>>(out var member))
                 result = member.Member(name);
@@ -34,7 +34,7 @@ namespace ZSharp.Compiler.CGDispatchers.Direct
 
         public IResult Member(CompilerObject @object, MemberName name, CompilerObject value)
         {
-            var result = @base.SetMemberByName(@object, name, value);
+            var result = @base.Member(@object, name, value);
 
             if (result.IsUnsupported() && @object.Is<ICTSetMember<MemberName>>(out var member))
                 result = member.Member(name, value);

@@ -28,7 +28,7 @@ namespace ZSharp.Compiler.CGDispatchers.External
 
         public IResult Member(CompilerObject @object, MemberName name)
         {
-            var result = @base.GetMemberByName(@object, name);
+            var result = @base.Member(@object, name);
 
             if (!result.IsUnsupported())
                 return result;
