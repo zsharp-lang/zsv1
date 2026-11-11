@@ -26,6 +26,14 @@
   and `.Class`, rather than by what binds it, so a built Z# class's type object carries
   no id that `reflect` reads. And the bootstrap's list of libraries and what each needs
   says again what each library's imports say.
+- **A signature the seed binds can't change in place.** The built standard library is
+  compiled code: it names the toolchain's types and members by their signatures, and
+  implements its interfaces. A member can be added and the old one removed a bootstrap
+  later, but a type can't be renamed, and an interface member that the seed's classes
+  implement can't change its type, since both shapes would have to exist at once. So
+  `LoaderMap` keeps its name for now, and `Annotated.Annotations` stays a list of objects
+  until there is a way: a seed that binds by name, or a step that builds the standard
+  library with the toolchain it was built for.
 - **A module's global whose type's code uses the global.** A global is declared once its
   type is lowered, and lowering a class lowers its code, so a global of type
   `List[ClassObject]` that `ClassObject`'s code uses isn't declared when that code asks
