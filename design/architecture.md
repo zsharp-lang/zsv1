@@ -620,13 +620,20 @@ insight into the project being compiled.
 import { cg } from "core:compiler";
 ```
 
-`CG` is an instance, and the pointer to the current one is static. That pointer
-lives in the library behind `core:compiler`, not in the API. Z# reaches it by
-importing the module and C# reaches it through the library, so both see the same
-singleton. There is no scoping: a compilation never needs a
-different setup, because a library is compiled when it is installed (not our
-responsibility) and only loaded on import. A library can export compile-time
-utilities, which can be imported and used at compile time.
+`CG` is an instance, and the pointer to the current one is static. That pointer is the
+compiler's, `ZSharp.Compiler.Current`, in the compiler layer above the REIs: the
+compiler in use, its operations and its loaders, which the host makes once. What
+compiles reaches it there, and `core:compiler` is how Z# reaches it: its members are
+`Current`'s, so the library is defined in terms of the compiler and not the other way
+around. There is no scoping: a compilation never needs a different setup, because a
+library is compiled when it is installed (not our responsibility) and only loaded on
+import. A library can export compile-time utilities, which can be imported and used at
+compile time.
+
+That the compiler is reached as one, and not passed to what uses it, is a known form to
+remove: a CO's operations don't take the compiler, and the standard library's Z# code
+implements them, so passing it is a change of every protocol, which the seed takes in
+steps.
 
 ## Execution
 
@@ -988,9 +995,8 @@ a custom type gets into the language to be used as a meta-type.
   it is referred to as the callee, `ICompileIRReceiver`, so a delegate of it is closed
   over the object, as the CLR closes one over a first argument:
   `let f: Func[Int32, Int32] = adder.add`. That is how the meta-compilers give their own
-  methods to the compiler as hooks. A Z# object reaches what expects a value of its own
-  type everywhere, while going to `Object` is the runtime's, so what holds any value
-  takes it as its type, as `CapabilityContext.Of[T]` does.
+  methods to the compiler as hooks. What holds any value takes it as its type, as
+  `CapabilityContext.Of[T]` does, so it needs no conversion.
 - A node type that dropped a field reads what was encoded of it before: the decoder
   leaves out a field the type no longer has, as the standard library's builds are read
   by the next build of the library that defines their nodes.
@@ -1001,14 +1007,14 @@ a custom type gets into the language to be used as a meta-type.
   And what lowers a function, or a parameter, makes it after compiling its types and finds
   it again then, since compiling them can lower code that asks for it first.
 - A class has no base, so a value of one has only its class's members, and goes only to
-  its class and to what it implements. That it is also an `Object` is the
-  running process's, which realizes it as a CLR class: `core:runtime` adds an implicit
-  cast to `Object`, which the host installs, and whose code compiles only for the
-  runtime, so a module that uses it can't be built for another platform. Put in the CLR
-  platforms' shared library, it would compile for any of them, but whether a value goes
-  to `Object` is decided as code is generated, by lowering its type for the runtime,
-  which then lowers the type's module for the runtime while it is being built for
-  another target. That needs a way to tell a class without lowering it first.
+  its class and to what it implements. `Object` is the CLR's, the root of its type
+  system, which every value is on a platform that realizes the CLR's types: so
+  `Object`'s CO takes a value of any type that isn't one of the CLR's own, as a Z#
+  class's, as it is, and a CLR type converts to it by its own rules, as a value type
+  boxes. Code generation asks nothing of what a class is on any platform, as "class"
+  isn't the same on every one: the target lowers the value, and a target that has no
+  `Object` fails on `Object` itself. So a Z# object goes where `Object` is expected in
+  what any CLR platform builds.
 - `def` isn't a class or a type: it is a definition, `def ID? (of META)? ...`, and
   `module` is `def` of `Module`. So a definition's body holds definitions as a module's
   does, and whether it takes each is its meta-type's to say; a CLR module is
@@ -2502,10 +2508,12 @@ src/
   Common/    CommonZ
   Core/      ZSharp.HIR, ZSharp.MIR, ZSharp.LIR
   HIR/       Language-neutral HIR extensions, such as ZSharp.HIR.Code
-  Compiler/  The CG, TS, IR, loader and runner REIs and implementations
+  Compiler/  The CG, TS, IR, loader and runner REIs and implementations, and
+             ZSharp.Compiler, the compiler in use, which they make up
   Importers/ Language-neutral importers, such as the string importer
   Lang/      Text, Tokenizer, AST, Parser, AST -> HIR, the Z# language
-  Library/   What `core:` and `std:` expose
+  Library/   What `core:` and `std:` expose, of what is below them, which nothing
+             below reaches
   Packages/  DotNet (CLR entities, pure structure, HIR level)
   Runtime/   IL loader, LIR -> IL
   CLI/
@@ -2551,6 +2559,13 @@ The first target is parity with `zsv1`: importing `print` and calling it.
   which fails only when its handle is mapped. The fix is for the IL loader to describe
   the target's reference assemblies, without loading them, as `MetadataLoadContext`
   reads them.
+- **What still needs a design of its own.** The IL importer imports the CLR's entities
+  and also compiles the CLR's definitions written in Z#, `DotNet_Class` and its kin, with
+  local functions and their closures: the second could be a unit of its own, on top of
+  it. A built class's metaclass is found by the name the platform gives it, the class's
+  and `.Class`, rather than by what binds it, so a built Z# class's type object carries
+  no id that `reflect` reads. And the bootstrap's list of libraries and what each needs
+  says again what each library's imports say.
 - **A module's global whose type's code uses the global.** A global is declared once its
   type is lowered, and lowering a class lowers its code, so a global of type
   `List[ClassObject]` that `ClassObject`'s code uses isn't declared when that code asks
