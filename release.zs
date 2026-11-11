@@ -12,6 +12,7 @@
 import "std:prelude";
 import { print } from "std:io";
 import { arguments } from "core:zsharp";
+import { inNuGet } from "core:packages";
 import { Object, String, Type, Int32, Boolean, List, Path, File, Directory, Environment } from "core:runtime";
 
 let objectType: Type = Object;
@@ -146,45 +147,22 @@ module Release {
     }
 
     // Copies a version of a package NuGet installed into a release's packages, as the
-    // package manager finds it there, `Name@1.2.3/Name.dll`: the assemblies of the target
-    // framework most like the toolchain's. Gives whether it was there to copy.
+    // package manager finds it there, `Name@1.2.3/Name.dll`: the assemblies the package
+    // manager would import of it, and those next to them. Gives whether it was there.
     fun carry(package: String, packages: String): Boolean {
         let at = package.IndexOf("@");
-        let name = package.Substring(0, at);
-        let version = package.Substring(at + 1);
+        let assembly = inNuGet(package.Substring(0, at), package.Substring(at + 1));
+        if (assembly == null) return false;
 
-        let nuget = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
-        if (nuget == null) nuget = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
-        let lib = Path.Combine(nuget, name.ToLowerInvariant(), version, "lib");
-
-        let frameworks = List[String]();
-        frameworks.Add("net10.0");
-        frameworks.Add("net9.0");
-        frameworks.Add("net8.0");
-        frameworks.Add("net7.0");
-        frameworks.Add("net6.0");
-        frameworks.Add("net5.0");
-        frameworks.Add("netcoreapp3.1");
-        frameworks.Add("netstandard2.1");
-        frameworks.Add("netstandard2.0");
-
+        let destination = Path.Combine(packages, package);
+        Directory.CreateDirectory(destination);
+        let files = Directory.GetFiles(Path.GetDirectoryName(assembly), "*.dll");
         let index = 0;
-        while (index < frameworks.Count) {
-            let directory = Path.Combine(lib, frameworks[index]);
-            if (File.Exists(Path.Combine(directory, name + ".dll"))) {
-                let destination = Path.Combine(packages, package);
-                Directory.CreateDirectory(destination);
-                let files = Directory.GetFiles(directory, "*.dll");
-                let each = 0;
-                while (each < files.Length) {
-                    File.Copy(files[each], Path.Combine(destination, Path.GetFileName(files[each])), true);
-                    each = each + 1;
-                }
-                return true;
-            }
+        while (index < files.Length) {
+            File.Copy(files[index], Path.Combine(destination, Path.GetFileName(files[index])), true);
             index = index + 1;
         }
-        return false;
+        return true;
     }
 
     // Builds the release for a platform, and gives where its archive is, or null.

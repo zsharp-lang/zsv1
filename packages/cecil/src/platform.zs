@@ -144,7 +144,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         index = 0;
         while (index < unit.Metadata.Count) {
             if (unit.Metadata[index] is defines of DefinesClass) this.classDefinition(defines.Definition);
-            if (unit.Metadata[index] is entry of LIREntryPoint) this.function(entry.Function).CustomAttributes.Add(CustomAttribute(this.attribute("ZSharp.Importer.ILLoader.EntryPointAttribute")));
+            if (unit.Metadata[index] is entry of LIREntryPoint) this.function(entry.Function).CustomAttributes.Add(CustomAttribute(this.attribute(EntryPointAttribute)));
             index = index + 1;
         }
 
@@ -250,7 +250,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A module's class is a module scope, as the IL loader reads one: its static members
     // are the module's, so importing the assembly gives the module.
-    @explicitThis fun moduleScope(this): MethodReference { return this.attribute("ZSharp.Importer.ILLoader.ModuleScopeAttribute"); }
+    @explicitThis fun moduleScope(this): MethodReference { return this.attribute(ModuleScopeAttribute); }
 
     // What was kept of what a definition was lowered from, written as the IL loader reads
     // it back: an attribute of the annotation's type, and each of its fields by name with
@@ -264,7 +264,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     @explicitThis fun metadataOf(this, annotation: Object): CustomAttribute {
-        let written = CustomAttribute(this.attribute("ZSharp.Importer.ILLoader.MetadataAttribute"));
+        let written = CustomAttribute(this.attribute(MetadataAttribute));
         let system = this.main.TypeSystem;
         let fields = annotation.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
@@ -306,33 +306,19 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // The constructor of the reflection blob attribute that names the decoder too.
     @explicitThis fun blobAttribute(this): MethodReference {
-        let assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        let index = 0;
-        while (index < assemblies.Length) {
-            let found = assemblies[index].GetType("ZSharp.Importer.ILLoader.ReflectionBlobAttribute");
-            if (found != null) {
-                let constructors = found.GetConstructors();
-                let each = 0;
-                while (each < constructors.Length) {
-                    if (constructors[each].GetParameters().Length == 2) return this.method(this.reflected.Method(constructors[each]));
-                    each = each + 1;
-                }
-            }
-            index = index + 1;
+        let attribute: Type = ReflectionBlobAttribute;
+        let constructors = attribute.GetConstructors();
+        let each = 0;
+        while (each < constructors.Length) {
+            if (constructors[each].GetParameters().Length == 2) return this.method(this.reflected.Method(constructors[each]));
+            each = each + 1;
         }
-        return fail("The IL loader's attributes aren't loaded.") as MethodReference;
+        return fail("The reflection blob attribute has no constructor that names the decoder.") as MethodReference;
     }
 
-    // The constructor of one of the IL loader's attributes, by its full name.
-    @explicitThis fun attribute(this, name: String): MethodReference {
-        let assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        let index = 0;
-        while (index < assemblies.Length) {
-            let found = assemblies[index].GetType(name);
-            if (found != null) return this.method(this.reflected.Method(found.GetConstructors()[0]));
-            index = index + 1;
-        }
-        return fail("The IL loader's attributes aren't loaded.") as MethodReference;
+    // The constructor of one of the IL loader's attributes.
+    @explicitThis fun attribute(this, attribute: Type): MethodReference {
+        return this.method(this.reflected.Method(attribute.GetConstructors()[0]));
     }
 
     // Functions that belong to no module, as code run on its own makes, are in a class of
@@ -1187,8 +1173,8 @@ def Cecil of DotNet_Class : ClrPlatform {
         }
         if (value is type of Type) {
             body.il.Emit(OpCodes.Ldtoken, this.type(this.reflected.Type(type)));
-            let core: Type = Object;
-            body.il.Emit(OpCodes.Call, this.method(this.reflected.Method(core.Assembly.GetType("System.Type").GetMethod("GetTypeFromHandle"))));
+            let types: Type = Type;
+            body.il.Emit(OpCodes.Call, this.method(this.reflected.Method(types.GetMethod("GetTypeFromHandle"))));
             return;
         }
 
@@ -1196,17 +1182,21 @@ def Cecil of DotNet_Class : ClrPlatform {
         if (kind.IsEnum or kind.IsPrimitive) {
             let underlying = kind;
             if (kind.IsEnum) underlying = Enum.GetUnderlyingType(kind);
-            if (underlying.Name == "Single") {
+            let single: Type = Single;
+            let double: Type = Double;
+            let long: Type = Int64;
+            let unsignedLong: Type = UInt64;
+            if (underlying == single) {
                 body.il.Emit(OpCodes.Ldc_R4, Convert.ToSingle(value));
                 return;
             }
-            if (underlying.Name == "Double") {
+            if (underlying == double) {
                 body.il.Emit(OpCodes.Ldc_R8, Convert.ToDouble(value));
                 return;
             }
             body.il.Emit(OpCodes.Ldc_I8, Convert.ToInt64(value));
-            if (underlying.Name != "Int64") {
-                if (underlying.Name != "UInt64") body.il.Emit(OpCodes.Conv_I4);
+            if (underlying != long) {
+                if (underlying != unsignedLong) body.il.Emit(OpCodes.Conv_I4);
             }
             return;
         }
@@ -1408,7 +1398,7 @@ def Cecil of DotNet_Class : ClrPlatform {
             // The token of a class is of its definition, as a type object of a generic
             // class with no arguments is.
             else if (operand is token of ClassDefinition) {
-                if (opcode.Name == "ldtoken") body.il.Emit(opcode, this.classDefinition(token) as TypeReference);
+                if (opcode == OpCodes.Ldtoken) body.il.Emit(opcode, this.classDefinition(token) as TypeReference);
                 else body.il.Emit(opcode, this.type(token));
             }
             else if (operand is type of LIRType) body.il.Emit(opcode, this.type(type));

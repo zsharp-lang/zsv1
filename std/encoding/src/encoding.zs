@@ -21,6 +21,7 @@
 
 import { Object, String, Boolean, Int32, Int64, Byte, Type, List, Dictionary, Assembly, DotNet_Class, explicitThis, ilLoader } from "core:runtime";
 import { Instance, Annotated, Kept, Encoded } from "std:zsharp/hir";
+import { Code, Local } from "std:zsharp/hir/code";
 import { DotNetDefinition } from "std:zsharp/package/dotnet";
 import { Error, Result, IResult } from "std:zsharp/common";
 import { bindings } from "core:compiler";
@@ -43,10 +44,12 @@ fun fail(message: String): Object {
 
 // What of a node is its code, which a built definition was built as, so it isn't written.
 fun isCode(field: FieldInfo): Boolean {
-    if (field.FieldType.FullName == "ZSharp.HIR.Code.Code") return true;
+    let code: Type = Code;
+    let local: Type = Local;
+    if (field.FieldType == code) return true;
     if (field.FieldType.IsGenericType) {
         let arguments = field.FieldType.GetGenericArguments();
-        if (arguments.Length == 1) return arguments[0].FullName == "ZSharp.HIR.Code.Local";
+        if (arguments.Length == 1) return arguments[0] == local;
     }
     return false;
 }
