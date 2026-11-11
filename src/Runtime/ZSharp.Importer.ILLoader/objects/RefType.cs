@@ -49,7 +49,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             var node = new Package.DotNet.RefType(loader.Load(element)) { IsOut = isOut };
 
-            return Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(node.GetType()))
+            return ZSharp.Compiler.Current.TS.IsAssignableTo(targetType, loader.Class(node.GetType()))
                 ? Result.Ok(new Literal(node, node.GetType(), loader))
                 : Result.Error(new UnsupportedError($"A reference can't be cast to that type."));
         }
@@ -62,7 +62,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
         public IResult ImplicitCast(CompilerObject @object)
         {
-            var typed = Core.Compiler.ModuleScope.TS.TypeOf(@object).Ok(out var type);
+            var typed = ZSharp.Compiler.Current.TS.TypeOf(@object).Ok(out var type);
 
             if (typed && type is RefType other && other.Element == element)
                 return Result.Ok(@object);

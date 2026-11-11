@@ -16,7 +16,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             => loader.Substitute(type, parameter => parameter.DeclaringMethod is not null ? arguments[parameter.GenericParameterPosition] : null);
 
         private static LIR.Type Lower(CompilerObject type, object? target)
-            => Core.Compiler.ModuleScope.IR.CompileType(type, target).Unwrap();
+            => ZSharp.Compiler.Current.IR.CompileType(type, target).Unwrap();
 
         /// <summary>
         /// The LIR type of a parameter: a reference to a variable of its type, if it takes
@@ -78,9 +78,9 @@ namespace ZSharp.Importer.ILLoader.Objects
                 return Result.Error($"No argument is given for parameter {parameter.Name}.");
 
             return variable.Is<ICTSet>(out _)
-                && Core.Compiler.ModuleScope.TS.TypeOf(variable).Ok(out var type)
-                && Core.Compiler.ModuleScope.TS.IsAssignableTo(type!, element)
-                && Core.Compiler.ModuleScope.TS.IsAssignableTo(element, type!)
+                && ZSharp.Compiler.Current.TS.TypeOf(variable).Ok(out var type)
+                && ZSharp.Compiler.Current.TS.IsAssignableTo(type!, element)
+                && ZSharp.Compiler.Current.TS.IsAssignableTo(element, type!)
                 ? Result.Ok(new VariableAddress(variable, element, target => owner.ParameterType(parameter.ParameterType, target)))
                 : Result.Error(new UnsupportedError($"Only a variable of the type can be passed to parameter {parameter.Name}."));
         }
@@ -101,7 +101,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (variable.Is<IHasAddress>(out var addressable) && addressable.AddressOf(target) is { } own)
                 return own;
 
-            if (Core.Compiler.ModuleScope.IR.CompileExpression(variable, target).When(out var compiled).Error(out var error))
+            if (ZSharp.Compiler.Current.IR.CompileExpression(variable, target).When(out var compiled).Error(out var error))
                 return Result<LIR.Expression>.Error(error);
 
             return LIR.CLR.AddressOf.Has(compiled!)

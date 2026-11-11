@@ -7,7 +7,7 @@ using ZSharp.Platform.Runtime;
 using ZSharp.Tokenizer;
 using C = ZSharp.HIR.Code;
 using A = ZSharp.AST;
-using Scope = Core.Compiler.ModuleScope;
+using Scope = ZSharp.Compiler.Current;
 
 void Report(string name, bool ok)
 {

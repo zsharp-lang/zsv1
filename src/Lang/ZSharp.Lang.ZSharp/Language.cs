@@ -407,11 +407,11 @@ namespace ZSharp.Lang
             if (statement is AST.ExpressionStatement { Expression: var expression })
                 reified = compiler.CompileExpression(expression).When(out var compiled).Error(out error)
                     ? Result<HIRExpression>.Error(error)
-                    : Core.Compiler.ModuleScope.HIRReifier.ReifyExpression(compiled!);
+                    : ZSharp.Compiler.Current.HIRReifier.ReifyExpression(compiled!);
             else
                 reified = compiler.CompileStatement(statement).When(out var compiled).Error(out error)
                     ? Result<HIRExpression>.Error(error)
-                    : Core.Compiler.ModuleScope.HIRReifier.ReifyStatement(compiled!);
+                    : ZSharp.Compiler.Current.HIRReifier.ReifyStatement(compiled!);
 
             return reified.When(out var node).Error(out error)
                 ? Result<HIRExpression>.Error(error)
@@ -534,7 +534,7 @@ namespace ZSharp.Lang
         public Error? BindImported(ASTCompiler compiler, AST.ImportStatement import, HIR.Instance imported)
         {
             foreach (var name in import.ImportedNames ?? [])
-                if (Core.Compiler.ModuleScope.HIRCodeLoader
+                if (ZSharp.Compiler.Current.HIRCodeLoader
                     .LoadExpression(new HIR.Code.NamedMember { Target = new HIR.Code.Get(imported), Name = name.Name })
                     .Error(out var error))
                     return new ErrorMessage($"The import of {name.Name} failed: {error}");

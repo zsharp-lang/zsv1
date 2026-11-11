@@ -24,7 +24,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             => Result<LIR.Expression>.Ok(new LIR.GetLocal(variable(target)));
 
         public IResult Set(CompilerObject value)
-            => Core.Compiler.ModuleScope.CG.ImplicitCast(value, type()).Ok(out var converted)
+            => ZSharp.Compiler.Current.CG.ImplicitCast(value, type()).Ok(out var converted)
                 ? Result.Ok(new SetVariable(variable, converted, type))
                 : Result.Error("The value doesn't match the type of this variable.");
     }
@@ -37,7 +37,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         CompilerObject ITyped.Type => type();
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
-            => Core.Compiler.ModuleScope.IR.CompileExpression(value, target).When(out var result).Error(out var error)
+            => ZSharp.Compiler.Current.IR.CompileExpression(value, target).When(out var result).Error(out var error)
                 ? Result<LIR.Expression>.Error(error)
                 : Result<LIR.Expression>.Ok(new LIR.Sequence(
                     new LIR.Block(new LIR.SetLocal(variable(target), result!)),

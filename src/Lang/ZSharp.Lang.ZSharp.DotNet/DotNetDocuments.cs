@@ -5,7 +5,7 @@ using ZSharp.Importer.ILLoader;
 using CompilerObject = ZSharp.MIR.CompilerObject;
 using Result = CommonZ.Result<ZSharp.MIR.CompilerObject>;
 using IResult = IResult<ZSharp.MIR.CompilerObject, CommonZ.Error>;
-using Toolchain = Core.Compiler.ModuleScope;
+using Toolchain = ZSharp.Compiler.Current;
 
 namespace ZSharp.Lang.DotNet
 {

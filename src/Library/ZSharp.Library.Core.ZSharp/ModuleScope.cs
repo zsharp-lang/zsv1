@@ -119,7 +119,7 @@ namespace Core.ZSharp
         /// </summary>
         [Alias("ct")]
         public static global::ZSharp.HIR.Code.Expression CT(global::ZSharp.HIR.Instance definition)
-            => Core.Compiler.ModuleScope.HIRReifier.EncodeValue(CT(new global::ZSharp.HIR.Code.Get(definition))).When(out var code).Error(out var error)
+            => global::ZSharp.Compiler.Current.HIRReifier.EncodeValue(CT(new global::ZSharp.HIR.Code.Get(definition))).When(out var code).Error(out var error)
                 ? throw new InvalidOperationException(error.ToString())
                 : code!;
 

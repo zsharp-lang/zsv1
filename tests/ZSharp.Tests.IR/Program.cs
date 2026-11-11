@@ -11,7 +11,7 @@ void Report(string name, bool ok)
     Console.WriteLine($"{(ok ? "pass" : "FAIL")}  {name}");
 }
 
-var ir = Core.Compiler.ModuleScope.IR;
+var ir = ZSharp.Compiler.Current.IR;
 
 var plain = new Plain();
 Report("default expression is unsupported", ir.CompileExpression(plain, null).IsUnsupported());

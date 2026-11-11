@@ -12,8 +12,8 @@ void Report(string name, bool ok)
     Console.WriteLine($"{(ok ? "pass" : "FAIL")}  {name}");
 }
 
-var cg = Core.Compiler.ModuleScope.CG;
-var ts = Core.Compiler.ModuleScope.TS;
+var cg = ZSharp.Compiler.Current.CG;
+var ts = ZSharp.Compiler.Current.TS;
 
 var plain = new Plain();
 
@@ -59,7 +59,7 @@ cg.Call = (callee, arguments) =>
 Report("extension checks itself first", cg.Call(plain, []).Ok(out var own) && own == plain);
 Report("extension delegates upwards", cg.Call(callable, []).Ok(out var delegated) && delegated == callable.Marker);
 
-Report("library sees dispatcher changes", Core.Compiler.ModuleScope.CG.Call == cg.Call);
+Report("library sees dispatcher changes", ZSharp.Compiler.Current.CG.Call == cg.Call);
 
 var separate = new CG();
 Report("a second CG is independent", separate.Call(callable, []).IsUnsupported());

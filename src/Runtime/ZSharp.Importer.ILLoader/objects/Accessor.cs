@@ -42,7 +42,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (setter is null && setterOf is null)
                 return Result.Error("This member can't be written.");
 
-            return Core.Compiler.ModuleScope.CG.ImplicitCast(value, type()).Ok(out var converted)
+            return ZSharp.Compiler.Current.CG.ImplicitCast(value, type()).Ok(out var converted)
                 ? Result.Ok(setterOf is not null ? new Call(setterOf, [.. Receiver(), converted], null) : new Call(setter!, [.. Receiver(), converted], null))
                 : Result.Error("The value doesn't match the type of this member.");
         }

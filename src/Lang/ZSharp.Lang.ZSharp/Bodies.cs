@@ -106,7 +106,7 @@ namespace ZSharp.Lang
 
             var code = statement as Code.Block ?? new Code.Block(statement!);
 
-            if (Core.Compiler.ModuleScope.HIRReifier.ReifyStatement(code).When(out var reified).Error(out error))
+            if (ZSharp.Compiler.Current.HIRReifier.ReifyStatement(code).When(out var reified).Error(out error))
                 return error;
 
             block.Statements.Add(new Code.ExpressionStatement(new Code.Set
@@ -125,7 +125,7 @@ namespace ZSharp.Lang
         public IResult<Code.Expression, Error> Reified(ASTCompiler compiler, Code.Block block, AST.Expression expression)
             => BuiltBy(compiler, block, () => compiler.CompileExpression(expression)).When(out var compiled).Error(out var error)
                 ? Result<Code.Expression>.Error(error)
-                : Core.Compiler.ModuleScope.HIRReifier.ReifyExpression(compiled!);
+                : ZSharp.Compiler.Current.HIRReifier.ReifyExpression(compiled!);
 
         /// <summary>
         /// A fork of the compiler for a body, in which a <c>let</c> is a local of what is

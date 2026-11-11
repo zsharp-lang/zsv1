@@ -94,7 +94,7 @@ namespace ZSharp.Importer.ILLoader
             loader.Definitions.Register<Package.DotNet.Parameter>(node => Result.Ok(new Objects.DefinedParameter(node)));
 
             loader.Definitions.Register<Package.DotNet.LocalFunction>(node => Result.Ok(new Objects.LocalFunction(this, node)));
-            loader.Instances.Register<Package.DotNet.LocalFunction>(node => Core.Compiler.ModuleScope.HIRLoader.LoadDefinition(node));
+            loader.Instances.Register<Package.DotNet.LocalFunction>(node => ZSharp.Compiler.Current.HIRLoader.LoadDefinition(node));
 
             // Inside a function that captures it, a capture is the cell it was given.
             var outside = loader.Instances.Register<HIR.Code.Capture>(capture =>
@@ -194,9 +194,9 @@ namespace ZSharp.Importer.ILLoader
             var methodObject = new Objects.Call(token, [], () => Class(typeof(MethodBase)));
             var call = new Objects.Call(Handle(describeMethod), [methodObject], () => description);
 
-            return Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, description)
+            return ZSharp.Compiler.Current.TS.IsAssignableTo(targetType, description)
                 ? Result.Ok(call)
-                : Core.Compiler.ModuleScope.CG.Cast(call, targetType);
+                : ZSharp.Compiler.Current.CG.Cast(call, targetType);
         }
 
         /// <summary>
@@ -208,9 +208,9 @@ namespace ZSharp.Importer.ILLoader
             var description = Class(typeof(Package.DotNet.TypeReference));
             var call = new Objects.Call(Handle(describeType), [type], () => description);
 
-            return Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, description)
+            return ZSharp.Compiler.Current.TS.IsAssignableTo(targetType, description)
                 ? Result.Ok(call)
-                : Core.Compiler.ModuleScope.CG.Cast(call, targetType);
+                : ZSharp.Compiler.Current.CG.Cast(call, targetType);
         }
 
         /// <summary>
@@ -517,7 +517,7 @@ namespace ZSharp.Importer.ILLoader
             var items = new List<CompilerObject>();
 
             foreach (var item in array.Items)
-                if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadExpression(item).When(out var loaded).Error(out var error))
+                if (ZSharp.Compiler.Current.HIRCodeLoader.LoadExpression(item).When(out var loaded).Error(out var error))
                     return Result.Error(error);
                 else
                     items.Add(loaded!);
@@ -740,7 +740,7 @@ namespace ZSharp.Importer.ILLoader
         }
 
         internal bool Describes(CompilerObject type)
-            => Core.Compiler.ModuleScope.TS.IsAssignableTo(Class(typeof(ZSharp.HIR.Type)), type);
+            => ZSharp.Compiler.Current.TS.IsAssignableTo(Class(typeof(ZSharp.HIR.Type)), type);
 
         /// <summary>
         /// The description of a generic type's instance, as code that builds it from what
@@ -753,12 +753,12 @@ namespace ZSharp.Importer.ILLoader
             var described = new List<Argument>();
 
             foreach (var argument in arguments)
-                if (Core.Compiler.ModuleScope.CG.ImplicitCast(argument, description).When(out var converted).Error(out _))
+                if (ZSharp.Compiler.Current.CG.ImplicitCast(argument, description).When(out var converted).Error(out _))
                     return null;
                 else
                     described.Add(new Argument(converted!));
 
-            return Core.Compiler.ModuleScope.CG.Call(
+            return ZSharp.Compiler.Current.CG.Call(
                 new Objects.Method(this, typeof(Package.DotNet.GenericInstance).GetMethod(nameof(Package.DotNet.GenericInstance.Of))!, null),
                 [new Argument(new Objects.Literal(Load(definition), typeof(Package.DotNet.TypeReference), this)), .. described]
             );
@@ -775,12 +775,12 @@ namespace ZSharp.Importer.ILLoader
             var arguments = new List<CompilerObject>();
 
             foreach (var argument in node.Arguments)
-                if (Core.Compiler.ModuleScope.HIRLoader.LoadType(argument).When(out var loaded).Error(out error))
+                if (ZSharp.Compiler.Current.HIRLoader.LoadType(argument).When(out var loaded).Error(out error))
                     return Result.Error(error);
                 else
                     arguments.Add(loaded!);
 
-            return Core.Compiler.ModuleScope.CG.Index(definition!, [.. arguments.Select(argument => new Argument(argument))]);
+            return ZSharp.Compiler.Current.CG.Index(definition!, [.. arguments.Select(argument => new Argument(argument))]);
         }
 
         /// <summary>
@@ -817,7 +817,7 @@ namespace ZSharp.Importer.ILLoader
         {
             // A reference type is not a type of its own, but a reference to its target.
             if (node is Package.DotNet.RefType reference)
-                return Core.Compiler.ModuleScope.HIRLoader.LoadType(reference.Target).When(out var target).Error(out var failure)
+                return ZSharp.Compiler.Current.HIRLoader.LoadType(reference.Target).When(out var target).Error(out var failure)
                     ? Result.Error(failure)
                     : target!.Is<IILType>(out var known) && known.GetILType() is { IsByRef: false } element
                         ? Result.Ok(Ref(element, reference.IsOut))
@@ -882,17 +882,17 @@ namespace ZSharp.Importer.ILLoader
             CodeLoaders.Returns = null;
 
             if (returned is not null)
-                if (Core.Compiler.ModuleScope.HIRLoader.LoadType(returned).When(out var type).Error(out var failure))
+                if (ZSharp.Compiler.Current.HIRLoader.LoadType(returned).When(out var type).Error(out var failure))
                     return failure;
                 else
                     CodeLoaders.Returns = type;
 
             try
             {
-                if (Core.Compiler.ModuleScope.HIRCodeLoader.LoadStatement(body.Block).When(out var loaded).Error(out var error))
+                if (ZSharp.Compiler.Current.HIRCodeLoader.LoadStatement(body.Block).When(out var loaded).Error(out var error))
                     return error;
 
-                if (Core.Compiler.ModuleScope.IR.CompileStatement(loaded!, target).When(out var statement).Error(out error))
+                if (ZSharp.Compiler.Current.IR.CompileStatement(loaded!, target).When(out var statement).Error(out error))
                     return error;
 
                 function.Body!.Block.Statements.Add(statement!);
@@ -922,13 +922,13 @@ namespace ZSharp.Importer.ILLoader
 
             foreach (var capture in node.Captures)
             {
-                if (Core.Compiler.ModuleScope.HIRLoader.LoadInstance((HIR.Instance)capture.Captured).When(out var captured).Error(out var error))
+                if (ZSharp.Compiler.Current.HIRLoader.LoadInstance((HIR.Instance)capture.Captured).When(out var captured).Error(out var error))
                     return Result<LIR.Function>.Error(error);
 
-                if (Core.Compiler.ModuleScope.TS.TypeOf(captured!).When(out var type).Error(out error))
+                if (ZSharp.Compiler.Current.TS.TypeOf(captured!).When(out var type).Error(out error))
                     return Result<LIR.Function>.Error(error);
 
-                if (Core.Compiler.ModuleScope.IR.CompileType(type!, runtime).When(out var compiled).Error(out error))
+                if (ZSharp.Compiler.Current.IR.CompileType(type!, runtime).When(out var compiled).Error(out error))
                     return Result<LIR.Function>.Error(error);
 
                 var parameter = new LIR.Parameter(new LIR.Reference(compiled!)) { Name = "capture" };
@@ -989,7 +989,7 @@ namespace ZSharp.Importer.ILLoader
 
                 var type = ((ITyped)variable).Type;
 
-                if (Core.Compiler.ModuleScope.IR.CompileType(type, target).When(out var compiled).Error(out var error))
+                if (ZSharp.Compiler.Current.IR.CompileType(type, target).When(out var compiled).Error(out var error))
                     return error;
 
                 var cell = new LIR.Local(new LIR.Reference(compiled!)) { Name = parameter.Name };

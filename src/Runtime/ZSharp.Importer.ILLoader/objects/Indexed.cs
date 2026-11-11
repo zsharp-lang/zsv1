@@ -10,10 +10,10 @@ namespace ZSharp.Importer.ILLoader.Objects
         , ICTSet
         , ITyped
     {
-        CompilerObject ITyped.Type => Core.Compiler.ModuleScope.TS.TypeOf(read).Unwrap();
+        CompilerObject ITyped.Type => ZSharp.Compiler.Current.TS.TypeOf(read).Unwrap();
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
-            => Core.Compiler.ModuleScope.IR.CompileExpression(read, target);
+            => ZSharp.Compiler.Current.IR.CompileExpression(read, target);
 
         public IResult Set(CompilerObject value)
             => write(value);

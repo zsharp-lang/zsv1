@@ -2,14 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Runtime\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
-    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.CG\ZSharp.Compiler.CG.csproj" />
-    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.TS\ZSharp.Compiler.TS.csproj" />
-    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.IR\ZSharp.Compiler.IR.csproj" />
-    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader\ZSharp.Compiler.HIRLoader.csproj" />
-    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader.Code\ZSharp.Compiler.HIRLoader.Code.csproj" />
-    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader.Code.Mapped\ZSharp.Compiler.HIRLoader.Code.Mapped.csproj" />
-    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRReifier\ZSharp.Compiler.HIRReifier.csproj" />
-    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.Overloading\ZSharp.Compiler.Overloading.csproj" />
+    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler\ZSharp.Compiler.csproj" />
   </ItemGroup>
 
 </Project>

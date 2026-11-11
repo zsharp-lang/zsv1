@@ -18,7 +18,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         public IResult Call(Argument[] arguments)
         {
             var types = arguments
-                .Select(argument => Core.Compiler.ModuleScope.TS.TypeOf(argument.Object).Ok(out var type) && type.Is<IILType>(out var known) ? known.GetILType() : null)
+                .Select(argument => ZSharp.Compiler.Current.TS.TypeOf(argument.Object).Ok(out var type) && type.Is<IILType>(out var known) ? known.GetILType() : null)
                 .OfType<Type>()
                 .Distinct()
                 .ToArray();
@@ -37,7 +37,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             return candidates.Count == 0
                 ? Result.Error(new UnsupportedError($"The operands define no {name}."))
-                : Core.Compiler.ModuleScope.CG.Call(OverloadGroup.Of(candidates), arguments);
+                : ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(candidates), arguments);
         }
     }
 }

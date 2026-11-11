@@ -20,11 +20,11 @@ namespace ZSharp.Importer.ILLoader.Objects
             foreach (var argument in new[] { left, right })
             {
                 // A value of a value type is no reference, though it would box to one.
-                if (Core.Compiler.ModuleScope.TS.TypeOf(argument.Object).Ok(out var type)
+                if (ZSharp.Compiler.Current.TS.TypeOf(argument.Object).Ok(out var type)
                     && type.Is<IILType>(out var known) && known.GetILType().IsValueType && !operand.IsValueType)
                     return Result.Error(new UnsupportedError("A value type is compared by what its type defines."));
 
-                if (Core.Compiler.ModuleScope.CG.ImplicitCast(argument.Object, loader.Class(operand)).Ok(out var value))
+                if (ZSharp.Compiler.Current.CG.ImplicitCast(argument.Object, loader.Class(operand)).Ok(out var value))
                     converted.Add(value);
                 else
                     return Result.Error(new UnsupportedError($"{name} of {operand.Name} doesn't apply to these arguments."));

@@ -12,6 +12,6 @@ namespace ZSharp.Importer.ILLoader.Objects
         CompilerObject ITyped.Type => type;
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
-            => Core.Compiler.ModuleScope.IR.CompileExpression(value, target);
+            => ZSharp.Compiler.Current.IR.CompileExpression(value, target);
     }
 }

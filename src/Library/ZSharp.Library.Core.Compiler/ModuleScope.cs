@@ -1,53 +1,42 @@
+using ZSharp.Compiler;
 using ZSharp.Importer.ILLoader;
 
 namespace Core.Compiler
 {
     /// <summary>
-    /// The toolchain objects as seen through <c>core:compiler</c>. Z# reaches them
-    /// by importing that module, and C# reaches them here.
+    /// <c>core:compiler</c>: the compiler in use, <see cref="Current"/>, as Z# reaches it.
     /// </summary>
     [ModuleScope]
     public static class ModuleScope
     {
         [Alias("cg")]
-        public static ZSharp.Compiler.CG CG { get; set; } = new();
+        public static ZSharp.Compiler.CG CG { get => Current.CG; set => Current.CG = value; }
 
         [Alias("ts")]
-        public static ZSharp.Compiler.TS TS { get; set; } = new();
+        public static ZSharp.Compiler.TS TS { get => Current.TS; set => Current.TS = value; }
 
         [Alias("overloading")]
-        public static ZSharp.Compiler.Overloading Overloading { get; set; } = new();
+        public static ZSharp.Compiler.Overloading Overloading { get => Current.Overloading; set => Current.Overloading = value; }
 
         [Alias("ir")]
-        public static ZSharp.Compiler.IR IR { get; set; } = new();
+        public static ZSharp.Compiler.IR IR { get => Current.IR; set => Current.IR = value; }
 
         [Alias("hirLoader")]
-        public static ZSharp.Compiler.HIRLoader HIRLoader { get; set; } = new();
+        public static ZSharp.Compiler.HIRLoader HIRLoader { get => Current.HIRLoader; set => Current.HIRLoader = value; }
 
         [Alias("hirCodeLoader")]
-        public static ZSharp.Compiler.HIRCodeLoader HIRCodeLoader { get; set; } = new();
+        public static ZSharp.Compiler.HIRCodeLoader HIRCodeLoader { get => Current.HIRCodeLoader; set => Current.HIRCodeLoader = value; }
 
-        /// <summary>
-        /// What loads HIR nodes by their type, which Z# registers the loaders of its own
-        /// nodes with. The host sets it once it has made it.
-        /// </summary>
         [Alias("mappedLoader")]
-        public static ZSharp.Compiler.MappedLoader MappedLoader { get; set; } = null!;
+        public static ZSharp.Compiler.MappedLoader MappedLoader { get => Current.MappedLoader; set => Current.MappedLoader = value; }
 
-        /// <summary>
-        /// What binds each kind of node to what it was built as, which libraries register
-        /// for their nodes, and an importer of built definitions uses.
-        /// </summary>
         [Alias("bindings")]
-        public static ZSharp.Compiler.Bindings Bindings { get; set; } = new();
+        public static ZSharp.Compiler.Bindings Bindings { get => Current.Bindings; set => Current.Bindings = value; }
 
-        /// <summary>
-        /// What loads HIR code by the type of its nodes.
-        /// </summary>
         [Alias("mappedCodeLoader")]
-        public static ZSharp.Compiler.MappedCodeLoader MappedCodeLoader { get; set; } = null!;
+        public static ZSharp.Compiler.MappedCodeLoader MappedCodeLoader { get => Current.MappedCodeLoader; set => Current.MappedCodeLoader = value; }
 
         [Alias("hirReifier")]
-        public static ZSharp.Compiler.HIRReifier HIRReifier { get; set; } = new();
+        public static ZSharp.Compiler.HIRReifier HIRReifier { get => Current.HIRReifier; set => Current.HIRReifier = value; }
     }
 }

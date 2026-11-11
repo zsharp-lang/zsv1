@@ -35,7 +35,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         CompilerObject ITyped.Type => type;
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
-            => Core.Compiler.ModuleScope.IR.CompileType(type, target).When(out var lowered).Error(out var error)
+            => ZSharp.Compiler.Current.IR.CompileType(type, target).When(out var lowered).Error(out var error)
                 ? Result<LIR.Expression>.Error(error)
                 : Result<LIR.Expression>.Ok(new LIR.Constant(lowered!, null));
     }
