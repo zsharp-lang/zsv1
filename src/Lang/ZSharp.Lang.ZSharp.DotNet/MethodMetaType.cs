@@ -21,7 +21,7 @@ namespace ZSharp.Lang.DotNet
             if (node is not AST.Function function)
                 return Result<CompiledDefinition>.Error($"A {node.GetType().Name} is not a method.");
 
-            // An accessor is the method the CLR names for its property.
+            // An accessor is the method of its property that reads or writes it.
             var name = function is AST.Accessor accessor ? Properties.AccessorName(accessor) : function.Name;
 
             return Result<CompiledDefinition>.Ok(new(
