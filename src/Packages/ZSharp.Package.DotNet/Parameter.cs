@@ -21,6 +21,5 @@ namespace Package.DotNet
 
         public ZSharp.HIR.Code.Expression? DefaultValue { get; set; }
 
-        public bool IsCaptured { get; set; }
     }
 }

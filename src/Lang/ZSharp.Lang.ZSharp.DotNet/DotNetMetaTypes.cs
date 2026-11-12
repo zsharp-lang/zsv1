@@ -46,7 +46,7 @@ namespace ZSharp.Lang.DotNet
             metaTypes.Register(module, new ModuleMetaType(il, body, container, module).Compile);
             metaTypes.Register(method, new MethodMetaType(il, body, method).Compile);
             metaTypes.Register(constructor, new ConstructorMetaType(il, body, constructor).Compile);
-            metaTypes.Register(localFunction, new LocalFunctionMetaType(language, il, body, localFunction).Compile);
+            metaTypes.Register(localFunction, new LocalFunctionMetaType(il, body, localFunction).Compile);
 
             metaTypes.Default<AST.TypeDefinition>(@class);
             metaTypes.Default<AST.Module>(module);
@@ -55,28 +55,17 @@ namespace ZSharp.Lang.DotNet
 
             metaTypes.Install(mapped);
 
-            // A name bound to a local's definition can be bound to another one, which is how
-            // a let reuses a name. The type of what holds the definition decides.
+            // A name bound to a local can be bound to another one, which is how a let reuses
+            // a name. A name is bound to the variable the code refers to a local through,
+            // which starts as the local's node, so what that variable starts as decides.
             var local = il.Load(typeof(Code.Local));
+            var variable = il.Load(typeof(HIR.Variable));
 
-            binding.Merges.Add((existing, value) =>
-                existing is Code.Get { Instance: Code.Local { Type: var before } } && ReferenceEquals(before, local)
-                && value is Code.Get { Instance: Code.Local { Type: var after } } && ReferenceEquals(after, local)
-                    ? value
-                    : null
-            );
+            bool IsLocal(Code.Expression value)
+                => value is Code.Get { Instance: Code.Local { Type: var type, Init: Code.Get { Instance: Code.Local { Type: var node } } } }
+                    && ReferenceEquals(type, variable) && ReferenceEquals(node, local);
 
-            // A capture of a local or a parameter is bound over it, so the code around a
-            // function that captures it refers to the capture from then on.
-            var capture = il.Load(typeof(Code.Capture));
-            HIR.Instance[] capturable = [local, il.Load(typeof(Package.DotNet.Parameter)), il.Load(typeof(Code.Parameter))];
-
-            binding.Merges.Add((existing, value) =>
-                existing is Code.Get { Instance: Code.Local { Type: var before } } && capturable.Any(kind => ReferenceEquals(before, kind))
-                && value is Code.Get { Instance: Code.Local { Type: var after } } && ReferenceEquals(after, capture)
-                    ? value
-                    : null
-            );
+            binding.Merges.Add((existing, value) => IsLocal(existing) && IsLocal(value) ? value : null);
 
             binding.Merges.Add((existing, value) =>
                 Overloads(existing, method) is { } before && Overloads(value, method) is { } after

@@ -192,38 +192,48 @@ method of a class defined in the body is still a method. Z# functions will have 
 A `Capture` (`HIR.Code`) is a variable that holds the variable it captures. The local
 function's meta-compiler resolves a name bound inside the function as usual. Any other
 name is resolved as the code around the function resolves it, and if that is a
-variable of that code, the function captures it:
+variable of that code, or a member of one, as a member of the class is a member of the
+object a method runs on, the function captures that variable. Nothing is bound again,
+and nothing is marked:
 
-- The code around gets a capture of the variable, bound over the variable's name in the
-  scope it was bound in, so it and the function both refer to the capture from then on.
-  Nothing already compiled is rewritten.
-- The variable's node is marked captured (`IsCaptured`, on a local or a parameter),
-  because code compiled before the capture still refers to the variable, and may run
-  after it.
-- A capture found that way is shared: a second function that uses the name finds the
-  capture and adds it to its own list. A variable is captured once.
+- Code refers to a variable it has, a local, a parameter or the object it runs on,
+  through a variable of the code that builds it, which starts as the variable's node and
+  can be set again. The name is bound to that variable, and the definition lists the node
+  itself, as its locals and its parameters.
+- Capturing sets that variable, in the code that builds the code around, to a capture of
+  what it held, before any code that refers to it is built: the function is built where
+  it stands, and the code around after everything in it. So all of that code refers to
+  the capture, before the function as after it, and the function holds the capture
+  among its captures. The code around declares a captured local as its capture.
+- A second function that captures the variable sets it again, to a capture of the
+  capture, so each function holds its own. Outside a function, its capture is what it
+  captures, so the code around reaches the variable through every capture of it.
 - Resolving through the code around is what makes nesting work. A function two levels
-  in asks the middle function, which captures the variable first, and then shares the
-  middle function's capture.
+  in resolves a name as the middle function does, so the middle function captures the
+  variable, and then the inner one captures the middle one's capture, never knowing
+  what the middle one captured.
+- Once a `let` can't be set again, the variables of the building code that captures set
+  are `var`s.
 
 Only variables are captured, as `HIR.Variable` marks them: locals, parameters, and the
 object a method or constructor runs on, its `this` node, which a function captures when it
-uses a member of the class by its name. No name is bound to the object, so its capture is
-bound over nothing: the method's functions share it, and a function nested in one shares
-the one around it. A definition or any other instance is referred to as it is, as a static
-method's object is, which is its class.
+uses a member of the class by its name. A definition or any other instance is referred to
+as it is, as a static method's object is, which is its class.
 
 The same `Capture` loads differently in each place. Outside the functions that capture
 it, it is what it captures, loaded as an instance, so in the capturee it is the
-variable's own CO, and that CO stores the variable so it can be shared because it is
-marked. (A parameter as a definition is what a call matches arguments to, which is why
-a capture loads what it captures as an instance.) Code from before and after the capture uses the same storage, so a capture in
-a branch needs no special handling. Inside a function that captures it, it is what that
-function was given. How a captured variable is stored is up to the platform. On the CLR:
+variable's own CO. (A parameter as a definition is what a call matches arguments to,
+which is why a capture loads what it captures as an instance.) Inside a function that
+captures it, it is what that function was given, and so is every capture it captured,
+as each stands for the same variable: a function calling one beside it passes what it
+was given. How a captured variable is stored is up to the platform, which finds what is
+shared in the code itself. On the CLR:
 
-- A marked local lives in a cell, an `LIR.Allocate`d reference made when its declaration
-  runs. A marked parameter, or a marked object, is copied into a cell when its function
-  starts, and the function uses the cell from then on.
+- A local the code declares as its capture lives in a cell, an `LIR.Allocate`d reference
+  made when its declaration runs, so one made in a loop is a new variable each time.
+- A parameter, or the object, that the code refers to through a capture is copied into a
+  cell when its function starts, the first time it is found to be, and the function uses
+  the cell from then on, so a capture in a branch needs no special handling.
 - A local function is a function of its own, which takes the cell of each capture as a
   hidden parameter before its own. Calling it passes the cells as the caller has them, so
   calling it from another local function passes on what that one was given.

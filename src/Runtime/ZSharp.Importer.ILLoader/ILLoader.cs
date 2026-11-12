@@ -94,19 +94,22 @@ namespace ZSharp.Importer.ILLoader
             loader.Definitions.Register<Package.DotNet.LocalFunction>(node => Result.Ok(new Objects.LocalFunction(this, node)));
             loader.Instances.Register<Package.DotNet.LocalFunction>(node => ZSharp.Compiler.Current.HIRLoader.LoadDefinition(node));
 
-            // Inside a function that captures it, a capture is the cell it was given.
-            var outside = loader.Instances.Register<HIR.Code.Capture>(capture =>
+            // Inside a function that captures it, a capture is the cell it was given. Outside,
+            // it is what it captures, which lives in a cell so the functions can share it: a
+            // local is declared as one, and a parameter or the object the code runs on is
+            // copied into one when its code starts, once its code is found to refer to it
+            // through a capture.
+            var outside = loader.Instances.Register<HIR.Code.Capture>(_ => Result.Error(new UnsupportedError("A capture is only known to the functions that capture it.")));
+
+            loader.Instances.Register<HIR.Code.Capture>(capture =>
                 captures.TryPeek(out var inside) && inside.TryGetValue(capture, out var cell)
                     ? Result.Ok(cell)
-                    : Result.Error(new UnsupportedError("A capture is only known to the functions that capture it."))
+                    : outside is null
+                        ? Result.Error(new UnsupportedError("A capture is only known to the functions that capture it."))
+                        : outside(capture).When(out var captured).Error(out var error)
+                            ? Result.Error(error)
+                            : Shared(CodeLoaders.Captured(capture), captured!)
             );
-
-            if (outside is not null)
-                loader.Instances.Register<HIR.Code.Capture>(capture =>
-                    captures.TryPeek(out var inside) && inside.TryGetValue(capture, out var cell)
-                        ? Result.Ok(cell)
-                        : outside(capture)
-                );
             loader.Instances.Register<Package.DotNet.This>(LoadVariable);
 
             code.Expressions.Register<HIR.Code.StringLiteral>(literal =>
@@ -868,23 +871,20 @@ namespace ZSharp.Importer.ILLoader
         /// parameters are the lowerer's, so its code reaches them as the lowerer loads them,
         /// and so is the object it runs on, if it has one.
         /// </summary>
-        private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned, Package.DotNet.This? @this, List<HIR.Code.Parameter> parameters, object? target)
+        private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned, object? target)
         {
             if (Returns.Check(body.Block, returned is not null) is { } invalid)
                 return invalid;
 
-            if (Cells(@this, parameters, function, target) is { } failed)
-                return failed;
+            CompilerObject? type = null;
+
+            if (returned is not null && ZSharp.Compiler.Current.HIRLoader.LoadType(returned).When(out type).Error(out var failure))
+                return failure;
 
             var outer = CodeLoaders.Returns;
 
-            CodeLoaders.Returns = null;
-
-            if (returned is not null)
-                if (ZSharp.Compiler.Current.HIRLoader.LoadType(returned).When(out var type).Error(out var failure))
-                    return failure;
-                else
-                    CodeLoaders.Returns = type;
+            CodeLoaders.Returns = type;
+            lowering.Push((function, target));
 
             try
             {
@@ -901,6 +901,7 @@ namespace ZSharp.Importer.ILLoader
             finally
             {
                 CodeLoaders.Returns = outer;
+                lowering.Pop();
             }
         }
 
@@ -950,9 +951,15 @@ namespace ZSharp.Importer.ILLoader
 
                 // The object a method runs on is still what its class's members' names are
                 // reached through.
-                cells[capture] = captured is Objects.ImplicitObject implicitly
+                CompilerObject given = captured is Objects.ImplicitObject implicitly
                     ? implicitly.With(new Objects.Cell(parameter, type!))
                     : new Objects.Cell(parameter, type!);
+
+                // What it captured is a capture too when a function beside it, or around it,
+                // captured the variable first, and stands for the same variable, so it is the
+                // same cell here, as when this function calls the one beside it.
+                for (HIR.Variable held = capture; held is HIR.Code.Capture each; held = each.Captured)
+                    cells[each] = given;
             }
 
             // A local function's captures are the running process's cells, so it runs there.
@@ -979,7 +986,7 @@ namespace ZSharp.Importer.ILLoader
 
             try
             {
-                if (Lower(node.Body, function, node.ReturnType, null, node.Parameters, runtime) is { } error)
+                if (Lower(node.Body, function, node.ReturnType, runtime) is { } error)
                 {
                     localFunctions.Remove(node);
                     return Result<LIR.Function>.Error(error);
@@ -994,28 +1001,44 @@ namespace ZSharp.Importer.ILLoader
         }
 
         /// <summary>
-        /// A parameter that a function inside the code captures is copied into a cell when
-        /// the code starts, and the code uses the cell from then on, so it and the
-        /// functions that capture it share it. So is the object the code runs on, which a
-        /// function captures to reach its class's members by their names.
+        /// The functions whose code is being lowered, innermost first, with what each is
+        /// lowered for, so a variable of one that its code shares is put in a cell there.
         /// </summary>
-        private Error? Cells(Package.DotNet.This? @this, List<HIR.Code.Parameter> parameters, LIR.Function function, object? target)
+        private readonly Stack<(LIR.Function Function, object? Target)> lowering = [];
+
+        /// <summary>
+        /// A variable as the functions that capture it share it. A local is already a cell,
+        /// as the code declares its capture. A parameter, or the object the code runs on,
+        /// is copied into a cell when the code starts, the first time it is found shared,
+        /// and is the cell from then on. A static method's object is its class, which isn't a
+        /// variable, so it is as it is.
+        /// </summary>
+        private IResult Shared(HIR.Variable variable, CompilerObject captured)
         {
-            foreach (var parameter in parameters.Where(parameter => parameter.IsCaptured))
-                if (CodeLoaders.Defined(parameter).Ok(out var defined) && defined is Objects.Variable variable)
-                    if (Cell(parameter.Name, variable, function, target).When(out var cell).Error(out var error))
-                        return error;
-                    else
-                        CodeLoaders.Define(parameter, cell!);
+            if (variable is not HIR.Instance node || !lowering.TryPeek(out var current))
+                return Result.Ok(captured);
 
-            // A static method's object is its class, which isn't a variable.
-            if (@this is { IsCaptured: true } && CodeLoaders.Defined(@this).Ok(out var self) && self is Objects.ImplicitObject { Receiver: Objects.Variable receiver } implicitly)
-                if (Cell("this", receiver, function, target).When(out var cell).Error(out var error))
-                    return error;
-                else
-                    CodeLoaders.Define(@this, implicitly.With(cell!));
+            switch (captured)
+            {
+                case Objects.Variable parameter:
+                    return Cell(Named(variable), parameter, current.Function, current.Target).When(out var cell).Error(out var error)
+                        ? Result.Error(error)
+                        : Result.Ok(Defined(node, cell!));
+                case Objects.ImplicitObject { Receiver: Objects.Variable receiver } implicitly:
+                    return Cell("this", receiver, current.Function, current.Target).When(out cell).Error(out error)
+                        ? Result.Error(error)
+                        : Result.Ok(Defined(node, implicitly.With(cell!)));
+                default:
+                    return Result.Ok(captured);
+            }
 
-            return null;
+            static CompilerObject Defined(HIR.Instance node, CompilerObject value)
+            {
+                CodeLoaders.Define(node, value);
+                return value;
+            }
+
+            static string Named(HIR.Variable variable) => variable is HIR.Code.Parameter parameter ? parameter.Name : "this";
         }
 
         private IResult<CompilerObject, Error> Cell(string name, Objects.Variable variable, LIR.Function function, object? target)
@@ -1027,8 +1050,9 @@ namespace ZSharp.Importer.ILLoader
 
             var cell = new LIR.Local(new LIR.Reference(compiled!)) { Name = name };
 
+            // Copied when the code starts, as the code may first share it in a branch.
             function.Body!.Block.Locals.Add(cell);
-            function.Body.Block.Statements.Add(new LIR.SetLocal(cell, new LIR.Allocate(new LIR.GetLocal(variable.For(target)))));
+            function.Body.Block.Statements.Insert(0, new LIR.SetLocal(cell, new LIR.Allocate(new LIR.GetLocal(variable.For(target)))));
 
             return Result<CompilerObject>.Ok(new Objects.Cell(cell, type));
         }

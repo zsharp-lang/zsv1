@@ -118,9 +118,9 @@ Decided in the review of the reimplementation, for the language features to come
   implicit captures, as Z#'s, the structure says it already: the inner code gets the outer
   local.
 - The code loader realizes a variable as a variable. Whether it is a cell is the
-  platform's: lowering the outer function, the CLR asks the functions nested in its code
-  what they capture, and lowers those variables as cells. Loading comes before lowering,
-  so they all exist by then.
+  platform's, found in the code: a capture sets the variable the building code refers to
+  the variable through, so the code around refers to the capture, and declares a captured
+  local as its capture. Nothing marks the variable or binds its name again.
 
 ### Patterns
 

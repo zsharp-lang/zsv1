@@ -11,31 +11,23 @@ namespace ZSharp.Lang.DotNet
     /// variables of the code around it that it uses, by reference, as C# does.
     /// <para>
     /// A name bound inside the function is the function's own. Any other name is resolved
-    /// as the code around it would resolve it, and if that is a variable of that code, the
-    /// function captures it: the code around it gets a <see cref="Code.Capture"/> of the
-    /// variable, bound over the variable's name, so it and the function both refer to the
-    /// capture from then on, and the variable is marked as captured. A capture found that
-    /// way is shared, so a variable is captured once, however many functions use it.
+    /// as the code around it would resolve it, and if that is a variable of that code, or a
+    /// member of one, as a member of the class is of the object a method runs on, the
+    /// function captures it. The code around refers to a variable through a variable of the
+    /// code that builds it, which the capture sets to a <see cref="Code.Capture"/> of what
+    /// it held, before any code that refers to it is built. So the code around and the
+    /// function both refer to the capture, and nothing is bound again. A function nested in
+    /// this one resolves a name as this one does, so it captures what this one captured.
     /// </para>
     /// </summary>
     public sealed class LocalFunctionMetaType(
-        Language language,
         ILLoader il,
         CodeBody body,
         Package.DotNet.TypeReference underlyingType
     )
     {
-        private readonly HIR.Instance local = il.Load(typeof(Code.Local));
+        private readonly HIR.Instance variable = il.Load(typeof(HIR.Variable));
         private readonly HIR.Instance capture = il.Load(typeof(Code.Capture));
-        private readonly HIR.Instance parameter = il.Load(typeof(Package.DotNet.Parameter));
-        private readonly HIR.Instance decorated = il.Load(typeof(Code.Parameter));
-        private readonly HIR.Instance receiver = il.Load(typeof(Package.DotNet.This));
-
-        /// <summary>
-        /// The capture of each method's object, by the holder of its node in the code that
-        /// builds the method, so the method's functions share it.
-        /// </summary>
-        private readonly System.Runtime.CompilerServices.ConditionalWeakTable<Code.Local, Code.Local> objects = new();
 
         public IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition node, Code.Local self)
         {
@@ -67,13 +59,13 @@ namespace ZSharp.Lang.DotNet
             var signature = function.Signature;
 
             var block = new Code.Block();
-            var captures = new Captures(this, self, block, around, boundary);
+            var captures = new Captures(this, self, block, around);
             var fork = compiler.Fork();
             var expressions = fork.Expression;
 
             fork.Expression = (current, expression) =>
                 expression is AST.IdentifierExpression identifier && !Inside(current, identifier.Name, boundary)
-                    ? captures.Capture(identifier.Name, expressions(current, expression))
+                    ? captures.Capture(expressions(current, expression))
                     : expressions(current, expression);
 
             if (body.Parameters(fork, block, self, nameof(Package.DotNet.LocalFunction.Parameters), signature) is { } error)
@@ -98,9 +90,6 @@ namespace ZSharp.Lang.DotNet
                 : Result<Code.Block>.Ok(block);
         }
 
-        private Error? Bind(Scope scope, string name, Code.Expression value)
-            => language.Bind(scope, name, value);
-
         /// <summary>
         /// Whether a name is bound inside the function, which is every scope up to and
         /// including the function's own.
@@ -122,118 +111,41 @@ namespace ZSharp.Lang.DotNet
         /// <summary>
         /// The captures of one function as they are found.
         /// </summary>
-        private sealed class Captures(
-            LocalFunctionMetaType owner,
-            Code.Local self,
-            Code.Block block,
-            Code.Block around,
-            Scope boundary
-        )
+        private sealed class Captures(LocalFunctionMetaType owner, Code.Local self, Code.Block block, Code.Block around)
         {
             private readonly HashSet<Code.Local> captured = new(ReferenceEqualityComparer.Instance);
 
             /// <param name="resolved">What the code around the function resolves the name to.</param>
-            public IResult<Code.Expression, Error> Capture(string name, IResult<Code.Expression, Error> resolved)
+            public IResult<Code.Expression, Error> Capture(IResult<Code.Expression, Error> resolved)
             {
                 if (resolved.When(out var value).Error(out _))
                     return resolved;
 
-                // A member of the object a method runs on, as its class's members' names are,
-                // is a member of the object the function captures.
-                if (value is Code.NamedMember { Target: Code.Get { Instance: Code.Local target } } member)
-                    return Object(target) is { } captured
-                        ? Result<Code.Expression>.Ok(new Code.NamedMember { Target = captured, Name = member.Name })
-                        : resolved;
-
-                if (value is not Code.Get { Instance: Code.Local holder })
-                    return resolved;
-
-                if (ReferenceEquals(holder.Type, owner.capture))
-                    return Share(holder);
-
-                if (!ReferenceEquals(holder.Type, owner.local)
-                    && !ReferenceEquals(holder.Type, owner.parameter)
-                    && !ReferenceEquals(holder.Type, owner.decorated))
-                    return resolved;
-
-                if (Binding(name, holder) is not { } scope)
-                    return Result<Code.Expression>.Error($"The scope {name} is bound in can't be found.");
-
-                var made = new Code.Local(name, (HIR.Type)owner.capture)
+                var holder = value switch
                 {
-                    Init = CodeBody.Construct(owner.capture, new Code.Get(holder))
+                    Code.Get { Instance: Code.Local variable } => variable,
+                    Code.NamedMember { Target: Code.Get { Instance: Code.Local variable } } => variable,
+                    _ => null
                 };
 
-                around.Statements.Add(new Code.Declare(made));
-                around.Statements.Add(new Code.ExpressionStatement(new Code.Set
+                if (holder is not null && ReferenceEquals(holder.Type, owner.variable) && captured.Add(holder))
                 {
-                    Target = new Code.NamedMember { Target = new Code.Get(holder), Name = nameof(Code.Parameter.IsCaptured) },
-                    Value = new Code.BooleanLiteral(true)
-                }));
-
-                if (owner.Bind(scope, name, new Code.Get(made)) is { } invalid)
-                    return Result<Code.Expression>.Error(invalid);
-
-                return Share(made);
-            }
-
-            /// <summary>
-            /// The capture of the object a method runs on, which its node's holder holds, as a
-            /// variable is captured: once for all the method's functions, and marked. No name is
-            /// bound to it, so nothing is bound over. A capture of it, as a function around
-            /// this one has, is shared.
-            /// </summary>
-            private Code.Get? Object(Code.Local holder)
-            {
-                if (ReferenceEquals(holder.Type, owner.capture))
-                    return Shared(holder);
-
-                if (!ReferenceEquals(holder.Type, owner.receiver))
-                    return null;
-
-                if (!owner.objects.TryGetValue(holder, out var made))
-                {
-                    made = new Code.Local(holder.Name, (HIR.Type)owner.capture)
-                    {
-                        Init = CodeBody.Construct(owner.capture, new Code.Get(holder))
-                    };
-
-                    around.Statements.Add(new Code.Declare(made));
+                    // The code around refers to its capture from now on, which this function
+                    // has among its captures once it is built.
                     around.Statements.Add(new Code.ExpressionStatement(new Code.Set
                     {
-                        Target = new Code.NamedMember { Target = new Code.Get(holder), Name = nameof(Package.DotNet.This.IsCaptured) },
-                        Value = new Code.BooleanLiteral(true)
+                        Target = new Code.Get(holder),
+                        Value = CodeBody.Construct(owner.capture, new Code.Get(holder))
                     }));
 
-                    owner.objects.Add(holder, made);
+                    block.Statements.Add(new Code.ExpressionStatement(CodeBody.Add(
+                        self,
+                        nameof(Package.DotNet.LocalFunction.Captures),
+                        new Code.Cast { Value = new Code.Get(holder), Type = new Code.Get(owner.capture) }
+                    )));
                 }
 
-                return Shared(made);
-            }
-
-            private IResult<Code.Expression, Error> Share(Code.Local holder)
-                => Result<Code.Expression>.Ok(Shared(holder));
-
-            private Code.Get Shared(Code.Local holder)
-            {
-                if (captured.Add(holder))
-                    block.Statements.Add(new Code.ExpressionStatement(
-                        CodeBody.Add(self, nameof(Package.DotNet.LocalFunction.Captures), new Code.Get(holder))
-                    ));
-
-                return new Code.Get(holder);
-            }
-
-            /// <summary>
-            /// The scope outside the function that binds a name to a variable.
-            /// </summary>
-            private Scope? Binding(string name, Code.Local holder)
-            {
-                for (var scope = boundary.Parent; scope is not null; scope = scope.Parent)
-                    if (scope.Local(name) is Code.Get { Instance: var bound } && ReferenceEquals(bound, holder))
-                        return scope;
-
-                return null;
+                return resolved;
             }
         }
     }

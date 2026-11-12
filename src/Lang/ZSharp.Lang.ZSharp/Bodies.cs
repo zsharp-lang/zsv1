@@ -90,7 +90,23 @@ namespace ZSharp.Lang
 
             block.Statements.Add(new Code.ExpressionStatement(Add(owner, list, new Code.Get(local))));
 
-            return language.Bind(compiler, parameter.Alias ?? parameter.Name, new Code.Get(local));
+            return language.Bind(compiler, parameter.Alias ?? parameter.Name, new Code.Get(Variable(block, local)));
+        }
+
+        /// <summary>
+        /// Code that declares, in the building code, the variable the code refers to a
+        /// variable it has through, as its parameter or its local, which starts as the
+        /// variable's node. It can be set again, as a function that captures the variable
+        /// sets it to its capture before any code that refers to it is built, so all of
+        /// that code refers to the capture. The node stays what the definition lists.
+        /// </summary>
+        public Code.Local Variable(Code.Block block, Code.Local node)
+        {
+            var variable = new Code.Local(node.Name, (HIR.Type)describe(typeof(HIR.Variable))) { Init = new Code.Get(node) };
+
+            block.Statements.Add(new Code.Declare(variable));
+
+            return variable;
         }
 
         /// <summary>
@@ -264,15 +280,22 @@ namespace ZSharp.Lang
 
             block.Statements.Add(new Code.ExpressionStatement(Add(owner, list, new Code.Get(local))));
 
-            if (language.Bind(compiler, let.Name, new Code.Get(local)) is { } invalid)
+            var variable = Variable(block, local);
+
+            if (language.Bind(compiler, let.Name, new Code.Get(variable)) is { } invalid)
                 return Result<Code.Expression>.Error(invalid);
 
             // The body declares the local where the let is. That Declare is built here, so
-            // it is already in the form of the building code.
+            // it is already in the form of the building code, and of the variable the code
+            // refers to the local through, so a captured local is declared as its capture.
             return Result<Code.Expression>.Ok(new Code.BlockExpression
             {
-                Statements = [new Code.UnquoteStatement(Node("Declare", new Code.Get(local)))],
-                Result = new Code.Get(local)
+                Statements = [new Code.UnquoteStatement(Node("Declare", new Code.Cast
+                {
+                    Value = new Code.Get(variable),
+                    Type = new Code.Get(describe(typeof(HIR.Definition)))
+                }))],
+                Result = new Code.Get(variable)
             });
         }
 

@@ -8,9 +8,5 @@ namespace Package.DotNet
         : ZSharp.HIR.Variable
         , ZSharp.HIR.Instance
     {
-        /// <summary>
-        /// Whether a function in the code captures it.
-        /// </summary>
-        public bool IsCaptured { get; set; }
     }
 }
