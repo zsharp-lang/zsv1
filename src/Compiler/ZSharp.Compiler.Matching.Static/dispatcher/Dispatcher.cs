@@ -2,8 +2,8 @@ namespace ZSharp.Compiler.MatchingDispatchers.Static
 {
     /// <summary>
     /// Matches through what the COs say of themselves: a parameter takes its value from
-    /// the arguments, and a value matches a pattern as it says, or else as what describes
-    /// it at runtime says. Each asks the dispatchers applied before it first.
+    /// the arguments, and a value matches a pattern as the pattern says, or else as the
+    /// value says, or else as what describes it at runtime says. Each asks the dispatchers applied before it first.
     /// </summary>
     public sealed class Dispatcher(Matching matching, TS ts)
     {
@@ -22,6 +22,10 @@ namespace ZSharp.Compiler.MatchingDispatchers.Static
         public IResult Pattern(CompilerObject value, CompilerObject pattern)
         {
             var result = @base.Match(value, pattern);
+
+            // A pattern that knows how it matches says so first, as one that binds does.
+            if (result.IsUnsupported() && pattern.Is<ICTPattern>(out var known))
+                result = known.Match(value);
 
             if (result.IsUnsupported() && value.Is<ICTMatch>(out var match))
                 result = match.Match(pattern);

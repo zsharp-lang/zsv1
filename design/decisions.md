@@ -117,6 +117,9 @@ Decided in the review of the reimplementation, for the language features to come
   which whatever dispatchers are applied answer.
 - Narrowing through `and`, as `nullable and nullable.do()`, is flow typing, a future
   feature.
+- So far there are value patterns and name patterns; sequences, `{}`, `not` and `case`
+  come next. A name pattern needs its type until a local can take the type of what
+  first sets it.
 
 ## Choices and restrictions from 2026-11-09
 

@@ -94,7 +94,7 @@ namespace ZSharp.Lang
             expressionParser.Nud(TokenType.LBracket, LangParser.ParseArrayLiteral);
             expressionParser.Led(".", LangParser.ParseMemberAccess, 150);
             expressionParser.Led(LangParser.Keywords.As, LangParser.ParseCastExpression, 20);
-            expressionParser.Led(LangParser.Keywords.Is, LangParser.ParseIsOfExpression, 20);
+            expressionParser.Led(LangParser.Keywords.Is, LangParser.ParseIsExpression, 20);
 
             expressionParser.Separator(TokenType.Comma);
             expressionParser.Separator(TokenType.RParen);

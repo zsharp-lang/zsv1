@@ -13,12 +13,15 @@ namespace ZSharp.Compiler
 
         public LoaderMap<HIR.Code.Statement> Statements { get; } = new();
 
+        public LoaderMap<HIR.Code.Pattern> Patterns { get; } = new();
+
         public void Apply()
         {
             @base = loader.Clone();
 
             loader.LoadExpression = LoadExpression;
             loader.LoadStatement = LoadStatement;
+            loader.LoadPattern = LoadPattern;
         }
 
         public IResult LoadExpression(HIR.Code.Expression expression)
@@ -37,6 +40,16 @@ namespace ZSharp.Compiler
 
             if (result.IsUnsupported())
                 result = Statements.Load(statement);
+
+            return result;
+        }
+
+        public IResult LoadPattern(HIR.Code.Pattern pattern)
+        {
+            var result = @base.LoadPattern(pattern);
+
+            if (result.IsUnsupported())
+                result = Patterns.Load(pattern);
 
             return result;
         }

@@ -4,11 +4,15 @@ namespace ZSharp.Compiler
 
     public delegate IResult LoadStatement(HIR.Code.Statement statement);
 
+    public delegate IResult LoadPattern(HIR.Code.Pattern pattern);
+
     public class HIRCodeLoader
     {
         public LoadExpression LoadExpression { get; set; } = expression => Unsupported("expression", expression);
 
         public LoadStatement LoadStatement { get; set; } = statement => Unsupported("statement", statement);
+
+        public LoadPattern LoadPattern { get; set; } = pattern => Unsupported("pattern", pattern);
 
         public HIRCodeLoader Clone() => (HIRCodeLoader)MemberwiseClone();
 

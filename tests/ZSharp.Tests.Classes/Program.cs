@@ -2460,20 +2460,26 @@ Try("a sealed type is not cast to an interface it does not implement", () =>
     Run("""Keep("text" as IDisposable154);""") is { } e && e.Contains("conversion"));
 
 Try("a type test", () =>
-    ResetKept() && Run("""let o155: Object = "x"; Keep(o155 is of String); Keep(o155 is of Int32);""") is null
+    ResetKept() && Run("""let o155: Object = "x"; Keep(o155 is String); Keep(o155 is Int32);""") is null
         && Probe.Kept is [true, false]);
 
+Try("a name pattern needs a type for now, until a local can take the type of what first sets it", () =>
+    Run("""let o314: Object = 5; if (o314 is let any314) Keep(any314);""") is { } error && error.Contains("needs a type for now"));
+
+Try("a var name pattern binds a value that can be set again", () =>
+    Run("""let o315: Object = 41; if (o315 is var number315: Int32) { number315 = number315 + 1; Keep(number315); }""") is null && Kept() is 42);
+
 Try("null is of no type", () =>
-    Run("let o156: Object = null; Keep(o156 is of Object);") is null && Kept() is false);
+    Run("let o156: Object = null; Keep(o156 is Object);") is null && Kept() is false);
 
 Try("a value is of a type it goes to", () =>
-    ResetKept() && Run("Keep(5 is of Object); Keep(5 is of String);") is null && Probe.Kept is [true, false]);
+    ResetKept() && Run("Keep(5 is Object); Keep(5 is String);") is null && Probe.Kept is [true, false]);
 
 Try("a type test and a cast in a method", () =>
     Run("""
         def Lengths157 {
             @static fun of(value: Object): Int32 {
-                if (value is of String) return (value as String).Length;
+                if (value is String) return (value as String).Length;
                 return 0;
             }
         }
@@ -2481,31 +2487,31 @@ Try("a type test and a cast in a method", () =>
         """) is null && Kept() is 4);
 
 Try("a name pattern is assigned what matched", () =>
-    Run("""let o158: Object = "four"; if (o158 is text158 of String) Keep(text158.Length);""") is null && Kept() is 4);
+    Run("""let o158: Object = "four"; if (o158 is let text158: String) Keep(text158.Length);""") is null && Kept() is 4);
 
 Try("a name pattern is not assigned when the value does not match", () =>
-    ResetKept() && Run("""let o159: Object = 4; Keep(o159 is text159 of String); Keep(text159 == null);""") is null
+    ResetKept() && Run("""let o159: Object = 4; Keep(o159 is let text159: String); Keep(text159 == null);""") is null
         && Probe.Kept is [false, true]);
 
 Try("a name pattern can be assigned", () =>
-    Run("""let o160: Object = "x"; o160 is text160 of String; text160 = "changed"; Keep(text160);""") is null
+    Run("""let o160: Object = "x"; o160 is let text160: String; text160 = "changed"; Keep(text160);""") is null
         && (string)Kept() == "changed");
 
 Try("a name pattern of a value type unboxes", () =>
-    Run("let o161: Object = 41; if (o161 is number161 of Int32) Keep(number161 + 1);") is null && Kept() is 42);
+    Run("let o161: Object = 41; if (o161 is let number161: Int32) Keep(number161 + 1);") is null && Kept() is 42);
 
 Try("the value a name pattern matches is evaluated once", () =>
-    ResetKept() && Run("Keep(NextNumber() is number162 of Int32); Keep(number162 + 1 == NextNumber());") is null
+    ResetKept() && Run("Keep(NextNumber() is let number162: Int32); Keep(number162 + 1 == NextNumber());") is null
         && Probe.Kept is [true, true]);
 
 Try("_ names nothing", () =>
-    Run("""let o163: Object = "x"; Keep(o163 is _ of String);""") is null && Kept() is true);
+    Run("""let o163: Object = "x"; Keep(o163 is String);""") is null && Kept() is true);
 
 Try("a name pattern in a method", () =>
     Run("""
         def Lengths164 {
             @static fun of(value: Object): Int32 {
-                if (value is text of String) return text.Length;
+                if (value is let text: String) return text.Length;
                 return 0;
             }
         }
@@ -2516,7 +2522,7 @@ Try("a name pattern in a module function", () =>
     Run("""
         module M165 {
             fun of(value: Object): Int32 {
-                if (value is text of String) return text.Length;
+                if (value is let text: String) return text.Length;
                 return 0;
             }
         }
@@ -3987,10 +3993,10 @@ Try("a trait is implemented for a CLR type, and a value of it goes where the tra
 Try("a value whose static type says nothing matches a trait its type implements", () =>
     ResetKept() && Run("""
         let o227: Object = "dynamic";
-        Keep(o227 is of Greeting226);
-        if (o227 is greeting227 of Greeting226) Keep(greeting227.greet());
+        Keep(o227 is Greeting226);
+        if (o227 is let greeting227: Greeting226) Keep(greeting227.greet());
         let n227: Object = 5;
-        Keep(n227 is of Greeting226);
+        Keep(n227 is Greeting226);
         """) is null && Probe.Kept is [true, "Hello, dynamic", false]);
 
 Try("the runtime has the capability of polymorphism, given by a trait", () =>
@@ -4001,8 +4007,8 @@ Try("the runtime has the capability of polymorphism, given by a trait", () =>
         import "std:zsharp/clr";
 
         let target228: Object = runtime;
-        Keep(target228 is of Polymorphism);
-        if (target228 is capability228 of Polymorphism) {
+        Keep(target228 is Polymorphism);
+        if (target228 is let capability228: Polymorphism) {
             let structure228 = Structure();
             capability228.objects(structure228);
             Keep(structure228.Metadata.Count);
@@ -4105,7 +4111,7 @@ Try("a value of a Z# interface is cast down to, and tested for, a class", () =>
         }
 
         fun lives236(named: Named236): Int32 {
-            if (named is cat of Cat236) return cat.lives;
+            if (named is let cat: Cat236) return cat.lives;
             return 0;
         }
 
@@ -4113,7 +4119,7 @@ Try("a value of a Z# interface is cast down to, and tested for, a class", () =>
         Keep(lives236(named236));
         Keep(lives236(Dog236()));
         Keep((named236 as Cat236).lives);
-        Keep(named236 is of Dog236);
+        Keep(named236 is Dog236);
         """) is null && Probe.Kept is [9, 0, 9, false]);
 
 Try("a Z# class must have each method of the interfaces it implements", () =>
@@ -4648,7 +4654,7 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         }
         fun square(side: Int32): Shape286 { return Square286(side); }
         fun describe(shape: Shape286): String {
-            if (shape is square of Square286) return "a square of side " + square.side + " and area " + shape.area() + ", " + Square286.made + " made";
+            if (shape is let square: Square286) return "a square of side " + square.side + " and area " + shape.area() + ", " + Square286.made + " made";
             return "a shape";
         }
         """);
@@ -4906,7 +4912,7 @@ Try("a class of a module lowered for the running process lowers again for the Ce
                 let found = 0;
                 let index = 0;
                 while (index < items.Count) {
-                    if (items[index] is text of String) found = found + 1;
+                    if (items[index] is let text: String) found = found + 1;
                     index = index + 1;
                 }
                 return found;
@@ -5125,7 +5131,7 @@ Try("a name a type that isn't generic shares with generic ones is that type, and
         let numbers299 = List299[Int32]();
         numbers299.Add(3);
         let value299: Object299 = numbers299;
-        if (value299 is list299 of IList299) Keep(list299.Count);
+        if (value299 is let list299: IList299) Keep(list299.Count);
         let typed299: IList299[Int32] = numbers299;
         Keep(typed299.Count);
         Keep((value299 as IList299).Count);
@@ -5141,7 +5147,7 @@ Try("a value of a CLR interface defined in Z# is matched against, and cast down 
         }
         def Shapes300 of DotNet_Module300 {
             fun kind(shape: Shape300): String {
-                if (shape is square of Square300) return "a " + square.name();
+                if (shape is let square: Square300) return "a " + square.name();
                 return "something";
             }
         }

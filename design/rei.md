@@ -54,7 +54,7 @@ node for matching arguments, which is why it isn't CG's.
 
 | Entrypoint | Question |
 |------------|----------|
-| `Pattern`, through `Match(value, pattern)` | What condition, as a CO, says whether a value matches a pattern, as `value is of T`? |
+| `Pattern`, through `Match(value, pattern)` | What condition, as a CO, says whether a value matches a pattern, as `value is T`? |
 | `Parameter`, through `Match(parameter, arguments)` | What value does a parameter take for a call, from its arguments? |
 
 Its static dispatcher asks what the COs say of themselves: a parameter's

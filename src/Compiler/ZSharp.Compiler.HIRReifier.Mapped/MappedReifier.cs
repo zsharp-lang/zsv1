@@ -13,6 +13,8 @@ namespace ZSharp.Compiler
 
         public ReifierMap<HIR.Code.Statement> Statements { get; } = new();
 
+        public ReifierMap<HIR.Code.Pattern> Patterns { get; } = new();
+
         /// <summary>
         /// How values are encoded into code, by the type of the value rather than of a node.
         /// </summary>
@@ -24,6 +26,7 @@ namespace ZSharp.Compiler
 
             reifier.ReifyExpression = ReifyExpression;
             reifier.ReifyStatement = ReifyStatement;
+            reifier.ReifyPattern = ReifyPattern;
             reifier.EncodeValue = EncodeValue;
         }
 
@@ -46,6 +49,13 @@ namespace ZSharp.Compiler
             var result = @base.ReifyStatement(statement);
 
             return result.IsUnsupported() ? Statements.Reify(statement) : result;
+        }
+
+        private IResult<HIR.Code.Expression, Error> ReifyPattern(HIR.Code.Pattern pattern)
+        {
+            var result = @base.ReifyPattern(pattern);
+
+            return result.IsUnsupported() ? Patterns.Reify(pattern) : result;
         }
     }
 }

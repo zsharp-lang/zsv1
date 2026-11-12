@@ -37,7 +37,7 @@ def Circle : Shape {
 fun describe(kind: Type[Shape]): String { return "a unit " + kind.kind() + " has area " + kind.unit().area(); }
 
 fun side(shape: Shape): Int32 {
-    if (shape is square of Square) return square.side;
+    if (shape is let square: Square) return square.side;
     return 0;
 }
 

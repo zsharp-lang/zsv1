@@ -19,7 +19,7 @@ import { core } from "core:zsharp";
 
 // Says something of a definition that can be annotated, and gives the definition.
 fun say(member: Instance, annotation: Object): Instance {
-    if (member is annotated of Annotated) annotated.Annotations.Add(annotation);
+    if (member is let annotated: Annotated) annotated.Annotations.Add(annotation);
     return member;
 }
 
@@ -138,10 +138,10 @@ fun declared(function: Function, code: Block): Boolean {
     let index = 0;
     while (index < function.Annotations.Count) {
         let annotation = function.Annotations[index];
-        if (annotation is said of Loader) code.Statements.Add(registerLoader(function, said.Registry));
-        if (annotation is meta of MetaType) code.Statements.Add(registerMetaType(function, meta.Type));
-        if (annotation is bound of Binder) code.Statements.Add(registerBinder(function));
-        if (annotation is entry of EntryPoint) explicit = true;
+        if (annotation is let said: Loader) code.Statements.Add(registerLoader(function, said.Registry));
+        if (annotation is let meta: MetaType) code.Statements.Add(registerMetaType(function, meta.Type));
+        if (annotation is let bound: Binder) code.Statements.Add(registerBinder(function));
+        if (annotation is let entry: EntryPoint) explicit = true;
         index = index + 1;
     }
     return explicit;
@@ -158,7 +158,7 @@ fun build(node: Module): Module {
 
     let index = 0;
     while (index < node.Definitions.Count) {
-        if (node.Definitions[index] is function of Function) {
+        if (node.Definitions[index] is let function: Function) {
             if (declared(function, entry.Body.Block)) explicit.Add(function);
         }
         index = index + 1;

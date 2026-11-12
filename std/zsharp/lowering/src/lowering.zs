@@ -25,7 +25,7 @@ def Initializing of DotNet_Class {
     // Adds code to what a definition is lowered into runs to initialize it, if it has an
     // initializer, which is a capability of it. Whether it does.
     @static fun into(owner: LIRDefinition, statement: LIRStatement): Boolean {
-        if (owner is initialized of Initialized) {
+        if (owner is let initialized: Initialized) {
             initialized.Initializer.Block.Statements.Add(statement);
             return true;
         }
@@ -36,10 +36,10 @@ def Initializing of DotNet_Class {
 // Keeps what is said of a node to keep, an annotation whose type is kept, on the metadata
 // of what it lowers to, which a platform writes its own way.
 fun keep(node: Object, metadata: List[Metadata]) {
-    if (node is annotated of Annotated) {
+    if (node is let annotated: Annotated) {
         let index = 0;
         while (index < annotated.Annotations.Count) {
-            if (annotated.Annotations[index] is kept of Kept) metadata.Add(KeptAnnotation(kept));
+            if (annotated.Annotations[index] is let kept: Kept) metadata.Add(KeptAnnotation(kept));
             index = index + 1;
         }
     }

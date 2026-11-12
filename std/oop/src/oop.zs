@@ -183,11 +183,11 @@ fun pairAccessors(methods: List[Method], properties: List[Property], name: Strin
 
 // Marks a field or a method of a class as the class's own, not its objects'.
 fun static(member: Instance): Instance {
-    if (member is method of Method) {
+    if (member is let method: Method) {
         method.IsStatic = true;
         method.Parameters.Remove(method.ThisParameter);
     }
-    if (member is field of Field) field.IsStatic = true;
+    if (member is let field: Field) field.IsStatic = true;
     return member;
 }
 
@@ -195,12 +195,12 @@ fun static(member: Instance): Instance {
 // the class, and a class method runs on the class. An interface's class method is one
 // the class of each of its values has.
 fun class(member: Instance): Instance {
-    if (member is method of Method) {
+    if (member is let method: Method) {
         method.IsClass = true;
         let receiver = method.ThisParameter as Positional;
         receiver.Type = ClassOf(receiver.Type);
     }
-    if (member is field of Field) field.IsClass = true;
+    if (member is let field: Field) field.IsClass = true;
     return member;
 }
 

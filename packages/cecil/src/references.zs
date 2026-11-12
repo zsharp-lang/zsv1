@@ -144,7 +144,7 @@ def References of DotNet_Class {
 
     // The definition of the type a member is declared by, a generic instance's included.
     @explicitThis fun owner(this, type: LIRType): ClrType {
-        if (type is instance of GenericInstance) return instance.Definition as ClrType;
+        if (type is let instance: GenericInstance) return instance.Definition as ClrType;
         return type as ClrType;
     }
 
@@ -208,8 +208,8 @@ def References of DotNet_Class {
     // running process's assemblies names the running .NET's types, which are the
     // version's, by their names.
     @explicitThis fun retarget(this, type: TypeReference): TypeReference {
-        if (type is parameter of GenericParameter) return type;
-        if (type is instance of GenericInstanceType) {
+        if (type is let parameter: GenericParameter) return type;
+        if (type is let instance: GenericInstanceType) {
             let made = GenericInstanceType(this.retarget(instance.ElementType));
             let index = 0;
             while (index < instance.GenericArguments.Count) {
@@ -218,17 +218,17 @@ def References of DotNet_Class {
             }
             return made;
         }
-        if (type is array of ArrayType) return ArrayType(this.retarget(array.ElementType), array.Rank);
-        if (type is reference of ByReferenceType) return ByReferenceType(this.retarget(reference.ElementType));
-        if (type is pointer of PointerType) return PointerType(this.retarget(pointer.ElementType));
-        if (type is required of RequiredModifierType) return RequiredModifierType(this.retarget(required.ModifierType), this.retarget(required.ElementType));
-        if (type is optional of OptionalModifierType) return OptionalModifierType(this.retarget(optional.ModifierType), this.retarget(optional.ElementType));
+        if (type is let array: ArrayType) return ArrayType(this.retarget(array.ElementType), array.Rank);
+        if (type is let reference: ByReferenceType) return ByReferenceType(this.retarget(reference.ElementType));
+        if (type is let pointer: PointerType) return PointerType(this.retarget(pointer.ElementType));
+        if (type is let required: RequiredModifierType) return RequiredModifierType(this.retarget(required.ModifierType), this.retarget(required.ElementType));
+        if (type is let optional: OptionalModifierType) return OptionalModifierType(this.retarget(optional.ModifierType), this.retarget(optional.ElementType));
         if (this.index.ContainsKey(type.FullName)) return this.main.ImportReference(this.index[type.FullName]);
         return this.main.ImportReference(type);
     }
 
     @explicitThis fun retargetMethod(this, method: MethodReference): MethodReference {
-        if (method is instance of GenericInstanceMethod) {
+        if (method is let instance: GenericInstanceMethod) {
             let made = GenericInstanceMethod(this.retargetMethod(instance.ElementMethod));
             let index = 0;
             while (index < instance.GenericArguments.Count) {

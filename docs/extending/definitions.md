@@ -43,7 +43,7 @@ of `Function`'s definitions:
 ```zs fragment
 @metaType(Function)
 fun compileFunction(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
-    if (definition is function of FunctionSyntax) {
+    if (definition is let function: FunctionSyntax) {
         let filler = Filler(compiler, function, self);
 
         return Result[CompiledDefinition].Ok(CompiledDefinition(
