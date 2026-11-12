@@ -914,8 +914,47 @@ namespace ZSharp.Importer.ILLoader
             => captured is not Objects.DefinedClass;
 
         /// <summary>
+        /// The captures a local function holds, and those of each local function it
+        /// captured, as it calls them, each once.
+        /// </summary>
+        internal static List<HIR.Code.Capture> Held(Package.DotNet.LocalFunction node)
+        {
+            var held = new List<HIR.Code.Capture>();
+            var seen = new HashSet<Package.DotNet.LocalFunction>(ReferenceEqualityComparer.Instance) { node };
+
+            void Add(Package.DotNet.LocalFunction function)
+            {
+                foreach (var capture in function.Captures)
+                {
+                    held.Add(capture);
+
+                    if (CodeLoaders.Captured(capture) is Package.DotNet.LocalFunction captured && seen.Add(captured))
+                        Add(captured);
+                }
+            }
+
+            Add(node);
+
+            return held;
+        }
+
+        /// <summary>
+        /// What a local function is passed, in order: a capture of each variable it holds,
+        /// once for each variable, however many captures of it there are. A function it
+        /// captured is the variables that function captures, which it holds too, so it is
+        /// passed nothing of its own.
+        /// </summary>
+        internal static List<HIR.Code.Capture> Passed(Package.DotNet.LocalFunction node)
+        {
+            var variables = new HashSet<HIR.Variable>(ReferenceEqualityComparer.Instance);
+
+            return [.. Held(node).Where(capture => CodeLoaders.Captured(capture) is not Package.DotNet.LocalFunction && variables.Add(CodeLoaders.Captured(capture)))];
+        }
+
+        /// <summary>
         /// Lowers a local function to a function of its own, once. It takes the cell of
-        /// each variable it captures, then its own parameters.
+        /// each variable it captures, through the functions it captured too, then its own
+        /// parameters.
         /// </summary>
         internal IResult<LIR.Function, Error> Lower(Package.DotNet.LocalFunction node)
         {
@@ -927,15 +966,16 @@ namespace ZSharp.Importer.ILLoader
 
             var signature = new LIR.Signature();
             var cells = new Dictionary<HIR.Code.Capture, CompilerObject>(ReferenceEqualityComparer.Instance);
+            var given = new Dictionary<HIR.Variable, CompilerObject>(ReferenceEqualityComparer.Instance);
 
-            foreach (var capture in node.Captures)
+            foreach (var capture in Passed(node))
             {
                 if (ZSharp.Compiler.Current.HIRLoader.LoadInstance((HIR.Instance)capture.Captured).When(out var captured).Error(out var error))
                     return Result<LIR.Function>.Error(error);
 
                 if (!InCell(captured!))
                 {
-                    cells[capture] = captured!;
+                    given[CodeLoaders.Captured(capture)] = captured!;
                     continue;
                 }
 
@@ -951,16 +991,26 @@ namespace ZSharp.Importer.ILLoader
 
                 // The object a method runs on is still what its class's members' names are
                 // reached through.
-                CompilerObject given = captured is Objects.ImplicitObject implicitly
+                given[CodeLoaders.Captured(capture)] = captured is Objects.ImplicitObject implicitly
                     ? implicitly.With(new Objects.Cell(parameter, type!))
                     : new Objects.Cell(parameter, type!);
-
-                // What it captured is a capture too when a function beside it, or around it,
-                // captured the variable first, and stands for the same variable, so it is the
-                // same cell here, as when this function calls the one beside it.
-                for (HIR.Variable held = capture; held is HIR.Code.Capture each; held = each.Captured)
-                    cells[each] = given;
             }
+
+            // Each capture it holds, and each a function it captured holds, stands for a
+            // variable it was given, as does each capture that one captured, as a function
+            // beside it, or around it, may have captured the variable first. One of a function
+            // is that function, which it calls with what it was given.
+            foreach (var capture in Held(node))
+                for (HIR.Variable held = capture; held is HIR.Code.Capture each; held = each.Captured)
+                    if (CodeLoaders.Captured(each) is Package.DotNet.LocalFunction beside)
+                    {
+                        if (ZSharp.Compiler.Current.HIRLoader.LoadDefinition(beside).When(out var called).Error(out var error))
+                            return Result<LIR.Function>.Error(error);
+
+                        cells[each] = called!;
+                    }
+                    else if (given.TryGetValue(CodeLoaders.Captured(each), out var value))
+                        cells[each] = value;
 
             // A local function's captures are the running process's cells, so it runs there.
             var capturing = signature.Parameters.Count;

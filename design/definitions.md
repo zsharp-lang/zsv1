@@ -215,10 +215,14 @@ and nothing is marked:
 - Once a `let` can't be set again, the variables of the building code that captures set
   are `var`s.
 
-Only variables are captured, as `HIR.Variable` marks them: locals, parameters, and the
-object a method or constructor runs on, its `this` node, which a function captures when it
-uses a member of the class by its name. A definition or any other instance is referred to
-as it is, as a static method's object is, which is its class.
+Only variables are captured, as `HIR.Variable` marks them: locals, parameters, the object
+a method or constructor runs on, its `this` node, which a function captures when it uses a
+member of the class by its name, and a local function, whose value exists only while the
+code around it runs, which a function beside it captures when it calls it. The code refers
+to a local function through the definition's variable, which its meta-compiler makes an
+`HIR.Variable`, and it builds the node through a variable of its own. A definition or any
+other instance is referred to as it is, as a static method's object is, which is its
+class.
 
 The same `Capture` loads differently in each place. Outside the functions that capture
 it, it is what it captures, loaded as an instance, so in the capturee it is the
@@ -234,9 +238,11 @@ shared in the code itself. On the CLR:
 - A parameter, or the object, that the code refers to through a capture is copied into a
   cell when its function starts, the first time it is found to be, and the function uses
   the cell from then on, so a capture in a branch needs no special handling.
-- A local function is a function of its own, which takes the cell of each capture as a
-  hidden parameter before its own. Calling it passes the cells as the caller has them, so
-  calling it from another local function passes on what that one was given.
+- A local function is a function of its own, which takes the cell of each variable it
+  captures as a hidden parameter before its own, once for each variable however many
+  captures of it it holds. A local function it captured is the variables that function
+  captures, so it takes those too, and calls that function with them. Calling it passes
+  the cells as the caller has them.
 - A local function used as a value is a delegate bound to the current run's cells, made
   by a runtime helper with expression trees. Its delegate type comes from its CLR types,
   so a function whose types aren't CLR types yet can be called but isn't a value.
