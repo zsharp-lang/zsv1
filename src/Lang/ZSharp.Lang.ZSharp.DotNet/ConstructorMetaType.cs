@@ -7,7 +7,8 @@ using Code = ZSharp.HIR.Code;
 namespace ZSharp.Lang.DotNet
 {
     /// <summary>
-    /// The CLR constructor meta-compiler. A constructor always has <c>this</c>.
+    /// The CLR constructor meta-compiler. A constructor always has <c>this</c>. One with a
+    /// name says it is that named constructor, which its class makes in the CLR's terms.
     /// </summary>
     public sealed class ConstructorMetaType(
         ILLoader il,
@@ -34,6 +35,13 @@ namespace ZSharp.Lang.DotNet
 
             var block = new Code.Block();
             block.Statements.Add(body.Accessible(self, MemberDefaults.MethodsIn(compiler)));
+
+            if (!string.IsNullOrEmpty(constructor.Name))
+                block.Statements.Add(new Code.ExpressionStatement(CodeBody.Add(
+                    self,
+                    nameof(Package.DotNet.Constructor.Annotations),
+                    CodeBody.Construct(il.Load(typeof(Package.DotNet.NamedConstructor)), new Code.StringLiteral(constructor.Name))
+                )));
 
             if (body.Parameters(
                 compiler,

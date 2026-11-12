@@ -228,6 +228,21 @@ string? Run(string source)
     return null;
 }
 
+// Whether what the Cecil platform wrote of a named constructor says it is one: its
+// static method and its constructor carry the kept annotation, as [Metadata].
+bool Fail(string error) => throw new Exception(error);
+
+bool NamedConstructorWritten(Type type, string name)
+{
+    var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;
+    bool Says(System.Reflection.MemberInfo member)
+        => member.GetCustomAttributesData().Any(attribute => attribute.AttributeType.Name == "MetadataAttribute"
+            && attribute.ConstructorArguments[0].Value is Type { FullName: "Package.DotNet.NamedConstructor" });
+
+    return type.GetMethod(name, flags) is { } factory && Says(factory)
+        && type.GetConstructors(flags).Any(constructor => constructor.IsPrivate && Says(constructor));
+}
+
 object Kept()
 {
     var value = Probe.Kept[^1];
@@ -2221,6 +2236,43 @@ Try("an assembly the process has is the source of an import, as its file is", ()
         import { Math as Math322 } from Object.Assembly;
         Keep(Math322.Max(3, 7));
         """) is null && Kept() is 7);
+
+Try("a CLR class's named constructor is a static method of its name, calling a private constructor that takes a private marker of its own", () =>
+{
+    if (Run("""
+        @public def Counter323 {
+            @public let count: Int32;
+            @public @explicitThis new(this) { this.count = 0; }
+            @public @explicitThis new from(this, start: Int32) { this.count = start; }
+            @explicitThis new hidden(this) { this.count = 1; }
+        }
+        Keep(Counter323.from(41));
+        Keep(Counter323().count);
+        Keep(Counter323);
+        """) is { } error)
+        throw new Exception(error);
+
+    if (Probe.Kept is not [var made, 0, Type type])
+        return false;
+
+    var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;
+    var marker = type.GetNestedType("<from>", flags);
+    var factory = type.GetMethod("from", flags);
+    var constructor = type.GetConstructors(flags).SingleOrDefault(constructor => constructor.GetParameters() is [{ } first, { } second] && first.ParameterType == marker && second.ParameterType == typeof(int));
+    Probe.Kept.Clear();
+
+    return made.GetType() == type && (int)type.GetField("count")!.GetValue(made)! == 41
+        && marker is { IsNestedPrivate: true }
+        && constructor is { IsPrivate: true }
+        && factory is { IsStatic: true, IsPublic: true } && factory.ReturnType == type && factory.GetParameters() is [{ ParameterType: var start }] && start == typeof(int)
+        && type.GetMethod("hidden", flags) is { IsPrivate: true };
+});
+
+Try("a named constructor of a generic CLR class is an error, for now", () =>
+    Run("""
+        @public def Box324[T] { @public @explicitThis new of(this) { } }
+        Keep(Box324[Int32]);
+        """) is { } e && e.Contains("named constructor of can't be defined yet"));
 
 Try("a class nested in a class is a CLR nested type, a member of its class, private unless it says otherwise", () =>
 {
@@ -4720,6 +4772,7 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         }
         @public286 def Dog286 of DotNet_Class286 : Animal286, Greeter286 {
             @public286 @explicitThis286 new(this) { this.name = "dog"; }
+            @public286 @explicitThis286 new named(this, name: String) { this.name = name; }
             @public286 @override286 @explicitThis286 fun sound(this): String { return "woof"; }
             @public286 @explicitThis286 fun greet(this): String { return this.name + " says " + this.sound(); }
             @public286 def Tag286 of DotNet_Class286 {
@@ -4734,7 +4787,7 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         }
         fun clr(): String {
             let greeter: Greeter286 = Dog286();
-            return greeter.greet() + ", " + Holder286[String]("held").held + " " + Holder286[Int32](1).with[String]("with") + ", " + Dog286.Tag286().text;
+            return greeter.greet() + ", " + Holder286[String]("held").held + " " + Holder286[Int32](1).with[String]("with") + ", " + Dog286.Tag286().text + ", " + Dog286.named("rex").greet();
         }
         """);
     File.WriteAllText(Path.Combine(source, "shapes.zs"), """
@@ -4775,7 +4828,8 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         Keep(twice286(21));
         Keep(describe286(square286(3)));
         Keep(clr286());
-        """) is null && Probe.Kept is [42, "a square of side 3 and area 9, 1 made", "dog says woof, held with, tagged"];
+        """) is var failed286 && (failed286 is null || Fail(failed286)) && Probe.Kept is [42, "a square of side 3 and area 9, 1 made", "dog says woof, held with, tagged, rex says woof"]
+        && NamedConstructorWritten(AppDomain.CurrentDomain.GetAssemblies().Last(assembly => assembly.GetName().Name == "Twice286").GetType("Dog286")!, "named");
 });
 
 Try("inside its module, a function's name is all of its overloads", () =>

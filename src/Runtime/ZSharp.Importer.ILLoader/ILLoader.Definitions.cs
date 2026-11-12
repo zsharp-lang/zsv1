@@ -275,6 +275,16 @@ namespace ZSharp.Importer.ILLoader
         }
 
         /// <summary>
+        /// Keeps what is said of a member to keep on what it lowers to, as a class's is.
+        /// </summary>
+        private static void Keep(HIR.Annotated member, List<LIR.Metadata> metadata)
+        {
+            foreach (var annotation in member.Annotations)
+                if (annotation is HIR.Kept)
+                    metadata.Add(new LIR.KeptAnnotation(annotation));
+        }
+
+        /// <summary>
         /// A definition's accessibility, as CLR LIR marks it.
         /// </summary>
         private static LIR.CLR.Accessible Lowered(Package.DotNet.Accessibility accessibility)
@@ -348,6 +358,7 @@ namespace ZSharp.Importer.ILLoader
                 creation.Parameters.AddRange(code.Parameters.Skip(1));
 
                 var declared = new LIR.CLR.ClassConstructor(creation, new(code) { Body = new() }) { Metadata = { Lowered(constructor.Accessibility) } };
+                Keep(constructor, declared.Metadata);
 
                 definition.Constructors.Add(declared);
                 lowered.Constructors.Add(declared);
@@ -399,6 +410,7 @@ namespace ZSharp.Importer.ILLoader
                 };
 
                 declared.GenericParameters.AddRange(methodParameters);
+                Keep(method, declared.Metadata);
 
                 definition.Methods.Add(declared);
                 lowered.Methods[method] = declared;
