@@ -474,7 +474,7 @@ namespace ZSharp.Importer.ILLoader
                     if (field.DefaultValue is not null && Initialize(field, @class, constructor, declared, target) is { } error)
                         return error;
 
-                if (constructor.Body is { } body && Lower(body, declared.Function, null, constructor.Parameters, target) is { } invalid)
+                if (constructor.Body is { } body && Lower(body, declared.Function, null, constructor.This, constructor.Parameters, target) is { } invalid)
                     return invalid;
             }
 
@@ -488,7 +488,7 @@ namespace ZSharp.Importer.ILLoader
 
                 using var bound = Bind(@class, method.This, !method.IsStatic, method.Parameters, method.HasExplicitThis, signatures[(method, target ?? NoTarget)], target);
 
-                if (Lower(method.Body, declared.Function, method.ReturnType, method.Parameters, target) is { } error)
+                if (Lower(method.Body, declared.Function, method.ReturnType, method.This, method.Parameters, target) is { } error)
                     return error;
             }
 
@@ -737,7 +737,7 @@ namespace ZSharp.Importer.ILLoader
 
                 using var bound = Bind(null, null, false, method.Parameters, false, [.. function.Signature.Parameters], target);
 
-                if (Lower(method.Body, function, method.ReturnType, method.Parameters, target) is { } error)
+                if (Lower(method.Body, function, method.ReturnType, null, method.Parameters, target) is { } error)
                     return error;
             }
 

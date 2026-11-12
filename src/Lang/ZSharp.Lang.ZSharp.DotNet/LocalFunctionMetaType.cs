@@ -29,6 +29,13 @@ namespace ZSharp.Lang.DotNet
         private readonly HIR.Instance capture = il.Load(typeof(Code.Capture));
         private readonly HIR.Instance parameter = il.Load(typeof(Package.DotNet.Parameter));
         private readonly HIR.Instance decorated = il.Load(typeof(Code.Parameter));
+        private readonly HIR.Instance receiver = il.Load(typeof(Package.DotNet.This));
+
+        /// <summary>
+        /// The capture of each method's object, by the holder of its node in the code that
+        /// builds the method, so the method's functions share it.
+        /// </summary>
+        private readonly System.Runtime.CompilerServices.ConditionalWeakTable<Code.Local, Code.Local> objects = new();
 
         public IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition node, Code.Local self)
         {
@@ -128,7 +135,17 @@ namespace ZSharp.Lang.DotNet
             /// <param name="resolved">What the code around the function resolves the name to.</param>
             public IResult<Code.Expression, Error> Capture(string name, IResult<Code.Expression, Error> resolved)
             {
-                if (resolved.When(out var value).Error(out _) || value is not Code.Get { Instance: Code.Local holder })
+                if (resolved.When(out var value).Error(out _))
+                    return resolved;
+
+                // A member of the object a method runs on, as its class's members' names are,
+                // is a member of the object the function captures.
+                if (value is Code.NamedMember { Target: Code.Get { Instance: Code.Local target } } member)
+                    return Object(target) is { } captured
+                        ? Result<Code.Expression>.Ok(new Code.NamedMember { Target = captured, Name = member.Name })
+                        : resolved;
+
+                if (value is not Code.Get { Instance: Code.Local holder })
                     return resolved;
 
                 if (ReferenceEquals(holder.Type, owner.capture))
@@ -160,14 +177,51 @@ namespace ZSharp.Lang.DotNet
                 return Share(made);
             }
 
+            /// <summary>
+            /// The capture of the object a method runs on, which its node's holder holds, as a
+            /// variable is captured: once for all the method's functions, and marked. No name is
+            /// bound to it, so nothing is bound over. A capture of it, as a function around
+            /// this one has, is shared.
+            /// </summary>
+            private Code.Get? Object(Code.Local holder)
+            {
+                if (ReferenceEquals(holder.Type, owner.capture))
+                    return Shared(holder);
+
+                if (!ReferenceEquals(holder.Type, owner.receiver))
+                    return null;
+
+                if (!owner.objects.TryGetValue(holder, out var made))
+                {
+                    made = new Code.Local(holder.Name, (HIR.Type)owner.capture)
+                    {
+                        Init = CodeBody.Construct(owner.capture, new Code.Get(holder))
+                    };
+
+                    around.Statements.Add(new Code.Declare(made));
+                    around.Statements.Add(new Code.ExpressionStatement(new Code.Set
+                    {
+                        Target = new Code.NamedMember { Target = new Code.Get(holder), Name = nameof(Package.DotNet.This.IsCaptured) },
+                        Value = new Code.BooleanLiteral(true)
+                    }));
+
+                    owner.objects.Add(holder, made);
+                }
+
+                return Shared(made);
+            }
+
             private IResult<Code.Expression, Error> Share(Code.Local holder)
+                => Result<Code.Expression>.Ok(Shared(holder));
+
+            private Code.Get Shared(Code.Local holder)
             {
                 if (captured.Add(holder))
                     block.Statements.Add(new Code.ExpressionStatement(
                         CodeBody.Add(self, nameof(Package.DotNet.LocalFunction.Captures), new Code.Get(holder))
                     ));
 
-                return Result<Code.Expression>.Ok(new Code.Get(holder));
+                return new Code.Get(holder);
             }
 
             /// <summary>

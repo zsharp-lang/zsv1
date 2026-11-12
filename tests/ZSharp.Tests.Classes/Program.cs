@@ -2344,6 +2344,54 @@ Try("a static method's code can't reach an object's member by its name, as it ha
         NoObject329.read();
         """) is { } e && e.Contains("no member named name"));
 
+Try("a local function in a method reaches the class's members by their names, capturing the object, as nested ones and values do", () =>
+    ResetKept() && Run("""
+        @public def Captures330 {
+            @public let name: String;
+            @public let count: Int32;
+            @public new() { name = "local"; count = 0; }
+            @public fun get(): String {
+                fun inner(): String { return name; }
+                return inner();
+            }
+            @public fun bumpTwice(): Int32 {
+                fun bump() { count = count + 1; }
+                fun again(): Int32 { bump(); return count; }
+                bump();
+                return again();
+            }
+            @public fun nested(): String {
+                fun outer(): String {
+                    fun deeper(): String { return name + "!"; }
+                    return deeper();
+                }
+                return outer();
+            }
+            @public fun asValue(): String {
+                fun reader(): String { return name; }
+                let read: Func[String] = reader;
+                name = "changed";
+                return read();
+            }
+        }
+        Keep(Captures330().get());
+        Keep(Captures330().bumpTwice());
+        Keep(Captures330().nested());
+        Keep(Captures330().asValue());
+        """) is null && Probe.Kept is ["local", 2, "local!", "changed"] && ResetKept());
+
+Try("a local function in a static method reaches the class's static members by their names", () =>
+    ResetKept() && Run("""
+        @public def StaticCaptures331 {
+            @public @static fun one(): Int32 { return 1; }
+            @public @static fun two(): Int32 {
+                fun add(): Int32 { return one() + one(); }
+                return add();
+            }
+        }
+        Keep(StaticCaptures331.two());
+        """) is null && Kept() is 2);
+
 Try("a class nested in a class is a CLR nested type, a member of its class, private unless it says otherwise", () =>
 {
     if (Run("""

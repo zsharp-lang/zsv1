@@ -304,9 +304,9 @@ simple name; in a static method, the class, so a static member is reached and an
 member fails as it does through the class. A base class's members are reached through
 `this`, since the class doesn't know them as it compiles.
 
-**Not yet:** a local function in a method can't reach the class's members by their names,
-since it would capture the method's object, which isn't a variable it can capture yet. It
-reaches them through an explicit `this`, which it captures as a parameter.
+A local function in a method reaches them by their names too: a name the code around it
+resolves to a member of the method's object is a member of the object the function
+captures, as it captures a variable (see Captures).
 
 A constructor call and a base call use the same call syntax, which covers both
 `new Foo()` and `base()` in C#. A base call passes the constructor's first parameter

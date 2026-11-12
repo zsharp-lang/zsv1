@@ -1,10 +1,16 @@
 namespace Package.DotNet
 {
     /// <summary>
-    /// The object an instance method or a constructor runs on.
+    /// The object an instance method or a constructor runs on, a variable of its code,
+    /// which a function in the code can capture, as it captures a parameter.
     /// </summary>
     public sealed class This
-        : ZSharp.HIR.Instance
+        : ZSharp.HIR.Variable
+        , ZSharp.HIR.Instance
     {
+        /// <summary>
+        /// Whether a function in the code captures it.
+        /// </summary>
+        public bool IsCaptured { get; set; }
     }
 }
