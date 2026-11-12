@@ -36,7 +36,8 @@ forty-two
 ## std:oop
 
 Z#'s classes and interfaces, which [Classes](../language/classes.md) and
-[Interfaces](../language/interfaces.md) describe.
+[Interfaces](../language/interfaces.md) describe. How the library is built, its nodes, COs and meta-compilers, is
+in [its README](../../std/oop/README.md).
 
 | Name | What it is |
 |---|---|
@@ -109,8 +110,8 @@ sources as one module, and `emit(value)` adds to what compiling the project give
 
 ## std:modules
 
-`Module` and `Global`, a module's node and its globals'. `std:modules/compiler` compiles
-them:
+`Module` and `Global`, a module's node and its globals', which [its README](../../std/modules/README.md)
+describes with its compiler. `std:modules/compiler` compiles them:
 
 | Name | What it does |
 |---|---|
@@ -120,7 +121,8 @@ them:
 
 ## std:functions
 
-`Function`, `Positional` and `Named`: a function's node and its parameters'.
+`Function`, `Positional` and `Named`: a function's node and its parameters'. [Its
+README](../../std/functions/README.md) describes them with their compiler.
 `std:functions/compiler` compiles them, and has `premap(declared, to)`, which makes a
 function declared with no code call another, as the prelude makes `reflect` call
 `std:encoding`'s `describe`.
