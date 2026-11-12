@@ -1,4 +1,4 @@
-using ZSharp.Parser; using ZSharp.Text; using ZSharp.Tokenizer;
+using ZSharp.Parser; using ZSharp.Syntax; using ZSharp.Text; using ZSharp.Tokenizer;
 var filePath = args[0];
 ZSharp.AST.Document documentNode;
 using (StreamReader stream = File.OpenText(filePath))

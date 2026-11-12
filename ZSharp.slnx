@@ -2,6 +2,7 @@
   <Folder Name="/src/" />
   <Folder Name="/src/CLI/">
     <Project Path="src/CLI/ZSharp.CLI/ZSharp.CLI.csproj" />
+    <Project Path="src/Toolchain/ZSharp.Toolchain/ZSharp.Toolchain.csproj" />
   </Folder>
   <Folder Name="/src/Diagnostics/">
     <Project Path="src/Diagnostics/ZSharp.Diagnostics.HIR/ZSharp.Diagnostics.HIR.csproj" />
@@ -54,6 +55,7 @@
     <Project Path="src/Lang/ZSharp.Lang.ZSharp.DotNet/ZSharp.Lang.ZSharp.DotNet.csproj" />
     <Project Path="src/Lang/ZSharp.Lang.ZSharp/ZSharp.Lang.ZSharp.csproj" />
     <Project Path="src/Lang/ZSharp.Parser/ZSharp.Parser.csproj" />
+    <Project Path="src/Lang/ZSharp.Syntax/ZSharp.Syntax.csproj" />
     <Project Path="src/Lang/ZSharp.Text/ZSharp.Text.csproj" />
     <Project Path="src/Lang/ZSharp.Tokenizer/ZSharp.Tokenizer.csproj" />
   </Folder>

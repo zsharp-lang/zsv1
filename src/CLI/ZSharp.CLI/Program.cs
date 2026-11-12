@@ -1,4 +1,4 @@
-// The entry point of Z#: the command line. It puts the toolchain together and runs a
+// The entry point of Z#: the command line. It has the toolchain put together and runs a
 // script. What gets compiled after that, and how, is up to the script.
 
 // Diagnostics print to standard error, so a program's own output stays as it is.
@@ -18,7 +18,7 @@ if (files.Length != 1 || options.Except(["--trace-reification", "--dump-definiti
 
 Core.ZSharp.ModuleScope.Arguments = args[(script + 1)..];
 
-var toolchain = new ZSharp.CLI.Toolchain(
+var toolchain = new ZSharp.Toolchain.Toolchain(
     traceReification: options.Contains("--trace-reification"),
     dumpDefinitions: options.Contains("--dump-definitions")
 );

@@ -1,4 +1,4 @@
-﻿using CommonZ.Utils;
+using CommonZ.Utils;
 using ZSharp.AST;
 using ZSharp.Text;
 
@@ -7,6 +7,8 @@ namespace ZSharp.Parser
     public delegate Expression NudFunction(Parser parser);
 
     public delegate Expression LedFunction(Parser parser, Expression left);
+
+    public delegate Expression TerminalFunction(Token token);
 
 
     public sealed partial class ExpressionParser
