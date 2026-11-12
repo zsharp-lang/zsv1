@@ -7,7 +7,7 @@
 import { compile, emit } from "core:project";
 import { Object, String, Boolean, Int32, Type, List, Func, Path, Directory, File, Environment, Assembly, ilLoader } from "core:runtime";
 
-import { AppContext, Version, AssemblyName, AssemblyLoadContext } from Object.Assembly.Location;
+import { AppContext, Version, AssemblyName, AssemblyLoadContext } from Object.Assembly;
 
 import { Instance } from "std:zsharp/hir";
 import { Error, Result, IResult } from "std:zsharp/common";

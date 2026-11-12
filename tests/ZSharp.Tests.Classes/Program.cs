@@ -126,6 +126,7 @@ Core.ZSharp.ModuleScope.Documents = documents;
 
 var assemblies = new Assemblies(il, Core.ZSharp.ModuleScope.Describers) { ImportLibrary = source => importer.Import(source) };
 Core.ZSharp.ModuleScope.Enter = assemblies.Enter;
+Core.Runtime.ModuleScope.Assemblies = assemblies;
 fileImporter.Register(".dll", assemblies.ImportFile);
 
 if (ZSharp.Importer.String.DocumentLibrary.Above(AppContext.BaseDirectory, "std") is { } standard)
@@ -2215,6 +2216,12 @@ Try("a module's functions are public and its globals private unless they say oth
         && Method("inside321").IsAssembly;
 });
 
+Try("an assembly the process has is the source of an import, as its file is", () =>
+    Run("""
+        import { Math as Math322 } from Object.Assembly;
+        Keep(Math322.Max(3, 7));
+        """) is null && Kept() is 7);
+
 Try("a class nested in a class is a CLR nested type, a member of its class, private unless it says otherwise", () =>
 {
     if (Run("""
@@ -3713,7 +3720,7 @@ Try("an import in a body passes its arguments too", () =>
 });
 
 Try("an import with arguments no overload takes is an error", () =>
-    Run($$"""import(true, false) { Library95 } from "{{Library("Library95", "x")}}";""") is { } e && e.Contains("None of the 3 overloads applies"));
+    Run($$"""import(true, false) { Library95 } from "{{Library("Library95", "x")}}";""") is { } e && e.Contains("overloads applies"));
 
 Try("an import in a body runs as the body is built", () =>
 {

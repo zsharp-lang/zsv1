@@ -4,6 +4,6 @@ import { compile, emit } from "core:project";
 import { build } from "std:framework";
 import { Object, Type } from "core:runtime";
 
-import { MethodInfo, FieldInfo, BindingFlags } from Object.Assembly.Location;
+import { MethodInfo, FieldInfo, BindingFlags } from Object.Assembly;
 
 emit(build(compile("oop")));

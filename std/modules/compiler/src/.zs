@@ -4,6 +4,6 @@ import { compile, emit } from "core:project";
 import { build } from "std:framework";
 import { Object, Type } from "core:runtime";
 
-import { MemberInfo } from Object.Assembly.Location;
+import { MemberInfo } from Object.Assembly;
 
 emit(build(compile("compiler")));

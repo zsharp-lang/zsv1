@@ -69,6 +69,9 @@
   type arguments gives the generic type of that name and arity, whatever its namespace,
   as C# reads `IList` and `IList<T>`; a name of generic types only is its arities, as
   overloads.
+- An assembly the running platform has is a source too, as in `import { BindingFlags }
+  from Object.Assembly`: `core:runtime`'s `import(Assembly)` gives what importing its
+  file gives, through the same importer, so nothing finds the file.
 - Nothing is imported for a script. The prelude, `std:prelude`, imports what a script
   wants, so a script imports it first, `import "std:prelude";`, and gets the standard
   definitions, as Z# functions, through an ordinary import.

@@ -13,7 +13,7 @@ import {
  } from "core:runtime";
 import { static, public } from "std:zsharp/package/dotnet";
 
-import { BindingFlags, Convert, Enum, Version, AppContext, Byte, Module as ReflectedModule } from Object.Assembly.Location;
+import { BindingFlags, Convert, Enum, Version, AppContext, Byte, Module as ReflectedModule } from Object.Assembly;
 import { Assemblies } from Path.Combine(AppContext.BaseDirectory, "ZSharp.Importer.ILLoader.dll");
 // The attributes the IL loader reads, which an assembly it imports carries.
 import { EntryPointAttribute, ModuleScopeAttribute, MetadataAttribute, ReflectionBlobAttribute } from Path.Combine(AppContext.BaseDirectory, "ZSharp.Importer.ILLoader.Attributes.dll");

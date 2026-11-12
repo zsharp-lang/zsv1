@@ -4,6 +4,6 @@ import { compile, emit } from "core:project";
 import { build } from "std:framework";
 import { Object, Type } from "core:runtime";
 
-import { Convert } from Object.Assembly.Location;
+import { Convert } from Object.Assembly;
 
 emit(build(compile("dotnet")));
