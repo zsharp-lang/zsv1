@@ -8,8 +8,6 @@ namespace ZSharp.LIR.CLR
     public sealed class ClassDefinition(string name)
         : LIR.Type
     {
-        public Accessibility Accessibility { get; set; } = Accessibility.Public;
-
         public string Name { get; set; } = name;
 
         /// <summary>
@@ -88,7 +86,10 @@ namespace ZSharp.LIR.CLR
     public sealed class ClassField(string name, LIR.Type type)
         : ClassMember
     {
-        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+        /// <summary>
+        /// What a platform may interpret of the member, as its accessibility.
+        /// </summary>
+        public List<LIR.Metadata> Metadata { get; } = [];
 
         public ClassDefinition? Owner { get; set; }
 
@@ -118,7 +119,10 @@ namespace ZSharp.LIR.CLR
         : LIR.ICallable
         , ClassMember
     {
-        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+        /// <summary>
+        /// What a platform may interpret of the member, as its accessibility.
+        /// </summary>
+        public List<LIR.Metadata> Metadata { get; } = [];
 
         public ClassDefinition? Owner { get; set; }
 
@@ -134,7 +138,10 @@ namespace ZSharp.LIR.CLR
         : LIR.ICallable
         , ClassMember
     {
-        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+        /// <summary>
+        /// What a platform may interpret of the member, as its accessibility.
+        /// </summary>
+        public List<LIR.Metadata> Metadata { get; } = [];
 
         public ClassDefinition? Owner { get; set; }
 
@@ -166,11 +173,17 @@ namespace ZSharp.LIR.CLR
 
     /// <summary>
     /// A field, constructor or method of a class, which knows the class it is in, so a
-    /// platform reaching a member first reaches its class.
+    /// platform reaching a member first reaches its class, and carries metadata, as a
+    /// definition does.
     /// </summary>
     public interface ClassMember
     {
         public ClassDefinition? Owner { get; set; }
+
+        /// <summary>
+        /// What a platform may interpret of the member, such as who can reach it.
+        /// </summary>
+        public List<LIR.Metadata> Metadata { get; }
     }
 
     /// <summary>

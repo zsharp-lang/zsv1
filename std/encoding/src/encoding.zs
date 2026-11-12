@@ -19,7 +19,7 @@
 //   - A CLR definition of the module is written as the entity it is built as, by its id.
 //   - Anything else is written by its fields, with what is shared written once.
 
-import { Object, String, Boolean, Int32, Int64, Byte, Type, List, Dictionary, Assembly, DotNet_Class, explicitThis, ilLoader, public } from "core:runtime";
+import { Object, String, Boolean, Int32, Int64, Byte, Type, List, Dictionary, Assembly, DotNet_Class, explicitThis, ilLoader } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
 import { Instance, Annotated, Kept, Encoded } from "std:zsharp/hir";
 import { Code, Local } from "std:zsharp/hir/code";
 import { DotNetDefinition } from "std:zsharp/package/dotnet";

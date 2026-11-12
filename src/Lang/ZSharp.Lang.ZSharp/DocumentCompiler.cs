@@ -226,7 +226,7 @@ namespace ZSharp.Lang
 
             // The document is running, so an import that can run now does, and its names are
             // bound to what it gave, as anywhere else an import can run while compiling.
-            if (CompileTime.Is(importing!))
+            if (language.CompileTime.Is(importing!))
             {
                 if (host.Evaluate(Document, importing!).When(out var value).Error(out error))
                     return Result<HIRStatement>.Error(error);

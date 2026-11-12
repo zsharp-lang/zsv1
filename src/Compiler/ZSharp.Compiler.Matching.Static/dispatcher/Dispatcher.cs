@@ -15,11 +15,11 @@ namespace ZSharp.Compiler.MatchingDispatchers.Static
         {
             @base = matching.Clone();
 
-            matching.Pattern = Pattern;
-            matching.Parameter = Parameter;
+            matching.MatchPattern = Match;
+            matching.BindParameter = Bind;
         }
 
-        public IResult Pattern(CompilerObject value, CompilerObject pattern)
+        public IResult Match(CompilerObject value, CompilerObject pattern)
         {
             var result = @base.Match(value, pattern);
 
@@ -36,12 +36,13 @@ namespace ZSharp.Compiler.MatchingDispatchers.Static
             return result;
         }
 
-        public IResult Parameter(CompilerObject parameter, ArgumentStream arguments)
+        public IResult Bind(CompilerObject parameter, ArgumentStream arguments)
         {
-            var result = @base.Match(parameter, arguments);
+            var result = @base.Bind(parameter, arguments);
 
-            if (result.IsUnsupported() && parameter.Is<ICTParameter>(out var match))
-                result = match.Match(arguments);
+            if (result.IsUnsupported() && parameter.Is<ICTBind>(out var bound))
+                result = bound.Bind(arguments);
+
 
             return result;
         }

@@ -16,6 +16,11 @@ namespace ZSharp.Lang
         public Dictionary<string, HIR.Code.OverloadGroup> Functions { get; } = [];
 
         /// <summary>
+        /// Whether code can run while compiling, as each kind of node says.
+        /// </summary>
+        public CompileTime CompileTime { get; } = new();
+
+        /// <summary>
         /// Adds an overload to the function a piece of syntax stands for.
         /// </summary>
         public void Add(string syntax, HIR.Instance function)

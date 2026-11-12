@@ -86,8 +86,6 @@ namespace ZSharp.Importer.ILLoader
                 ? Result.Ok(global)
                 : Result.Error($"Field {field.Name} can only be reached through its class."));
             loader.Instances.Register<Package.DotNet.Parameter>(LoadVariable);
-            loader.Instances.Register<HIR.Code.PositionalParameter>(LoadVariable);
-            loader.Instances.Register<HIR.Code.NamedParameter>(LoadVariable);
 
             // A parameter as defined is what a call matches arguments to, and as an instance
             // it is the variable the code it belongs to uses.

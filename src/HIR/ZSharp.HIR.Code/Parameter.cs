@@ -26,44 +26,4 @@ namespace ZSharp.HIR.Code
         /// </summary>
         public bool IsCaptured { get; set; }
     }
-
-    /// <summary>
-    /// A parameter that only a positional argument fills, or else its default value.
-    /// </summary>
-    public sealed class PositionalParameter(string name, Type? type)
-        : Parameter
-    {
-        public PositionalParameter(string name)
-            : this(name, null)
-        {
-        }
-
-        public string Name { get; set; } = name;
-
-        public Type? Type { get; set; } = type;
-
-        public Expression? DefaultValue { get; set; }
-
-        public bool IsCaptured { get; set; }
-    }
-
-    /// <summary>
-    /// A parameter that only an argument with its name fills, or else its default value.
-    /// </summary>
-    public sealed class NamedParameter(string name, Type? type)
-        : Parameter
-    {
-        public NamedParameter(string name)
-            : this(name, null)
-        {
-        }
-
-        public string Name { get; set; } = name;
-
-        public Type? Type { get; set; } = type;
-
-        public Expression? DefaultValue { get; set; }
-
-        public bool IsCaptured { get; set; }
-    }
 }

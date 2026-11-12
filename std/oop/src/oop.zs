@@ -21,7 +21,7 @@
 // The nodes are the platform's own definitions, written with one meta-type, `Node`, so
 // another platform reimplements them by giving that name its own.
 
-import { String, Object, Boolean, List, DotNet_Class as Node, explicitThis, public } from "core:runtime";
+import { String, Object, Boolean, List, DotNet_Class as Node, explicitThis } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
 import { importers } from "core:zsharp";
 import { entrypoint } from "std:framework";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";

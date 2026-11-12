@@ -107,8 +107,8 @@ print("" + wide + " " + text.Length + " " + (nothing == null));
 ## Accessibility of the CLR's definitions
 
 A class of the CLR's defined in Z#, as `def Name of DotNet_Class`, has the CLR's
-accessibility, which `core:runtime`'s decorators set: `@public`, `@private`, `@internal`
-and `@protected`. They apply to the CLR's definitions alone. What isn't written is
+accessibility, which the decorators of `std:zsharp/package/dotnet` set: `@public`,
+`@private`, `@internal` and `@protected`. They apply to the CLR's definitions alone. What isn't written is
 decided by where it is:
 
 - a class and its members are private, and a top-level class, which the CLR can't make
@@ -118,7 +118,8 @@ decided by where it is:
   always written.
 
 ```zs fragment
-import { Int32, DotNet_Class, explicitThis, public } from "core:runtime";
+import { Int32, DotNet_Class, explicitThis } from "core:runtime";
+import { public } from "std:zsharp/package/dotnet";
 
 @public def Counter of DotNet_Class {
     let count: Int32;                                   // private

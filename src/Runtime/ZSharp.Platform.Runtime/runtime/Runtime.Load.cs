@@ -255,14 +255,14 @@ namespace ZSharp.Platform.Runtime
             var implemented = Implemented(definition);
 
             foreach (var field in definition.Fields)
-                classFields[field] = builder.DefineField(field.Name, ImportType(field.Type), FieldVisibility(field.Accessibility));
+                classFields[field] = builder.DefineField(field.Name, ImportType(field.Type), FieldVisibility(Accessible.Of(field.Metadata)));
 
             foreach (var member in definition.Fields.Cast<object>().Concat(definition.Constructors).Concat(definition.Methods))
                 owners[member] = definition;
 
             foreach (var constructor in definition.Constructors)
                 classConstructors[constructor] = builder.DefineConstructor(
-                    MethodVisibility(constructor.Accessibility),
+                    MethodVisibility(Accessible.Of(constructor.Metadata)),
                     IL.CallingConventions.Standard,
                     [.. constructor.Signature.Parameters.Select(parameter => ImportType(parameter.Type))]
                 );
@@ -306,7 +306,7 @@ namespace ZSharp.Platform.Runtime
         /// </summary>
         private static IL.MethodAttributes Attributes(ClassDefinition definition, ClassMethod method, HashSet<string> implemented)
         {
-            var attributes = MethodVisibility(method.Accessibility) | IL.MethodAttributes.HideBySig;
+            var attributes = MethodVisibility(Accessible.Of(method.Metadata)) | IL.MethodAttributes.HideBySig;
 
             if (method.IsStatic)
                 return attributes | IL.MethodAttributes.Static;
@@ -330,8 +330,8 @@ namespace ZSharp.Platform.Runtime
         /// </summary>
         private static IL.TypeAttributes Visibility(ClassDefinition definition)
             => definition.DeclaringType is null
-                ? definition.Accessibility == Accessibility.Public ? IL.TypeAttributes.Public : IL.TypeAttributes.NotPublic
-                : definition.Accessibility switch
+                ? Accessible.Of(definition.Metadata) == Accessibility.Public ? IL.TypeAttributes.Public : IL.TypeAttributes.NotPublic
+                : Accessible.Of(definition.Metadata) switch
                 {
                     Accessibility.Public => IL.TypeAttributes.NestedPublic,
                     Accessibility.Private => IL.TypeAttributes.NestedPrivate,
@@ -382,7 +382,7 @@ namespace ZSharp.Platform.Runtime
             if (definition.IsInterface)
                 return;
 
-            foreach (var method in definition.Methods.Where(method => !method.IsStatic && method.Accessibility != Accessibility.Public))
+            foreach (var method in definition.Methods.Where(method => !method.IsStatic && Accessible.Of(method.Metadata) != Accessibility.Public))
                 foreach (var @interface in definition.Interfaces)
                     foreach (var (name, taken, target) in InterfaceMethods(@interface))
                         if (name == method.Name && taken == method.Signature.Parameters.Count - 1)
@@ -628,7 +628,7 @@ namespace ZSharp.Platform.Runtime
             var field = Holder(global.Module).DefineField(
                 Unique(global.Name),
                 ImportType(global.Type),
-                IL.FieldAttributes.Public | IL.FieldAttributes.Static
+                FieldVisibility(Accessible.Of(global.Metadata)) | IL.FieldAttributes.Static
             );
 
             globals[global] = field;
@@ -644,7 +644,7 @@ namespace ZSharp.Platform.Runtime
 
             var method = Holder(function.Module).DefineMethod(
                 Unique(function.Name),
-                IL.MethodAttributes.Public | IL.MethodAttributes.Static,
+                MethodVisibility(Accessible.Of(function.Metadata)) | IL.MethodAttributes.Static,
                 ImportType(function.Signature.ReturnType),
                 [.. function.Signature.Parameters.Select(parameter => ImportType(parameter.Type))]
             );

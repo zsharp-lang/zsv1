@@ -37,7 +37,7 @@ function, as a decorator says it is an entry point, is its annotations.
 |---|---|---|
 | `FunctionObject` | A function. Calling it matches the arguments to its parameters. It lowers once per target, to an LIR function of what holds it, if something does. | `ICTCallable`, `ICTCastTo`, `Held`, `ICompileIRDefinitionIn[LIRModule]`, `ICompileIRReference[ICallable]` |
 | `FunctionCall` | A call of a function, with its matched values. | `ICompileIRExpression`, `ITyped` |
-| `ParameterObject` | A parameter, both as a call matches an argument to it, through the matching REI, and as its function's code uses it. It owns the LIR parameter for each target. | `ICTParameter`, `ICompileIRExpression`, `ICompileIRReference[LIRParameter]`, `ITyped` |
+| `ParameterObject` | A parameter, both as a call matches an argument to it, through the matching REI, and as its function's code uses it. It owns the LIR parameter for each target. | `ICTBind`, `ICompileIRExpression`, `ICompileIRReference[LIRParameter]`, `ITyped` |
 | `Known` | A value that exists as the code is compiled, as a definition's node does. | `ICompileIRExpression`, `ITyped` |
 
 ### How it plugs into the compiler

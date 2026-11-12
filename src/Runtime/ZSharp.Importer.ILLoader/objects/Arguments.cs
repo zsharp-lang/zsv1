@@ -17,7 +17,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             var values = new List<CompilerObject>();
 
             foreach (var parameter in parameters)
-                if (Scope.Matching.Match(parameter, stream).Ok(out var value))
+                if (Scope.Matching.Bind(parameter, stream).Ok(out var value))
                     values.Add(value);
                 else
                     return null;
@@ -78,9 +78,9 @@ namespace ZSharp.Importer.ILLoader.Objects
     /// </summary>
     internal sealed class ClrParameter(ParameterInfo parameter, ILLoader loader)
         : CompilerObject
-        , ICTParameter
+        , ICTBind
     {
-        public IResult Match(ArgumentStream arguments)
+        public IResult Bind(ArgumentStream arguments)
         {
             var name = parameter.Name ?? string.Empty;
             var type = loader.ParameterType(parameter);
@@ -125,9 +125,9 @@ namespace ZSharp.Importer.ILLoader.Objects
     /// </summary>
     internal sealed class DefinedParameter(Package.DotNet.Parameter node)
         : CompilerObject
-        , ICTParameter
+        , ICTBind
     {
-        public IResult Match(ArgumentStream arguments)
+        public IResult Bind(ArgumentStream arguments)
         {
             if (node.Type is null || !Scope.HIRLoader.LoadType(node.Type).Ok(out var type))
                 return Result.Error($"Parameter {node.Name} has no type.");

@@ -5,7 +5,7 @@
 import { Polymorphism, PlatformInterfaces } from "std:zsharp/capabilities";
 import { Implementation, implement } from "std:traits";
 import { entrypoint } from "std:framework";
-import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest, explicitThis, public } from "core:runtime";
+import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest, explicitThis } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
 import { Structure, Function, Type as LIRType } from "std:zsharp/lir";
 
 // The CLR has polymorphism: a polymorphic structure is a CLR class or interface, and a

@@ -144,8 +144,8 @@ An interface is a type definition with `of DotNet_Interface`, so it needs no key
 one can be added later, in Z#. Its methods have no body, written `fun f(): T;`, and its
 bases are interfaces it extends. A class's bases are sorted as it is constructed, once
 they are built: an interface is one it implements, and anything else is its one base
-class. `@virtual`, `@abstract` and `@override` come from `core:runtime`, as `@static`
-does, so methods aren't virtual unless marked, as in C#. On the CLR, the IL loader
+class. `@virtual`, `@abstract` and `@override` come from CLR HIR's own module,
+`std:zsharp/package/dotnet`, as `@static` does, so methods aren't virtual unless marked, as in C#. On the CLR, the IL loader
 defines an interface through a class-shaped view of it, which the class machinery
 handles, and maps the type back to the interface's node. A method that implements an
 interface method by its name is made virtual and final, as C# makes it, so the CLR maps

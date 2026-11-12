@@ -11,7 +11,7 @@
 // compiler needs of them. Importing it makes `module` a Z# module wherever nothing else
 // compiles one, as `module` is `def` of Module.
 
-import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Class, DotNet_Module, explicitThis, static, public } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Class, DotNet_Module, explicitThis } from "core:runtime"; import { static, public } from "std:zsharp/package/dotnet";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "std:zsharp/hir";
 import { Call } from "std:zsharp/hir/code";
 import { Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get, Declare, BlockExpression, Statement, Cast } from "std:zsharp/hir/code";

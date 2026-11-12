@@ -6,7 +6,7 @@
 // reaches, asks what holds it. Belonging is how a definition is lowered, so it is in the
 // COs, and the nodes stay structure.
 
-import { Object, Boolean, Int32, List, DotNet_Interface, DotNet_Class, static, public } from "core:runtime";
+import { Object, Boolean, Int32, List, DotNet_Interface, DotNet_Class } from "core:runtime"; import { static, public } from "std:zsharp/package/dotnet";
 import { Module as LIRModule, Definition as LIRDefinition, Statement as LIRStatement, Initialized, Metadata, KeptAnnotation } from "std:zsharp/lir";
 import { Annotated, Kept } from "std:zsharp/hir";
 

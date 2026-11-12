@@ -226,11 +226,10 @@ namespace ZSharp.Importer.ILLoader
             return Lowering(target, key =>
             {
                 var node = @class.Node;
-                var lowered = new Objects.LoweredClass(new LIR.CLR.ClassDefinition(node.Name)
-                {
-                    // An interface's accessibility is the interface's, not the view's it is defined by.
-                    Accessibility = Lowered((Description(node) as Package.DotNet.Accessible ?? node).Accessibility)
-                });
+                var lowered = new Objects.LoweredClass(new LIR.CLR.ClassDefinition(node.Name));
+
+                // An interface's accessibility is the interface's, not the view's it is defined by.
+                lowered.Definition.Metadata.Add(Lowered((Description(node) as Package.DotNet.Accessible ?? node).Accessibility));
 
                 // What is said of the class to keep is kept on what it lowers to: of an
                 // interface, what is said of the interface, not of the view it is defined by.
@@ -276,10 +275,10 @@ namespace ZSharp.Importer.ILLoader
         }
 
         /// <summary>
-        /// A definition's accessibility, as CLR LIR has it.
+        /// A definition's accessibility, as CLR LIR marks it.
         /// </summary>
-        private static LIR.CLR.Accessibility Lowered(Package.DotNet.Accessibility accessibility)
-            => accessibility switch
+        private static LIR.CLR.Accessible Lowered(Package.DotNet.Accessibility accessibility)
+            => new(accessibility switch
             {
                 Package.DotNet.Accessibility.Public => LIR.CLR.Accessibility.Public,
                 Package.DotNet.Accessibility.Private => LIR.CLR.Accessibility.Private,
@@ -288,7 +287,7 @@ namespace ZSharp.Importer.ILLoader
                 Package.DotNet.Accessibility.ProtectedInternal => LIR.CLR.Accessibility.ProtectedInternal,
                 Package.DotNet.Accessibility.PrivateProtected => LIR.CLR.Accessibility.PrivateProtected,
                 _ => throw new ArgumentOutOfRangeException(nameof(accessibility)),
-            };
+            });
 
         /// <summary>
         /// What the CLR names a method: an accessor for its property, as <c>get_Name</c> and
@@ -327,7 +326,7 @@ namespace ZSharp.Importer.ILLoader
                     return error;
                 else
                 {
-                    var declared = new LIR.CLR.ClassField(field.Name, type!) { Accessibility = Lowered(field.Accessibility) };
+                    var declared = new LIR.CLR.ClassField(field.Name, type!) { Metadata = { Lowered(field.Accessibility) } };
 
                     definition.Fields.Add(declared);
                     lowered.Fields[field] = declared;
@@ -348,7 +347,7 @@ namespace ZSharp.Importer.ILLoader
                 var creation = new LIR.Signature { ReturnType = definition };
                 creation.Parameters.AddRange(code.Parameters.Skip(1));
 
-                var declared = new LIR.CLR.ClassConstructor(creation, new(code) { Body = new() }) { Accessibility = Lowered(constructor.Accessibility) };
+                var declared = new LIR.CLR.ClassConstructor(creation, new(code) { Body = new() }) { Metadata = { Lowered(constructor.Accessibility) } };
 
                 definition.Constructors.Add(declared);
                 lowered.Constructors.Add(declared);
@@ -393,7 +392,7 @@ namespace ZSharp.Importer.ILLoader
                     new(signature) { Name = name, Body = new() }
                 )
                 {
-                    Accessibility = Lowered(method.Accessibility),
+                    Metadata = { Lowered(method.Accessibility) },
                     IsVirtual = method.IsVirtual,
                     IsAbstract = method.IsAbstract || definition.IsInterface,
                     IsOverride = method.IsOverride
@@ -674,7 +673,7 @@ namespace ZSharp.Importer.ILLoader
                 if (CompileType(field.Type, target).When(out var type).Error(out var error))
                     return error;
 
-                var global = new LIR.Global(type!) { Name = field.Name };
+                var global = new LIR.Global(type!) { Name = field.Name, Metadata = { Lowered(field.Accessibility) } };
 
                 lowered.Module.Globals.Add(global);
                 lowered.Globals[field] = global;
@@ -693,7 +692,7 @@ namespace ZSharp.Importer.ILLoader
                     else
                         signature.ReturnType = type;
 
-                var function = new LIR.Function(signature) { Name = method.Name, Body = new() };
+                var function = new LIR.Function(signature) { Name = method.Name, Body = new(), Metadata = { Lowered(method.Accessibility) } };
 
                 lowered.Module.Functions.Add(function);
                 lowered.Functions[method] = function;

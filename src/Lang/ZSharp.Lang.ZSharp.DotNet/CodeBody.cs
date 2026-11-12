@@ -76,11 +76,19 @@ namespace ZSharp.Lang.DotNet
         }
 
         /// <summary>
-        /// Adds code that builds each parameter of a CLR member, as the parameters of
-        /// <c>HIR.Code</c>.
+        /// Adds code that builds each parameter of a CLR member, as the CLR has them: an
+        /// argument with its name fills it, or else the next positional one, or else its
+        /// default value. A CLR parameter can always be given by position, so one written
+        /// to be named only has no meaning on the CLR.
         /// </summary>
         public Error? Parameters(ASTCompiler compiler, Code.Block block, Code.Local owner, string list, AST.Signature signature)
-            => Bodies.Parameters(compiler, block, owner, list, signature, il.Load(typeof(Code.PositionalParameter)), il.Load(typeof(Code.NamedParameter)));
+        {
+            if (signature.KwArgs is { Count: > 0 } named)
+                return new ErrorMessage($"Parameter {named[0].Name} is named only, which a parameter of the CLR's can't be: each can be given by position or by name.");
+
+            var parameter = il.Load(typeof(Package.DotNet.Parameter));
+            return Bodies.Parameters(compiler, block, owner, list, signature, parameter, parameter);
+        }
 
         /// <summary>
         /// Compiles a <c>let</c> of a container to code that builds a field and adds it to
