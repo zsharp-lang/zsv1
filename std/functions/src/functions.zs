@@ -8,7 +8,7 @@
 // The nodes are the platform's own definitions, written with one meta-type, `Node`, so
 // another platform reimplements them by giving that name its own.
 
-import { String, Object, List, DotNet_Class as Node, explicitThis } from "core:runtime";
+import { String, Object, List, DotNet_Class as Node, explicitThis, public } from "core:runtime";
 import { importers } from "core:zsharp";
 import { entrypoint } from "std:framework";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
@@ -19,44 +19,44 @@ import { Code, Local, Expression } from "std:zsharp/hir/code";
 // A Z# function. Its meta-compiler fills it through bodies, by these names. What is
 // said of it, as a decorator says it is an entry point, is its annotations. Functions of
 // one name overload.
-def Function of Node : Instance, Definition, NamedDefinition, Annotated, Overloadable {
-    let name: String;
-    let Parameters: List[Definition];
-    let Locals: List[Local];
-    let ReturnType: Type;
-    let Body: Code;
-    let annotations: List[Object];
+@public def Function of Node : Instance, Definition, NamedDefinition, Annotated, Overloadable {
+    @public let name: String;
+    @public let Parameters: List[Definition];
+    @public let Locals: List[Local];
+    @public let ReturnType: Type;
+    @public let Body: Code;
+    @public let annotations: List[Object];
 
-    @explicitThis new(this, name: String) {
+    @public @explicitThis new(this, name: String) {
         this.name = name;
         this.Parameters = List[Definition]();
         this.Locals = List[Local]();
         this.annotations = List[Object]();
     }
 
-    @explicitThis get Name(this): String { return this.name; }
+    @public @explicitThis get Name(this): String { return this.name; }
 
-    @explicitThis get Annotations(this): List[Object] { return this.annotations; }
+    @public @explicitThis get Annotations(this): List[Object] { return this.annotations; }
 }
 
 // A parameter that a positional argument fills, or else its default value.
-def Positional of Node : Instance, Definition, Variable {
-    let Name: String;
-    let Type: Type;
-    let DefaultValue: Expression;
+@public def Positional of Node : Instance, Definition, Variable {
+    @public let Name: String;
+    @public let Type: Type;
+    @public let DefaultValue: Expression;
 
-    @explicitThis new(this, name: String) { this.Name = name; }
-    @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
+    @public @explicitThis new(this, name: String) { this.Name = name; }
+    @public @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
 }
 
 // A parameter that an argument with its name fills, or else its default value.
-def Named of Node : Instance, Definition, Variable {
-    let Name: String;
-    let Type: Type;
-    let DefaultValue: Expression;
+@public def Named of Node : Instance, Definition, Variable {
+    @public let Name: String;
+    @public let Type: Type;
+    @public let DefaultValue: Expression;
 
-    @explicitThis new(this, name: String) { this.Name = name; }
-    @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
+    @public @explicitThis new(this, name: String) { this.Name = name; }
+    @public @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
 }
 
 // ---- Installing it

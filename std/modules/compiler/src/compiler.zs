@@ -11,7 +11,7 @@
 // compiler needs of them. Importing it makes `module` a Z# module wherever nothing else
 // compiles one, as `module` is `def` of Module.
 
-import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Class, DotNet_Module, explicitThis, static } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Class, DotNet_Module, explicitThis, static, public } from "core:runtime";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "std:zsharp/hir";
 import { Call } from "std:zsharp/hir/code";
 import { Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get, Declare, BlockExpression, Statement, Cast } from "std:zsharp/hir/code";
@@ -42,28 +42,28 @@ import { Global, Module } from "std:modules";
 
 // A global, held by its module: what holds it lowers it into its LIR module, in its
 // order, and gives it its initial value in that module's initializer.
-def GlobalObject of DotNet_Class : CompilerObject, ICompileIRExpression, ICTSet, ITyped, Held, ICompileIRDefinitionIn[LIRModule] {
-    let node: Global;
-    let holder: Holder;
-    let globals: Dictionary[Object, LIRGlobal];
+@public def GlobalObject of DotNet_Class : CompilerObject, ICompileIRExpression, ICTSet, ITyped, Held, ICompileIRDefinitionIn[LIRModule] {
+    @public let node: Global;
+    @public let holder: Holder;
+    @public let globals: Dictionary[Object, LIRGlobal];
 
-    @explicitThis new(this, node: Global) {
+    @public @explicitThis new(this, node: Global) {
         this.node = node;
         this.globals = Dictionary[Object, LIRGlobal]();
     }
 
-    @explicitThis fun hold(this, holder: Holder) { this.holder = holder; }
+    @public @explicitThis fun hold(this, holder: Holder) { this.holder = holder; }
 
-    @explicitThis fun initializer(this): CompilerObject {
+    @public @explicitThis fun initializer(this): CompilerObject {
         return hirCodeLoader.LoadExpression(this.node.Initializer).Unwrap();
     }
 
-    @explicitThis fun get_Type(this): CompilerObject {
+    @public @explicitThis fun get_Type(this): CompilerObject {
         if (this.node.Type != null) return hirLoader.LoadType(this.node.Type).Unwrap();
         return ts.TypeOf(this.initializer()).Unwrap();
     }
 
-    @explicitThis fun CompileIRDefinition(this, owner: LIRModule, target: Object): Error {
+    @public @explicitThis fun CompileIRDefinition(this, owner: LIRModule, target: Object): Error {
         if (bound.ContainsKey(this.node)) return null;
         if (this.globals.ContainsKey(target)) return null;
 
@@ -88,18 +88,18 @@ def GlobalObject of DotNet_Class : CompilerObject, ICompileIRExpression, ICTSet,
     }
 
     // The global for the target, which what holds it lowers.
-    @explicitThis fun global(this, target: Object): LIRGlobal {
+    @public @explicitThis fun global(this, target: Object): LIRGlobal {
         if (this.globals.ContainsKey(target) == false) this.holder.module(target);
         return this.globals[target];
     }
 
     // A global that was built is what it was built as.
-    @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+    @public @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
         if (bound.ContainsKey(this.node)) return ir.CompileExpression(bound[this.node], target);
         return Result[LIRExpression].Ok(GetGlobal(this.global(target)));
     }
 
-    @explicitThis fun Set(this, value: CompilerObject): IResult[CompilerObject, Error] {
+    @public @explicitThis fun Set(this, value: CompilerObject): IResult[CompilerObject, Error] {
         if (bound.ContainsKey(this.node)) return cg.Set(bound[this.node], value);
         let converted = cg.ImplicitCast(value, this.get_Type());
         if (converted.IsError) return converted;
@@ -108,13 +108,13 @@ def GlobalObject of DotNet_Class : CompilerObject, ICompileIRExpression, ICTSet,
     }
 }
 
-def GlobalSet of DotNet_Class : CompilerObject, ICompileIRStatement {
-    let global: GlobalObject;
-    let value: CompilerObject;
+@public def GlobalSet of DotNet_Class : CompilerObject, ICompileIRStatement {
+    @public let global: GlobalObject;
+    @public let value: CompilerObject;
 
-    @explicitThis new(this, global: GlobalObject, value: CompilerObject) { this.global = global; this.value = value; }
+    @public @explicitThis new(this, global: GlobalObject, value: CompilerObject) { this.global = global; this.value = value; }
 
-    @explicitThis fun CompileIRStatement(this, target: Object): IResult[LIRStatement, Error] {
+    @public @explicitThis fun CompileIRStatement(this, target: Object): IResult[LIRStatement, Error] {
         let value = ir.CompileExpression(this.value, target);
         if (value.IsError) return Result[LIRStatement].Error(value.UnwrapError());
 
@@ -124,13 +124,13 @@ def GlobalSet of DotNet_Class : CompilerObject, ICompileIRStatement {
 
 // A Z# module: it holds its members, which it finds by their names, and lowers them
 // into its LIR module, its globals first, in their order.
-def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] {
-    let node: Module;
-    let members: Dictionary[String, List[Definition]];
-    let modules: Dictionary[Object, LIRModule];
-    let failures: List[String];
+@public def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] {
+    @public let node: Module;
+    @public let members: Dictionary[String, List[Definition]];
+    @public let modules: Dictionary[Object, LIRModule];
+    @public let failures: List[String];
 
-    @explicitThis new(this, node: Module) {
+    @public @explicitThis new(this, node: Module) {
         this.node = node;
         this.members = Dictionary[String, List[Definition]]();
         this.modules = Dictionary[Object, LIRModule]();
@@ -138,7 +138,7 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
     }
 
     // Finds its members by their names, and binds the COs of those it holds to itself.
-    @explicitThis fun bind(this) {
+    @public @explicitThis fun bind(this) {
         let index = 0;
         while (index < this.node.Globals.Count) {
             this.add(this.node.Globals[index]);
@@ -152,7 +152,7 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
         }
     }
 
-    @explicitThis fun add(this, member: Definition) {
+    @public @explicitThis fun add(this, member: Definition) {
         if (member is let named: NamedDefinition) {
             if (this.members.ContainsKey(named.Name) == false) this.members[named.Name] = List[Definition]();
             this.members[named.Name].Add(member);
@@ -163,7 +163,7 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
         if (loaded.Unwrap() is let held: Held) held.hold(this);
     }
 
-    @explicitThis fun module(this, target: Object): LIRModule {
+    @public @explicitThis fun module(this, target: Object): LIRModule {
         if (this.modules.ContainsKey(target)) return this.modules[target];
 
         let lowered = LIRModule(this.node.Name);
@@ -197,7 +197,7 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
     // A member that can't be lowered into a module, as a definition of another
     // platform's, lowers by itself; any other failure is the member's to report where
     // it is used.
-    @explicitThis fun lower(this, member: Definition, lowered: LIRModule, target: Object) {
+    @public @explicitThis fun lower(this, member: Definition, lowered: LIRModule, target: Object) {
         let name = "a definition";
         if (member is let named: NamedDefinition) name = named.Name;
 
@@ -211,7 +211,7 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
         if (failed != null) this.failures.Add(name + ": " + failed);
     }
 
-    @explicitThis fun Member(this, name: String): IResult[CompilerObject, Error] {
+    @public @explicitThis fun Member(this, name: String): IResult[CompilerObject, Error] {
         // A name of several definitions, as overloads, is all of them.
         if (this.members.ContainsKey(name)) {
             let named = this.members[name];
@@ -236,25 +236,25 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
 // What the members of a module are compiled with: a let is a global, bound by its name,
 // an import runs as the module is built, and a definition is compiled by its own
 // meta-type.
-def Members of DotNet_Class {
-    let self: Local;
-    let fork: ASTCompiler;
-    let expressions: CompileASTExpression;
-    let statements: CompileASTStatement;
+@public def Members of DotNet_Class {
+    @public let self: Local;
+    @public let fork: ASTCompiler;
+    @public let expressions: CompileASTExpression;
+    @public let statements: CompileASTStatement;
 
-    @explicitThis new(this, self: Local, compiler: ASTCompiler) {
+    @public @explicitThis new(this, self: Local, compiler: ASTCompiler) {
         this.self = self;
         this.fork = compiler.Fork();
         this.expressions = this.fork.Expression;
         this.statements = this.fork.Statement;
     }
 
-    @explicitThis fun expression(this, compiler: ASTCompiler, node: ExpressionSyntax): IResult[Expression, Error] {
+    @public @explicitThis fun expression(this, compiler: ASTCompiler, node: ExpressionSyntax): IResult[Expression, Error] {
         if (node is let local: LetSyntax) return this.global(compiler, local);
         return this.expressions(compiler, node);
     }
 
-    @explicitThis fun statement(this, compiler: ASTCompiler, node: StatementSyntax): IResult[Statement, Error] {
+    @public @explicitThis fun statement(this, compiler: ASTCompiler, node: StatementSyntax): IResult[Statement, Error] {
         if (node is let imported: ImportSyntax) {
             let holder = bodies.Imported(compiler, imported);
             if (holder.IsError) return Result[Statement].Error(holder.UnwrapError());
@@ -265,7 +265,7 @@ def Members of DotNet_Class {
     }
 
     // A global: code that builds it and adds it to the module. Its initializer is code.
-    @explicitThis fun global(this, compiler: ASTCompiler, local: LetSyntax): IResult[Expression, Error] {
+    @public @explicitThis fun global(this, compiler: ASTCompiler, local: LetSyntax): IResult[Expression, Error] {
         let global = Local(local.Name, Global as Type);
         global.Init = Bodies.Construct(Global as Instance, StringLiteral(local.Name));
 
@@ -309,7 +309,7 @@ def Members of DotNet_Class {
     }
 
     // What its decorators gave is the kind of definition it is, as a class's member is.
-    @explicitThis fun register(this, member: CompiledDefinition, value: Expression): Statement {
+    @public @explicitThis fun register(this, member: CompiledDefinition, value: Expression): Statement {
         let kind = Cast();
         kind.Value = value;
         kind.Type = Get(member.UnderlyingType);
@@ -318,18 +318,18 @@ def Members of DotNet_Class {
 
 }
 
-def Filler of DotNet_Class {
-    let compiler: ASTCompiler;
-    let body: List[StatementSyntax];
-    let self: Local;
+@public def Filler of DotNet_Class {
+    @public let compiler: ASTCompiler;
+    @public let body: List[StatementSyntax];
+    @public let self: Local;
 
-    @explicitThis new(this, compiler: ASTCompiler, body: List[StatementSyntax], self: Local) {
+    @public @explicitThis new(this, compiler: ASTCompiler, body: List[StatementSyntax], self: Local) {
         this.compiler = compiler;
         this.body = body;
         this.self = self;
     }
 
-    @explicitThis fun fill(this): IResult[Block, Error] {
+    @public @explicitThis fun fill(this): IResult[Block, Error] {
         let members = Members(this.self, this.compiler);
         members.fork.Expression = members.expression;
         members.fork.Statement = members.statement;

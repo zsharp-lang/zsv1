@@ -6,7 +6,7 @@
 // compiler needs of them. Importing it makes `fun` a Z# function wherever nothing else
 // compiles one.
 
-import { String, Object, Boolean, Int32, List, Dictionary, explicitThis, DotNet_Class, DotNet_Module } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Dictionary, explicitThis, DotNet_Class, DotNet_Module, public } from "core:runtime";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get } from "std:zsharp/hir/code";
 import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "std:zsharp/lang/ast";
@@ -34,14 +34,14 @@ import { Function, Positional, Named } from "std:functions";
 // A parameter, as a call matches an argument to it and as its function's code uses it.
 // One CO is both, and it owns the LIR parameter the signature holds for each target, so
 // whatever lowers a function with it refers to it as that parameter.
-def ParameterObject of DotNet_Class : CompilerObject, ICTParameter, ICompileIRExpression, ICompileIRReference[LIRParameter], ITyped {
-    let name: String;
-    let named: Boolean;
-    let type: Type;
-    let defaultValue: Expression;
-    let lowered: Dictionary[Object, LIRParameter];
+@public def ParameterObject of DotNet_Class : CompilerObject, ICTParameter, ICompileIRExpression, ICompileIRReference[LIRParameter], ITyped {
+    @public let name: String;
+    @public let named: Boolean;
+    @public let type: Type;
+    @public let defaultValue: Expression;
+    @public let lowered: Dictionary[Object, LIRParameter];
 
-    @explicitThis new(this, name: String, named: Boolean, type: Type, defaultValue: Expression) {
+    @public @explicitThis new(this, name: String, named: Boolean, type: Type, defaultValue: Expression) {
         this.name = name;
         this.named = named;
         this.type = type;
@@ -49,11 +49,11 @@ def ParameterObject of DotNet_Class : CompilerObject, ICTParameter, ICompileIREx
         this.lowered = Dictionary[Object, LIRParameter]();
     }
 
-    @explicitThis fun get_Type(this): CompilerObject {
+    @public @explicitThis fun get_Type(this): CompilerObject {
         return hirLoader.LoadType(this.type).Unwrap();
     }
 
-    @explicitThis fun parameter(this, target: Object): LIRParameter {
+    @public @explicitThis fun parameter(this, target: Object): LIRParameter {
         if (this.lowered.ContainsKey(target)) return this.lowered[target];
 
         let type = ir.CompileType(this.get_Type(), target).Unwrap();
@@ -67,17 +67,17 @@ def ParameterObject of DotNet_Class : CompilerObject, ICTParameter, ICompileIREx
         return parameter;
     }
 
-    @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+    @public @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
         return Result[LIRExpression].Ok(GetLocal(this.parameter(target)));
     }
 
     // It is referred to as the LIR parameter it is for the target, which a signature holds.
-    @explicitThis fun CompileIRReference(this, target: Object): IResult[LIRParameter, Error] {
+    @public @explicitThis fun CompileIRReference(this, target: Object): IResult[LIRParameter, Error] {
         return Result[LIRParameter].Ok(this.parameter(target));
     }
 
     // The argument with its name, or the next positional one, or else the default.
-    @explicitThis fun Match(this, arguments: ArgumentStream): IResult[CompilerObject, Error] {
+    @public @explicitThis fun Match(this, arguments: ArgumentStream): IResult[CompilerObject, Error] {
         let argument: CompilerObject = null;
 
         if (this.named) argument = arguments.Pop(this.name);
@@ -97,15 +97,15 @@ def ParameterObject of DotNet_Class : CompilerObject, ICTParameter, ICompileIREx
 let premapped: Dictionary[Function, Instance] = Dictionary[Function, Instance]();
 
 // A value that exists as the code is compiled, as the node a definition is.
-def Known of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
-    let value: Object;
-    let type: CompilerObject;
+@public def Known of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
+    @public let value: Object;
+    @public let type: CompilerObject;
 
-    @explicitThis new(this, value: Object, type: CompilerObject) { this.value = value; this.type = type; }
+    @public @explicitThis new(this, value: Object, type: CompilerObject) { this.value = value; this.type = type; }
 
-    @explicitThis fun get_Type(this): CompilerObject { return this.type; }
+    @public @explicitThis fun get_Type(this): CompilerObject { return this.type; }
 
-    @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+    @public @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
         let type = ir.CompileType(this.type, target);
         if (type.IsError) return Result[LIRExpression].Error(type.UnwrapError());
         return Result[LIRExpression].Ok(Constant(type.Unwrap(), this.value));
@@ -115,29 +115,29 @@ def Known of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
 // A Z# function as a CO: calling it matches the arguments to its parameters, and it
 // is lowered once for each target, to an LIR function of its own: a function of what
 // holds it, as a module, if something does.
-def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Held, ICompileIRDefinitionIn[LIRModule], ICompileIRReference[ICallable] {
-    let node: Function;
-    let holder: Holder;
-    let lowered: Dictionary[Object, LIRFunction];
-    let handles: Dictionary[Object, FunctionHandle];
+@public def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Held, ICompileIRDefinitionIn[LIRModule], ICompileIRReference[ICallable] {
+    @public let node: Function;
+    @public let holder: Holder;
+    @public let lowered: Dictionary[Object, LIRFunction];
+    @public let handles: Dictionary[Object, FunctionHandle];
     // Why its code didn't lower for each target it didn't.
-    let failures: Dictionary[Object, Error];
+    @public let failures: Dictionary[Object, Error];
 
-    @explicitThis new(this, node: Function) {
+    @public @explicitThis new(this, node: Function) {
         this.node = node;
         this.handles = Dictionary[Object, FunctionHandle]();
         this.lowered = Dictionary[Object, LIRFunction]();
         this.failures = Dictionary[Object, Error]();
     }
 
-    @explicitThis fun hold(this, holder: Holder) { this.holder = holder; }
+    @public @explicitThis fun hold(this, holder: Holder) { this.holder = holder; }
 
     // It is referred to as what a call of it calls, as a delegate of it is.
-    @explicitThis fun CompileIRReference(this, target: Object): IResult[ICallable, Error] {
+    @public @explicitThis fun CompileIRReference(this, target: Object): IResult[ICallable, Error] {
         return this.callable(target);
     }
 
-    @explicitThis fun CompileIRDefinition(this, owner: LIRModule, target: Object): Error {
+    @public @explicitThis fun CompileIRDefinition(this, owner: LIRModule, target: Object): Error {
         if (this.declared()) return null;
         if (this.function(target) != null) return null;
         return this.failures[target];
@@ -145,11 +145,11 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
 
     // A function with no code of its own is declared: what the platform provides, or
     // what it is premapped to.
-    @explicitThis fun declared(this): Boolean { return this.node.Body == null; }
+    @public @explicitThis fun declared(this): Boolean { return this.node.Body == null; }
 
     // What a call of it calls, for a target: what it is premapped to, or a declared
     // function's handle, which the platform maps, or its own function.
-    @explicitThis fun callable(this, target: Object): IResult[ICallable, Error] {
+    @public @explicitThis fun callable(this, target: Object): IResult[ICallable, Error] {
         if (premapped.ContainsKey(this.node)) {
             let to = hirLoader.LoadInstance(premapped[this.node]);
             if (to.IsError) return Result[ICallable].Error(to.UnwrapError());
@@ -167,7 +167,7 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
         return Result[ICallable].Error("The code of " + this.node.Name + " can't be lowered.");
     }
 
-    @explicitThis fun signature(this, target: Object): Signature {
+    @public @explicitThis fun signature(this, target: Object): Signature {
         let signature = Signature();
         let returned = this.returnType();
         if (returned != null) signature.ReturnType = ir.CompileType(returned, target).Unwrap();
@@ -181,22 +181,22 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
     }
 
     // What describes the function is its node, as code compiled where it is knows it.
-    @explicitThis fun Cast(this, type: CompilerObject): IResult[CompilerObject, Error] {
+    @public @explicitThis fun Cast(this, type: CompilerObject): IResult[CompilerObject, Error] {
         let described = hirLoader.LoadType(Function as Type).Unwrap();
         if (ts.IsAssignableTo(type, described)) return Result[CompilerObject].Ok(Known(this.node, described));
         return Result[CompilerObject].Error("A function is only described by its node.");
     }
 
-    @explicitThis fun parameter(this, index: Int32): ParameterObject {
+    @public @explicitThis fun parameter(this, index: Int32): ParameterObject {
         return hirLoader.LoadDefinition(this.node.Parameters[index]).Unwrap() as ParameterObject;
     }
 
-    @explicitThis fun returnType(this): CompilerObject {
+    @public @explicitThis fun returnType(this): CompilerObject {
         if (this.node.ReturnType == null) return null;
         return hirLoader.LoadType(this.node.ReturnType).Unwrap();
     }
 
-    @explicitThis fun function(this, target: Object): LIRFunction {
+    @public @explicitThis fun function(this, target: Object): LIRFunction {
         if (this.lowered.ContainsKey(target)) return this.lowered[target];
 
         // What holds it lowers it with the rest of what it holds.
@@ -258,7 +258,7 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
     }
 
     // Defines each of its parameters as its code uses it, and gives what each was before.
-    @explicitThis fun defineParameters(this): List[CompilerObject] {
+    @public @explicitThis fun defineParameters(this): List[CompilerObject] {
         let previous = List[CompilerObject]();
         let index = 0;
         while (index < this.node.Parameters.Count) {
@@ -268,7 +268,7 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
         return previous;
     }
 
-    @explicitThis fun restoreParameters(this, previous: List[CompilerObject]) {
+    @public @explicitThis fun restoreParameters(this, previous: List[CompilerObject]) {
         let index = 0;
         while (index < this.node.Parameters.Count) {
             CodeLoaders.Redefine(this.node.Parameters[index] as Instance, previous[index]);
@@ -276,7 +276,7 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
         }
     }
 
-    @explicitThis fun Call(this, arguments: Argument[]): IResult[CompilerObject, Error] {
+    @public @explicitThis fun Call(this, arguments: Argument[]): IResult[CompilerObject, Error] {
         let stream = ArgumentStream(arguments);
         let values = List[CompilerObject]();
 
@@ -295,18 +295,18 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
 }
 
 // A call of a Z# function.
-def FunctionCall of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
-    let callee: FunctionObject;
-    let arguments: List[CompilerObject];
+@public def FunctionCall of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
+    @public let callee: FunctionObject;
+    @public let arguments: List[CompilerObject];
 
-    @explicitThis new(this, callee: FunctionObject, arguments: List[CompilerObject]) {
+    @public @explicitThis new(this, callee: FunctionObject, arguments: List[CompilerObject]) {
         this.callee = callee;
         this.arguments = arguments;
     }
 
-    @explicitThis fun get_Type(this): CompilerObject { return this.callee.returnType(); }
+    @public @explicitThis fun get_Type(this): CompilerObject { return this.callee.returnType(); }
 
-    @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+    @public @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
         let called = this.callee.callable(target);
         if (called.IsError) return Result[LIRExpression].Error(called.UnwrapError());
         let function = called.Unwrap();
@@ -328,18 +328,18 @@ def FunctionCall of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped 
 // ---- The meta-compiler
 
 // What fills a function as it is built: its parameters, what it returns, and its code.
-def Filler of DotNet_Class {
-    let compiler: ASTCompiler;
-    let function: FunctionSyntax;
-    let self: Local;
+@public def Filler of DotNet_Class {
+    @public let compiler: ASTCompiler;
+    @public let function: FunctionSyntax;
+    @public let self: Local;
 
-    @explicitThis new(this, compiler: ASTCompiler, function: FunctionSyntax, self: Local) {
+    @public @explicitThis new(this, compiler: ASTCompiler, function: FunctionSyntax, self: Local) {
         this.compiler = compiler;
         this.function = function;
         this.self = self;
     }
 
-    @explicitThis fun fill(this): IResult[Block, Error] {
+    @public @explicitThis fun fill(this): IResult[Block, Error] {
         let block = Block([]);
 
         let invalid = bodies.Parameters(this.compiler, block, this.self, "Parameters", this.function.Signature, Positional as Instance, Named as Instance);

@@ -6,15 +6,15 @@
 // CLR class defined in Z# is a class definition, written as the runtime loads one.
 
 // What emitting one function's body keeps: its locals and the loops it is in.
-def Body of DotNet_Class {
-    let method: MethodDefinition;
-    let function: LIRFunction;
-    let il: ILProcessor;
-    let locals: Dictionary[LIRLocal, VariableDefinition];
-    let starts: Dictionary[LIRLoop, Instruction];
-    let ends: Dictionary[Breakable, Instruction];
+@public def Body of DotNet_Class {
+    @public let method: MethodDefinition;
+    @public let function: LIRFunction;
+    @public let il: ILProcessor;
+    @public let locals: Dictionary[LIRLocal, VariableDefinition];
+    @public let starts: Dictionary[LIRLoop, Instruction];
+    @public let ends: Dictionary[Breakable, Instruction];
 
-    @explicitThis new(this, method: MethodDefinition, function: LIRFunction) {
+    @public @explicitThis new(this, method: MethodDefinition, function: LIRFunction) {
         this.method = method;
         this.function = function;
         this.il = method.Body.GetILProcessor();
@@ -24,14 +24,14 @@ def Body of DotNet_Class {
         method.Body.InitLocals = true;
     }
 
-    @explicitThis fun local(this, type: TypeReference): VariableDefinition {
+    @public @explicitThis fun local(this, type: TypeReference): VariableDefinition {
         let variable = VariableDefinition(type);
         this.method.Body.Variables.Add(variable);
         return variable;
     }
 
     // A method's object is its first parameter, which is `this` to the CLR.
-    @explicitThis fun parameter(this, parameter: LIRParameter): ParameterDefinition {
+    @public @explicitThis fun parameter(this, parameter: LIRParameter): ParameterDefinition {
         let index = this.function.Signature.Parameters.IndexOf(parameter);
         if (index < 0) fail("The parameter " + parameter.Name + " isn't one of " + this.function.Name + "'s.");
         if (this.method.HasThis) {
@@ -41,50 +41,50 @@ def Body of DotNet_Class {
         return this.method.Parameters[index];
     }
 
-    @explicitThis fun variable(this, variable: LIRVariable): VariableDefinition {
+    @public @explicitThis fun variable(this, variable: LIRVariable): VariableDefinition {
         if (variable is let local: LIRLocal) {
             if (this.locals.ContainsKey(local)) return this.locals[local];
         }
         return fail("A local isn't one of its function's.") as VariableDefinition;
     }
 
-    @explicitThis fun label(this): Instruction { return this.il.Create(OpCodes.Nop); }
+    @public @explicitThis fun label(this): Instruction { return this.il.Create(OpCodes.Nop); }
 }
 
-def Cecil of DotNet_Class : ClrPlatform {
-    let assembly: AssemblyDefinition;
-    let main: ModuleDefinition;
-    let references: References;
-    let reflected: Reflected;
-    let holders: Dictionary[LIRModule, TypeDefinition];
-    let functions: Dictionary[LIRFunction, MethodDefinition];
-    let globals: Dictionary[LIRGlobal, FieldDefinition];
-    let methods: Dictionary[ClrMethod, MethodReference];
-    let structures: Dictionary[LIRStructure, TypeDefinition];
-    let fieldsOf: Dictionary[LIRField, FieldDefinition];
-    let constructors: Dictionary[LIRStructure, MethodDefinition];
-    let instanceMethods: Dictionary[LIRFunction, Boolean];
-    let pending: List[LIRFunction];
-    let initializers: List[LIRModule];
-    let opcodes: Dictionary[Int16, OpCode];
-    let names: Dictionary[String, Boolean];
-    let standalone: TypeDefinition;
-    let box: TypeDefinition;
-    let unnamed: Int32;
-    let definitions: Dictionary[ClassDefinition, TypeDefinition];
-    let definedFields: Dictionary[ClassField, FieldDefinition];
-    let definedMethods: Dictionary[ClassMethod, MethodDefinition];
+@public def Cecil of DotNet_Class : ClrPlatform {
+    @public let assembly: AssemblyDefinition;
+    @public let main: ModuleDefinition;
+    @public let references: References;
+    @public let reflected: Reflected;
+    @public let holders: Dictionary[LIRModule, TypeDefinition];
+    @public let functions: Dictionary[LIRFunction, MethodDefinition];
+    @public let globals: Dictionary[LIRGlobal, FieldDefinition];
+    @public let methods: Dictionary[ClrMethod, MethodReference];
+    @public let structures: Dictionary[LIRStructure, TypeDefinition];
+    @public let fieldsOf: Dictionary[LIRField, FieldDefinition];
+    @public let constructors: Dictionary[LIRStructure, MethodDefinition];
+    @public let instanceMethods: Dictionary[LIRFunction, Boolean];
+    @public let pending: List[LIRFunction];
+    @public let initializers: List[LIRModule];
+    @public let opcodes: Dictionary[Int16, OpCode];
+    @public let names: Dictionary[String, Boolean];
+    @public let standalone: TypeDefinition;
+    @public let box: TypeDefinition;
+    @public let unnamed: Int32;
+    @public let definitions: Dictionary[ClassDefinition, TypeDefinition];
+    @public let definedFields: Dictionary[ClassField, FieldDefinition];
+    @public let definedMethods: Dictionary[ClassMethod, MethodDefinition];
     // The methods that aren't public and implement an interface's, with their classes, which
     // say which ones once every class is declared.
-    let explicitMethods: List[ClassMethod];
-    let explicitOwners: List[ClassDefinition];
-    let definedConstructors: Dictionary[ClassConstructor, MethodDefinition];
-    let definedParameters: Dictionary[ClassGenericParameter, GenericParameter];
-    let prologues: Dictionary[LIRFunction, MethodReference];
+    @public let explicitMethods: List[ClassMethod];
+    @public let explicitOwners: List[ClassDefinition];
+    @public let definedConstructors: Dictionary[ClassConstructor, MethodDefinition];
+    @public let definedParameters: Dictionary[ClassGenericParameter, GenericParameter];
+    @public let prologues: Dictionary[LIRFunction, MethodReference];
 
     // An assembly for a version of .NET, as `net8.0`, or, given null, for the .NET that
     // runs it.
-    @explicitThis new(this, name: String, version: String) {
+    @public @explicitThis new(this, name: String, version: String) {
         this.assembly = AssemblyDefinition.CreateAssembly(AssemblyNameDefinition(name, Version(1, 0, 0, 0)), name + ".dll", ModuleKind.Dll);
         this.main = this.assembly.MainModule;
         this.references = References(this.main, version);
@@ -123,7 +123,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     // ---- What is written
 
     // Adds a module to the assembly, with what it reaches.
-    @explicitThis fun add(this, unit: LIRModule) {
+    @public @explicitThis fun add(this, unit: LIRModule) {
         this.holder(unit);
 
         let index = 0;
@@ -158,7 +158,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // The assembly is written the same each time it is built from the same LIR: its
     // module's identity is of its content, and it has no time of its own.
-    @explicitThis fun write(this, path: String) {
+    @public @explicitThis fun write(this, path: String) {
         this.flush();
         let parameters = WriterParameters();
         parameters.DeterministicMvid = true;
@@ -169,7 +169,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     // The files of the assemblies the written one needs that neither .NET nor the toolchain
     // that runs it has, as a package's, with those they need in turn: what a build puts
     // next to it, so it runs where they aren't installed.
-    @explicitThis fun dependencies(this): List[String] {
+    @public @explicitThis fun dependencies(this): List[String] {
         this.flush();
         let found = List[String]();
         let index = 0;
@@ -180,7 +180,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return found;
     }
 
-    @explicitThis fun depend(this, name: String, found: List[String]) {
+    @public @explicitThis fun depend(this, name: String, found: List[String]) {
         let framework = Path.GetDirectoryName(Object.Assembly.Location);
         let toolchain = Path.GetDirectoryName(Path.GetFullPath(AppContext.BaseDirectory));
 
@@ -207,7 +207,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // Whether an assembly goes with a build: one with a file of its own, that neither .NET
     // nor the toolchain has, and that isn't with it already.
-    @explicitThis fun bundles(this, assembly: Assembly, framework: String, toolchain: String, found: List[String]): Boolean {
+    @public @explicitThis fun bundles(this, assembly: Assembly, framework: String, toolchain: String, found: List[String]): Boolean {
         if (assembly.IsDynamic) return false;
         if (assembly.Location == "") return false;
         let directory = Path.GetDirectoryName(assembly.Location);
@@ -220,13 +220,13 @@ def Cecil of DotNet_Class : ClrPlatform {
     // A type of a dotted name, as `Shape.Class`, is in the namespace of what is before its
     // last dot, so its full name is that name however it is found: a module Reflection.Emit
     // builds refers to a type by its namespace and name.
-    @explicitThis fun named(this, name: String, attributes: TypeAttributes, base: TypeReference): TypeDefinition {
+    @public @explicitThis fun named(this, name: String, attributes: TypeAttributes, base: TypeReference): TypeDefinition {
         let dot = name.LastIndexOf(".");
         if (dot < 0) return TypeDefinition("", name, attributes, base);
         return TypeDefinition(name.Substring(0, dot), name.Substring(dot + 1), attributes, base);
     }
 
-    @explicitThis fun unique(this, name: String, fallback: String): String {
+    @public @explicitThis fun unique(this, name: String, fallback: String): String {
         let given = name;
         if (given == null) given = fallback;
         if (given == "") given = fallback;
@@ -238,7 +238,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return given;
     }
 
-    @explicitThis fun holder(this, unit: LIRModule): TypeDefinition {
+    @public @explicitThis fun holder(this, unit: LIRModule): TypeDefinition {
         if (this.holders.ContainsKey(unit)) return this.holders[unit];
 
         let attributes = TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.Class;
@@ -254,12 +254,12 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A module's class is a module scope, as the IL loader reads one: its static members
     // are the module's, so importing the assembly gives the module.
-    @explicitThis fun moduleScope(this): MethodReference { return this.attribute(ModuleScopeAttribute); }
+    @public @explicitThis fun moduleScope(this): MethodReference { return this.attribute(ModuleScopeAttribute); }
 
     // What was kept of what a definition was lowered from, written as the IL loader reads
     // it back: an attribute of the annotation's type, and each of its fields by name with
     // its value, a constant.
-    @explicitThis fun annotate(this, target: ICustomAttributeProvider, metadata: List[LIRMetadata]) {
+    @public @explicitThis fun annotate(this, target: ICustomAttributeProvider, metadata: List[LIRMetadata]) {
         let index = 0;
         while (index < metadata.Count) {
             if (metadata[index] is let kept: KeptAnnotation) target.CustomAttributes.Add(this.metadataOf(kept.Value));
@@ -267,7 +267,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         }
     }
 
-    @explicitThis fun metadataOf(this, annotation: Object): CustomAttribute {
+    @public @explicitThis fun metadataOf(this, annotation: Object): CustomAttribute {
         let written = CustomAttribute(this.attribute(MetadataAttribute));
         let system = this.main.TypeSystem;
         let fields = annotation.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -288,7 +288,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     // A constant of an attribute, as its own type gives it.
-    @explicitThis fun constant(this, value: Object): CustomAttributeArgument {
+    @public @explicitThis fun constant(this, value: Object): CustomAttributeArgument {
         let system = this.main.TypeSystem;
         if (value is let text: String) return CustomAttributeArgument(system.String, text);
         if (value is let number: Int32) return CustomAttributeArgument(system.Int32, number);
@@ -299,7 +299,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // Carries bytes an encoder wrote in the assembly, as the resource of this name, which
     // the assembly says it carries as its reflection blob.
-    @explicitThis fun embed(this, resource: String, bytes: Byte[], decoder: String) {
+    @public @explicitThis fun embed(this, resource: String, bytes: Byte[], decoder: String) {
         this.main.Resources.Add(EmbeddedResource(resource, ManifestResourceAttributes.Public, bytes));
         let blob = CustomAttribute(this.blobAttribute());
         blob.ConstructorArguments.Add(CustomAttributeArgument(this.main.TypeSystem.String, resource));
@@ -308,7 +308,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     // The constructor of the reflection blob attribute that names the decoder too.
-    @explicitThis fun blobAttribute(this): MethodReference {
+    @public @explicitThis fun blobAttribute(this): MethodReference {
         let constructors = ReflectionBlobAttribute.GetConstructors();
         let each = 0;
         while (each < constructors.Length) {
@@ -319,13 +319,13 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     // The constructor of one of the IL loader's attributes.
-    @explicitThis fun attribute(this, attribute: Type): MethodReference {
+    @public @explicitThis fun attribute(this, attribute: Type): MethodReference {
         return this.method(this.reflected.Method(attribute.GetConstructors()[0]));
     }
 
     // Functions that belong to no module, as code run on its own makes, are in a class of
     // their own.
-    @explicitThis fun holderOf(this, unit: LIRModule): TypeDefinition {
+    @public @explicitThis fun holderOf(this, unit: LIRModule): TypeDefinition {
         if (unit != null) return this.holder(unit);
         if (this.standalone == null) {
             this.standalone = TypeDefinition("", this.unique("<Standalone>", "<Standalone>"), TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.Class, this.system("System.Object"));
@@ -334,7 +334,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return this.standalone;
     }
 
-    @explicitThis fun global(this, global: LIRGlobal): FieldDefinition {
+    @public @explicitThis fun global(this, global: LIRGlobal): FieldDefinition {
         if (this.globals.ContainsKey(global)) return this.globals[global];
         if (global.Module == null) fail("A global belongs to a module.");
 
@@ -346,7 +346,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return field;
     }
 
-    @explicitThis fun function(this, function: LIRFunction): MethodDefinition {
+    @public @explicitThis fun function(this, function: LIRFunction): MethodDefinition {
         if (this.functions.ContainsKey(function)) return this.functions[function];
 
         // A method is declared with its class.
@@ -377,7 +377,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     // which may declare more.
     // Says which interface method each method that isn't public implements: one of its name
     // and number of parameters, of each interface its class implements.
-    @explicitThis fun implementations(this) {
+    @public @explicitThis fun implementations(this) {
         while (this.explicitMethods.Count > 0) {
             let method = this.explicitMethods[0];
             let owner = this.explicitOwners[0];
@@ -392,7 +392,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         }
     }
 
-    @explicitThis fun implement(this, declared: MethodDefinition, method: ClassMethod, implemented: LIRType) {
+    @public @explicitThis fun implement(this, declared: MethodDefinition, method: ClassMethod, implemented: LIRType) {
         let taken = method.Signature.Parameters.Count - 1;
 
         if (implemented is let own: ClassDefinition) {
@@ -429,7 +429,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         }
     }
 
-    @explicitThis fun flush(this) {
+    @public @explicitThis fun flush(this) {
         this.implementations();
         while (this.pending.Count > 0 or this.initializers.Count > 0) {
             if (this.pending.Count > 0) {
@@ -453,7 +453,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         }
     }
 
-    @explicitThis fun emitBody(this, method: MethodDefinition, function: LIRFunction) {
+    @public @explicitThis fun emitBody(this, method: MethodDefinition, function: LIRFunction) {
         let body = Body(method, function);
 
         // A constructor's object is first made an object of its base.
@@ -474,11 +474,11 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // ---- Types
 
-    @explicitThis fun system(this, name: String): TypeReference {
+    @public @explicitThis fun system(this, name: String): TypeReference {
         return this.references.type(this.reflected.Type(Object.Assembly.GetType(name)) as ClrType);
     }
 
-    @explicitThis fun type(this, type: LIRType): TypeReference {
+    @public @explicitThis fun type(this, type: LIRType): TypeReference {
         if (type == null) return this.system("System.Void");
         if (type is let clr: ClrType) return this.references.type(clr);
         if (type is let array: ClrArrayType) {
@@ -511,7 +511,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return fail("The Cecil platform can't write a type that is a " + type.GetType().Name + " yet.") as TypeReference;
     }
 
-    @explicitThis fun isValueType(this, type: LIRType): Boolean {
+    @public @explicitThis fun isValueType(this, type: LIRType): Boolean {
         if (type is let clr: ClrType) return clr.IsValueType;
         if (type is let instance: GenericInstance) return this.isValueType(instance.Definition);
         if (type is let structure: LIRStructure) return this.polymorphicOf(structure) == null;
@@ -520,7 +520,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A reference to a variable is a box of it, a class with the variable as its field,
     // which the assembly defines for itself.
-    @explicitThis fun boxType(this): TypeDefinition {
+    @public @explicitThis fun boxType(this): TypeDefinition {
         if (this.box != null) return this.box;
 
         let box = TypeDefinition("ZSharp", "Box`1", TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.Class, this.system("System.Object"));
@@ -549,22 +549,22 @@ def Cecil of DotNet_Class : ClrPlatform {
         return box;
     }
 
-    @explicitThis fun objectConstructor(this): MethodReference {
+    @public @explicitThis fun objectConstructor(this): MethodReference {
         let constructors = Object.GetConstructors();
         return this.method(this.reflected.Method(constructors[0]));
     }
 
-    @explicitThis fun boxOf(this, target: TypeReference): TypeReference {
+    @public @explicitThis fun boxOf(this, target: TypeReference): TypeReference {
         let made = GenericInstanceType(this.boxType());
         made.GenericArguments.Add(target);
         return made;
     }
 
-    @explicitThis fun boxValue(this, box: TypeReference): FieldReference {
+    @public @explicitThis fun boxValue(this, box: TypeReference): FieldReference {
         return FieldReference("Value", this.boxType().GenericParameters[0], box);
     }
 
-    @explicitThis fun boxConstructor(this, box: TypeReference): MethodReference {
+    @public @explicitThis fun boxConstructor(this, box: TypeReference): MethodReference {
         let constructor = MethodReference(".ctor", this.system("System.Void"), box);
         constructor.HasThis = true;
         constructor.Parameters.Add(ParameterDefinition(this.boxType().GenericParameters[0]));
@@ -575,7 +575,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A method as code calls it: of a generic instance, the instance's, and of a generic
     // method, its instance.
-    @explicitThis fun method(this, method: ClrMethod): MethodReference {
+    @public @explicitThis fun method(this, method: ClrMethod): MethodReference {
         if (this.methods.ContainsKey(method)) return this.methods[method];
 
         let result: MethodReference = null;
@@ -600,7 +600,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     // A method of a definition, as an instance of it has it.
-    @explicitThis fun onType(this, definition: MethodReference, owner: TypeReference): MethodReference {
+    @public @explicitThis fun onType(this, definition: MethodReference, owner: TypeReference): MethodReference {
         let reference = MethodReference(definition.Name, definition.ReturnType, owner);
         reference.HasThis = definition.HasThis;
         reference.ExplicitThis = definition.ExplicitThis;
@@ -622,7 +622,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // An array's methods are made up by the runtime, so they are written by their names
     // and signatures.
-    @explicitThis fun arrayMethod(this, method: ClrMethod, owner: ClrArrayType): MethodReference {
+    @public @explicitThis fun arrayMethod(this, method: ClrMethod, owner: ClrArrayType): MethodReference {
         let returned = this.system("System.Void");
         let first = 0;
         if (method.IsConstructor == false) {
@@ -641,7 +641,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return reference;
     }
 
-    @explicitThis fun field(this, field: ClrField): FieldReference {
+    @public @explicitThis fun field(this, field: ClrField): FieldReference {
         let definition = this.references.field(field);
         if (field.DeclaringType is let instance: GenericInstance) return FieldReference(definition.Name, definition.FieldType, this.type(instance));
         return definition;
@@ -649,7 +649,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // ---- Structures and classes
 
-    @explicitThis fun polymorphicOf(this, structure: LIRStructure): Polymorphic {
+    @public @explicitThis fun polymorphicOf(this, structure: LIRStructure): Polymorphic {
         let index = 0;
         while (index < structure.Metadata.Count) {
             if (structure.Metadata[index] is let mark: Polymorphic) return mark;
@@ -658,7 +658,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return null;
     }
 
-    @explicitThis fun ownerOf(this, function: LIRFunction): LIRStructure {
+    @public @explicitThis fun ownerOf(this, function: LIRFunction): LIRStructure {
         let index = 0;
         while (index < function.Metadata.Count) {
             if (function.Metadata[index] is let method: MethodOf) return method.Owner;
@@ -669,7 +669,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // The type a structure is, declared the first time it is reached, before its members,
     // as they can be of it.
-    @explicitThis fun structure(this, structure: LIRStructure): TypeDefinition {
+    @public @explicitThis fun structure(this, structure: LIRStructure): TypeDefinition {
         if (this.structures.ContainsKey(structure)) return this.structures[structure];
 
         let mark = this.polymorphicOf(structure);
@@ -677,7 +677,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return this.classOf(structure, mark);
     }
 
-    @explicitThis fun valueType(this, structure: LIRStructure): TypeDefinition {
+    @public @explicitThis fun valueType(this, structure: LIRStructure): TypeDefinition {
         let attributes = TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.SequentialLayout;
         let type = this.named(this.unique(structure.Name, "Structure"), attributes, this.system("System.ValueType"));
         this.main.Types.Add(type);
@@ -687,7 +687,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return type;
     }
 
-    @explicitThis fun declareFields(this, structure: LIRStructure, type: TypeDefinition) {
+    @public @explicitThis fun declareFields(this, structure: LIRStructure, type: TypeDefinition) {
         let index = 0;
         while (index < structure.Fields.Count) {
             let field = structure.Fields[index];
@@ -703,7 +703,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     // A class, or an interface: what implements it is its interfaces, its fields are its
     // own, and an object starts with no code of its own, as the code that makes one sets
     // its fields. Its methods are the functions of its module that are its methods.
-    @explicitThis fun classOf(this, structure: LIRStructure, mark: Polymorphic): TypeDefinition {
+    @public @explicitThis fun classOf(this, structure: LIRStructure, mark: Polymorphic): TypeDefinition {
         let attributes = TypeAttributes.Public | TypeAttributes.Class;
         let base = this.system("System.Object");
         if (mark.IsInterface) {
@@ -756,7 +756,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A method is virtual, so a method of the same name and signature implements an
     // interface's, and one with no code is abstract, as an interface's are.
-    @explicitThis fun declareMethod(this, function: LIRFunction, type: TypeDefinition, ofInterface: Boolean) {
+    @public @explicitThis fun declareMethod(this, function: LIRFunction, type: TypeDefinition, ofInterface: Boolean) {
         let attributes = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot;
         if (ofInterface or function.Body == null) {
             attributes = attributes | MethodAttributes.Abstract;
@@ -783,21 +783,21 @@ def Cecil of DotNet_Class : ClrPlatform {
         if (function.Body != null) this.pending.Add(function);
     }
 
-    @explicitThis fun structureOf(this, target: LIRExpression): LIRStructure {
+    @public @explicitThis fun structureOf(this, target: LIRExpression): LIRStructure {
         let type = this.typeOf(target);
         if (type is let boxed: LIRReference) type = boxed.Target;
         if (type is let structure: LIRStructure) return structure;
         return fail("A field is read from a structure, or a reference to one.") as LIRStructure;
     }
 
-    @explicitThis fun fieldOf(this, field: LIRField): FieldDefinition {
+    @public @explicitThis fun fieldOf(this, field: LIRField): FieldDefinition {
         if (this.fieldsOf.ContainsKey(field)) return this.fieldsOf[field];
         return fail("A field isn't one of a structure the assembly has.") as FieldDefinition;
     }
 
     // Puts what a field is read from or written to on the stack: an object itself, or the
     // address of a value.
-    @explicitThis fun fieldOwner(this, body: Body, target: LIRExpression) {
+    @public @explicitThis fun fieldOwner(this, body: Body, target: LIRExpression) {
         let type = this.typeOf(target);
         if (type is let boxed: LIRReference) {
             this.expression(body, target);
@@ -813,7 +813,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A new object is made, and its fields set; a new value is a zero one, its fields set
     // through its address.
-    @explicitThis fun construct(this, body: Body, made: LIRNew) {
+    @public @explicitThis fun construct(this, body: Body, made: LIRNew) {
         let structure = made.Structure;
         let type = this.structure(structure);
 
@@ -847,7 +847,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     // A class as the runtime loads one: its type parameters, its base and interfaces, its
     // fields, constructors that make an object of its base first, methods marked as what
     // they are, and properties of its accessors.
-    @explicitThis fun classDefinition(this, definition: ClassDefinition): TypeDefinition {
+    @public @explicitThis fun classDefinition(this, definition: ClassDefinition): TypeDefinition {
         if (this.definitions.ContainsKey(definition)) return this.definitions[definition];
 
         let attributes = typeVisibility(definition.Accessibility) | TypeAttributes.Class;
@@ -912,7 +912,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return type;
     }
 
-    @explicitThis fun declareConstructor(this, definition: ClassDefinition, constructor: ClassConstructor, type: TypeDefinition) {
+    @public @explicitThis fun declareConstructor(this, definition: ClassDefinition, constructor: ClassConstructor, type: TypeDefinition) {
         let attributes = methodVisibility(constructor.Accessibility) | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName;
         let declared = MethodDefinition(".ctor", attributes, this.system("System.Void"));
 
@@ -932,7 +932,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // How a method is declared: a method that implements an interface method by its name
     // is virtual and final, as C# makes it, so the CLR maps it to the interface's.
-    @explicitThis fun declareClassMethod(this, definition: ClassDefinition, method: ClassMethod, type: TypeDefinition) {
+    @public @explicitThis fun declareClassMethod(this, definition: ClassDefinition, method: ClassMethod, type: TypeDefinition) {
         let attributes = methodVisibility(method.Accessibility) | MethodAttributes.HideBySig;
         if (method.IsStatic) attributes = attributes | MethodAttributes.Static;
         else if (definition.IsInterface or method.IsAbstract) attributes = attributes | MethodAttributes.Abstract | MethodAttributes.Virtual | MethodAttributes.NewSlot;
@@ -987,7 +987,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // The constructor of the base an object is made of first: its base's that takes
     // nothing.
-    @explicitThis fun baseConstructor(this, definition: ClassDefinition): MethodReference {
+    @public @explicitThis fun baseConstructor(this, definition: ClassDefinition): MethodReference {
         if (definition.Base == null) return this.objectConstructor();
 
         if (definition.Base is let defined: ClassDefinition) {
@@ -1012,7 +1012,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A generic class's own code refers to it as its instance over its own type
     // parameters, as C# does.
-    @explicitThis fun selfOf(this, type: TypeDefinition): TypeReference {
+    @public @explicitThis fun selfOf(this, type: TypeDefinition): TypeReference {
         if (type.GenericParameters.Count == 0) return type;
         let made = GenericInstanceType(type);
         let index = 0;
@@ -1023,26 +1023,26 @@ def Cecil of DotNet_Class : ClrPlatform {
         return made;
     }
 
-    @explicitThis fun ownerOfMember(this, owner: ClassDefinition): TypeReference {
+    @public @explicitThis fun ownerOfMember(this, owner: ClassDefinition): TypeReference {
         if (owner == null) return fail("A member of a class isn't in a class.") as TypeReference;
         return this.selfOf(this.classDefinition(owner));
     }
 
-    @explicitThis fun classFieldOf(this, field: ClassField): FieldReference {
+    @public @explicitThis fun classFieldOf(this, field: ClassField): FieldReference {
         let owner = this.ownerOfMember(field.Owner);
         let declared = this.definedFields[field];
         if (owner is let instance: GenericInstanceType) return FieldReference(declared.Name, declared.FieldType, owner);
         return declared;
     }
 
-    @explicitThis fun classMethodOf(this, method: ClassMethod): MethodReference {
+    @public @explicitThis fun classMethodOf(this, method: ClassMethod): MethodReference {
         let owner = this.ownerOfMember(method.Owner);
         let declared = this.definedMethods[method];
         if (owner is let instance: GenericInstanceType) return this.onType(declared, owner);
         return declared;
     }
 
-    @explicitThis fun classConstructorOf(this, constructor: ClassConstructor): MethodReference {
+    @public @explicitThis fun classConstructorOf(this, constructor: ClassConstructor): MethodReference {
         let owner = this.ownerOfMember(constructor.Owner);
         let declared = this.definedConstructors[constructor];
         if (owner is let instance: GenericInstanceType) return this.onType(declared, owner);
@@ -1051,7 +1051,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // ---- Statements
 
-    @explicitThis fun statement(this, body: Body, statement: LIRStatement) {
+    @public @explicitThis fun statement(this, body: Body, statement: LIRStatement) {
         if (statement is let block: LIRBlock) {
             let index = 0;
             while (index < block.Locals.Count) {
@@ -1137,7 +1137,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // ---- Expressions
 
-    @explicitThis fun typeOf(this, expression: LIRExpression): LIRType {
+    @public @explicitThis fun typeOf(this, expression: LIRExpression): LIRType {
         if (expression is let constant: Constant) return constant.Type;
         if (expression is let local: GetLocal) return local.Variable.Type;
         if (expression is let global: GetGlobal) return global.Global.Type;
@@ -1153,7 +1153,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return fail("The Cecil platform can't type a " + expression.GetType().Name + ".") as LIRType;
     }
 
-    @explicitThis fun expression(this, body: Body, expression: LIRExpression) {
+    @public @explicitThis fun expression(this, body: Body, expression: LIRExpression) {
         if (expression is let constant: Constant) {
             this.constant(body, constant);
             return;
@@ -1216,7 +1216,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A constant is what it is in IL. A value that only the running process has, an
     // object, has no meaning in an assembly, so it can't be written.
-    @explicitThis fun constant(this, body: Body, constant: Constant) {
+    @public @explicitThis fun constant(this, body: Body, constant: Constant) {
         let value = constant.Value;
         if (value == null) {
             this.zero(body, constant.Type);
@@ -1268,7 +1268,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     // The default value of a type: null, or a value type's zero.
-    @explicitThis fun zero(this, body: Body, type: LIRType) {
+    @public @explicitThis fun zero(this, body: Body, type: LIRType) {
         if (this.isValueType(type) == false) {
             body.il.Emit(OpCodes.Ldnull);
             return;
@@ -1280,7 +1280,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         body.il.Emit(OpCodes.Ldloc, temporary);
     }
 
-    @explicitThis fun call(this, body: Body, call: LIRCall) {
+    @public @explicitThis fun call(this, body: Body, call: LIRCall) {
         let index = 0;
         while (index < call.Arguments.Count) {
             if (index == 0) {
@@ -1293,7 +1293,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         this.invoke(body, call.Callable);
     }
 
-    @explicitThis fun takesAddress(this, callable: ICallable): Boolean {
+    @public @explicitThis fun takesAddress(this, callable: ICallable): Boolean {
         if (callable is let clr: ClrMethod) return clr.TakesAddress;
         if (callable is let member: InstanceMember) return this.takesAddress(member.Member);
         if (callable is let instance: MethodInstance) return this.takesAddress(instance.Method);
@@ -1301,7 +1301,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     // Calls what is called, its arguments on the stack.
-    @explicitThis fun invoke(this, body: Body, callable: ICallable) {
+    @public @explicitThis fun invoke(this, body: Body, callable: ICallable) {
         if (callable is let function: LIRFunction) {
             if (this.operation(body, function)) return;
             let declared = this.function(function);
@@ -1385,7 +1385,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         fail("The Cecil platform can't call a " + callable.GetType().Name + " yet.");
     }
 
-    @explicitThis fun instantiated(this, element: MethodReference, instance: MethodInstance): MethodReference {
+    @public @explicitThis fun instantiated(this, element: MethodReference, instance: MethodInstance): MethodReference {
         let made = GenericInstanceMethod(element);
         let index = 0;
         while (index < instance.Arguments.Count) {
@@ -1397,14 +1397,14 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // A constructor makes its object; a value type's own method is called directly, on
     // the address of its object; any other method of an object is called through it.
-    @explicitThis fun callClr(this, body: Body, clr: ClrMethod, reference: MethodReference) {
+    @public @explicitThis fun callClr(this, body: Body, clr: ClrMethod, reference: MethodReference) {
         if (clr.IsConstructor) body.il.Emit(OpCodes.Newobj, reference);
         else if (clr.IsStatic or clr.TakesAddress) body.il.Emit(OpCodes.Call, reference);
         else body.il.Emit(OpCodes.Callvirt, reference);
     }
 
     // A function that is an operation of the platform, as a cast, is emitted in place.
-    @explicitThis fun operation(this, body: Body, function: LIRFunction): Boolean {
+    @public @explicitThis fun operation(this, body: Body, function: LIRFunction): Boolean {
         let index = 0;
         while (index < function.Metadata.Count) {
             let metadata = function.Metadata[index];
@@ -1423,7 +1423,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         return false;
     }
 
-    @explicitThis fun isOperation(this, function: LIRFunction): Boolean {
+    @public @explicitThis fun isOperation(this, function: LIRFunction): Boolean {
         let index = 0;
         while (index < function.Metadata.Count) {
             if (function.Metadata[index] is let cast: CastDown) return true;
@@ -1434,7 +1434,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     // A function whose code is IL, emitted in place of the call.
-    @explicitThis fun code(this, body: Body, code: ClrCode) {
+    @public @explicitThis fun code(this, body: Body, code: ClrCode) {
         let locals = List[VariableDefinition]();
         let index = 0;
         while (index < code.Locals.Count) {
@@ -1470,7 +1470,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         }
     }
 
-    @explicitThis fun callIndirect(this, body: Body, call: CallIndirect) {
+    @public @explicitThis fun callIndirect(this, body: Body, call: CallIndirect) {
         // The callee goes on top of the stack, but is evaluated first.
         let callee = body.local(this.system("System.IntPtr"));
         this.expression(body, call.Callee);
@@ -1494,7 +1494,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     // The address of a variable, or of a temporary holding a value that isn't one.
-    @explicitThis fun address(this, body: Body, expression: LIRExpression) {
+    @public @explicitThis fun address(this, body: Body, expression: LIRExpression) {
         if (expression is let local: GetLocal) {
             if (local.Variable is let parameter: LIRParameter) body.il.Emit(OpCodes.Ldarga, body.parameter(parameter));
             else body.il.Emit(OpCodes.Ldloca, body.variable(local.Variable));

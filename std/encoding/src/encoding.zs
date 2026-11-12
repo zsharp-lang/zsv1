@@ -19,7 +19,7 @@
 //   - A CLR definition of the module is written as the entity it is built as, by its id.
 //   - Anything else is written by its fields, with what is shared written once.
 
-import { Object, String, Boolean, Int32, Int64, Byte, Type, List, Dictionary, Assembly, DotNet_Class, explicitThis, ilLoader } from "core:runtime";
+import { Object, String, Boolean, Int32, Int64, Byte, Type, List, Dictionary, Assembly, DotNet_Class, explicitThis, ilLoader, public } from "core:runtime";
 import { Instance, Annotated, Kept, Encoded } from "std:zsharp/hir";
 import { Code, Local } from "std:zsharp/hir/code";
 import { DotNetDefinition } from "std:zsharp/package/dotnet";
@@ -30,10 +30,10 @@ import { entrypoint } from "std:framework";
 
 // The id a definition is encoded with, kept on what it is built as, so what carries it
 // gives the definition again.
-def ReflectionId of DotNet_Class : Kept {
-    let Id: Int32;
+@public def ReflectionId of DotNet_Class : Kept {
+    @public let Id: Int32;
 
-    @explicitThis new(this, id: Int32) { this.Id = id; }
+    @public @explicitThis new(this, id: Int32) { this.Id = id; }
 }
 
 // Fails the encoding, with why.
@@ -103,13 +103,13 @@ fun idOn(entity: Object): Int32 {
 
 // A unit, as it is decoded once in a process: the entities that carry ids, and the nodes
 // it gave each id, so an importer and `describe` give the same nodes.
-def Unit of DotNet_Class {
-    let Assembly: Assembly;
-    let Entities: Dictionary[Int32, Object];
-    let Nodes: Dictionary[Int32, Object];
-    let Root: Object;
+@public def Unit of DotNet_Class {
+    @public let Assembly: Assembly;
+    @public let Entities: Dictionary[Int32, Object];
+    @public let Nodes: Dictionary[Int32, Object];
+    @public let Root: Object;
 
-    @explicitThis new(this, assembly: Assembly) {
+    @public @explicitThis new(this, assembly: Assembly) {
         this.Assembly = assembly;
         this.Entities = Dictionary[Int32, Object]();
         this.Nodes = Dictionary[Int32, Object]();
@@ -171,15 +171,15 @@ fun bind(unit: Unit) {
 
 // ---- Encoding
 
-def Encoder of DotNet_Class {
-    let objects: List[Object];
-    let indexes: Dictionary[Object, Int32];
-    let ids: Dictionary[Object, Int32];
-    let annotationLists: List[Object];
-    let stream: MemoryStream;
-    let body: BinaryWriter;
+@public def Encoder of DotNet_Class {
+    @public let objects: List[Object];
+    @public let indexes: Dictionary[Object, Int32];
+    @public let ids: Dictionary[Object, Int32];
+    @public let annotationLists: List[Object];
+    @public let stream: MemoryStream;
+    @public let body: BinaryWriter;
 
-    @explicitThis new(this) {
+    @public @explicitThis new(this) {
         this.objects = List[Object]();
         this.indexes = Dictionary[Object, Int32]();
         this.ids = Dictionary[Object, Int32]();
@@ -188,7 +188,7 @@ def Encoder of DotNet_Class {
         this.body = BinaryWriter(this.stream);
     }
 
-    @explicitThis fun encode(this, root: Object): Byte[] {
+    @public @explicitThis fun encode(this, root: Object): Byte[] {
         this.index(root);
         let at = 0;
         while (at < this.objects.Count) {
@@ -208,7 +208,7 @@ def Encoder of DotNet_Class {
 
     // The index of an object written by its fields, which an annotated one is given an
     // id with.
-    @explicitThis fun index(this, value: Object): Int32 {
+    @public @explicitThis fun index(this, value: Object): Int32 {
         if (this.indexes.ContainsKey(value)) return this.indexes[value];
 
         let at = this.objects.Count;
@@ -223,7 +223,7 @@ def Encoder of DotNet_Class {
     }
 
     // Gives a definition its id, kept as metadata, replacing one an earlier encoding gave.
-    @explicitThis fun identify(this, value: Object): Int32 {
+    @public @explicitThis fun identify(this, value: Object): Int32 {
         if (this.ids.ContainsKey(value)) return this.ids[value];
 
         let id = this.ids.Count;
@@ -244,7 +244,7 @@ def Encoder of DotNet_Class {
         return id;
     }
 
-    @explicitThis fun value(this, value: Object) {
+    @public @explicitThis fun value(this, value: Object) {
         let w = this.body;
         if (value == null) {
             w.Write(0);
@@ -315,7 +315,7 @@ def Encoder of DotNet_Class {
     }
 
     // A CLR entity, by its names, as it is found again where it is decoded.
-    @explicitThis fun entity(this, entity: Object) {
+    @public @explicitThis fun entity(this, entity: Object) {
         let w = this.body;
         if (entity is let type: Type) {
             w.Write(1);
@@ -343,7 +343,7 @@ def Encoder of DotNet_Class {
         fail("A " + entity.GetType().Name + " can't be encoded as what it describes.");
     }
 
-    @explicitThis fun parameters(this, parameters: ParameterInfo[]) {
+    @public @explicitThis fun parameters(this, parameters: ParameterInfo[]) {
         this.body.Write(parameters.Length);
         let index = 0;
         while (index < parameters.Length) {
@@ -352,7 +352,7 @@ def Encoder of DotNet_Class {
         }
     }
 
-    @explicitThis fun record(this, value: Object) {
+    @public @explicitThis fun record(this, value: Object) {
         let w = this.body;
         let type = value.GetType();
         w.Write(type.AssemblyQualifiedName);
@@ -420,21 +420,21 @@ def Encoder of DotNet_Class {
 // ---- Decoding
 
 // A reference to an object of the graph, which may be decoded after what refers to it.
-def Pending of DotNet_Class {
-    let Index: Int32;
+@public def Pending of DotNet_Class {
+    @public let Index: Int32;
 
-    @explicitThis new(this, index: Int32) { this.Index = index; }
+    @public @explicitThis new(this, index: Int32) { this.Index = index; }
 }
 
 // An object as it was read, before the objects it refers to are made.
-def Read of DotNet_Class {
-    let Type: Type;
-    let Kind: Int32;
-    let Id: Int32;
-    let Names: List[String];
-    let Values: List[Object];
+@public def Read of DotNet_Class {
+    @public let Type: Type;
+    @public let Kind: Int32;
+    @public let Id: Int32;
+    @public let Names: List[String];
+    @public let Values: List[Object];
 
-    @explicitThis new(this, type: Type, kind: Int32) {
+    @public @explicitThis new(this, type: Type, kind: Int32) {
         this.Type = type;
         this.Kind = kind;
         this.Id = -1;
@@ -443,18 +443,18 @@ def Read of DotNet_Class {
     }
 }
 
-def Decoder of DotNet_Class {
-    let unit: Unit;
-    let reader: BinaryReader;
-    let objects: List[Object];
+@public def Decoder of DotNet_Class {
+    @public let unit: Unit;
+    @public let reader: BinaryReader;
+    @public let objects: List[Object];
 
-    @explicitThis new(this, unit: Unit, reader: BinaryReader) {
+    @public @explicitThis new(this, unit: Unit, reader: BinaryReader) {
         this.unit = unit;
         this.reader = reader;
         this.objects = List[Object]();
     }
 
-    @explicitThis fun decode(this): Object {
+    @public @explicitThis fun decode(this): Object {
         let version = this.reader.ReadInt32();
         if (version != 1) fail("The blob of " + this.unit.Assembly.GetName().Name + " is of another encoding.");
 
@@ -496,7 +496,7 @@ def Decoder of DotNet_Class {
         return this.objects[0];
     }
 
-    @explicitThis fun fill(this, read: Read, made: Object) {
+    @public @explicitThis fun fill(this, read: Read, made: Object) {
         let index = 0;
         if (read.Kind == 1) {
             let array = made as Array;
@@ -533,18 +533,18 @@ def Decoder of DotNet_Class {
         }
     }
 
-    @explicitThis fun resolve(this, value: Object): Object {
+    @public @explicitThis fun resolve(this, value: Object): Object {
         if (value is let pending: Pending) return this.objects[pending.Index];
         return value;
     }
 
-    @explicitThis fun type(this, name: String): Type {
+    @public @explicitThis fun type(this, name: String): Type {
         let found = Type.GetType(name);
         if (found == null) fail("The type " + name + " isn't loaded where " + this.unit.Assembly.GetName().Name + " is decoded.");
         return found;
     }
 
-    @explicitThis fun read(this): Read {
+    @public @explicitThis fun read(this): Read {
         let type = this.type(this.reader.ReadString());
         let kind = this.reader.ReadInt32();
         let read = Read(type, kind);
@@ -570,7 +570,7 @@ def Decoder of DotNet_Class {
         return read;
     }
 
-    @explicitThis fun value(this): Object {
+    @public @explicitThis fun value(this): Object {
         let tag = this.reader.ReadInt32();
         if (tag == 0) return null;
         if (tag == 1) return this.reader.ReadBoolean();
@@ -600,7 +600,7 @@ def Decoder of DotNet_Class {
     }
 
     // A CLR entity, found by its names, as the IL loader describes it.
-    @explicitThis fun entity(this): Object {
+    @public @explicitThis fun entity(this): Object {
         let kind = this.reader.ReadInt32();
         if (kind == 1) return ilLoader.Load(this.type(this.reader.ReadString()));
         if (kind == 2) {
@@ -620,7 +620,7 @@ def Decoder of DotNet_Class {
         return fail("The blob of " + this.unit.Assembly.GetName().Name + " has an entity of no kind.");
     }
 
-    @explicitThis fun parameters(this): Type[] {
+    @public @explicitThis fun parameters(this): Type[] {
         let count = this.reader.ReadInt32();
         let types = List[Type]();
         let index = 0;

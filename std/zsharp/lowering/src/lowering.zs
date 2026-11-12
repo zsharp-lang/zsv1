@@ -6,7 +6,7 @@
 // reaches, asks what holds it. Belonging is how a definition is lowered, so it is in the
 // COs, and the nodes stay structure.
 
-import { Object, Boolean, Int32, List, DotNet_Interface, DotNet_Class, static } from "core:runtime";
+import { Object, Boolean, Int32, List, DotNet_Interface, DotNet_Class, static, public } from "core:runtime";
 import { Module as LIRModule, Definition as LIRDefinition, Statement as LIRStatement, Initialized, Metadata, KeptAnnotation } from "std:zsharp/lir";
 import { Annotated, Kept } from "std:zsharp/hir";
 
@@ -21,10 +21,10 @@ def Held of DotNet_Interface {
     fun hold(holder: Holder);
 }
 
-def Initializing of DotNet_Class {
+@public def Initializing of DotNet_Class {
     // Adds code to what a definition is lowered into runs to initialize it, if it has an
     // initializer, which is a capability of it. Whether it does.
-    @static fun into(owner: LIRDefinition, statement: LIRStatement): Boolean {
+    @public @static fun into(owner: LIRDefinition, statement: LIRStatement): Boolean {
         if (owner is let initialized: Initialized) {
             initialized.Initializer.Block.Statements.Add(statement);
             return true;
