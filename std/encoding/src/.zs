@@ -8,7 +8,7 @@ import { Object, Type, Path } from "core:runtime";
 import {
     BinaryWriter, BinaryReader, MemoryStream, BindingFlags, FieldInfo, MethodInfo, ConstructorInfo, MemberInfo, ParameterInfo,
     RuntimeHelpers, Activator, Array, Enum, Convert, Delegate, AppContext, Module as ReflectedModule
-} from Object.Assembly.Location;
+} from Object.Assembly;
 import { Metadata } from Path.Combine(AppContext.BaseDirectory, "ZSharp.Importer.ILLoader.Attributes.dll");
 
 emit(build(compile("encoding")));

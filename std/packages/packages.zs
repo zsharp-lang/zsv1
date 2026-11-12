@@ -14,7 +14,7 @@ import { discover, Compiler } from "std:project";
 import { Module } from "std:modules";
 import { enter } from "std:modules/compiler";
 
-import { AppContext, AssemblyLoadContext } from Object.Assembly.Location;
+import { AppContext, AssemblyLoadContext } from Object.Assembly;
 
 module Bootstrap {
     // Where the toolchain is: the directory the standard library is in.

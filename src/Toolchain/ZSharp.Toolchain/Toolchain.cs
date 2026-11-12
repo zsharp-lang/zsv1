@@ -201,6 +201,7 @@ namespace ZSharp.Toolchain
             // the toolchain is built of has to be loaded before anything in Z# can be.
             var assemblies = new Assemblies(il, global::Core.ZSharp.ModuleScope.Describers) { ImportLibrary = source => importer.Import(source) };
             global::Core.ZSharp.ModuleScope.Enter = assemblies.Enter;
+            global::Core.Runtime.ModuleScope.Assemblies = assemblies;
             files.Register(".dll", assemblies.ImportFile);
             global::Core.ZSharp.ModuleScope.Files = files;
             global::Core.ZSharp.ModuleScope.Importers = importer;

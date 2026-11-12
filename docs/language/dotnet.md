@@ -2,7 +2,8 @@
 
 Z# runs on .NET, and reaches .NET's types as its own. `core:runtime` has the ones Z# needs
 most, as `String`, `Int32`, `List` and `Path`, and any assembly can be imported by its
-path, as .NET's own are: the rest of `System`'s types are in `Object`'s assembly.
+path, as .NET's own are, or by the assembly itself: the rest of `System`'s types are in
+`Object`'s assembly, `Object.Assembly`.
 
 ## .NET's types
 
@@ -13,10 +14,8 @@ by name, and a parameter with a default value can be left out.
 ```zs
 import "std:prelude";
 import { print } from "std:io";
-import { Object, Type, String, Int32 } from "core:runtime";
-
-let objectType: Type = Object;
-import { Math, DateTime } from objectType.Assembly.Location;
+import { Object, String, Int32 } from "core:runtime";
+import { Math, DateTime } from Object.Assembly;
 
 print(Math.Max(3, 7));
 print(Int32.Parse("41") + 1);
@@ -146,10 +145,9 @@ is, the folder of `Object`'s assembly:
 ```zs
 import "std:prelude";
 import { print } from "std:io";
-import { Object, Type, Path } from "core:runtime";
+import { Object, Path } from "core:runtime";
 
-let objectType: Type = Object;
-let runtime = Path.GetDirectoryName(objectType.Assembly.Location);
+let runtime = Path.GetDirectoryName(Object.Assembly.Location);
 import { Process } from Path.Combine(runtime, "System.Diagnostics.Process.dll");
 
 print(Process.GetCurrentProcess().Id > 0);
@@ -158,6 +156,9 @@ print(Process.GetCurrentProcess().Id > 0);
 ```output
 True
 ```
+
+An assembly the running process has is imported as itself, with no path, as
+`import { Math } from Object.Assembly;`. It's the same module importing its file gives.
 
 A package of the package manager is imported as `pkg:Name`, or `pkg:Name@1.2.3` for a
 version: it looks in the project's `packages`, the toolchain's, and the packages NuGet
