@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.HIRLoader.Code\ZSharp.Compiler.HIRLoader.Code.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.HIRLoader.Mapped\ZSharp.Compiler.HIRLoader.Mapped.csproj" />
+  </ItemGroup>
+
+</Project>

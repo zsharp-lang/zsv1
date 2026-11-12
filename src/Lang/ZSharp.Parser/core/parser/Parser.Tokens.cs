@@ -1,0 +1,67 @@
+﻿using ZSharp.Text;
+
+namespace ZSharp.Parser
+{
+    public sealed partial class Parser
+    {
+		public bool HasTokens => TokenStream.HasTokens;
+
+		public Token Token => HasTokens ? TokenStream.PeekToken() : throw new ParseError();
+
+		public Token Eat(TokenType type)
+			=> Is(type) ? TokenStream.Advance() : throw new UnexpectedTokenError(type.ToString(), Token);
+
+		public bool Eat(TokenType type, out Token token)
+		{
+			if (!Is(type)) throw new ParseError();
+			token = TokenStream.Advance();
+			return true;
+		}
+
+		public Token Eat(string value)
+			=> Is(value) ? TokenStream.Advance() : throw new UnexpectedTokenError(value, Token);
+
+        public bool Eat(string value, out Token token)
+        {
+            if (!Is(value)) throw new ParseError();
+			token = TokenStream.Advance();
+            return true;
+        }
+
+        public bool Is(TokenType type, bool eat = false)
+		{
+			if (TokenStream.PeekToken().Type != type) return false;
+			if (eat) TokenStream.Advance();
+			return true;
+		}
+
+		public bool Is(TokenType type, out Token token, bool eat = false)
+		{
+			token = TokenStream.PeekToken();
+			if (TokenStream.PeekToken().Type != type) return false;
+			if (eat) TokenStream.Advance();
+			return true;
+		}
+
+		/// <summary>
+		/// Whether a token's value is what it is: a literal's value is never syntax.
+		/// </summary>
+		public static bool IsLiteral(Token token)
+			=> ((ushort)token.Type & (ushort)TokenType.Mask) == (ushort)TokenCategory.Literal;
+
+		public bool Is(string value, bool eat = false)
+		{
+            if (IsLiteral(TokenStream.PeekToken()) || TokenStream.PeekToken().Value != value) return false;
+            if (eat) TokenStream.Advance();
+            return true;
+        }
+
+		public bool Is(string value, out Token token, bool eat = false)
+        {
+            token = TokenStream.PeekToken();
+            if (IsLiteral(token) || token.Value != value) return false;
+            if (eat) TokenStream.Advance();
+            return true;
+        }
+    }
+}

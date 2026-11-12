@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.CG\ZSharp.Compiler.CG.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.Overloading.Static\ZSharp.Compiler.Overloading.Static.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,3 @@
+# The installer's launchers keep their platform's line endings, whatever checks them out.
+*.sh text eol=lf
+*.cmd text eol=crlf

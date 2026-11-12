@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\CommonZ\CommonZ.csproj" />
+    <ProjectReference Include="..\..\Core\ZSharp.MIR\ZSharp.MIR.csproj" />
+  </ItemGroup>
+
+</Project>
