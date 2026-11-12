@@ -81,6 +81,26 @@ namespace Package.DotNet
             return method;
         }
 
+        /// <summary>
+        /// Makes the first parameter of a method the object it runs on.
+        /// </summary>
+        [Alias("explicitThis")]
+        public static Method ExplicitThis(Method method)
+        {
+            method.HasExplicitThis = true;
+            return method;
+        }
+
+        /// <summary>
+        /// Makes the first parameter of a constructor the object it runs on.
+        /// </summary>
+        [Alias("explicitThis")]
+        public static Constructor ExplicitThis(Constructor constructor)
+        {
+            constructor.HasExplicitThis = true;
+            return constructor;
+        }
+
         private static T With<T>(T definition, Accessibility accessibility)
             where T : Accessible
         {

@@ -93,6 +93,14 @@ Decided in the review of the reimplementation, for the language features to come
   import where Z# has the same name. The CLR's LIR, as `ClrPlatform`, is in
   `pkg:clr/lir`. `Path`, `File`, `Directory`, `Environment`, `Assembly` and `AppDomain`
   are imported from `Object.Assembly`.
+- **Explicit this** is the CLR's concept: a signature whose first parameter is the
+  object, as ECMA-335's `EXPLICITTHIS` calling convention has it. So it is a property of
+  a CLR method or constructor, as being static is, `HasExplicitThis`, which
+  `@explicitThis` of `pkg:clr/hir` sets. How it is encoded is the platform's: the runtime
+  emits an ordinary instance method, which the object is passed to as `this`. It was an
+  attribute of the IL loader's, which only the running loader could name, so its
+  decorator had to be `core:runtime`'s. `Ref` and `Out` are CLR HIR too, so they are
+  `pkg:clr/hir`'s.
 - **Integers.** The integer concept is a set of operator functions and casts. A
   fixed-width integer is a type of its own `Integer` meta-type, which gives its width.
 
@@ -150,8 +158,8 @@ Decided in the review of the reimplementation, for the language features to come
   set it: `@public`, `@private`, `@internal` and `@protected`. Each is one generic
   function over the `Accessible` capability, which gives back what it was given, typed
   as it was. They are HIR's alone and need nothing that runs, so they aren't
-  `core:runtime`'s; nor are `@static`, `@virtual`, `@abstract` and `@override`, which
-  are there too. A top-level type
+  `core:runtime`'s; nor are `@static`, `@virtual`, `@abstract`, `@override` and
+  `@explicitThis`, which are there too. A top-level type
   has public or internal alone on the CLR, so a private one is internal.
 - A meta-compiler gives each node its default, as it interprets what is written:
   - a class and its contents are private;

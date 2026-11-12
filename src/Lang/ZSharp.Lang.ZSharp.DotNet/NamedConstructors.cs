@@ -37,7 +37,7 @@ namespace ZSharp.Lang.DotNet
             owner.NestedDefinitions.Add(marker);
 
             // The marker goes before what a call passes, after an explicit this.
-            List<Code.Parameter> called = [.. il.CallParameters(constructor.Parameters, constructor.CustomMetadata)];
+            List<Code.Parameter> called = [.. il.CallParameters(constructor)];
             constructor.Parameters.Insert(constructor.Parameters.Count - called.Count, new Package.DotNet.Parameter("marker", marker));
 
             var factory = new Package.DotNet.Method(named.Name)

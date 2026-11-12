@@ -697,10 +697,10 @@ namespace ZSharp.Importer.ILLoader
             if (property is { Getter: null, Setter: null } || property.Type is null)
                 return new ErrorMessage($"Property {property.Name} of {owner.Name} needs a getter with a return type, or a setter that takes its value.");
 
-            if (property.Getter is { } getter && (getter.ReturnType is null || CallParameters(getter.Parameters, getter.CustomMetadata).Count > 0))
+            if (property.Getter is { } getter && (getter.ReturnType is null || CallParameters(getter).Count > 0))
                 return new ErrorMessage($"The getter of property {property.Name} of {owner.Name} takes nothing and gives its value.");
 
-            if (property.Setter is { } setter && (setter.ReturnType is not null || CallParameters(setter.Parameters, setter.CustomMetadata).Count != 1))
+            if (property.Setter is { } setter && (setter.ReturnType is not null || CallParameters(setter).Count != 1))
                 return new ErrorMessage($"The setter of property {property.Name} of {owner.Name} takes one value and returns nothing.");
 
             if (property is { Getter: { } read, Setter: { } write } && read.IsStatic != write.IsStatic)
@@ -846,23 +846,21 @@ namespace ZSharp.Importer.ILLoader
         }
 
         /// <summary>
-        /// Whether metadata makes the first parameter the object the code runs on.
+        /// The parameters a call to a method passes arguments to, which leaves out an
+        /// explicit this.
         /// </summary>
-        private bool ExplicitThis(List<Package.DotNet.CustomMetadata> metadata)
-        {
-            var marker = Load(typeof(ExplicitThisAttribute).GetConstructor(Type.EmptyTypes)!);
-
-            return metadata.Any(item => item.Constructor == marker);
-        }
+        public List<HIR.Code.Parameter> CallParameters(Package.DotNet.Method method)
+            => CallParameters(method.Parameters, method.HasExplicitThis);
 
         /// <summary>
-        /// The parameters a call passes arguments to, which leaves out an explicit this.
+        /// The parameters a call to a constructor passes arguments to, which leaves out an
+        /// explicit this.
         /// </summary>
-        public List<HIR.Code.Parameter> CallParameters(
-            List<HIR.Code.Parameter> parameters,
-            List<Package.DotNet.CustomMetadata> metadata
-        )
-            => ExplicitThis(metadata) ? [.. parameters.Skip(1)] : parameters;
+        public List<HIR.Code.Parameter> CallParameters(Package.DotNet.Constructor constructor)
+            => CallParameters(constructor.Parameters, constructor.HasExplicitThis);
+
+        private static List<HIR.Code.Parameter> CallParameters(List<HIR.Code.Parameter> parameters, bool explicitThis)
+            => explicitThis ? [.. parameters.Skip(1)] : parameters;
 
         /// <summary>
         /// Lowers code into a function on the CLR: it checks that the code returns what the
@@ -943,7 +941,7 @@ namespace ZSharp.Importer.ILLoader
             if (Signature(node.Parameters, signature, runtime) is { } invalid)
                 return Result<LIR.Function>.Error(invalid);
 
-            Bind(null, null, node.Parameters, [], [.. signature.Parameters.Skip(capturing)], runtime);
+            Bind(null, null, node.Parameters, false, [.. signature.Parameters.Skip(capturing)], runtime);
 
             if (node.ReturnType is not null)
                 if (CompileType(node.ReturnType, runtime).When(out var type).Error(out var error))

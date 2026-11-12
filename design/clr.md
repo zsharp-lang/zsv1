@@ -247,9 +247,9 @@ C#'s rules rather than new ones:
   element, and an array of them is made through a function handle mapped to `newarr`.
 - `Ref[T]` and `Out[T]` are the types of references to variables of `T`, which `ref` and
   `out` parameters take. They look like generic types but aren't: `Ref` and `Out` are
-  `Package.DotNet.RefFamily` nodes, which `core:runtime` exports, and indexing one gives a
+  `Package.DotNet.RefFamily` nodes, which `pkg:clr/hir` exports, and indexing one gives a
   `RefType`, which the CLR has as `T&` either way. A static readonly field of a library's
-  module scope that holds HIR is exported as that HIR, which is how `core:runtime` gives
+  module scope that holds HIR is exported as that HIR, which is how `pkg:clr/hir` gives
   them.
 - A variable of exactly `T` goes to `Ref[T]` or `Out[T]`, so nothing marks an argument
   passed by reference. A local, parameter, global, field or captured variable is passed by

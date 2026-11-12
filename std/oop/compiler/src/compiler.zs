@@ -6,8 +6,8 @@
 // needs of them. Importing it makes `def` a Z# class wherever nothing else compiles one,
 // and `def Name of Interface` a Z# interface.
 
-import { String, Object, Boolean, Int32, List, Dictionary, HashSet, explicitThis, ilLoader, Type as ClrType } from "core:runtime";
-import { Interface as DotNet_Interface, Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { String, Object, Boolean, Int32, List, Dictionary, HashSet, ilLoader, Type as ClrType } from "core:runtime";
+import { Interface as DotNet_Interface, Class as DotNet_Class, Module as DotNet_Module, explicitThis } from "pkg:clr/hir";
 import { static as clrStatic } from "pkg:clr/hir";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "pkg:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement, Cast as CastCode } from "pkg:zsharp/hir/code";

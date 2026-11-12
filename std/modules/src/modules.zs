@@ -9,9 +9,9 @@
 // The nodes are the platform's own definitions, written with one meta-type, `Node`, so
 // another platform reimplements them by giving that name its own.
 
-import { String, Object, List, explicitThis } from "core:runtime";
+import { String, Object, List } from "core:runtime";
 import { Class as Node } from "pkg:clr/hir";
-import { public } from "pkg:clr/hir";
+import { public, explicitThis } from "pkg:clr/hir";
 import { importers } from "core:zsharp";
 import { entrypoint } from "std:framework";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "pkg:zsharp/hir";

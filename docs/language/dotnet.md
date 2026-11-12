@@ -117,8 +117,8 @@ alone. What isn't written is decided by where it is:
   always written.
 
 ```zs fragment
-import { Int32, explicitThis } from "core:runtime";
-import { Class, public } from "pkg:clr/hir";
+import { Int32 } from "core:runtime";
+import { Class, public, explicitThis } from "pkg:clr/hir";
 
 @public def Counter of Class {
     let count: Int32;                                   // private
@@ -132,8 +132,8 @@ A constructor can have a name, as a Z# class's can, and is called through it:
 ```zs
 import "std:prelude";
 import { print } from "std:io";
-import { Int32, explicitThis } from "core:runtime";
-import { Class, public } from "pkg:clr/hir";
+import { Int32 } from "core:runtime";
+import { Class, public, explicitThis } from "pkg:clr/hir";
 
 @public def Counter of Class {
     @public let count: Int32;

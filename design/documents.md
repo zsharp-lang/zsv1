@@ -236,8 +236,7 @@ member accesses and calls, as in `@api.post("/login")`. Several decorators apply
 first, so in `@a @b fun f()`, `b` receives the method and `a` receives what `b` returned.
 Definitions, statements and parameters can be decorated; expressions can't yet.
 CLR HIR's own module, `pkg:clr/hir`, supplies `@static`, `@virtual`,
-`@abstract`, `@override` and the accessibilities for .NET definitions, and
-`core:runtime` supplies `@explicitThis`, which names an attribute of the IL loader's.
+`@abstract`, `@override`, `@explicitThis` and the accessibilities for .NET definitions.
 
 A decorated statement that isn't a definition gives its decorators the statement as
 HIR: the code that builds its node, reified. An expression statement gives them its
@@ -287,10 +286,12 @@ resolved to.
 
 `this` is not a keyword or a special name. A method has a `this` HIR node, and methods
 are implicit `this` by default, with no name bound to it. A free name compiles to
-`NamedMember` on that node. Code that needs the object uses `@explicitThis`, which adds
-custom metadata to the method. Its mapper, registered for the .NET `Method` node, then
+`NamedMember` on that node. Code that needs the object uses `@explicitThis`, which sets
+`HasExplicitThis` on the method. Its mapper, registered for the .NET `Method` node, then
 pre-maps that parameter to the CO that `this` maps to, instead of constructing a new one.
-The decorator doesn't touch the code.
+The decorator doesn't touch the code. **Not yet:** a CLR method binds no name through its
+`this` node, so a free name doesn't reach the class's members, and code reaches them
+through an explicit `this`.
 
 A constructor call and a base call use the same call syntax, which covers both
 `new Foo()` and `base()` in C#. A base call passes the constructor's first parameter

@@ -5,7 +5,7 @@
 import { Polymorphism, PlatformInterfaces } from "std:zsharp/capabilities";
 import { Implementation, implement } from "std:traits";
 import { entrypoint } from "std:framework";
-import { explicitThis } from "core:runtime";
+import { explicitThis } from "pkg:clr/hir";
 import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest } from "pkg:clr/lir";
 import { public } from "pkg:clr/hir";
 import { Structure, Function, Type as LIRType } from "pkg:zsharp/lir";

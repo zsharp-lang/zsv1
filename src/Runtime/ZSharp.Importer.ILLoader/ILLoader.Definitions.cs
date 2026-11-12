@@ -344,14 +344,14 @@ namespace ZSharp.Importer.ILLoader
 
             foreach (var constructor in @class.Constructors)
             {
-                if (ExplicitThis(constructor.CustomMetadata) && constructor.Parameters.Count == 0)
+                if (constructor.HasExplicitThis && constructor.Parameters.Count == 0)
                     return new ErrorMessage("An explicit this needs a parameter to be it.");
 
                 var code = new LIR.Signature();
 
                 code.Parameters.Add(new LIR.Parameter(definition) { Name = "this" });
 
-                if (Signature(CallParameters(constructor.Parameters, constructor.CustomMetadata), code, target) is { } error)
+                if (Signature(CallParameters(constructor), code, target) is { } error)
                     return error;
 
                 var creation = new LIR.Signature { ReturnType = definition };
@@ -378,16 +378,16 @@ namespace ZSharp.Importer.ILLoader
                     lowered.Parameters[parameter] = declaredParameter;
                 }
 
-                if (method.IsStatic && ExplicitThis(method.CustomMetadata))
+                if (method.IsStatic && method.HasExplicitThis)
                     return new ErrorMessage($"Method {method.Name} is static, so it has no this.");
 
-                if (ExplicitThis(method.CustomMetadata) && method.Parameters.Count == 0)
+                if (method.HasExplicitThis && method.Parameters.Count == 0)
                     return new ErrorMessage("An explicit this needs a parameter to be it.");
 
                 if (!method.IsStatic)
                     signature.Parameters.Add(new LIR.Parameter(definition) { Name = "this" });
 
-                if (Signature(CallParameters(method.Parameters, method.CustomMetadata), signature, target) is { } error)
+                if (Signature(CallParameters(method), signature, target) is { } error)
                     return error;
 
                 if (method.ReturnType is not null)
@@ -468,7 +468,7 @@ namespace ZSharp.Importer.ILLoader
 
             foreach (var (constructor, declared) in @class.Constructors.Zip(lowered.Constructors))
             {
-                using var bound = Bind(@class, constructor.This, constructor.Parameters, constructor.CustomMetadata, signatures[(constructor, target ?? NoTarget)], target);
+                using var bound = Bind(@class, constructor.This, constructor.Parameters, constructor.HasExplicitThis, signatures[(constructor, target ?? NoTarget)], target);
 
                 foreach (var field in node.Fields)
                     if (field.DefaultValue is not null && Initialize(field, @class, constructor, declared, target) is { } error)
@@ -486,7 +486,7 @@ namespace ZSharp.Importer.ILLoader
                 if (method.Body is null)
                     return new ErrorMessage($"Method {method.Name} has no body.");
 
-                using var bound = Bind(@class, method.IsStatic ? null : method.This, method.Parameters, method.CustomMetadata, signatures[(method, target ?? NoTarget)], target);
+                using var bound = Bind(@class, method.IsStatic ? null : method.This, method.Parameters, method.HasExplicitThis, signatures[(method, target ?? NoTarget)], target);
 
                 if (Lower(method.Body, declared.Function, method.ReturnType, method.Parameters, target) is { } error)
                     return error;
@@ -505,12 +505,12 @@ namespace ZSharp.Importer.ILLoader
             Objects.DefinedClass? @class,
             Package.DotNet.This? @this,
             List<HIR.Code.Parameter> parameters,
-            List<Package.DotNet.CustomMetadata> metadata,
+            bool explicitThis,
             List<LIR.Parameter> lowered,
             object? target
         )
         {
-            var called = CallParameters(parameters, metadata);
+            var called = CallParameters(parameters, explicitThis);
             var index = 0;
             var binding = new Binding();
 
@@ -520,7 +520,7 @@ namespace ZSharp.Importer.ILLoader
 
                 binding.Set(@this, receiver);
 
-                if (ExplicitThis(metadata) && parameters.Count > 0)
+                if (explicitThis && parameters.Count > 0)
                     binding.Set(parameters[0], receiver);
 
                 index = 1;
@@ -730,7 +730,7 @@ namespace ZSharp.Importer.ILLoader
 
                 var function = lowered.Functions[method];
 
-                using var bound = Bind(null, null, method.Parameters, [], [.. function.Signature.Parameters], target);
+                using var bound = Bind(null, null, method.Parameters, false, [.. function.Signature.Parameters], target);
 
                 if (Lower(method.Body, function, method.ReturnType, method.Parameters, target) is { } error)
                     return error;

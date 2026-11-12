@@ -161,7 +161,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                     target => For(target).When(out var lowered).Error(out var error)
                         ? Result<LIR.ICallable>.Error(error)
                         : Result<LIR.ICallable>.Ok(lowered!.Constructors[index]),
-                    loader.CallParameters(constructor.Parameters, constructor.CustomMetadata),
+                    loader.CallParameters(constructor),
                     null,
                     () => this,
                     loader,
@@ -236,7 +236,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 : new Callable(
                     $"{Name}.{method.Name}",
                     callee,
-                    loader.CallParameters(method.Parameters, method.CustomMetadata),
+                    loader.CallParameters(method),
                     receiver,
                     method.ReturnType is { } returnType ? () => Scope.HIRLoader.LoadType(returnType).Unwrap() : null,
                     loader,

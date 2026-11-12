@@ -103,7 +103,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             => Candidates.Call(Class.Constructors.Select((constructor, index) => new Callable(
                     $"A constructor of {Class.Name}",
                     On(lowered => lowered.Constructors[index]),
-                    loader.CallParameters(constructor.Parameters, constructor.CustomMetadata),
+                    loader.CallParameters(constructor),
                     null,
                     () => this,
                     loader,

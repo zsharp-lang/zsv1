@@ -7,12 +7,12 @@
 
 import { compile, emit } from "core:project";
 import {
-    Object, String, Boolean, Int16, Int32, Int64, UInt64, Single, Double, Type, List, Dictionary, explicitThis
+    Object, String, Boolean, Int16, Int32, Int64, UInt64, Single, Double, Type, List, Dictionary
 } from "core:runtime";
 import { Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
 import { ClrPlatform } from "pkg:clr/lir";
 import { Path, Directory, File, Environment, Assembly, AppDomain } from Object.Assembly;
-import { static, public } from "pkg:clr/hir";
+import { static, public, explicitThis } from "pkg:clr/hir";
 
 import { BindingFlags, Convert, Enum, Version, AppContext, Byte, Module as ReflectedModule } from Object.Assembly;
 import { Assemblies } from Path.Combine(AppContext.BaseDirectory, "ZSharp.Importer.ILLoader.dll");
