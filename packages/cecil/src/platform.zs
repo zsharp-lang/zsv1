@@ -850,12 +850,29 @@
     @public @explicitThis fun classDefinition(this, definition: ClassDefinition): TypeDefinition {
         if (this.definitions.ContainsKey(definition)) return this.definitions[definition];
 
-        let attributes = typeVisibility(definition.Accessibility) | TypeAttributes.Class;
-        if (definition.IsInterface) attributes = typeVisibility(definition.Accessibility) | TypeAttributes.Interface | TypeAttributes.Abstract;
+        let visibility = typeVisibility(definition.Accessibility);
+        if (definition.DeclaringType != null) visibility = nestedVisibility(definition.Accessibility);
+        let attributes = visibility | TypeAttributes.Class;
+        if (definition.IsInterface) attributes = visibility | TypeAttributes.Interface | TypeAttributes.Abstract;
 
-        let type = TypeDefinition("", this.unique(definition.Name, "Class"), attributes, null);
-        this.main.Types.Add(type);
+        // A nested class is a type of the class it is in, which is written first.
+        let type: TypeDefinition = null;
+        if (definition.DeclaringType != null) {
+            let outer = this.classDefinition(definition.DeclaringType);
+            type = TypeDefinition("", definition.Name, attributes, null);
+            outer.NestedTypes.Add(type);
+        }
+        else {
+            type = TypeDefinition("", this.unique(definition.Name, "Class"), attributes, null);
+            this.main.Types.Add(type);
+        }
         this.definitions[definition] = type;
+
+        let nested = 0;
+        while (nested < definition.NestedTypes.Count) {
+            this.classDefinition(definition.NestedTypes[nested]);
+            nested = nested + 1;
+        }
         this.annotate(type, definition.Metadata);
 
         let index = 0;
@@ -1533,6 +1550,16 @@
 fun typeVisibility(accessibility: ClrAccessibility): TypeAttributes {
     if (accessibility == ClrAccessibility.Public) return TypeAttributes.Public;
     return TypeAttributes.NotPublic;
+}
+
+// A nested type's visibility, which the CLR has all of a member's.
+fun nestedVisibility(accessibility: ClrAccessibility): TypeAttributes {
+    if (accessibility == ClrAccessibility.Private) return TypeAttributes.NestedPrivate;
+    if (accessibility == ClrAccessibility.Internal) return TypeAttributes.NestedAssembly;
+    if (accessibility == ClrAccessibility.Protected) return TypeAttributes.NestedFamily;
+    if (accessibility == ClrAccessibility.ProtectedInternal) return TypeAttributes.NestedFamORAssem;
+    if (accessibility == ClrAccessibility.PrivateProtected) return TypeAttributes.NestedFamANDAssem;
+    return TypeAttributes.NestedPublic;
 }
 
 fun methodVisibility(accessibility: ClrAccessibility): MethodAttributes {

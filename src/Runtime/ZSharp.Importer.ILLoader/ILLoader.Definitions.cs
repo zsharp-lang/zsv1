@@ -33,6 +33,11 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<(object Member, object Target), List<LIR.Parameter>> signatures = [];
 
         /// <summary>
+        /// The class each nested class is nested in, known once that class is loaded.
+        /// </summary>
+        private readonly Dictionary<Package.DotNet.Class, Package.DotNet.Class> nestedIn = new(ReferenceEqualityComparer.Instance);
+
+        /// <summary>
         /// What stands for no target, for code lowered for none.
         /// </summary>
         private static readonly object NoTarget = new();
@@ -155,6 +160,9 @@ namespace ZSharp.Importer.ILLoader
             var @class = new Objects.DefinedClass(this, node);
             defined[node] = @class;
 
+            foreach (var nested in node.NestedDefinitions.OfType<Package.DotNet.Class>())
+                nestedIn[nested] = node;
+
             foreach (var parameter in node.GenericParameters.Concat(node.Methods.SelectMany(method => method.GenericParameters)))
                 typeParameters[parameter] = new(parameter, target => @class.For(target).When(out var lowered).Error(out var failure)
                     ? Result<LIR.Type>.Error(failure)
@@ -240,6 +248,20 @@ namespace ZSharp.Importer.ILLoader
                 }
 
                 @class.Lowerings[key] = lowered;
+
+                // A nested class is defined with the class it is nested in, which is lowered
+                // first.
+                if (nestedIn.TryGetValue(node, out var outerNode) && defined.TryGetValue(outerNode, out var outer))
+                {
+                    if (Lower(outer, target).When(out var enclosing).Error(out var failure))
+                    {
+                        @class.Lowerings.Remove(key);
+                        return Result<Objects.LoweredClass>.Error(failure);
+                    }
+
+                    lowered.Definition.DeclaringType = enclosing!.Definition;
+                    enclosing.Definition.NestedTypes.Add(lowered.Definition);
+                }
 
                 if (Declare(@class, lowered, target) is { } error)
                 {
@@ -397,6 +419,11 @@ namespace ZSharp.Importer.ILLoader
                         Getter = property.Getter is { } getter ? lowered.Methods[getter] : null,
                         Setter = property.Setter is { } setter ? lowered.Methods[setter] : null,
                     });
+
+            // Its nested classes are lowered with it, as the CLR defines them with it.
+            foreach (var nested in node.NestedDefinitions.OfType<Package.DotNet.Class>())
+                if (Defined(nested).When(out var loaded).Error(out var failure) || Lower((Objects.DefinedClass)loaded!, target).When(out _).Error(out failure))
+                    return failure;
 
             return null;
         }

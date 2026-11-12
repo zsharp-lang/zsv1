@@ -185,6 +185,10 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (methods.Length > 0)
                 return Candidates.Of(methods.Select(method => Callable(method, receiver, Method(method), null)));
 
+            // A class nested in it is a member of the class, not of its objects.
+            if (receiver is null && Node.NestedDefinitions.OfType<Package.DotNet.Class>().FirstOrDefault(nested => nested.Name == member) is { } nestedClass)
+                return Scope.HIRLoader.LoadInstance(nestedClass);
+
             if (Node.Properties.FirstOrDefault(property => property.Name == member && property.IsStatic == receiver is null) is { } property)
                 return Result.Ok(new Accessor(
                     receiver,

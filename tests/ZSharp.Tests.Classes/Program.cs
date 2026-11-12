@@ -2183,6 +2183,20 @@ Try("a class and its members are private unless they say otherwise, and an inter
         && open.GetMethod("shown", flags)!.IsPublic;
 });
 
+Try("a class nested in a class is a CLR nested type, a member of its class, private unless it says otherwise", () =>
+{
+    if (Run("""
+        @public def Outer319 { @public def Shown319 { @public @explicitThis new(this) { } } def Hidden319 { } }
+        Keep(Outer319.Shown319());
+        Keep(Outer319);
+        """) is not null || Probe.Kept is not [var shown, Type outer])
+        return false;
+
+    var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+    return shown.GetType() is { IsNestedPublic: true } inner && inner.DeclaringType == outer
+        && outer.GetNestedType("Hidden319", flags) is { IsNestedPrivate: true };
+});
+
 Try("a method that implements an interface's but isn't public implements it explicitly", () =>
     Run("""
         def IGreeter317 of DotNet_Interface { fun greet(): String; }
@@ -4669,6 +4683,10 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
             @public286 @explicitThis286 new(this) { this.name = "dog"; }
             @public286 @override286 @explicitThis286 fun sound(this): String { return "woof"; }
             @public286 @explicitThis286 fun greet(this): String { return this.name + " says " + this.sound(); }
+            @public286 def Tag286 of DotNet_Class286 {
+                @public286 let text: String;
+                @public286 @explicitThis286 new(this) { this.text = "tagged"; }
+            }
         }
         @public286 def Holder286[T] of DotNet_Class286 {
             @public286 let held: T;
@@ -4677,7 +4695,7 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         }
         fun clr(): String {
             let greeter: Greeter286 = Dog286();
-            return greeter.greet() + ", " + Holder286[String]("held").held + " " + Holder286[Int32](1).with[String]("with");
+            return greeter.greet() + ", " + Holder286[String]("held").held + " " + Holder286[Int32](1).with[String]("with") + ", " + Dog286.Tag286().text;
         }
         """);
     File.WriteAllText(Path.Combine(source, "shapes.zs"), """
@@ -4718,7 +4736,7 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         Keep(twice286(21));
         Keep(describe286(square286(3)));
         Keep(clr286());
-        """) is null && Probe.Kept is [42, "a square of side 3 and area 9, 1 made", "dog says woof, held with"];
+        """) is null && Probe.Kept is [42, "a square of side 3 and area 9, 1 made", "dog says woof, held with, tagged"];
 });
 
 Try("inside its module, a function's name is all of its overloads", () =>

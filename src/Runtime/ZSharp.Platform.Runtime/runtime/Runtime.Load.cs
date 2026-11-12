@@ -104,6 +104,13 @@ namespace ZSharp.Platform.Runtime
 
             batch.Add(definition);
 
+            // A nested class is defined with the class it is in, and that class with it.
+            if (definition.DeclaringType is { } outer)
+                Reach(outer, batch);
+
+            foreach (var nested in definition.NestedTypes)
+                Reach(nested, batch);
+
             Reach(definition.Base, batch);
 
             foreach (var @interface in definition.Interfaces)
@@ -177,15 +184,20 @@ namespace ZSharp.Platform.Runtime
         {
             var builders = new Dictionary<ClassDefinition, Emit.TypeBuilder>();
 
-            // Everything is declared first, as any of them can refer to any other.
-            foreach (var definition in definitions.Where(definition => !classes.ContainsKey(definition)))
-                classes[definition] = builders[definition] = module.DefineType(
-                    classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name),
-                    definition.IsInterface
-                        ? Visibility(definition) | IL.TypeAttributes.Interface | IL.TypeAttributes.Abstract
-                        : Visibility(definition) | IL.TypeAttributes.Class
-                            | (definition.Methods.Any(method => method.IsAbstract) ? IL.TypeAttributes.Abstract : 0)
-                );
+            // Everything is declared first, as any of them can refer to any other: a class
+            // nested in another after it, through it.
+            foreach (var definition in definitions.Where(definition => !classes.ContainsKey(definition)).OrderBy(Depth))
+            {
+                var attributes = definition.IsInterface
+                    ? Visibility(definition) | IL.TypeAttributes.Interface | IL.TypeAttributes.Abstract
+                    : Visibility(definition) | IL.TypeAttributes.Class
+                        | (definition.Methods.Any(method => method.IsAbstract) ? IL.TypeAttributes.Abstract : 0);
+
+                classes[definition] = builders[definition] = definition.DeclaringType is { } outer
+                    ? (classes[outer] as Emit.TypeBuilder ?? throw new NotSupportedException($"Class {definition.Name} is nested in {outer.Name}, which is already created."))
+                        .DefineNestedType(definition.Name, attributes)
+                    : module.DefineType(classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name), attributes);
+            }
 
             foreach (var (definition, builder) in builders.Where(pair => pair.Key.GenericParameters.Count > 0))
             {
@@ -317,7 +329,24 @@ namespace ZSharp.Platform.Runtime
         /// A type's visibility: a top-level type is public or else internal to its assembly.
         /// </summary>
         private static IL.TypeAttributes Visibility(ClassDefinition definition)
-            => definition.Accessibility == Accessibility.Public ? IL.TypeAttributes.Public : IL.TypeAttributes.NotPublic;
+            => definition.DeclaringType is null
+                ? definition.Accessibility == Accessibility.Public ? IL.TypeAttributes.Public : IL.TypeAttributes.NotPublic
+                : definition.Accessibility switch
+                {
+                    Accessibility.Public => IL.TypeAttributes.NestedPublic,
+                    Accessibility.Private => IL.TypeAttributes.NestedPrivate,
+                    Accessibility.Internal => IL.TypeAttributes.NestedAssembly,
+                    Accessibility.Protected => IL.TypeAttributes.NestedFamily,
+                    Accessibility.ProtectedInternal => IL.TypeAttributes.NestedFamORAssem,
+                    Accessibility.PrivateProtected => IL.TypeAttributes.NestedFamANDAssem,
+                    _ => throw new ArgumentOutOfRangeException(nameof(definition)),
+                };
+
+        /// <summary>
+        /// How deep a class is nested: a class is defined after the one it is in.
+        /// </summary>
+        private static int Depth(ClassDefinition definition)
+            => definition.DeclaringType is { } outer ? Depth(outer) + 1 : 0;
 
         private static IL.MethodAttributes MethodVisibility(Accessibility accessibility)
             => accessibility switch
@@ -486,6 +515,10 @@ namespace ZSharp.Platform.Runtime
         {
             if (classes[definition] is not Emit.TypeBuilder builder || !uncreated.Remove(definition))
                 return;
+
+            // The CLR creates a nested class after the class it is in.
+            if (definition.DeclaringType is { } outer)
+                CreateClass(outer);
 
             if (definition.Base is ClassDefinition @base)
                 CreateClass(@base);

@@ -27,6 +27,16 @@ namespace ZSharp.LIR.CLR
         public bool IsInterface { get; set; }
 
         /// <summary>
+        /// The class it is nested in, if it is one, which defines it with itself.
+        /// </summary>
+        public ClassDefinition? DeclaringType { get; set; }
+
+        /// <summary>
+        /// The classes nested in it, defined with it.
+        /// </summary>
+        public List<ClassDefinition> NestedTypes { get; } = [];
+
+        /// <summary>
         /// The interfaces it implements, or extends if it is one.
         /// </summary>
         public List<LIR.Type> Interfaces { get; } = [];
