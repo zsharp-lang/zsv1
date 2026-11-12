@@ -2428,6 +2428,53 @@ Try("a local function in a static method reaches the class's static members by t
         Keep(StaticCaptures331.two());
         """) is null && Kept() is 2);
 
+Try("a local function that calls one beside it captures it, and so what that one captures, through any number of them", () =>
+    ResetKept() && Run("""
+        @public def Siblings332 {
+            @public let name: String;
+            @public new() { name = "obj"; }
+            @public @static fun chain(): String {
+                let x = "x";
+                fun first(): String { return x; }
+                fun second(): String { return first() + "2"; }
+                fun third(): String { return second() + "3"; }
+                x = "y";
+                return third();
+            }
+            @public @static fun both(): String {
+                let x = "x";
+                fun first(): String { return x; }
+                fun second(): String { x = x + "!"; return first() + x; }
+                return second() + x;
+            }
+            @public @static fun value(): String {
+                let x = "v";
+                fun first(): String { return x; }
+                fun second(): String { let f: Func[String] = first; return f(); }
+                return second();
+            }
+            @public @static fun nested(): String {
+                let x = "n";
+                fun first(): String { return x; }
+                fun outer(): String {
+                    fun inner(): String { return first(); }
+                    return inner();
+                }
+                return outer();
+            }
+            @public fun members(): String {
+                fun first(): String { return name; }
+                fun second(): String { return first() + "?"; }
+                return second();
+            }
+        }
+        Keep(Siblings332.chain());
+        Keep(Siblings332.both());
+        Keep(Siblings332.value());
+        Keep(Siblings332.nested());
+        Keep(Siblings332().members());
+        """) is null && Probe.Kept is ["y23", "x!x!x!", "v", "n", "obj?"] && ResetKept());
+
 Try("a class nested in a class is a CLR nested type, a member of its class, private unless it says otherwise", () =>
 {
     if (Run("""

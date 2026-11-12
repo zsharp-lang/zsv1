@@ -40,6 +40,11 @@ namespace ZSharp.Lang.DotNet
             if (Language.Names(compiler) is not { } boundary)
                 return Result<CompiledDefinition>.Error($"Function {function.Name} has no names of its own.");
 
+            // A local function is a variable of the code around it, which that code refers to
+            // through the definition's variable, as it refers to a local, so a function beside
+            // it that uses it captures it. Its node is built through a variable of its own.
+            self.Type = (HIR.Type)variable;
+
             return Result<CompiledDefinition>.Ok(new(
                 self,
                 CodeBody.Construct(underlyingType, new Code.StringLiteral(function.Name ?? string.Empty)),
@@ -59,7 +64,14 @@ namespace ZSharp.Lang.DotNet
             var signature = function.Signature;
 
             var block = new Code.Block();
-            var captures = new Captures(this, self, block, around);
+            var node = new Code.Local(self.Name, underlyingType)
+            {
+                Init = new Code.Cast { Value = new Code.Get(self), Type = new Code.Get(underlyingType) }
+            };
+
+            block.Statements.Add(new Code.Declare(node));
+
+            var captures = new Captures(this, node, block, around);
             var fork = compiler.Fork();
             var expressions = fork.Expression;
 
@@ -68,7 +80,7 @@ namespace ZSharp.Lang.DotNet
                     ? captures.Capture(expressions(current, expression))
                     : expressions(current, expression);
 
-            if (body.Parameters(fork, block, self, nameof(Package.DotNet.LocalFunction.Parameters), signature) is { } error)
+            if (body.Parameters(fork, block, node, nameof(Package.DotNet.LocalFunction.Parameters), signature) is { } error)
                 return Result<Code.Block>.Error(error);
 
             if (function.ReturnType is not null)
@@ -78,14 +90,14 @@ namespace ZSharp.Lang.DotNet
 
                 block.Statements.Add(new Code.ExpressionStatement(new Code.Set
                 {
-                    Target = CodeBody.Member(self, nameof(Package.DotNet.LocalFunction.ReturnType)),
+                    Target = CodeBody.Member(node, nameof(Package.DotNet.LocalFunction.ReturnType)),
                     Value = type!
                 }));
             }
 
-            var locals = body.WithLocals(fork, block, self, nameof(Package.DotNet.LocalFunction.Locals));
+            var locals = body.WithLocals(fork, block, node, nameof(Package.DotNet.LocalFunction.Locals));
 
-            return body.Body(locals, block, self, function.Body) is { } invalid
+            return body.Body(locals, block, node, function.Body) is { } invalid
                 ? Result<Code.Block>.Error(invalid)
                 : Result<Code.Block>.Ok(block);
         }
