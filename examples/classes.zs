@@ -1,5 +1,6 @@
 import { print } from "std:io";
-import { String, explicitThis } from "core:runtime"; import { static } from "std:zsharp/package/dotnet";
+import { String, explicitThis } from "core:runtime";
+import { static } from "pkg:clr/hir";
 
 module Program {
     def Greeter {

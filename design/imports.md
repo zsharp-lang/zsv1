@@ -42,15 +42,27 @@
   that call. An import has no alias of its own: only the names it brings in can be
   renamed, as in `{ a as b }`.
 - Importers route by prefix through the string importer. The prefixes say what a
-  library is: `core:` is live and stateful, bound to the toolchain that is running, as
-  `core:compiler`'s CG and loaders, `core:zsharp`'s compiler and meta-types, and
-  `core:runtime`, which also keeps the CLR's types for now; `pkg:` is an external
-  package installed by the package manager; `std:` is the standard library, its common
-  APIs; and `std:zsharp/` is the standard API of the toolchain, its types, as
-  `std:zsharp/hir`, `std:zsharp/lang/ast`, `std:zsharp/lang/tokenizer` and
-  `std:zsharp/lang/parser`. The CLR
-  package's HIR, `std:zsharp/package/dotnet`, isn't standard: it is there until a package
-  manager can give it as a `pkg:`.
+  library is:
+  - `core:` is live and stateful, bound to the toolchain that is running. Under
+    `core:zsharp/` are the compiler's layers: `h2m` (HIR to MIR, the code loaders),
+    `mir/core`, `mir/cg` with `direct` and `typed`, `mir/ts`, `mir/overloading` and
+    `mir/matching`, `m2l` (MIR to LIR), and the language's compiler, `lang`. The
+    backend adds `core:runtime`, the running platform and the CLR types Z# uses most;
+    `core:zsharp` itself has the compiler and the meta-types; and a project's module
+    file has `core:project`.
+  - `pkg:` is a package: definitions with no state of their own. The toolchain's are
+    its own, `pkg:zsharp/core`, `pkg:zsharp/hir`, `pkg:zsharp/hir/code`,
+    `pkg:zsharp/mir`, `pkg:zsharp/lir`, and the language's `pkg:zsharp/lang/hir`,
+    `/ast`, `/parser`, `/syntax` and `/tokenizer`; and the CLR's, `pkg:clr/hir`,
+    `pkg:clr/lir` and `pkg:clr/platform`. The toolchain registers `pkg:` with its own,
+    so the standard library can import them before the package manager is installed,
+    and the package manager, once it is, imports what they don't have.
+  - `std:` is the standard library, its common APIs.
+- The CLR's HIR, `pkg:clr/hir`, names its nodes as they are: `Class`, `Module`,
+  `Interface` and the rest. Code that has a `Class` of its own, as a Z# class, renames
+  the CLR's on import, as in `import { Class as DotNet_Class } from "pkg:clr/hir"`.
+  .NET's own types that aren't Z#'s common ones are imported from their assembly, as in
+  `import { Path, File } from Object.Assembly`.
 - A `std:` library is a CLR module, or else a library of the standard library written
   in Z#, found from where the toolchain runs: `std:name` is its build,
   `std/name/build/name.dll`, an assembly named `std.name` (`std.zsharp.lowering` for

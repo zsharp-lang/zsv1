@@ -85,7 +85,7 @@ import "std:prelude";
 import { print } from "std:io";
 import { reflect } from "std:reflection";
 import { Class } from "std:oop";
-import { Named } from "std:zsharp/hir";
+import { Named } from "pkg:zsharp/hir";
 import { Type } from "core:runtime";
 
 let built: Type = Class;
@@ -127,15 +127,10 @@ README](../../std/functions/README.md) describes them with their compiler.
 function declared with no code call another, as the prelude makes `reflect` call
 `std:encoding`'s `describe`.
 
-## std:dotnet
-
-Importing a `.dll` by its path, as [Using .NET](../language/dotnet.md) shows, and
-`bundle(assemblies, folder)`, which copies the assemblies a built assembly needs next to
-it.
-
 ## std:packages
 
-`pkg:`, the package manager's. `pkg:name` is a package found in the packages folders: the
+What `pkg:` has beyond [the toolchain's own packages](core.md#the-toolchains-packages),
+from the package manager. `pkg:name` is a package found in the packages folders: the
 project's `packages`, the toolchain's, then the packages NuGet installed. In a folder, a
 package is an assembly (`name.dll`), a document (`name.zs`), or a project, and a version
 of one, `pkg:name@1.2.3`, is in `name@1.2.3/name.dll`.

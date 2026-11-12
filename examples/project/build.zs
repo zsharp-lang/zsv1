@@ -4,8 +4,8 @@ import "std:prelude";
 import { print } from "std:io";
 import { discover, Compiler } from "std:project";
 import { Module } from "std:modules";
-import { Get, NamedMember, StringLiteral } from "std:zsharp/hir/code";
-import { Bodies } from "std:zsharp/lang";
+import { Get, NamedMember, StringLiteral } from "pkg:zsharp/hir/code";
+import { Bodies } from "pkg:zsharp/lang/hir";
 import { ct } from "core:zsharp";
 import { String, Object } from "core:runtime";
 

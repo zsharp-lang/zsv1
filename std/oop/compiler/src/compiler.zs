@@ -6,33 +6,35 @@
 // needs of them. Importing it makes `def` a Z# class wherever nothing else compiles one,
 // and `def Name of Interface` a Z# interface.
 
-import { String, Object, Boolean, Int32, List, Dictionary, HashSet, DotNet_Interface, explicitThis, DotNet_Class, DotNet_Module, ilLoader, Type as ClrType } from "core:runtime"; import { static as clrStatic } from "std:zsharp/package/dotnet";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
-import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement, Cast as CastCode } from "std:zsharp/hir/code";
+import { String, Object, Boolean, Int32, List, Dictionary, HashSet, explicitThis, ilLoader, Type as ClrType } from "core:runtime";
+import { Interface as DotNet_Interface, Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { static as clrStatic } from "pkg:clr/hir";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "pkg:zsharp/hir";
+import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement, Cast as CastCode } from "pkg:zsharp/hir/code";
 import {
     Function as FunctionSyntax, Definition as DefinitionSyntax, TypeDefinition as TypeSyntax,
     Constructor as ConstructorSyntax, Accessor as AccessorSyntax, AccessorKind, LetExpression as LetSyntax, Expression as ExpressionSyntax,
     Signature as SignatureSyntax, Parameter as ParameterSyntax, Statement as StatementSyntax, DefinitionStatement as DefinitionStatementSyntax,
     DecoratedStatement as DecoratedSyntax, ExpressionStatement as ExpressionStatementSyntax
-} from "std:zsharp/lang/ast";
-import { CompilerObject } from "std:zsharp/mir";
-import { Error, ErrorMessage, Result, IResult } from "std:zsharp/common";
-import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
-import { IRTMatch } from "std:zsharp/compiler/matching/static";
-import { UnsupportedError } from "std:zsharp/compiler";
-import { ICTCallable, ICTBound, ICTGetMember, ICTSet, ICTCastTo, ICTImplicitCastTo, ICTGetIndex, ICTGet } from "std:zsharp/compiler/cg/direct";
-import { IRTGetMember, IRTCastTo, IRTGetIndex } from "std:zsharp/compiler/cg/typed";
-import { ICompileIRExpression, ICompileIRType, ICompileIRStatement, ICompileIRDefinitionIn, ICompileIRReference } from "std:zsharp/compiler/ir";
-import { ITyped, IAssignableTo } from "std:zsharp/compiler/ts";
-import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTDefinition, CompileASTStatement, Context } from "std:zsharp/compiler/ast";
+} from "pkg:zsharp/lang/ast";
+import { CompilerObject } from "pkg:zsharp/mir";
+import { Error, ErrorMessage, Result, IResult } from "pkg:zsharp/core";
+import { Argument, ArgumentStream } from "core:zsharp/mir/cg";
+import { IRTMatch } from "core:zsharp/mir/matching/static";
+import { UnsupportedError } from "core:zsharp/mir/core";
+import { ICTCallable, ICTBound, ICTGetMember, ICTSet, ICTCastTo, ICTImplicitCastTo, ICTGetIndex, ICTGet } from "core:zsharp/mir/cg/direct";
+import { IRTGetMember, IRTCastTo, IRTGetIndex } from "core:zsharp/mir/cg/typed";
+import { ICompileIRExpression, ICompileIRType, ICompileIRStatement, ICompileIRDefinitionIn, ICompileIRReference } from "core:zsharp/m2l";
+import { ITyped, IAssignableTo } from "core:zsharp/mir/ts";
+import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTDefinition, CompileASTStatement, Context } from "core:zsharp/lang";
 import {
     Function as LIRFunction, Parameter as LIRParameter, Local as LIRLocal, Signature, Call as LIRCall,
     GetLocal, SetLocal, Return as LIRReturn, New as LIRNew, GetField, SetField, Constant, Structure,
     Global as LIRGlobal, GetGlobal, SetGlobal,
     Field as LIRField, Module as LIRModule, Expression as LIRExpression, Statement as LIRStatement, Code as LIRCode, Evaluate, Type as LIRType, ICallable
-} from "std:zsharp/lir";
-import { Bodies, ContainerCompiler, CapabilityContext, Language, Operator, OperatorAnnotation } from "std:zsharp/lang";
-import { CodeLoaders } from "std:zsharp/compiler/code";
+} from "pkg:zsharp/lir";
+import { Bodies, ContainerCompiler, CapabilityContext, Language, Operator, OperatorAnnotation } from "pkg:zsharp/lang/hir";
+import { CodeLoaders } from "core:zsharp/h2m";
 import { Positional, Named } from "std:functions";
 import { Holder, Held, Initializing, keep } from "std:zsharp/lowering";
 import { Polymorphism, PlatformInterfaces } from "std:zsharp/capabilities";

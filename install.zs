@@ -14,7 +14,8 @@
 import "std:prelude";
 import { print } from "std:io";
 import { arguments } from "core:zsharp";
-import { Object, String, Type, Int32, Boolean, List, Path, File, Directory, Environment } from "core:runtime";
+import { Object, String, Type, Int32, Boolean, List } from "core:runtime";
+import { Path, File, Directory, Environment } from Object.Assembly;
 
 let objectAssembly = Object.Assembly.Location;
 let runtimeFolder = Path.GetDirectoryName(objectAssembly);

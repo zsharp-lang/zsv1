@@ -18,7 +18,8 @@ nodes without importing it, so it gets the structure alone.
 ## The structure: `std:functions`
 
 The nodes are the platform's own definitions, written with one meta-type, `Node`, which is
-`DotNet_Class` here. Another platform reimplements them by giving that name its own.
+the CLR's `Class`, of `pkg:clr/hir`, here. Another platform reimplements them by giving
+that name its own.
 
 | Node | Capabilities | What it holds |
 |---|---|---|
@@ -62,10 +63,12 @@ registration call the compiler needs.
 
 ## What it depends on
 
-- **`core:runtime`:** the CLR's types, and `DotNet_Class` as the nodes' meta-type.
+- **`core:runtime`:** the CLR's types.
+- **`pkg:clr/hir`:** `Class`, as the nodes' meta-type.
 - **`core:zsharp`:** `importers` for its entry point, and `metaTypes` and `bodies`.
 - **`core:compiler`:** the REIs.
-- **The `std:zsharp/...` modules:** HIR, MIR, LIR, and the compiler's protocols.
+- **The toolchain's packages and layers:** HIR, MIR and LIR, under `pkg:zsharp/`, and
+  the compiler's protocols, under `core:zsharp/`.
 - **`std:framework`:** its decorators.
 - **`std:zsharp/lowering`:** `Holder` and `Held`.
 

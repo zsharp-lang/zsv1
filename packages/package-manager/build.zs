@@ -4,8 +4,9 @@
 // its source, which is what builds it the first time.
 import "std:prelude";
 import { print } from "std:io";
-import { bundle } from "std:dotnet";
-import { Path, Directory } from "core:runtime";
+import { bundle } from "pkg:clr/platform";
+import { Object } from "core:runtime";
+import { Path, Directory } from Object.Assembly;
 import { discover, Compiler } from "std:project";
 import { Module } from "std:modules";
 import { lower } from "std:modules/compiler";

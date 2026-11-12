@@ -235,7 +235,7 @@ A decorator is written `@expression` before a statement, where the expression is
 member accesses and calls, as in `@api.post("/login")`. Several decorators apply nearest
 first, so in `@a @b fun f()`, `b` receives the method and `a` receives what `b` returned.
 Definitions, statements and parameters can be decorated; expressions can't yet.
-CLR HIR's own module, `std:zsharp/package/dotnet`, supplies `@static`, `@virtual`,
+CLR HIR's own module, `pkg:clr/hir`, supplies `@static`, `@virtual`,
 `@abstract`, `@override` and the accessibilities for .NET definitions, and
 `core:runtime` supplies `@explicitThis`, which names an attribute of the IL loader's.
 

@@ -7,6 +7,6 @@
 // object, a member, or a Z# class's type object, which carries its metaclass's.
 
 import { Object } from "core:runtime";
-import { Instance } from "std:zsharp/hir";
+import { Instance } from "pkg:zsharp/hir";
 
 fun reflect(value: Object): Instance;

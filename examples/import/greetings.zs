@@ -1,4 +1,5 @@
-import { String } from "core:runtime"; import { static } from "std:zsharp/package/dotnet";
+import { String } from "core:runtime";
+import { static } from "pkg:clr/hir";
 import { export } from "core:zsharp";
 
 @export

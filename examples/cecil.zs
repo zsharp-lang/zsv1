@@ -1,10 +1,10 @@
-// Mono.Cecil from Z#: a .dll is imported by its path once std:dotnet is, and this one is
-// found in the NuGet cache, until a package manager resolves it. It writes an assembly,
-// then imports it and calls what it wrote.
+// Mono.Cecil from Z#: a .dll is imported by its path, and this one is found in the NuGet
+// cache, until a package manager resolves it. It writes an assembly, then imports it and
+// calls what it wrote.
 import "std:prelude";
-import "std:dotnet";
 import { print } from "std:io";
-import { String, Path, Environment } from "core:runtime";
+import { Object, String } from "core:runtime";
+import { Path, Environment } from Object.Assembly;
 
 let cecil = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget/packages/mono.cecil/0.11.6/lib/netstandard2.0/Mono.Cecil.dll");
 import { AssemblyDefinition, AssemblyNameDefinition, ModuleKind, TypeDefinition, TypeAttributes, MethodDefinition, MethodAttributes, OpCodes } from cecil;

@@ -105,10 +105,10 @@ print("" + wide + " " + text.Length + " " + (nothing == null));
 
 ## Accessibility of the CLR's definitions
 
-A class of the CLR's defined in Z#, as `def Name of DotNet_Class`, has the CLR's
-accessibility, which the decorators of `std:zsharp/package/dotnet` set: `@public`,
-`@private`, `@internal` and `@protected`. They apply to the CLR's definitions alone. What isn't written is
-decided by where it is:
+A class of the CLR's defined in Z#, as `def Name of Class` with `Class` from the CLR's
+HIR, `pkg:clr/hir`, has the CLR's accessibility, which that package's decorators set:
+`@public`, `@private`, `@internal` and `@protected`. They apply to the CLR's definitions
+alone. What isn't written is decided by where it is:
 
 - a class and its members are private, and a top-level class, which the CLR can't make
   private, is internal to its assembly;
@@ -117,10 +117,10 @@ decided by where it is:
   always written.
 
 ```zs fragment
-import { Int32, DotNet_Class, explicitThis } from "core:runtime";
-import { public } from "std:zsharp/package/dotnet";
+import { Int32, explicitThis } from "core:runtime";
+import { Class, public } from "pkg:clr/hir";
 
-@public def Counter of DotNet_Class {
+@public def Counter of Class {
     let count: Int32;                                   // private
     @public @explicitThis new(this) { this.count = 0; }
     @public @explicitThis fun next(this): Int32 { this.count = this.count + 1; return this.count; }
@@ -132,10 +132,10 @@ A constructor can have a name, as a Z# class's can, and is called through it:
 ```zs
 import "std:prelude";
 import { print } from "std:io";
-import { Int32, DotNet_Class, explicitThis } from "core:runtime";
-import { public } from "std:zsharp/package/dotnet";
+import { Int32, explicitThis } from "core:runtime";
+import { Class, public } from "pkg:clr/hir";
 
-@public def Counter of DotNet_Class {
+@public def Counter of Class {
     @public let count: Int32;
     @public @explicitThis new(this) { this.count = 0; }
     @public @explicitThis new from(this, start: Int32) { this.count = start; }
@@ -173,7 +173,8 @@ is, the folder of `Object`'s assembly:
 ```zs
 import "std:prelude";
 import { print } from "std:io";
-import { Object, Path } from "core:runtime";
+import { Object } from "core:runtime";
+import { Path } from Object.Assembly;
 
 let runtime = Path.GetDirectoryName(Object.Assembly.Location);
 import { Process } from Path.Combine(runtime, "System.Diagnostics.Process.dll");

@@ -101,8 +101,15 @@ Core.ZSharp.ModuleScope.Libraries = core;
 
 var std = new ZSharp.Importer.String.LibraryImporter("standard");
 
-foreach (var (name, module) in ZSharp.Toolchain.ToolchainModules.All())
-    std.Add(name, il.Load(module));
+foreach (var (name, module) in ZSharp.Toolchain.ToolchainModules.Core())
+    core.Add(name, il.Load(module));
+
+var packages = new ZSharp.Importer.String.LibraryImporter("package");
+
+foreach (var (name, module) in ZSharp.Toolchain.ToolchainModules.Packages())
+    packages.Add(name, il.Load(module));
+
+Core.ZSharp.ModuleScope.Packages = packages;
 
 var importer = new ZSharp.Importer.String.StringImporter();
 var host = new ZSharp.Lang.Runtime.RuntimeDocuments(
@@ -117,6 +124,7 @@ var document = new DocumentCompiler(language, host);
 var documents = new DocumentImporter(language, compiler, host);
 importer.Register("core", core);
 importer.Register("std", std);
+importer.Register("pkg", packages);
 var fileImporter = new FileImporter(compiler);
 fileImporter.Register(".zs", documents.Import);
 importer.DefaultImporter = fileImporter;
@@ -176,8 +184,8 @@ document.Scope.Add("Either", new C.NamedMember { Target = probe, Name = "Either"
 
 var coreRuntime = new C.Get(il.Load(typeof(Core.Runtime.ModuleScope).Module));
 document.Scope.Add("explicitThis", new C.NamedMember { Target = coreRuntime, Name = "explicitThis" });
-document.Scope.Add("DotNet_Interface", new C.NamedMember { Target = coreRuntime, Name = "DotNet_Interface" });
 var dotNet = new C.Get(il.Load(typeof(Package.DotNet.Decorators).Module));
+document.Scope.Add("DotNet_Interface", new C.NamedMember { Target = dotNet, Name = "Interface" });
 foreach (var name in new[] { "static", "virtual", "abstract", "override", "public", "private", "internal", "protected" })
     document.Scope.Add(name, new C.NamedMember { Target = dotNet, Name = name });
 document.Scope.Add("export", new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "export" });
@@ -1957,7 +1965,7 @@ Try("a module's let is a variable of it, with its initial value", () =>
 Try("a module's let can have a type the module imports", () =>
     Run("""
         module M103 {
-            import { String } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+            import { String } from "core:runtime"; import { public } from "pkg:clr/hir";
 
             @public let name: String = "Z#";
 
@@ -2001,7 +2009,7 @@ Try("a function builds a module that imports, has a let and a function, and the 
         @public def Factory104 {
             @public @static fun make(): DotNet_Module {
                 return module {
-                    import { String } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+                    import { String } from "core:runtime"; import { public } from "pkg:clr/hir";
 
                     let name: String = "Z#";
 
@@ -2133,7 +2141,7 @@ Try("a generic CLR type with two arguments", () =>
 
 Try("an instantiated generic type in a type position", () =>
     Run("""
-        import { List } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+        import { List } from "core:runtime"; import { public } from "pkg:clr/hir";
         @public def Generic118 {
             @public let items: List[String];
             @public @static fun count(xs: List[String]): Int32 { return xs.Count; }
@@ -2350,7 +2358,7 @@ Try("a class has a base class and interfaces", () =>
 
 Try("a CLR interface is implemented", () =>
     Run("""
-        import { IDisposable } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+        import { IDisposable } from "core:runtime"; import { public } from "pkg:clr/hir";
         @public def Closer126 : IDisposable { @public fun Dispose() { Keep("disposed"); } }
         let closer126: IDisposable = Closer126();
         closer126.Dispose();
@@ -2959,7 +2967,7 @@ Try("a type given several lengths is an array of as many dimensions", () =>
     Run("Keep(Int32[2, 3]);") is null && Kept() is int[,] grid && grid.GetLength(0) == 2 && grid.GetLength(1) == 3);
 
 Try("a generic type isn't given a length", () =>
-    Run("""module M208 { import { List } from "core:runtime"; import { public } from "std:zsharp/package/dotnet"; @public let lists: Int32 = List[3].Length; }""") is { } e && e.Contains("type arguments, not lengths"));
+    Run("""module M208 { import { List } from "core:runtime"; import { public } from "pkg:clr/hir"; @public let lists: Int32 = List[3].Length; }""") is { } e && e.Contains("type arguments, not lengths"));
 
 Try("an array type is not called", () =>
     Run("Keep(Int32[](3));") is { } e && e.Contains("Int32[4]"));
@@ -3107,10 +3115,10 @@ Try("an array of several dimensions is indexed by an index for each", () =>
 Try("the toolchain's types are imported from its modules", () =>
     ResetKept() && Run("""
         module M212 {
-            import { Instance } from "std:zsharp/hir";
-            import { Function } from "std:zsharp/lang/ast";
-            import { CompilerObject } from "std:zsharp/mir";
-            import { Result } from "std:zsharp/common";
+            import { Instance } from "pkg:zsharp/hir";
+            import { Function } from "pkg:zsharp/lang/ast";
+            import { CompilerObject } from "pkg:zsharp/mir";
+            import { Result } from "pkg:zsharp/core";
             import { String } from "core:runtime";
         }
         """) is null);
@@ -3118,8 +3126,8 @@ Try("the toolchain's types are imported from its modules", () =>
 Try("a generic type of a module is found by its name, every arity of it", () =>
     Run("""
         module M213 {
-            import { Result, Error } from "std:zsharp/common";
-            import { String, Type } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+            import { Result, Error } from "pkg:zsharp/core";
+            import { String, Type } from "core:runtime"; import { public } from "pkg:clr/hir";
             @public let kind: Type = Result[String, Error];
         }
         Keep(M213.kind);
@@ -3130,7 +3138,7 @@ Try("Z# reaches the meta-types and the mapped loaders", () =>
         module M214 {
             import { metaTypes } from "core:zsharp";
             import { mappedLoader } from "core:compiler";
-            import { Object } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+            import { Object } from "core:runtime"; import { public } from "pkg:clr/hir";
             @public let types: Object = metaTypes;
             @public let loader: Object = mappedLoader;
         }
@@ -3143,10 +3151,10 @@ Try("Z# reaches the meta-types and the mapped loaders", () =>
 Try("Z# replaces how a meta-compiler is found, asking what it replaced", () =>
     ResetKept() && Run("""
         module M225 {
-            import { MetaCompilerOf, MetaCompiler } from "std:zsharp/lang";
-            import { Instance } from "std:zsharp/hir";
-            import { IResult, Error } from "std:zsharp/common";
-            import { Int32 } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+            import { MetaCompilerOf, MetaCompiler } from "pkg:zsharp/lang/hir";
+            import { Instance } from "pkg:zsharp/hir";
+            import { IResult, Error } from "pkg:zsharp/core";
+            import { Int32 } from "core:runtime"; import { public } from "pkg:clr/hir";
 
             @public let previous: MetaCompilerOf;
             @public let asked: Int32 = 0;
@@ -3179,7 +3187,7 @@ Try("equality binds looser than a cast and a comparison", () =>
 Try("a generic CLR type is given a class loaded with the code that uses it", () =>
     ResetKept() && Run("""
         module M232 {
-            import { List } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+            import { List } from "core:runtime"; import { public } from "pkg:clr/hir";
             @public def Item232 { @public let value: Int32; @public @explicitThis new(this, value: Int32) { this.value = value; } }
             @public def Items232 {
                 @public @static fun total(): Int32 {
@@ -3205,7 +3213,7 @@ Try("a module's code names the module itself", () =>
 
 Try("a class's own method is a delegate in its own code", () =>
     Run("""
-        import { Func } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+        import { Func } from "core:runtime"; import { public } from "pkg:clr/hir";
         @public def Holder234 {
             @public @explicitThis fun give(this): Int32 { return 42; }
             @public @explicitThis fun run(this): Int32 {
@@ -3219,7 +3227,7 @@ Try("a class's own method is a delegate in its own code", () =>
 Try("a generic CLR type given a class still being built is the description of its instance", () =>
     Run("""
         module M248 {
-            import { Dictionary } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+            import { Dictionary } from "core:runtime"; import { public } from "pkg:clr/hir";
             @public def Item248 { @public @explicitThis new(this) { } }
             @public def Bag248 {
                 @public let items: Dictionary[String, Item248];
@@ -3617,7 +3625,7 @@ string WriteDocument(string name, string source)
 }
 
 const string Header = """
-    import { String } from "core:runtime"; import { static, public } from "std:zsharp/package/dotnet";
+    import { String } from "core:runtime"; import { static, public } from "pkg:clr/hir";
     import { export } from "core:zsharp";
     """;
 
@@ -3890,7 +3898,7 @@ Try("an import in a module runs as the module is constructed", () =>
 Try("a module can use what it imports from a compile-time source while it is compiled", () =>
 {
     var library = WriteDocument("Library94.zs", """
-        import { String, DotNet_Class } from "core:runtime"; import { static, public } from "std:zsharp/package/dotnet";
+        import { String } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { static, public } from "pkg:clr/hir";
         import { export } from "core:zsharp";
 
         @export
@@ -4162,7 +4170,7 @@ Try("the runtime has the capability of polymorphism, given by a trait", () =>
     ResetKept() && Run("""
         import { runtime } from "core:runtime";
         import { Polymorphism } from "std:zsharp/capabilities";
-        import { Structure } from "std:zsharp/lir";
+        import { Structure } from "pkg:zsharp/lir";
         import "std:zsharp/clr";
 
         let target228: Object = runtime;
@@ -4478,7 +4486,7 @@ Try("a Z# class's fields are of generic CLR types over Z# classes", () =>
 Try("a type written in a signature is any code that gives a type", () =>
     Run("""
         import { List as List250 } from "core:runtime";
-        import { Type as HIRType250 } from "std:zsharp/hir";
+        import { Type as HIRType250 } from "pkg:zsharp/hir";
 
         fun listOf250(element: HIRType250): HIRType250 { return List250[element]; }
 
@@ -4596,7 +4604,7 @@ Try("a Z# class's index operator is what indexing the class or one of its object
     ResetKept() && Run("""
         import { class as class273 } from "std:oop";
         import { operator as operator273 } from "core:zsharp";
-        import { Operator as Operator273 } from "std:zsharp/lang";
+        import { Operator as Operator273 } from "pkg:zsharp/lang/hir";
 
         def Grid273 {
             let scale: Int32;
@@ -4738,9 +4746,8 @@ Try("a module is any definition of Module", () =>
 Try("the prelude brings the standard definitions", () =>
     Run("""import "std:prelude";""") is null);
 
-Try("std:dotnet makes a .dll importable by its path, its public types its members", () =>
+Try("a .dll is importable by its path, its public types its members", () =>
     ResetKept() && Run($$"""
-        import "std:dotnet";
         import { GenericProbe as GenericProbe285, ProbeFlags as ProbeFlags285 } from "{{typeof(GenericProbe).Assembly.Location.Replace('\\', '/')}}";
         Keep(GenericProbe285.Same(5));
         Keep(ProbeFlags285.Low | ProbeFlags285.High);
@@ -4748,7 +4755,6 @@ Try("std:dotnet makes a .dll importable by its path, its public types its member
 
 Try("two types of one name in different namespaces of an assembly are an error to import, not one of them", () =>
     Run($$"""
-        import "std:dotnet";
         import { Twin as Twin313 } from "{{typeof(GenericProbe).Assembly.Location.Replace('\\', '/')}}";
         """) is { } error && error.Contains("more than one type named Twin") && error.Contains("Twins.A") && error.Contains("Twins.B"));
 
@@ -4774,7 +4780,7 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         import { compile, emit } from "core:project";
         import { Int32, String } from "core:runtime";
         import { Interface as Interface286, static as static286, class as class286 } from "std:oop";
-        import { DotNet_Class as DotNet_Class286, DotNet_Interface as DotNet_Interface286, explicitThis as explicitThis286 } from "core:runtime"; import { virtual as virtual286, override as override286, public as public286 } from "std:zsharp/package/dotnet";
+        import { explicitThis as explicitThis286 } from "core:runtime"; import { Class as DotNet_Class286, Interface as DotNet_Interface286 } from "pkg:clr/hir"; import { virtual as virtual286, override as override286, public as public286 } from "pkg:clr/hir";
         emit(compile("Twice286"));
         """);
     File.WriteAllText(Path.Combine(source, "clr.zs"), """
@@ -4830,7 +4836,6 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
     var written = Path.Combine(root, "Twice286.dll").Replace('\\', '/');
 
     return ResetKept() && Run($$"""
-        import "std:dotnet";
         import { discover as discover286, Compiler as Compiler286 } from "std:project";
         import { Module as Module286 } from "std:modules";
         import { lower as lower286 } from "std:modules/compiler";
@@ -4871,7 +4876,7 @@ Try("a Z# field's type can be made of its own class", () =>
 
 Try("a CLR module cast to what it is gives what describes it", () =>
     ResetKept() && Run("""
-        import { Instance as Instance282 } from "std:zsharp/hir";
+        import { Instance as Instance282 } from "pkg:zsharp/hir";
         def Described282 of DotNet_Module { fun one(): Int32 { return 1; } }
         Keep(Described282 as Instance282);
         """) is null && Kept() is Package.DotNet.Module { Name: "Described282" });
@@ -4903,7 +4908,7 @@ Try("a module file emits anything, as a type, which it is given as what describe
 
 Try("reflect describes a type as the code runs, as what a description cast gives", () =>
     ResetKept() && Run("""
-        import { Instance as Instance287 } from "std:zsharp/hir";
+        import { Instance as Instance287 } from "pkg:zsharp/hir";
         import { reflect as reflect287 } from "std:reflection";
         import { Type as Type287 } from "core:runtime";
         let type287: Type287 = String;
@@ -4913,7 +4918,7 @@ Try("reflect describes a type as the code runs, as what a description cast gives
 
 Try("a declared function is called as what it is premapped to", () =>
     ResetKept() && Run("""
-        import { Instance as Instance288 } from "std:zsharp/hir";
+        import { Instance as Instance288 } from "pkg:zsharp/hir";
         import { premap as premap288 } from "std:functions/compiler";
         fun answer288(): Int32;
         fun given288(): Int32 { return 42; }
@@ -4932,7 +4937,7 @@ Try("an assembly the Cecil platform writes describes types where it runs", () =>
         """);
     File.WriteAllText(Path.Combine(source, "described.zs"), """
         import { String, Type, Object } from "core:runtime";
-        import { Instance } from "std:zsharp/hir";
+        import { Instance } from "pkg:zsharp/hir";
         import { reflect } from "std:reflection";
         fun direct(): Object { return String as Instance; }
         fun reflected(type: Type): Object { return reflect(type); }
@@ -4970,13 +4975,13 @@ string Plugin(string name)
         emit(build(compile("{{name}}")));
         """);
     File.WriteAllText(Path.Combine(source, "plugin.zs"), """
-        import { String, Int32, Boolean, DotNet_Class, explicitThis } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
-        import { Instance, Definition } from "std:zsharp/hir";
-        import { Local } from "std:zsharp/hir/code";
-        import { CompilerObject } from "std:zsharp/mir";
-        import { Error, Result, IResult } from "std:zsharp/common";
-        import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
-        import { Definition as DefinitionSyntax } from "std:zsharp/lang/ast";
+        import { String, Int32, Boolean, explicitThis } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { public } from "pkg:clr/hir";
+        import { Instance, Definition } from "pkg:zsharp/hir";
+        import { Local } from "pkg:zsharp/hir/code";
+        import { CompilerObject } from "pkg:zsharp/mir";
+        import { Error, Result, IResult } from "pkg:zsharp/core";
+        import { ASTCompiler, CompiledDefinition } from "core:zsharp/lang";
+        import { Definition as DefinitionSyntax } from "pkg:zsharp/lang/ast";
         import { hirLoader } from "core:compiler";
         import { metaTypes } from "core:zsharp";
         import { entrypoint, definitionLoader, metaType } from "std:framework";
@@ -5050,7 +5055,7 @@ Try("an assembly the Cecil platform writes does what its module declares when it
 
 Try("a value of a delegate type over a class defined in Z# is called", () =>
     ResetKept() && Run("""
-        import { Func as Func292 } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+        import { Func as Func292 } from "core:runtime"; import { public } from "pkg:clr/hir";
         @public def Box292 of DotNet_Class {
             @public let value: Int32;
             @public @explicitThis new(this, value: Int32) { this.value = value; }
@@ -5070,7 +5075,7 @@ Try("a class of a module lowered for the running process lowers again for the Ce
         emit(compile("Twice293"));
         """);
     File.WriteAllText(Path.Combine(source, "counter.zs"), """
-        import { Object, String, Int32, List, DotNet_Class, explicitThis } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+        import { Object, String, Int32, List, explicitThis } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { public } from "pkg:clr/hir";
         @public def Counter of DotNet_Class {
             @public @explicitThis new(this) { }
             @public @explicitThis fun count(this, items: List[Object]): Int32 {
@@ -5151,7 +5156,7 @@ Try("an assembly that carries what was encoded of its module is imported as that
         emit(compile("Encoded295"));
         """);
     File.WriteAllText(Path.Combine(source, "encoded.zs"), """
-        import { String, Int32, DotNet_Class, explicitThis } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+        import { String, Int32, explicitThis } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { public } from "pkg:clr/hir";
         @public def Thing of DotNet_Class {
             @public let Name: String;
             @public @explicitThis new(this, name: String) { this.Name = name; }
@@ -5174,7 +5179,7 @@ Try("an assembly that carries what was encoded of its module is imported as that
         import { importers as importers295 } from "core:zsharp";
         import { Cecil as Cecil295 } from "pkg:cecil";
         import { Type as Type295, Object as Object295 } from "core:runtime";
-        import { Instance as Instance295 } from "std:zsharp/hir";
+        import { Instance as Instance295 } from "pkg:zsharp/hir";
         let encoded295 = Compiler295(discover295("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module295;
         let blob295 = encode295(encoded295);
         let target295 = Cecil295("Encoded295", null);
@@ -5237,7 +5242,7 @@ Try("a Z# class of an assembly that carries what was encoded of it is that class
         import { lower as lower296 } from "std:modules/compiler";
         import { encode as encode296 } from "std:encoding";
         import { Cecil as Cecil296 } from "pkg:cecil";
-        import { Instance as Instance296 } from "std:zsharp/hir";
+        import { Instance as Instance296 } from "pkg:zsharp/hir";
         let counters296 = Compiler296(discover296("{{root.Replace('\\', '/')}}/src")).compile()[0] as Module296;
         let blob296 = encode296(counters296);
         let target296 = Cecil296("Counters296", null);
@@ -5264,7 +5269,7 @@ Try("a minus before an operand negates it, binding tighter than * and looser tha
 
 Try("a return inside a loop returns from what the loop is in", () =>
     ResetKept() && Run("""
-        import { Boolean as Boolean298, DotNet_Module as DotNet_Module298 } from "core:runtime";
+        import { Boolean as Boolean298 } from "core:runtime"; import { Module as DotNet_Module298 } from "pkg:clr/hir";
         def Loops298 of DotNet_Module298 {
             fun first(stop: Boolean298): Int32 {
                 let index = 0;
@@ -5304,7 +5309,7 @@ Try("a name a type that isn't generic shares with generic ones is that type, and
 
 Try("a value of a CLR interface defined in Z# is matched against, and cast down to, a class", () =>
     ResetKept() && Run("""
-        import { DotNet_Interface as DotNet_Interface300, DotNet_Module as DotNet_Module300 } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+        import { Interface as DotNet_Interface300, Module as DotNet_Module300 } from "pkg:clr/hir"; import { public } from "pkg:clr/hir";
         def Shape300 of DotNet_Interface300 { fun name(): String; }
         @public def Square300 of DotNet_Class : Shape300 {
             @public @explicitThis new(this) { }
@@ -5420,11 +5425,11 @@ Try("a Z# class implements a CLR interface, and goes where it is expected", () =
 Try("a Z# class is a CO, which the compiler calls through its protocols", () =>
     ResetKept() && Run("""
         import { Object as Object307, Type as Type307, runtime as runtime307, ilLoader as ilLoader307 } from "core:runtime";
-        import { CompilerObject as CompilerObject307 } from "std:zsharp/mir";
-        import { Error as Error307, Result as Result307, IResult as IResult307 } from "std:zsharp/common";
-        import { ICompileIRExpression as ICompileIRExpression307 } from "std:zsharp/compiler/ir";
-        import { ITyped as ITyped307 } from "std:zsharp/compiler/ts";
-        import { Constant as Constant307, Expression as LIRExpression307 } from "std:zsharp/lir";
+        import { CompilerObject as CompilerObject307 } from "pkg:zsharp/mir";
+        import { Error as Error307, Result as Result307, IResult as IResult307 } from "pkg:zsharp/core";
+        import { ICompileIRExpression as ICompileIRExpression307 } from "core:zsharp/m2l";
+        import { ITyped as ITyped307 } from "core:zsharp/mir/ts";
+        import { Constant as Constant307, Expression as LIRExpression307 } from "pkg:zsharp/lir";
         import { ir as ir307, ts as ts307, hirLoader as hirLoader307 } from "core:compiler";
         def Answer307 : CompilerObject307, ICompileIRExpression307, ITyped307 {
             let type: CompilerObject307;

@@ -12,8 +12,9 @@
 //
 // What to do with what was emitted is the build script's.
 
-import { String, List, Directory, File, Path } from "core:runtime";
-import { Instance } from "std:zsharp/hir";
+import { Object, String, List } from "core:runtime";
+import { Directory, File, Path } from Object.Assembly;
+import { Instance } from "pkg:zsharp/hir";
 import { core, importers } from "core:zsharp";
 import { Submodule, Project, compileProject } from "std:project/core";
 import { entrypoint } from "std:framework";

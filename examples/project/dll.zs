@@ -5,7 +5,8 @@
 // and its module's functions called.
 import "std:prelude";
 import { print } from "std:io";
-import { Path } from "core:runtime";
+import { Object } from "core:runtime";
+import { Path } from Object.Assembly;
 import { discover, Compiler } from "std:project";
 import { Module } from "std:modules";
 import { lower } from "std:modules/compiler";

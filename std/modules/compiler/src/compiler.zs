@@ -11,26 +11,28 @@
 // compiler needs of them. Importing it makes `module` a Z# module wherever nothing else
 // compiles one, as `module` is `def` of Module.
 
-import { String, Object, Boolean, Int32, List, Dictionary, DotNet_Class, DotNet_Module, explicitThis } from "core:runtime"; import { static, public } from "std:zsharp/package/dotnet";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "std:zsharp/hir";
-import { Call } from "std:zsharp/hir/code";
-import { Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get, Declare, BlockExpression, Statement, Cast } from "std:zsharp/hir/code";
+import { String, Object, Boolean, Int32, List, Dictionary, explicitThis } from "core:runtime";
+import { Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { static, public } from "pkg:clr/hir";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "pkg:zsharp/hir";
+import { Call } from "pkg:zsharp/hir/code";
+import { Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get, Declare, BlockExpression, Statement, Cast } from "pkg:zsharp/hir/code";
 import {
     Module as ModuleSyntax, TypeDefinition as TypeSyntax, Definition as DefinitionSyntax, LetExpression as LetSyntax,
     Expression as ExpressionSyntax, Statement as StatementSyntax, ImportStatement as ImportSyntax
-} from "std:zsharp/lang/ast";
-import { CompilerObject } from "std:zsharp/mir";
-import { Error, Result, IResult } from "std:zsharp/common";
-import { UnsupportedError } from "std:zsharp/compiler";
-import { ICTGetMember, ICTSet } from "std:zsharp/compiler/cg/direct";
-import { ICompileIRExpression, ICompileIRStatement, ICompileIRDefinitionIn } from "std:zsharp/compiler/ir";
-import { ITyped } from "std:zsharp/compiler/ts";
-import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTStatement, CompileASTDefinition } from "std:zsharp/compiler/ast";
+} from "pkg:zsharp/lang/ast";
+import { CompilerObject } from "pkg:zsharp/mir";
+import { Error, Result, IResult } from "pkg:zsharp/core";
+import { UnsupportedError } from "core:zsharp/mir/core";
+import { ICTGetMember, ICTSet } from "core:zsharp/mir/cg/direct";
+import { ICompileIRExpression, ICompileIRStatement, ICompileIRDefinitionIn } from "core:zsharp/m2l";
+import { ITyped } from "core:zsharp/mir/ts";
+import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTStatement, CompileASTDefinition } from "core:zsharp/lang";
 import {
     Module as LIRModule, Global as LIRGlobal, GetGlobal, SetGlobal,
     Expression as LIRExpression, Statement as LIRStatement, Function as LIRFunction, ICallable, EntryPoint as LIREntryPoint
-} from "std:zsharp/lir";
-import { Bodies, ContainerCompiler } from "std:zsharp/lang";
+} from "pkg:zsharp/lir";
+import { Bodies, ContainerCompiler } from "pkg:zsharp/lang/hir";
 import { Holder, Held, Initializing, keep } from "std:zsharp/lowering";
 import { metaTypes, bodies, language, ct } from "core:zsharp";
 import { entrypoint, definitionLoader, instanceLoader, metaType, binder } from "std:framework";

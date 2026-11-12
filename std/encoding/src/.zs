@@ -3,7 +3,8 @@
 // toolchain's attributes assembly has.
 import { compile, emit } from "core:project";
 import { build } from "std:framework";
-import { Object, Type, Path } from "core:runtime";
+import { Object, Type } from "core:runtime";
+import { Path } from Object.Assembly;
 
 import {
     BinaryWriter, BinaryReader, MemoryStream, BindingFlags, FieldInfo, MethodInfo, ConstructorInfo, MemberInfo, ParameterInfo,

@@ -117,21 +117,22 @@ a custom type gets into the language to be used as a meta-type.
 - A return converts its value to what the code being loaded returns, which is
   `CodeLoaders.Returns`: whatever lowers a function's code sets it while it loads that
   code and puts it back after, the IL loader as `std:functions` does.
-- Z# reaches the toolchain's types through `std:zsharp/` modules made of its
-  assemblies, as `std:zsharp/hir`, `std:zsharp/hir/code`, `std:zsharp/mir`,
-  `std:zsharp/lir`, `std:zsharp/lang`, `std:zsharp/lang/ast`, `std:zsharp/common` and
-  `std:zsharp/compiler/...`, listed once in `ToolchainModules`. A module's generic types
-  are found by their name without their arity, all arities as overloads. What is live
-  is under `core:`: `core:zsharp` gives `metaTypes` and `bodies`, and `core:compiler`
-  gives `mappedLoader` and `mappedCodeLoader`.
+- Z# reaches the toolchain's types through modules made of its assemblies: the
+  definitions under `pkg:`, as `pkg:zsharp/hir`, `pkg:zsharp/hir/code`,
+  `pkg:zsharp/mir`, `pkg:zsharp/lir`, `pkg:zsharp/lang/hir`, `pkg:zsharp/lang/ast` and
+  `pkg:zsharp/core`, and the compiler's layers under `core:zsharp/`, as
+  `core:zsharp/mir/cg` and `core:zsharp/m2l`, listed once in `ToolchainModules`. A
+  module's generic types are found by their name without their arity, all arities as
+  overloads. What is live is under `core:`: `core:zsharp` gives `metaTypes` and
+  `bodies`, and `core:compiler` gives `mappedLoader` and `mappedCodeLoader`.
 - A CO lowers for the target it is given, and passes it on to what it lowers, so a
   Z# function lowers its code for the target its call is compiled for.
 - Lowering is to be by capability: a CO asks the target what it can do and lowers to
   the richest form the target has, or to a shallow one built of LIR's core. The CLR has
   polymorphism, so a Z# class can be a class there, and a target without it gets
   records, tables of functions and `CallIndirect`. A capability is standard, not a
-  platform's: its LIR nodes and what they mean are part of the standard under
-  `std:zsharp/`, and each platform implements those it can. So an LIR structure is a
+  platform's: its LIR nodes and what they mean are part of the standard, in
+  `pkg:zsharp/lir`, and each platform implements those it can. So an LIR structure is a
   record of fields, and how it is laid out is the target's.
 - The minimal target is a platform that writes LIR modules as they are, written in pure
   Z#, which shows how Z# defines a platform. It comes after classes.
@@ -368,10 +369,10 @@ a custom type gets into the language to be used as a meta-type.
   what any CLR platform builds.
 - `def` isn't a class or a type: it is a definition, `def ID? (of META)? ...`, and
   `module` is `def` of `Module`. So a definition's body holds definitions as a module's
-  does, and whether it takes each is its meta-type's to say; a CLR module is
-  `def Name of DotNet_Module`. Z#'s definitions are the defaults, and a library that
-  needs another meta-type says `of`, so what a library's definitions are doesn't depend on
-  what was imported before it.
+  does, and whether it takes each is its meta-type's to say; a CLR module is `def Name
+  of Module`, with the CLR's `Module`, of `pkg:clr/hir`. Z#'s definitions are the
+  defaults, and a library that needs another meta-type says `of`, so what a library's
+  definitions are doesn't depend on what was imported before it.
 - A module is a standard definition too: `std:modules` defines it in Z#, and the CLR
   realizes it as a module. The HIR `Module` is structure: its globals and its
   definitions. A `let` in a module is a `Global`, of the type written or of its

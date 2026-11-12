@@ -15,8 +15,8 @@ library imports `std:modules` too, since a library's nodes are modules.
 
 ## The structure: `std:modules`
 
-The nodes are written with one meta-type, `Node`, which is `DotNet_Class` here, so another
-platform reimplements them by giving that name its own.
+The nodes are written with one meta-type, `Node`, which is the CLR's `Class`, of
+`pkg:clr/hir`, here, so another platform reimplements them by giving that name its own.
 
 | Node | Capabilities | What it holds |
 |---|---|---|
@@ -66,8 +66,9 @@ and a definition is compiled by its own meta-type.
 ## What it depends on
 
 - **`core:runtime`**, **`core:zsharp`** and **`core:compiler`**.
-- **The `std:zsharp/...` modules:** HIR, MIR, LIR, the compiler's protocols, overloading
-  and lowering.
+- **`pkg:clr/hir`:** `Class`, as the nodes' meta-type.
+- **The toolchain's packages and layers:** HIR, MIR and LIR, under `pkg:zsharp/`, and the
+  compiler's protocols, overloading and lowering, under `core:zsharp/`.
 - **`std:framework`:** its decorators.
 
 ## Open points for review

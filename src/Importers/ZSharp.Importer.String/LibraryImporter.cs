@@ -16,6 +16,13 @@ namespace ZSharp.Importer.String
         public void Add(string name, HIR.Instance module)
             => modules[name] = module;
 
+        /// <summary>
+        /// Makes a function what imports a library this one has no module for, as the
+        /// package manager is for <c>pkg:</c>.
+        /// </summary>
+        public void FallBackTo(Func<string, IResult<HIR.Instance, Error>> import)
+            => Fallback = new FunctionImporter(import);
+
         public IResult<HIR.Instance, Error> Import(string source)
             => modules.TryGetValue(source, out var module)
                 ? Result<HIR.Instance>.Ok(module)

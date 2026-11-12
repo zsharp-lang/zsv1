@@ -72,6 +72,27 @@ Decided in the review of the reimplementation, for the language features to come
   doesn't reach a namespace. Today an assembly's types are found by name alone, whatever
   their namespace, so two types of one name in one assembly have to be an error rather
   than one of them.
+- **Where libraries are.** `core:` is live, `pkg:` is definitions with no state of their
+  own, and `std:` is the standard library:
+  - the toolchain's definitions are packages: `pkg:zsharp/core` (was `std:zsharp/common`),
+    `pkg:zsharp/hir`, `/hir/code`, `/mir`, `/lir`, `pkg:zsharp/lang/hir` (was
+    `std:zsharp/lang`), `/lang/ast`, `/lang/parser`, `/lang/syntax` and
+    `/lang/tokenizer`;
+  - the CLR's are packages too: `pkg:clr/hir` (was `std:zsharp/package/dotnet`),
+    `pkg:clr/lir` (was `std:zsharp/lir/clr`), and `pkg:clr/platform` (was `std:dotnet`),
+    a project of the toolchain's packages;
+  - the compiler's layers are live, under `core:zsharp/`: `h2m` (was
+    `compiler/code`), `mir/core` (was `compiler`), `mir/cg` with `direct` and `typed`,
+    `mir/ts`, `mir/overloading`, `mir/matching` with `static`, `m2l` (was `compiler/ir`),
+    and `lang` (was `compiler/ast`);
+  - the toolchain registers `pkg:` with its own packages, so the standard library can
+    import them before the package manager is installed, and the package manager is its
+    fallback for the rest.
+- **`core:runtime`** has the running platform and the CLR types Z# uses most. The CLR's
+  HIR is in `pkg:clr/hir` by its own names, `Class` and `Module` and the rest, renamed on
+  import where Z# has the same name. The CLR's LIR, as `ClrPlatform`, is in
+  `pkg:clr/lir`. `Path`, `File`, `Directory`, `Environment`, `Assembly` and `AppDomain`
+  are imported from `Object.Assembly`.
 - **Integers.** The integer concept is a set of operator functions and casts. A
   fixed-width integer is a type of its own `Integer` meta-type, which gives its width.
 
@@ -125,7 +146,7 @@ Decided in the review of the reimplementation, for the language features to come
 
 - CLR HIR represents the CLR, so it has the CLR's accessibility: public, private,
   internal, protected, protected internal and private protected, as a property of each
-  node that has one. Decorators of CLR HIR's own module, `std:zsharp/package/dotnet`,
+  node that has one. Decorators of CLR HIR's own module, `pkg:clr/hir`,
   set it: `@public`, `@private`, `@internal` and `@protected`. Each is one generic
   function over the `Accessible` capability, which gives back what it was given, typed
   as it was. They are HIR's alone and need nothing that runs, so they aren't

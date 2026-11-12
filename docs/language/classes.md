@@ -217,7 +217,7 @@ import "std:prelude";
 import { print } from "std:io";
 import { class } from "std:oop";
 import { operator } from "core:zsharp";
-import { Operator } from "std:zsharp/lang";
+import { Operator } from "pkg:zsharp/lang/hir";
 import { Int32 } from "core:runtime";
 
 def Scale {
