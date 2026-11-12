@@ -54,18 +54,18 @@ node for matching arguments, which is why it isn't CG's.
 
 | Entrypoint | Question |
 |------------|----------|
-| `Pattern`, through `Match(value, pattern)` | What condition, as a CO, says whether a value matches a pattern, as `value is T`? |
-| `Parameter`, through `Match(parameter, arguments)` | What value does a parameter take for a call, from its arguments? |
+| `MatchPattern`, through `Match(value, pattern)` | What condition, as a CO, says whether a value matches a pattern, as `value is T`? |
+| `BindParameter`, through `Bind(parameter, arguments)` | What value does a parameter take for a call, from its arguments? |
 
 Its static dispatcher asks what the COs say of themselves: a parameter's
-`ICTParameter`, then a value's `ICTMatch`, then its runtime descriptor's `IRTMatch`.
+`ICTBind`, then a value's `ICTMatch`, then its runtime descriptor's `IRTMatch`.
 A match gives the condition as a CO, with nothing around it: what else a match does,
 as running other code when it fails, is an operation of that CO. `std:traits/dynamic`
-replaces `Pattern` to match a trait as the code runs.
+replaces `MatchPattern` to match a trait as the code runs.
 
 `ArgumentStream` is what a parameter takes from: the next positional argument, the
-one with its name, or `Rest()`, every argument left, which a parameter that takes the
-rest uses.
+one with its name, or the rest: `RestPositional()`, the positional arguments left, and
+`RestNamed()`, the named ones, which a positional and a named rest parameter take.
 
 ### Overloading
 
