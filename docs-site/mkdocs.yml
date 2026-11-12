@@ -45,6 +45,10 @@ nav:
   - The libraries:
       - Overview: library/README.md
       - The standard library: library/standard.md
+      # Each library's own README, which hooks.py adds from ../std.
+      - std:functions: library/std/functions.md
+      - std:modules: library/std/modules.md
+      - std:oop: library/std/oop.md
       - The core libraries: library/core.md
   - The toolchain:
       - The zs command: toolchain/cli.md
