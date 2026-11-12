@@ -19,7 +19,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             => new Call(loader.LoadIndirect(element), [reference], () => loader.Class(element)).CompileIRExpression(target);
 
         public IResult Set(CompilerObject value)
-            => Core.Compiler.ModuleScope.CG.ImplicitCast(value, loader.Class(element)).Ok(out var converted)
+            => ZSharp.Compiler.Current.CG.ImplicitCast(value, loader.Class(element)).Ok(out var converted)
                 ? Result.Ok(new Call(loader.StoreIndirect(element), [reference, converted], null))
                 : Result.Error($"The value doesn't go to {element.Name}.");
 

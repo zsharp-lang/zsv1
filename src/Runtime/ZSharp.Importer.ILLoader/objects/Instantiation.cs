@@ -32,7 +32,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             => loader.Describes(targetType) ? Cast(targetType) : Result.Error(new UnsupportedError($"{definition.Name} isn't a description."));
 
         public IResult Cast(CompilerObject targetType)
-            => Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(typeof(Package.DotNet.GenericInstance)))
+            => ZSharp.Compiler.Current.TS.IsAssignableTo(targetType, loader.Class(typeof(Package.DotNet.GenericInstance)))
                 && loader.DescribeInstance(definition, arguments) is { } described
                 ? described
                 : Result.Error(new UnsupportedError($"{definition.Name} can't be cast to that type."));
@@ -70,7 +70,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         }
 
         private static LIR.Type Lower(CompilerObject type, object? target)
-            => Core.Compiler.ModuleScope.IR.CompileType(type, target).Unwrap();
+            => ZSharp.Compiler.Current.IR.CompileType(type, target).Unwrap();
 
         /// <summary>
         /// A method or constructor of the definition, called on this instance: it takes and
@@ -117,14 +117,14 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             if (target is Instantiation other && other.Definition == definition && other.Arguments.Count == arguments.Length)
                 return arguments.Zip(other.Arguments).All(pair =>
-                    Core.Compiler.ModuleScope.TS.IsAssignableTo(pair.First, pair.Second)
-                    && Core.Compiler.ModuleScope.TS.IsAssignableTo(pair.Second, pair.First));
+                    ZSharp.Compiler.Current.TS.IsAssignableTo(pair.First, pair.Second)
+                    && ZSharp.Compiler.Current.TS.IsAssignableTo(pair.Second, pair.First));
 
             return target.Is<IILType>(out var known) && known.GetILType() == typeof(object);
         }
 
         public IResult Call(Argument[] arguments)
-            => Core.Compiler.ModuleScope.CG.Call(
+            => ZSharp.Compiler.Current.CG.Call(
                 OverloadGroup.Of(definition.GetConstructors().Select(constructor => new InstantiationMember(loader, this, constructor, null))),
                 arguments
             );
@@ -174,7 +174,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (getters.Length == 0)
                 return Result.Error(new UnsupportedError($"{definition.Name} has no indexer that can be read."));
 
-            if (Core.Compiler.ModuleScope.CG.Call(OverloadGroup.Of(getters), arguments).When(out var read).Error(out var error))
+            if (ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(getters), arguments).When(out var read).Error(out var error))
                 return Result.Error(error);
 
             return Result.Ok(new Indexed(read!, value => Index(@object, arguments, value)));
@@ -187,7 +187,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             return setters.Length == 0
                 ? Result.Error($"The indexer of {definition.Name} can't be assigned.")
-                : Core.Compiler.ModuleScope.CG.Call(OverloadGroup.Of(setters), [.. arguments, new Argument(value)]);
+                : ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(setters), [.. arguments, new Argument(value)]);
         }
 
         private PropertyInfo[] Indexers()

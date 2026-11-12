@@ -8,7 +8,7 @@ using ZSharp.Platform.Runtime;
 using ZSharp.Tokenizer;
 
 using CompilerObject = ZSharp.MIR.CompilerObject;
-using Scope = Core.Compiler.ModuleScope;
+using Scope = ZSharp.Compiler.Current;
 
 // This file is the entry point of Z#, and the only place that combines its parts.
 // It bootstraps the language and runs a script. What gets compiled after that, and
@@ -58,7 +58,6 @@ new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
 CodeLoaders.Register(codeLoader, loader, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
-Core.Runtime.Objects.Install(runtime, il);
 il.Install(loader, codeLoader);
 
 var reifier = new MappedReifier(Scope.HIRReifier);
@@ -100,7 +99,7 @@ var std = new LibraryImporter("standard");
 std.Add("io", il.Load(typeof(Standard.IO.ModuleScope).Module));
 
 var core = new LibraryImporter("core");
-core.Add("compiler", il.Load(typeof(Scope).Module));
+core.Add("compiler", il.Load(typeof(Core.Compiler.ModuleScope).Module));
 core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 core.Add("diagnostics", il.Load(typeof(ZSharp.Diagnostics.ModuleScope).Module));
 core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
@@ -164,7 +163,8 @@ var host = new ZSharp.Lang.DotNet.DotNetDocuments(runtime, il, instance =>
 host.Install(loader);
 host.Install(reifier);
 
-Core.ZSharp.ModuleScope.MetaTypes = ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
+Core.ZSharp.ModuleScope.MetaTypes = ZSharp.Lang.DotNet.DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il, out var bodies);
+Core.ZSharp.ModuleScope.Bodies = bodies;
 
 #endregion
 

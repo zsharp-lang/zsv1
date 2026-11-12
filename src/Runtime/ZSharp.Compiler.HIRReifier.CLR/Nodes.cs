@@ -13,7 +13,7 @@ namespace ZSharp.Compiler
         /// Encodes a value held by the code doing the building into the code it builds.
         /// </summary>
         public static Code.Expression Encode(object value)
-            => Core.Compiler.ModuleScope.HIRReifier.EncodeValue(value).When(out var encoded).Error(out var error)
+            => ZSharp.Compiler.Current.HIRReifier.EncodeValue(value).When(out var encoded).Error(out var error)
                 ? throw new InvalidOperationException(error.ToString())
                 : encoded!;
 

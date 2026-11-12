@@ -21,7 +21,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// Casting a module to what describes it is reflection, as for a type.
         /// </summary>
         public IResult Cast(CompilerObject targetType)
-            => Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(Node.GetType()))
+            => ZSharp.Compiler.Current.TS.IsAssignableTo(targetType, loader.Class(Node.GetType()))
                 ? Result.Ok(new Literal(Node, Node.GetType(), loader))
                 : Result.Error(new UnsupportedError("A module can't be cast to that type."));
 
@@ -29,7 +29,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             // A class or an interface is found as a type.
             if (Node.Definitions.OfType<Package.DotNet.TypeReference>().FirstOrDefault(type => Named(type, member)) is { } found)
-                return Core.Compiler.ModuleScope.HIRLoader.LoadType(found);
+                return ZSharp.Compiler.Current.HIRLoader.LoadType(found);
 
             var functions = Node.Methods
                 .Where(method => method.Name == member)

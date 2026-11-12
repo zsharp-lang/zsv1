@@ -21,7 +21,6 @@ let objectAssembly = objectType.Assembly.Location;
 let runtimeFolder = Path.GetDirectoryName(objectAssembly);
 import { AppContext, OperatingSystem, EnvironmentVariableTarget, StringComparison, StringSplitOptions } from objectAssembly;
 import { Process, ProcessStartInfo } from Path.Combine(runtimeFolder, "System.Diagnostics.Process.dll");
-import { UnixFileMode } from objectAssembly;
 
 module Installer {
     // What a release has at its root, which says a folder is a toolchain.
@@ -65,21 +64,6 @@ module Installer {
         index = 0;
         while (index < folders.Length) {
             Installer.copy(folders[index], Path.Combine(destination, Path.GetFileName(folders[index])));
-            index = index + 1;
-        }
-    }
-
-    // What runs as a program on a platform that says so by a file's mode.
-    fun runnable(folder: String) {
-        if (OperatingSystem.IsWindows()) return;
-        let mode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
-        let files = List[String]();
-        files.Add(Path.Combine(folder, "bin", "zs"));
-        files.Add(Path.Combine(folder, "bin", "createdump"));
-        files.Add(Path.Combine(folder, "install.sh"));
-        let index = 0;
-        while (index < files.Count) {
-            if (File.Exists(files[index])) File.SetUnixFileMode(files[index], mode);
             index = index + 1;
         }
     }
@@ -178,9 +162,9 @@ module Installer {
                     Directory.Delete(folder, true);
                 }
             }
+            // What runs as a program keeps its mode, as the release's archive has it.
             Installer.copy(source, folder);
         }
-        Installer.runnable(folder);
 
         if (onPath) Installer.path(folder, true);
 

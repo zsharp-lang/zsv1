@@ -3,7 +3,7 @@ using ZSharp.Compiler;
 using ZSharp.Importer.ILLoader;
 using ZSharp.Platform.Runtime;
 using C = ZSharp.HIR.Code;
-using Scope = Core.Compiler.ModuleScope;
+using Scope = ZSharp.Compiler.Current;
 
 void Report(string name, bool ok)
 {

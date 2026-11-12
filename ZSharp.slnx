@@ -13,6 +13,7 @@
     <Project Path="src/Compiler/ZSharp.Compiler.CG.Direct/ZSharp.Compiler.CG.Direct.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.CG.External/ZSharp.Compiler.CG.External.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.CG.Typed/ZSharp.Compiler.CG.Typed.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler/ZSharp.Compiler.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.CG/ZSharp.Compiler.CG.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.Core/ZSharp.Compiler.Core.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.HIRLoader.Code.CG/ZSharp.Compiler.HIRLoader.Code.CG.csproj" />

@@ -19,7 +19,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             var values = new List<CompilerObject>();
 
             foreach (var item in items)
-                if (Core.Compiler.ModuleScope.CG.ImplicitCast(item, loader.Class(element)).Ok(out var value))
+                if (ZSharp.Compiler.Current.CG.ImplicitCast(item, loader.Class(element)).Ok(out var value))
                     values.Add(value);
                 else
                     return Result.Error(new UnsupportedError($"A value in brackets doesn't go to {element.Name}."));

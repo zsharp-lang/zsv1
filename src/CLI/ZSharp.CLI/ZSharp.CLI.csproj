@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Library\ZSharp.Library.Core.Compiler\ZSharp.Library.Core.Compiler.csproj" />
     <ProjectReference Include="..\..\Lang\ZSharp.Lang.ZSharp\ZSharp.Lang.ZSharp.csproj" />
     <ProjectReference Include="..\..\Lang\ZSharp.Lang.ZSharp.DotNet\ZSharp.Lang.ZSharp.DotNet.csproj" />
     <ProjectReference Include="..\..\Runtime\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />

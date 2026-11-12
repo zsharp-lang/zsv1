@@ -1,4 +1,4 @@
-using Scope = Core.Compiler.ModuleScope;
+using Scope = ZSharp.Compiler.Current;
 
 namespace ZSharp.Importer.ILLoader.Objects
 {

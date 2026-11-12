@@ -15,7 +15,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// Casting a module to what describes it is reflection, as for a type.
         /// </summary>
         public IResult Cast(CompilerObject targetType)
-            => Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(loader.Load(il).GetType()))
+            => ZSharp.Compiler.Current.TS.IsAssignableTo(targetType, loader.Class(loader.Load(il).GetType()))
                 ? Result.Ok(new Literal(loader.Load(il), loader.Load(il).GetType(), loader))
                 : Result.Error(new UnsupportedError("A module can't be cast to that type."));
 
@@ -45,7 +45,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                         && (field.GetCustomAttribute<AliasAttribute>()?.Name ?? field.Name) == member);
 
                 if (exported?.GetValue(null) is HIR.Instance instance)
-                    return Core.Compiler.ModuleScope.HIRLoader.LoadInstance(instance);
+                    return ZSharp.Compiler.Current.HIRLoader.LoadInstance(instance);
 
                 var result = loader.Class(scope).Member(member);
 

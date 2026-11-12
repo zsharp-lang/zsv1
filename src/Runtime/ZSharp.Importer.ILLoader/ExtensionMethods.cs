@@ -24,7 +24,7 @@ namespace ZSharp.Importer.ILLoader
 
         public IEnumerable<CompilerObject> Members(CompilerObject @object, MemberName name)
         {
-            if (!Core.Compiler.ModuleScope.TS.TypeOf(@object).Ok(out var type) || !type.Is<IILType>(out var known))
+            if (!ZSharp.Compiler.Current.TS.TypeOf(@object).Ok(out var type) || !type.Is<IILType>(out var known))
                 return [];
 
             var receiver = known.GetILType();

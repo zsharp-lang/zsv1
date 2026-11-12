@@ -4,7 +4,7 @@ using ZSharp.Importer.ILLoader;
 using ZSharp.Platform.Runtime;
 using C = ZSharp.HIR.Code;
 using L = ZSharp.LIR;
-using Scope = Core.Compiler.ModuleScope;
+using Scope = ZSharp.Compiler.Current;
 
 void Report(string name, bool ok)
 {

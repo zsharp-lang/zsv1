@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The compiler in use: its operations and its loaders, which what compiles reaches. -->
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Compiler.CG\ZSharp.Compiler.CG.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.TS\ZSharp.Compiler.TS.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.IR\ZSharp.Compiler.IR.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.HIRLoader\ZSharp.Compiler.HIRLoader.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.HIRLoader.Code\ZSharp.Compiler.HIRLoader.Code.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.HIRLoader.Code.Mapped\ZSharp.Compiler.HIRLoader.Code.Mapped.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.HIRReifier\ZSharp.Compiler.HIRReifier.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.Overloading\ZSharp.Compiler.Overloading.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -33,7 +33,15 @@ fun initialRoots(): List[String] {
 // A global's initial value is code that runs where the global is, so what it calls is
 // above it.
 let roots: List[String] = initialRoots();
-let nuget: String = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
+
+// Where NuGet keeps the packages it installed: where it is told to, or its default.
+fun nugetPackages(): String {
+    let told = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
+    if (told != null) return told;
+    return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
+}
+
+let nuget: String = nugetPackages();
 let projects: Func[String, IResult[Instance, Error]] = null;
 
 // The folders of the built packages loaded, where what they need was put.

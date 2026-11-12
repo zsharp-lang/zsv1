@@ -33,7 +33,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (variable.Is<IHasAddress>(out var addressable) && addressable.AddressOf(target) is { } own)
                 return own.When(out address).Error(out var failure) ? failure : null;
 
-            if (Core.Compiler.ModuleScope.IR.CompileExpression(variable, target).When(out var compiled).Error(out var error))
+            if (ZSharp.Compiler.Current.IR.CompileExpression(variable, target).When(out var compiled).Error(out var error))
                 return error;
 
             if (LIR.CLR.AddressOf.Has(compiled!))

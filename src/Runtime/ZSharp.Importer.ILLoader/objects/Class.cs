@@ -65,7 +65,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? Result.Error($"An array of {IL.GetElementType()!.Name} is made by giving {IL.GetElementType()!.Name} its length, as in {IL.GetElementType()!.Name}[4].")
                 : IL.IsValueType && arguments.Length == 0 && IL.GetConstructor(Type.EmptyTypes) is null
                 ? Result.Ok(new Literal(null, IL, loader))
-                : Core.Compiler.ModuleScope.CG.Call(
+                : ZSharp.Compiler.Current.CG.Call(
                 OverloadGroup.Of(IL.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
                 arguments
             );
@@ -95,7 +95,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             if (!implicitly && !IL.IsValueType && GoesDown(type, to) && type.Is<ICompileIRType>(out _))
                 return Result.Ok(new Call(
-                    target => Core.Compiler.ModuleScope.IR.CompileType(type, target).When(out var lowered).Error(out var error)
+                    target => ZSharp.Compiler.Current.IR.CompileType(type, target).When(out var lowered).Error(out var error)
                         ? Result<LIR.ICallable>.Error(error)
                         : Result<LIR.ICallable>.Ok(loader.Downcast(IL, lowered!)),
                     [@object],
@@ -107,7 +107,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             var defined = Conversions.Defined(IL, to, "op_Implicit") ?? (implicitly ? null : Conversions.Defined(IL, to, "op_Explicit"));
 
-            return defined is null ? null : Core.Compiler.ModuleScope.CG.Call(new Method(loader, defined, null), [new(@object)]);
+            return defined is null ? null : ZSharp.Compiler.Current.CG.Call(new Method(loader, defined, null), [new(@object)]);
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// </summary>
         private bool GoesDown(CompilerObject type, Type? to)
             => to is null
-                ? Core.Compiler.ModuleScope.TS.IsAssignableTo(this, type)
+                ? ZSharp.Compiler.Current.TS.IsAssignableTo(this, type)
                     || (!IL.IsSealed && type.Is<IDefinedClass>(out var defined) && loader.IsInterface(defined.Node))
                 : to.IsAssignableTo(IL) || (to.IsInterface && !IL.IsSealed) || (IL.IsInterface && !to.IsSealed);
 
@@ -139,7 +139,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? Result<MatchResult>.Ok(new MatchResult
                 {
                     Match = new Call(
-                        target => Core.Compiler.ModuleScope.IR.CompileType(pattern, target).When(out var lowered).Error(out var error)
+                        target => ZSharp.Compiler.Current.IR.CompileType(pattern, target).When(out var lowered).Error(out var error)
                             ? Result<LIR.ICallable>.Error(error)
                             : Result<LIR.ICallable>.Ok(loader.IsOf(IL, lowered!)),
                         [value],
@@ -168,7 +168,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (getters.Length == 0)
                 return Result.Error($"The indexer of {IL.Name} can't be read.");
 
-            if (Core.Compiler.ModuleScope.CG.Call(OverloadGroup.Of(getters), arguments).When(out var read).Error(out var error))
+            if (ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(getters), arguments).When(out var read).Error(out var error))
                 return Result.Error(error);
 
             return Result.Ok(new Indexed(read!, value => Index(@object, arguments, value)));
@@ -178,7 +178,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             if (IL.IsArray)
                 return Element(@object, arguments) is var element && element.Ok(out var indexed)
-                    ? Core.Compiler.ModuleScope.CG.Set(indexed, value)
+                    ? ZSharp.Compiler.Current.CG.Set(indexed, value)
                     : element;
 
             var setters = Indexers()
@@ -188,7 +188,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             return setters.Length == 0
                 ? Result.Error($"The indexer of {IL.Name} can't be assigned.")
-                : Core.Compiler.ModuleScope.CG.Call(OverloadGroup.Of(setters), [.. arguments, new Argument(value)]);
+                : ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(setters), [.. arguments, new Argument(value)]);
         }
 
         /// <summary>
@@ -198,11 +198,11 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// </summary>
         private IResult Element(CompilerObject array, Argument[] arguments)
         {
-            if (Core.Compiler.ModuleScope.CG.Call(new Method(loader, IL.GetMethod("Get")!, array), arguments).When(out var read).Error(out var error))
+            if (ZSharp.Compiler.Current.CG.Call(new Method(loader, IL.GetMethod("Get")!, array), arguments).When(out var read).Error(out var error))
                 return Result.Error(error);
 
             return Result.Ok(new Indexed(read!, value =>
-                Core.Compiler.ModuleScope.CG.Call(new Method(loader, IL.GetMethod("Set")!, array), [.. arguments, new Argument(value)])));
+                ZSharp.Compiler.Current.CG.Call(new Method(loader, IL.GetMethod("Set")!, array), [.. arguments, new Argument(value)])));
         }
 
         private PropertyInfo[] Indexers()
@@ -256,7 +256,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             var array = arguments.Length == 1 ? IL.MakeArrayType() : IL.MakeArrayType(arguments.Length);
 
-            return Core.Compiler.ModuleScope.CG.Call(
+            return ZSharp.Compiler.Current.CG.Call(
                 OverloadGroup.Of(array.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
                 arguments
             );
@@ -321,7 +321,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             var node = loader.Load(IL);
 
-            return Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(node.GetType()))
+            return ZSharp.Compiler.Current.TS.IsAssignableTo(targetType, loader.Class(node.GetType()))
                 ? loader.Described(this, targetType)
                 : Result.Error(new UnsupportedError($"{IL.Name} can't be cast to that type."));
         }
@@ -343,7 +343,23 @@ namespace ZSharp.Importer.ILLoader.Objects
                 && value is not Method
                 && value.Is<ICompileIRReference<LIR.ICallable>>(out _)
                 ? Result.Ok(new FunctionDelegate(loader, this, IL, value))
-                : Result.Error(new UnsupportedError($"{IL.Name} has no conversion from that value."));
+                : IsRoot && OfAnotherTypeSystem(value)
+                    ? Result.Ok(new Upcast(value, this))
+                    : Result.Error(new UnsupportedError($"{IL.Name} has no conversion from that value."));
+
+        /// <summary>
+        /// Whether this is the root of the CLR's type system, <c>Object</c>, which every value
+        /// is, on any platform that realizes the CLR's types: an object as it is.
+        /// </summary>
+        private bool IsRoot => IL == typeof(object);
+
+        /// <summary>
+        /// Whether a value's type isn't one of the CLR's own types as this loader gives them,
+        /// as a Z# class's isn't. A CLR type converts to <c>Object</c> by its own rules, as a
+        /// value type boxes, so only the others are this type's to convert.
+        /// </summary>
+        private static bool OfAnotherTypeSystem(CompilerObject value)
+            => ZSharp.Compiler.Current.TS.TypeOf(value).Ok(out var type) && type is not IILType;
 
         /// <summary>
         /// A value of a value type becomes an object by boxing it, when it goes to a type
@@ -354,8 +370,8 @@ namespace ZSharp.Importer.ILLoader.Objects
             => Converted(@object, type, implicitly: true) is { } converted
                 ? converted
                 : IL.IsValueType
-            && Core.Compiler.ModuleScope.TS.IsAssignableTo(type, this)
-            && !Core.Compiler.ModuleScope.TS.IsAssignableTo(this, type)
+            && ZSharp.Compiler.Current.TS.IsAssignableTo(type, this)
+            && !ZSharp.Compiler.Current.TS.IsAssignableTo(this, type)
                 ? Result.Ok(new Call(loader.Box(IL), [@object], () => type))
                 : Result.Error(new UnsupportedError($"{IL.Name} has no conversion to that type."));
 

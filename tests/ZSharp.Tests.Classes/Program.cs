@@ -7,7 +7,7 @@ using ZSharp.Parser;
 using ZSharp.Platform.Runtime;
 using ZSharp.Tokenizer;
 using C = ZSharp.HIR.Code;
-using Scope = Core.Compiler.ModuleScope;
+using Scope = ZSharp.Compiler.Current;
 
 void Report(string name, bool ok)
 {
@@ -50,7 +50,6 @@ new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
 CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
-Core.Runtime.Objects.Install(runtime, il);
 il.Install(mapped, mappedCode);
 
 // A kind of parameter defined outside the toolchain: it is injected, so a call gives it
@@ -96,7 +95,7 @@ DocumentCompiler.Install(mapped, Scope.HIRLoader);
 var core = new ZSharp.Importer.String.LibraryImporter("core");
 core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
 core.Add("zsharp", il.Load(typeof(Core.ZSharp.ModuleScope).Module));
-core.Add("compiler", il.Load(typeof(Scope).Module));
+core.Add("compiler", il.Load(typeof(Core.Compiler.ModuleScope).Module));
 Core.ZSharp.ModuleScope.Libraries = core;
 
 var std = new ZSharp.Importer.String.LibraryImporter("standard");
@@ -136,7 +135,8 @@ if (ZSharp.Importer.String.DocumentLibrary.Above(AppContext.BaseDirectory, "std"
 }
 language.Install(mappedCompiler, IsUnderlying);
 Core.ZSharp.ModuleScope.Importer = importer.Import;
-Core.ZSharp.ModuleScope.MetaTypes = DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il);
+Core.ZSharp.ModuleScope.MetaTypes = DotNetMetaTypes.Install(language, mappedCompiler, mappedBinder, runner, il, out var bodies);
+Core.ZSharp.ModuleScope.Bodies = bodies;
 
 foreach (var library in new[] { typeof(Core.Runtime.ModuleScope), typeof(Core.ZSharp.ModuleScope) })
     foreach (var (syntax, function) in il.Operators(library))
@@ -5377,6 +5377,37 @@ Try("classes the Cecil platform writes make each other as they are built, and pa
         import { run as run311 } from "{{written}}";
         Keep(run311());
         """) is null && Kept() is "x! of x 3";
+});
+
+Try("a Z# object goes where Object is expected, as every value does on the CLR, in what the Cecil platform writes too", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-objects-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Objects312"));
+        """);
+    File.WriteAllText(Path.Combine(source, "objects.zs"), """
+        import { Object, String, Int32 } from "core:runtime";
+        def Box { let v: Int32; new(this, v: Int32) { this.v = v; } }
+        fun describe(value: Object): String { return value.GetType().Name; }
+        fun run(): String { return describe(Box(3)) + ", " + describe(7); }
+        """);
+    var written = Path.Combine(root, "Objects312.dll").Replace('\\', '/');
+
+    return ResetKept() && Run($$"""
+        import { discover as discover312, Compiler as Compiler312 } from "std:project";
+        import { Module as Module312 } from "std:modules";
+        import { lower as lower312 } from "std:modules/compiler";
+        import { Cecil as Cecil312 } from "pkg:cecil";
+        let objects312 = Compiler312(discover312("{{source.Replace('\\', '/')}}")).compile()[0] as Module312;
+        let target312 = Cecil312("Objects312", null);
+        target312.add(lower312(objects312, target312));
+        target312.write("{{written}}");
+        import { run as run312 } from "{{written}}";
+        Keep(run312());
+        """) is null && Kept() is "Box, Int32";
 });
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)

@@ -72,17 +72,17 @@ namespace ZSharp.Importer.ILLoader.Objects
                     before.Statements.Add(new LIR.SetLocal(temporary, current!));
                     values.Add(new LIR.CLR.AddressOf(new LIR.GetLocal(temporary), byAddress.AddressType));
 
-                    if (Core.Compiler.ModuleScope.CG.Set(byAddress.Variable, new Temporary(temporary, byAddress.ElementClass)).When(out var assign).Error(out failure))
+                    if (ZSharp.Compiler.Current.CG.Set(byAddress.Variable, new Temporary(temporary, byAddress.ElementClass)).When(out var assign).Error(out failure))
                         return Result<Lowered>.Error(failure);
 
-                    if (Core.Compiler.ModuleScope.IR.CompileStatement(assign!, target).When(out var assigned).Error(out failure))
+                    if (ZSharp.Compiler.Current.IR.CompileStatement(assign!, target).When(out var assigned).Error(out failure))
                         return Result<Lowered>.Error(failure);
 
                     after.Add(assigned!);
                     continue;
                 }
 
-                if (Core.Compiler.ModuleScope.IR.CompileExpression(argument, target).When(out var value).Error(out var error))
+                if (ZSharp.Compiler.Current.IR.CompileExpression(argument, target).When(out var value).Error(out var error))
                     return Result<Lowered>.Error(error);
 
                 values.Add(value!);
@@ -102,7 +102,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (returnType is null)
                 return Result<LIR.Expression>.Error("A call that returns nothing has no value.");
 
-            if (Core.Compiler.ModuleScope.IR.CompileType(returnType(), target).When(out var type).Error(out error))
+            if (ZSharp.Compiler.Current.IR.CompileType(returnType(), target).When(out var type).Error(out error))
                 return Result<LIR.Expression>.Error(error);
 
             var result = new LIR.Local(type!);

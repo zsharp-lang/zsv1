@@ -90,7 +90,7 @@ namespace ZSharp.Compiler
             instances.Types.Register<HIR.Code.TypeOf>(node =>
                 code.LoadExpression(node.Value).Error(out var error, out var value)
                     ? Result.Error(error)
-                    : Core.Compiler.ModuleScope.TS.TypeOf(value));
+                    : ZSharp.Compiler.Current.TS.TypeOf(value));
 
             instances.Definitions.Register<HIR.Code.Local>(local =>
             {
@@ -107,7 +107,7 @@ namespace ZSharp.Compiler
                 if (init is null)
                     return Result.Error($"Local {local.Name} has no initial value to infer its type from.");
 
-                return Core.Compiler.ModuleScope.TS.TypeOf(init).Error(out _, out var inferred)
+                return ZSharp.Compiler.Current.TS.TypeOf(init).Error(out _, out var inferred)
                     ? Result.Error($"The type of local {local.Name} can't be inferred from its initial value.")
                     : Result.Ok(Local(local, inferred, init));
             });
@@ -281,7 +281,7 @@ namespace ZSharp.Compiler
                 if (code.LoadExpression(loop.Else).Error(out error, out var otherwise))
                     return Result.Error(error);
 
-                if (Core.Compiler.ModuleScope.TS.TypeOf(otherwise).Error(out _, out var type))
+                if (ZSharp.Compiler.Current.TS.TypeOf(otherwise).Error(out _, out var type))
                     return Result.Error("The else part of a loop that is an expression has no type to give the loop.");
 
                 var loaded = new Objects.WhileValue(type) { Condition = condition, Else = otherwise };

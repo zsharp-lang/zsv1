@@ -4,7 +4,7 @@
     <ProjectReference Include="..\ZSharp.Compiler.Overloading\ZSharp.Compiler.Overloading.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.TS.Static\ZSharp.Compiler.TS.Static.csproj" />
-    <ProjectReference Include="..\..\Library\ZSharp.Library.Core.Compiler\ZSharp.Library.Core.Compiler.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler\ZSharp.Compiler.csproj" />
   </ItemGroup>
 
 </Project>

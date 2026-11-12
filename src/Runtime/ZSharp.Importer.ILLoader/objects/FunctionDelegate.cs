@@ -23,7 +23,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
         {
-            if (Core.Compiler.ModuleScope.IR.CompileReference<LIR.ICallable>(function, target).When(out var callable).Error(out var error))
+            if (ZSharp.Compiler.Current.IR.CompileReference<LIR.ICallable>(function, target).When(out var callable).Error(out var error))
                 return Result<LIR.Expression>.Error(error);
 
             if (callable is not LIR.Function lowered)
@@ -34,14 +34,14 @@ namespace ZSharp.Importer.ILLoader.Objects
             // A function bound to an object takes it first, and the delegate is closed over it.
             LIR.Expression? receiver = null;
             if (function.Is<ICompileIRReceiver>(out var bound) && bound.Receiver is { } @object)
-                if (Core.Compiler.ModuleScope.IR.CompileExpression(@object, target).When(out receiver).Error(out error))
+                if (ZSharp.Compiler.Current.IR.CompileExpression(@object, target).When(out receiver).Error(out error))
                     return Result<LIR.Expression>.Error(error);
 
             var taken = lowered.Signature.Parameters.Count - (receiver is null ? 0 : 1);
             if (invoke.GetParameters().Length != taken)
                 return Result<LIR.Expression>.Error($"A {definition.Name} takes {invoke.GetParameters().Length} arguments, but the function takes {taken}.");
 
-            if (Core.Compiler.ModuleScope.IR.CompileType(delegateType, target).When(out var type).Error(out error))
+            if (ZSharp.Compiler.Current.IR.CompileType(delegateType, target).When(out var type).Error(out error))
                 return Result<LIR.Expression>.Error(error);
 
             var constructor = loader.Handle(definition.GetConstructor([typeof(object), typeof(nint)])!);

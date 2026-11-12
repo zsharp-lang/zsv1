@@ -16,7 +16,8 @@ namespace ZSharp.Lang.DotNet
             MappedASTCompiler mapped,
             MappedBinder binding,
             HIRRunner runner,
-            ILLoader il
+            ILLoader il,
+            out Bodies bodies
         )
         {
             var metaTypes = new MetaTypes(language, of => Resolve(of, runner, il));
@@ -31,7 +32,7 @@ namespace ZSharp.Lang.DotNet
                 (compiler, node) => metaTypes.Compile(compiler, node, method),
                 expression => runner.EvaluateExpression(expression)
             );
-            Core.ZSharp.ModuleScope.Bodies = body.Bodies;
+            bodies = body.Bodies;
 
             var @class = il.Load(typeof(Package.DotNet.Class));
             var module = il.Load(typeof(Package.DotNet.Module));

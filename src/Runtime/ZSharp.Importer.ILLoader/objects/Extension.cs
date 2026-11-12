@@ -16,7 +16,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             => [new(receiver), .. arguments];
 
         public IResult Call(Argument[] arguments)
-            => Core.Compiler.ModuleScope.CG.Call(method, With(arguments));
+            => ZSharp.Compiler.Current.CG.Call(method, With(arguments));
 
         public CompilerObject? Infer(Argument[] arguments)
             => method.Is<IInferable>(out var inferable) && inferable.Infer(With(arguments)) is { } inferred

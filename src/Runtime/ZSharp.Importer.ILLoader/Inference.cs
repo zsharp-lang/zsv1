@@ -67,7 +67,7 @@ namespace ZSharp.Importer.ILLoader
         }
 
         private static Type? TypeOf(CompilerObject argument)
-            => Core.Compiler.ModuleScope.TS.TypeOf(argument).Ok(out var type) && type.Is<IILType>(out var known)
+            => ZSharp.Compiler.Current.TS.TypeOf(argument).Ok(out var type) && type.Is<IILType>(out var known)
                 ? known.GetILType()
                 : null;
 

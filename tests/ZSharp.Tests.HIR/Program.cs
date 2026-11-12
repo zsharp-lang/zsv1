@@ -13,8 +13,8 @@ void Report(string name, bool ok)
     Console.WriteLine($"{(ok ? "pass" : "FAIL")}  {name}");
 }
 
-var rei = Core.Compiler.ModuleScope.HIRLoader;
-var codeRei = Core.Compiler.ModuleScope.HIRCodeLoader;
+var rei = ZSharp.Compiler.Current.HIRLoader;
+var codeRei = ZSharp.Compiler.Current.HIRCodeLoader;
 
 Report("default definition is unsupported", rei.LoadDefinition(new Def()).IsUnsupported());
 Report("default instance is unsupported", rei.LoadInstance(new Inst()).IsUnsupported());

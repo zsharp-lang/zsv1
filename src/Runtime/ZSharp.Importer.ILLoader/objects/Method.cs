@@ -45,7 +45,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// </summary>
         public IResult Cast(CompilerObject targetType)
             => method is MethodInfo info && receiver is null
-                && Core.Compiler.ModuleScope.TS.IsAssignableTo(targetType, loader.Class(typeof(Package.DotNet.Method)))
+                && ZSharp.Compiler.Current.TS.IsAssignableTo(targetType, loader.Class(typeof(Package.DotNet.Method)))
                 ? loader.DescribedMethod(info, targetType)
                 : ImplicitCast(targetType);
 
@@ -114,7 +114,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         {
             if (method is MethodInfo { IsGenericMethodDefinition: true })
                 return Infer(arguments) is { } inferred
-                    ? Core.Compiler.ModuleScope.CG.Call(inferred, arguments)
+                    ? ZSharp.Compiler.Current.CG.Call(inferred, arguments)
                     : Result.Error($"The type arguments of {method.Name} can't be inferred from these arguments.");
 
             if (Arguments.Match(Matching(), arguments) is not { } values)
@@ -124,7 +124,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             if (receiver is not null)
                 if (method.DeclaringType is { IsValueType: false } owner
-                    && Core.Compiler.ModuleScope.CG.ImplicitCast(receiver, loader.Class(owner)).Ok(out var converted))
+                    && ZSharp.Compiler.Current.CG.ImplicitCast(receiver, loader.Class(owner)).Ok(out var converted))
                     bound = [converted];
                 else
                     bound = [receiver];
