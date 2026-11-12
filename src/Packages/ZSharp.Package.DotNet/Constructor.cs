@@ -7,8 +7,11 @@ namespace Package.DotNet
         : ZSharp.HIR.Definition
         , ZSharp.HIR.Instance
         , Accessible
+        , ZSharp.HIR.Annotated
     {
         public Accessibility Accessibility { get; set; } = Accessibility.Public;
+
+        public List<object> Annotations { get; } = [];
 
         public This This { get; } = new();
 

@@ -858,7 +858,7 @@ namespace ZSharp.Importer.ILLoader
         /// <summary>
         /// The parameters a call passes arguments to, which leaves out an explicit this.
         /// </summary>
-        internal List<HIR.Code.Parameter> CallParameters(
+        public List<HIR.Code.Parameter> CallParameters(
             List<HIR.Code.Parameter> parameters,
             List<Package.DotNet.CustomMetadata> metadata
         )

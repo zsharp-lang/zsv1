@@ -127,6 +127,34 @@ import { public } from "std:zsharp/package/dotnet";
 }
 ```
 
+A constructor can have a name, as a Z# class's can, and is called through it:
+
+```zs
+import "std:prelude";
+import { print } from "std:io";
+import { Int32, DotNet_Class, explicitThis } from "core:runtime";
+import { public } from "std:zsharp/package/dotnet";
+
+@public def Counter of DotNet_Class {
+    @public let count: Int32;
+    @public @explicitThis new(this) { this.count = 0; }
+    @public @explicitThis new from(this, start: Int32) { this.count = start; }
+}
+
+print(Counter.from(41).count);
+print(Counter().count);
+```
+
+```output
+41
+0
+```
+
+The CLR has no named constructors, so `from` is a static method of the class, with the
+constructor's accessibility, which calls a private constructor that takes a private
+marker type, `Counter.<from>`, so no other constructor has its signature. A generic class
+can't have one yet.
+
 A method that implements an interface's needn't be public: one that isn't implements it
 explicitly, as C#'s explicit implementations do. Accessibility is checked by the CLR as
 the code runs, not yet as it's compiled.

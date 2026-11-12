@@ -175,10 +175,11 @@ module gives HIR too. Where an importer's HIR comes from is its own business.
 #### How it is built
 
 - **Annotations.** `Annotated` is on Z# functions, globals, modules, classes, methods and
-  constructors, and on CLR classes, interfaces and structures. The capabilities
+  constructors, and on CLR classes, interfaces, structures, methods and constructors. The capabilities
   `Kept` and `Encoded` of an annotation's type say what keeps it. `keep(node,
   metadata)`, of `std:zsharp/lowering`, is how a CO carries a node's kept annotations
-  onto the LIR it makes, as LIR `KeptAnnotation`; the IL loader does it for a CLR class.
+  onto the LIR it makes, as LIR `KeptAnnotation`; the IL loader does it for a CLR class
+  and its methods and constructors.
   The Cecil platform writes each as `[Metadata]` on the method, field or type it writes.
   The runtime platform doesn't yet, as what it makes is reflected in the process anyway.
 - **`std:encoding`** is the encoder and the decoder, in Z#. `encode(module)` gives each

@@ -941,6 +941,7 @@
         }
 
         type.Methods.Add(declared);
+        this.annotate(declared, constructor.Metadata);
         this.definedConstructors[constructor] = declared;
         this.functions[constructor.Function] = declared;
         this.prologues[constructor.Function] = this.baseConstructor(definition);
@@ -982,6 +983,7 @@
         }
 
         type.Methods.Add(declared);
+        this.annotate(declared, method.Metadata);
         this.definedMethods[method] = declared;
 
         // One that implements an interface's but isn't public says which, once every class is

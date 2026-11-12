@@ -152,6 +152,16 @@ Decided in the review of the reimplementation, for the language features to come
 - A named constructor is what the CLR class meta-compiler interprets in the CLR's terms:
   a private constructor taking a private marker type of its own, named `<name>`, and a
   public static method of the name that calls it, both marked `[NamedConstructor(name)]`.
+  - Built so: the constructor meta-compiler annotates a constructor with a name
+    `NamedConstructor(name)`, a kept annotation of CLR HIR's. Once the class's members
+    are built, as their decorators left them, the class makes each: the marker, nested
+    and private; the constructor, private, taking the marker before what a call passes;
+    and the static method, with the constructor's accessibility and parameters, which
+    calls it with a null marker.
+  - The mark is the kept annotation, so the Cecil platform writes it as `[Metadata]` on
+    both. The runtime platform doesn't write kept annotations yet.
+  - **Not yet:** a generic class's named constructor, as the static method would return
+    the class instantiated with its own type parameters. It is an error for now.
 
 ## Choices and restrictions from 2026-11-09
 

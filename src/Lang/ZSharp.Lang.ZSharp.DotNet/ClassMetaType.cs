@@ -12,8 +12,9 @@ namespace ZSharp.Lang.DotNet
     /// class's HIR, a <see cref="Package.DotNet.Class"/>: its type parameters first, its
     /// bases, then each member, a <c>let</c> as a field, a <c>fun</c> as a method, a
     /// constructor as one, and any other definition as a nested one, and last a property
-    /// for each name its accessors have. Only a type definition is one: a function can be
-    /// given a meta-type too, so what isn't a type definition fails.
+    /// for each name its accessors have, and the named constructors, in the CLR's terms.
+    /// Only a type definition is one: a function can be given a meta-type too, so what
+    /// isn't a type definition fails.
     /// </summary>
     public sealed class ClassMetaType(
         Language language,
@@ -23,6 +24,8 @@ namespace ZSharp.Lang.DotNet
         Package.DotNet.TypeReference underlyingType
     )
     {
+        private readonly NamedConstructors namedConstructors = new(il);
+
         public IResult<CompiledDefinition, Error> Compile(ASTCompiler compiler, AST.Definition node, Code.Local self)
         {
             if (node is not AST.TypeDefinition definition)
@@ -72,6 +75,13 @@ namespace ZSharp.Lang.DotNet
                     Callee = new Code.NamedMember { Target = new Code.Get(il.Load(typeof(Properties))), Name = nameof(Properties.Define) },
                     Arguments = [new() { Value = new Code.Get(self) }, new() { Value = new Code.StringLiteral(property) }]
                 }));
+
+            // A named constructor is made in the CLR's terms once its decorators are done.
+            block.Statements.Add(new Code.ExpressionStatement(new Code.Call
+            {
+                Callee = new Code.NamedMember { Target = new Code.Get(il.Expose(namedConstructors)), Name = nameof(NamedConstructors.Define) },
+                Arguments = [new() { Value = new Code.Get(self) }]
+            }));
 
             return Bases(compiler, definition, self, block!) is { } failed ? Result<Code.Block>.Error(failed) : filled;
         }
