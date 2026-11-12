@@ -1,11 +1,12 @@
 namespace ZSharp.LIR
 {
     /// <summary>
-    /// Leaves a <see cref="Loop"/> that contains it, which need not be the innermost one.
+    /// Leaves a <see cref="Breakable"/> statement that contains it, which need not be the
+    /// innermost one.
     /// </summary>
-    public sealed class Break(Loop loop)
+    public sealed class Break(Breakable target)
         : Statement
     {
-        public Loop Loop { get; set; } = loop;
+        public Breakable Target { get; set; } = target;
     }
 }

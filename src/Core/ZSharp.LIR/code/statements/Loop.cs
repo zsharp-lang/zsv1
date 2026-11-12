@@ -5,6 +5,7 @@ namespace ZSharp.LIR
     /// </summary>
     public sealed class Loop(Statement body)
         : Statement
+        , Breakable
     {
         public Statement Body { get; set; } = body;
     }

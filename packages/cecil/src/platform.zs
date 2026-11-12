@@ -12,7 +12,7 @@ def Body of DotNet_Class {
     let il: ILProcessor;
     let locals: Dictionary[LIRLocal, VariableDefinition];
     let starts: Dictionary[LIRLoop, Instruction];
-    let ends: Dictionary[LIRLoop, Instruction];
+    let ends: Dictionary[Breakable, Instruction];
 
     @explicitThis new(this, method: MethodDefinition, function: LIRFunction) {
         this.method = method;
@@ -20,7 +20,7 @@ def Body of DotNet_Class {
         this.il = method.Body.GetILProcessor();
         this.locals = Dictionary[LIRLocal, VariableDefinition]();
         this.starts = Dictionary[LIRLoop, Instruction]();
-        this.ends = Dictionary[LIRLoop, Instruction]();
+        this.ends = Dictionary[Breakable, Instruction]();
         method.Body.InitLocals = true;
     }
 
@@ -1043,16 +1043,16 @@ def Cecil of DotNet_Class : ClrPlatform {
             let end = body.label();
             body.il.Append(start);
             body.starts[repeated] = start;
-            body.ends[repeated] = end;
+            body.ends[repeated as Breakable] = end;
             this.statement(body, repeated.Body);
             body.starts.Remove(repeated);
-            body.ends.Remove(repeated);
+            body.ends.Remove(repeated as Breakable);
             body.il.Emit(OpCodes.Br, start);
             body.il.Append(end);
             return;
         }
         if (statement is left of LIRBreak) {
-            body.il.Emit(OpCodes.Br, body.ends[left.Loop]);
+            body.il.Emit(OpCodes.Br, body.ends[left.Target]);
             return;
         }
         if (statement is next of LIRContinue) {

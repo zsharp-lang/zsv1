@@ -34,7 +34,7 @@ import {
     Type as LIRType, FunctionType as LIRFunctionType, Reference as LIRReference, Signature as LIRSignature,
     Parameter as LIRParameter, Local as LIRLocal, Variable as LIRVariable, ICallable,
     GenericInstance, InstanceMember, MethodInstance,
-    Expression as LIRExpression, Statement as LIRStatement, Block as LIRBlock, Evaluate, If as LIRIf, Loop as LIRLoop,
+    Expression as LIRExpression, Statement as LIRStatement, Block as LIRBlock, Evaluate, If as LIRIf, Loop as LIRLoop, Breakable,
     Break as LIRBreak, Continue as LIRContinue, Return as LIRReturn, SetLocal, SetGlobal, SetField, Store,
     Constant, GetLocal, GetGlobal, GetField, GetFunction, Call as LIRCall, CallIndirect, New as LIRNew,
     Allocate, Load as LIRLoad, Sequence, EntryPoint as LIREntryPoint, KeptAnnotation, Metadata as LIRMetadata

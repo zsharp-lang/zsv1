@@ -7,7 +7,7 @@
 // and `def Name of Interface` a Z# interface.
 
 import { String, Object, Boolean, Int32, List, Dictionary, HashSet, DotNet_Interface, explicitThis, static as clrStatic, DotNet_Class, DotNet_Module, ilLoader, Type as ClrType } from "core:runtime";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition, OperatorDefinition, Annotated, Overloadable } from "std:zsharp/hir";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement, Cast as CastCode } from "std:zsharp/hir/code";
 import {
     Function as FunctionSyntax, Definition as DefinitionSyntax, TypeDefinition as TypeSyntax,
@@ -31,7 +31,7 @@ import {
     Global as LIRGlobal, GetGlobal, SetGlobal,
     Field as LIRField, Module as LIRModule, Expression as LIRExpression, Statement as LIRStatement, Code as LIRCode, Evaluate, Type as LIRType, ICallable
 } from "std:zsharp/lir";
-import { Bodies, ContainerCompiler, CapabilityContext, Language, Operator } from "std:zsharp/lang";
+import { Bodies, ContainerCompiler, CapabilityContext, Language, Operator, OperatorAnnotation } from "std:zsharp/lang";
 import { CodeLoaders } from "std:zsharp/compiler/code";
 import { Positional, Named } from "std:functions";
 import { Holder, Held, Initializing, keep } from "std:zsharp/lowering";
@@ -940,6 +940,18 @@ def Evaluated : CompilerObject, ICompileIRStatement {
     }
 }
 
+// Whether a method is an operator, as `@operator` says of it.
+fun isOperator(method: Method, which: Object): Boolean {
+    let index = 0;
+    while (index < method.Annotations.Count) {
+        if (method.Annotations[index] is said of OperatorAnnotation) {
+            if (which.Equals(said.Operator)) return true;
+        }
+        index = index + 1;
+    }
+    return false;
+}
+
 // What indexing a class or one of its values calls: its methods that are its index
 // operator, the class's for the class and the objects' for a value, called with what
 // is indexed as a call of them is.
@@ -948,7 +960,7 @@ fun callIndex(methods: List[Method], onClass: Boolean, object: CompilerObject, a
     let index = 0;
     while (index < methods.Count) {
         let method = methods[index];
-        if (Operator.Index.Equals(method.Operator)) {
+        if (isOperator(method, Operator.Index)) {
             if (method.IsClass == onClass) {
                 if (method.IsStatic == false) candidates.Add(Bound(hirLoader.LoadDefinition(method).Unwrap(), object));
             }

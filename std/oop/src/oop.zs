@@ -24,7 +24,7 @@
 import { String, Object, Boolean, List, DotNet_Class as Node, explicitThis } from "core:runtime";
 import { importers } from "core:zsharp";
 import { entrypoint } from "std:framework";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition, OperatorDefinition, Annotated, Overloadable } from "std:zsharp/hir";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
 import { Code, Local, Expression } from "std:zsharp/hir/code";
 import { Positional } from "std:functions";
 
@@ -48,7 +48,7 @@ def Field of Node : Instance, Definition {
 }
 
 // Methods of one name overload, as functions do.
-def Method of Node : Instance, Definition, OperatorDefinition, Annotated, Overloadable {
+def Method of Node : Instance, Definition, Annotated, Overloadable {
     let Name: String;
     let Parameters: List[Definition];
     let Locals: List[Local];
@@ -59,7 +59,6 @@ def Method of Node : Instance, Definition, OperatorDefinition, Annotated, Overlo
     let ThisParameter: Positional;
     let IsStatic: Boolean;
     let IsClass: Boolean;
-    let operator: Object;
     let annotations: List[Object];
 
     @explicitThis new(this, name: String) {
@@ -72,10 +71,6 @@ def Method of Node : Instance, Definition, OperatorDefinition, Annotated, Overlo
     }
 
     @explicitThis get Annotations(this): List[Object] { return this.annotations; }
-
-    // The operator it is, if it is one, as `@operator(Operator.Index)` makes it.
-    @explicitThis get Operator(this): Object { return this.operator; }
-    @explicitThis set Operator(this, value: Object) { this.operator = value; }
 }
 
 // A property: what its accessors read and write, which are methods of what holds it,
