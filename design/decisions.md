@@ -140,8 +140,11 @@ Decided in the review of the reimplementation, for the language features to come
 - A non-public method that implements an interface's implements it explicitly: the
   platform records which interface method it implements, as the CLR's method
   implementations do. `@public` isn't required for it.
-- **Not written yet for modules:** a module lowers to LIR's own module, whose functions and
-  globals have no accessibility, so a module's members are written public whatever they say.
+- In LIR, accessibility is CLR metadata, `LIR.CLR.Accessible`, on whatever definition has
+  one: a class, a member of one, and a module's functions and globals, which are LIR's
+  own. Core LIR knows nothing of accessibility, and a target that reads none makes the
+  definition public, which still works. A class's members carry metadata, as a definition
+  does, for it.
 - **Pending:** accessibility is checked as the code runs, by the CLR, and not as it is
   compiled. A CO can't refuse a member to code outside its class until member access
   knows where the code asking for it is, which needs the requester's context in the

@@ -339,7 +339,7 @@
         if (global.Module == null) fail("A global belongs to a module.");
 
         let holder = this.holder(global.Module);
-        let field = FieldDefinition(this.unique(global.Name, "global"), FieldAttributes.Public | FieldAttributes.Static, this.type(global.Type));
+        let field = FieldDefinition(this.unique(global.Name, "global"), fieldVisibility(ClrAccessible.Of(global.Metadata)) | FieldAttributes.Static, this.type(global.Type));
         holder.Fields.Add(field);
         this.globals[global] = field;
         this.annotate(field, global.Metadata);
@@ -357,7 +357,7 @@
         }
 
         let holder = this.holderOf(function.Module);
-        let method = MethodDefinition(this.unique(function.Name, "function"), MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.HideBySig, this.type(function.Signature.ReturnType));
+        let method = MethodDefinition(this.unique(function.Name, "function"), methodVisibility(ClrAccessible.Of(function.Metadata)) | MethodAttributes.Static | MethodAttributes.HideBySig, this.type(function.Signature.ReturnType));
 
         let index = 0;
         while (index < function.Signature.Parameters.Count) {
@@ -850,8 +850,8 @@
     @public @explicitThis fun classDefinition(this, definition: ClassDefinition): TypeDefinition {
         if (this.definitions.ContainsKey(definition)) return this.definitions[definition];
 
-        let visibility = typeVisibility(definition.Accessibility);
-        if (definition.DeclaringType != null) visibility = nestedVisibility(definition.Accessibility);
+        let visibility = typeVisibility(ClrAccessible.Of(definition.Metadata));
+        if (definition.DeclaringType != null) visibility = nestedVisibility(ClrAccessible.Of(definition.Metadata));
         let attributes = visibility | TypeAttributes.Class;
         if (definition.IsInterface) attributes = visibility | TypeAttributes.Interface | TypeAttributes.Abstract;
 
@@ -897,7 +897,7 @@
         index = 0;
         while (index < definition.Fields.Count) {
             let field = definition.Fields[index];
-            let declared = FieldDefinition(field.Name, fieldVisibility(field.Accessibility), this.type(field.Type));
+            let declared = FieldDefinition(field.Name, fieldVisibility(ClrAccessible.Of(field.Metadata)), this.type(field.Type));
             type.Fields.Add(declared);
             this.definedFields[field] = declared;
             index = index + 1;
@@ -930,7 +930,7 @@
     }
 
     @public @explicitThis fun declareConstructor(this, definition: ClassDefinition, constructor: ClassConstructor, type: TypeDefinition) {
-        let attributes = methodVisibility(constructor.Accessibility) | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName;
+        let attributes = methodVisibility(ClrAccessible.Of(constructor.Metadata)) | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName;
         let declared = MethodDefinition(".ctor", attributes, this.system("System.Void"));
 
         let index = 0;
@@ -950,7 +950,7 @@
     // How a method is declared: a method that implements an interface method by its name
     // is virtual and final, as C# makes it, so the CLR maps it to the interface's.
     @public @explicitThis fun declareClassMethod(this, definition: ClassDefinition, method: ClassMethod, type: TypeDefinition) {
-        let attributes = methodVisibility(method.Accessibility) | MethodAttributes.HideBySig;
+        let attributes = methodVisibility(ClrAccessible.Of(method.Metadata)) | MethodAttributes.HideBySig;
         if (method.IsStatic) attributes = attributes | MethodAttributes.Static;
         else if (definition.IsInterface or method.IsAbstract) attributes = attributes | MethodAttributes.Abstract | MethodAttributes.Virtual | MethodAttributes.NewSlot;
         else if (method.IsOverride) attributes = attributes | MethodAttributes.Virtual;
@@ -989,7 +989,7 @@
         if (method.IsStatic == false) {
             if (definition.IsInterface == false) {
                 if (definition.Interfaces.Count > 0) {
-                    if (method.Accessibility != ClrAccessibility.Public) {
+                    if (ClrAccessible.Of(method.Metadata) != ClrAccessibility.Public) {
                         this.explicitMethods.Add(method);
                         this.explicitOwners.Add(definition);
                     }

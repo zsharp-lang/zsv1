@@ -2187,6 +2187,34 @@ Try("a class and its members are private unless they say otherwise, and an inter
         && open.GetMethod("shown", flags)!.IsPublic;
 });
 
+Try("a module's functions are public and its globals private unless they say otherwise, on the CLR as written", () =>
+{
+    if (Run("""
+        module M321 {
+            @public def Anchor321 {}
+            let hidden321: Int32 = 1;
+            @public let shown321: Int32 = 2;
+            fun open321(): Int32 { return hidden321; }
+            @internal fun inside321(): Int32 { return shown321; }
+        }
+        Keep(M321.Anchor321);
+        """) is { } error)
+        throw new Exception(error);
+
+    if (Kept() is not Type anchor)
+        return false;
+
+    var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly;
+    var types = anchor.Assembly.GetTypes();
+    System.Reflection.FieldInfo Field(string name) => types.SelectMany(type => type.GetFields(flags)).Single(field => field.Name.StartsWith(name));
+    System.Reflection.MethodInfo Method(string name) => types.SelectMany(type => type.GetMethods(flags)).Single(method => method.Name.StartsWith(name));
+
+    return Field("hidden321").IsPrivate
+        && Field("shown321").IsPublic
+        && Method("open321").IsPublic
+        && Method("inside321").IsAssembly;
+});
+
 Try("a class nested in a class is a CLR nested type, a member of its class, private unless it says otherwise", () =>
 {
     if (Run("""
