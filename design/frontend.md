@@ -281,7 +281,8 @@ a custom type gets into the language to be used as a meta-type.
 - The structures are the platform's own definitions, CLR classes, which a new runtime
   reimplements: each is written with one meta-type, `Node`, which its library imports as
   `DotNet_Class`, so reimplementing it is ideally giving that name another meta-type.
-  Their getters still say `@explicitThis`, which a CLR class needs and a Z# class doesn't.
+  Their methods still say `@explicitThis` and reach their fields through `this`, as they
+  were written before a CLR method's code reached its class's members by their names.
 - `std:oop/compiler`'s COs are Z# classes, built by itself: what loads a class, method,
   constructor or interface, and the meta-compilers that compile them. What has no object,
   as matching arguments or finding what a built class was built as, is a function of its

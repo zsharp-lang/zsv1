@@ -102,7 +102,9 @@ a Z# definition is, not a type of the running process:
   lowered for the runtime only.
 
 A method is an instance method unless it is marked static, as the members of a class
-describe.
+describe. Its code reaches its class's members by their names, through its `this` node,
+which the IL loader defines as the object, whose member a name is, or else the class's,
+and as the class in a static method.
 
 Each target decides how it handles a value: a `.NET` field, local or parameter converts
 it with `CG.ImplicitCast`, and another target might want an exact type or something else

@@ -91,6 +91,38 @@ namespace ZSharp.Lang.DotNet
         }
 
         /// <summary>
+        /// Binds the names of the members of the class a method or a constructor is defined
+        /// in, for its code, to the members of its <c>this</c>, the object it runs on, which
+        /// what lowers the code gives: a member of the object, or the class's if it has none,
+        /// as C# resolves a simple name. They are bound once its signature is compiled, as
+        /// they are its code's names and not its signature's, and what the code names itself,
+        /// as a parameter, hides one.
+        /// </summary>
+        public Error? Members(ASTCompiler compiler, Code.Block block, Code.Local owner, AST.Signature signature)
+        {
+            var names = ClassMembers.Of(compiler);
+
+            if (names.Count == 0)
+                return null;
+
+            var receiver = new Code.Local("this", (HIR.Type)il.Load(typeof(Package.DotNet.This)))
+            {
+                Init = Member(owner, nameof(Package.DotNet.Method.This))
+            };
+
+            block.Statements.Add(new Code.Declare(receiver));
+
+            HashSet<string> hidden = [.. (signature.Args ?? []).Concat(signature.KwArgs ?? []).Select(parameter => parameter.Alias ?? parameter.Name)];
+
+            foreach (var name in names)
+                if (!hidden.Contains(name) && Language.Names(compiler)?.Local(name) is null
+                    && language.Bind(compiler, name, new Code.NamedMember { Target = new Code.Get(receiver), Name = name }) is { } error)
+                    return error;
+
+            return null;
+        }
+
+        /// <summary>
         /// Compiles a <c>let</c> of a container to code that builds a field and adds it to
         /// the owner's list. Its initial value is code, reified for whoever runs it. A class
         /// reaches its fields through an object, so only a container whose fields its code

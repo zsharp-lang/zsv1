@@ -101,6 +101,11 @@ Decided in the review of the reimplementation, for the language features to come
   attribute of the IL loader's, which only the running loader could name, so its
   decorator had to be `core:runtime`'s. `Ref` and `Out` are CLR HIR too, so they are
   `pkg:clr/hir`'s.
+- **A CLR method's code reaches its class's members by their names**, the class's own,
+  over a name outside the class of the same name, unless a parameter has it, as C# and
+  `std:oop` resolve them. A base class's members are reached through `this`. So
+  `return Type;` in a class with a field `Type` reads the field, though `core:runtime`'s
+  `Type` is imported.
 - **Integers.** The integer concept is a set of operator functions and casts. A
   fixed-width integer is a type of its own `Integer` meta-type, which gives its width.
 

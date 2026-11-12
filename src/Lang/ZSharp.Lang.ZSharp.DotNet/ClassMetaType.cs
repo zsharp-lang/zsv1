@@ -49,12 +49,14 @@ namespace ZSharp.Lang.DotNet
             // In a class, a let is a field and a fun a method.
             var fork = body.WithFields(body.WithMethods(compiler), self, nameof(Package.DotNet.Class.Fields), bind: false);
 
-            // A class is private, and so are its members unless they say otherwise.
-            var filled = MemberDefaults.Within(compiler, Package.DotNet.Accessibility.Private, Package.DotNet.Accessibility.Private, () => container.Compile(
+            // A class is private, and so are its members unless they say otherwise. Its
+            // methods' code reaches its members by their names.
+            var members = definition.Content?.Statements ?? [];
+            var filled = MemberDefaults.Within(compiler, Package.DotNet.Accessibility.Private, Package.DotNet.Accessibility.Private, () => ClassMembers.Within(compiler, members, () => container.Compile(
                 fork,
-                definition.Content?.Statements ?? [],
+                members,
                 (member, value) => new Code.ExpressionStatement(body.Register(self, ListOf(member), value))
-            ));
+            )));
 
             if (filled.When(out var block).Error(out var error))
                 return Result<Code.Block>.Error(error);

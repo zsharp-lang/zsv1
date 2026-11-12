@@ -468,7 +468,7 @@ namespace ZSharp.Importer.ILLoader
 
             foreach (var (constructor, declared) in @class.Constructors.Zip(lowered.Constructors))
             {
-                using var bound = Bind(@class, constructor.This, constructor.Parameters, constructor.HasExplicitThis, signatures[(constructor, target ?? NoTarget)], target);
+                using var bound = Bind(@class, constructor.This, true, constructor.Parameters, constructor.HasExplicitThis, signatures[(constructor, target ?? NoTarget)], target);
 
                 foreach (var field in node.Fields)
                     if (field.DefaultValue is not null && Initialize(field, @class, constructor, declared, target) is { } error)
@@ -486,7 +486,7 @@ namespace ZSharp.Importer.ILLoader
                 if (method.Body is null)
                     return new ErrorMessage($"Method {method.Name} has no body.");
 
-                using var bound = Bind(@class, method.IsStatic ? null : method.This, method.Parameters, method.HasExplicitThis, signatures[(method, target ?? NoTarget)], target);
+                using var bound = Bind(@class, method.This, !method.IsStatic, method.Parameters, method.HasExplicitThis, signatures[(method, target ?? NoTarget)], target);
 
                 if (Lower(method.Body, declared.Function, method.ReturnType, method.Parameters, target) is { } error)
                     return error;
@@ -499,11 +499,14 @@ namespace ZSharp.Importer.ILLoader
         /// Makes a member's parameters the variables its code uses, as the target lowered
         /// them: its object first, which an explicit this parameter is too. They are its
         /// until the binding is disposed, which gives back what they were before, as a
-        /// member lowered for one target can be lowered for another while it is.
+        /// member lowered for one target can be lowered for another while it is. The code's
+        /// <c>this</c> is what its members' names are reached through: the object, or the
+        /// class for a member that has none, as a static method.
         /// </summary>
         private Binding Bind(
             Objects.DefinedClass? @class,
             Package.DotNet.This? @this,
+            bool hasObject,
             List<HIR.Code.Parameter> parameters,
             bool explicitThis,
             List<LIR.Parameter> lowered,
@@ -514,11 +517,13 @@ namespace ZSharp.Importer.ILLoader
             var index = 0;
             var binding = new Binding();
 
-            if (@this is not null && @class is not null)
+            if (@this is not null && @class is not null && !hasObject)
+                binding.Set(@this, @class);
+            else if (@this is not null && @class is not null)
             {
                 var receiver = new Objects.Variable(Lowered(@this, lowered[0], target), () => @class);
 
-                binding.Set(@this, receiver);
+                binding.Set(@this, new Objects.ImplicitObject(receiver, @class));
 
                 if (explicitThis && parameters.Count > 0)
                     binding.Set(parameters[0], receiver);
@@ -730,7 +735,7 @@ namespace ZSharp.Importer.ILLoader
 
                 var function = lowered.Functions[method];
 
-                using var bound = Bind(null, null, method.Parameters, false, [.. function.Signature.Parameters], target);
+                using var bound = Bind(null, null, false, method.Parameters, false, [.. function.Signature.Parameters], target);
 
                 if (Lower(method.Body, function, method.ReturnType, method.Parameters, target) is { } error)
                     return error;

@@ -770,8 +770,9 @@ Try("an untyped parameter is an error", () =>
     Run("@public def E4 { @public @explicitThis fun f(this, x) { } }") is { } e && e.Contains("needs a type"));
 Try("a missing method is an error", () =>
     Run("@public def E6 { @public @explicitThis fun f(this) { this.nope(); } } ") is { } e && e.Contains("no member"));
-Try("a bare method name is an error", () =>
-    Run("@public def E7 { @public @explicitThis fun f(this) { g(); } @public @explicitThis fun g(this) { } }") is not null);
+Try("a bare method name calls it on the object", () =>
+    ResetKept() && Run("""@public def E7 { @public fun f(): String { return g(); } @public fun g(): String { return "g"; } } Keep(E7().f());""") is null
+    && Kept() is "g");
 Try("a function outside a class is an error", () =>
     Run("fun loose() { }") is not null);
 
@@ -2293,6 +2294,55 @@ Try("a named constructor of a generic CLR class is an error, for now", () =>
         @public def Box324[T] { @public @explicitThis new of(this) { } }
         Keep(Box324[Int32]);
         """) is { } e && e.Contains("named constructor of can't be defined yet"));
+
+// ---- A CLR method's code reaches its class's members by their names
+
+Try("a method's code reaches its class's members by their names, through its object", () =>
+    ResetKept() && Run("""
+        @public def Named326 {
+            @public let name: String;
+            @public let count: Int32;
+            @public new(given: String) { name = given; count = 0; }
+            @public fun bump(): Int32 { count = count + 1; return count; }
+            @public fun twice(): Int32 { bump(); return bump(); }
+            @public fun hidden(name: String): String { return name; }
+            @public get Label(): String { return "<" + name + ">"; }
+            @public fun label(): String { return Label; }
+        }
+        Keep(Named326("ada").twice());
+        Keep(Named326("ada").hidden("given"));
+        Keep(Named326("ada").label());
+        """) is null && Probe.Kept is [2, "given", "<ada>"] && ResetKept());
+
+Try("a member's name in a method's code is the member, over a name outside the class, but not in its signature", () =>
+    ResetKept() && Run("""
+        @public def Shadow327 {
+            @public let String: String;
+            @public new(text: String) { String = text; }
+            @public fun echo(text: String): String { return String + text; }
+        }
+        Keep(Shadow327("field ").echo("given"));
+        """) is null && Kept() is "field given");
+
+Try("a static method's code reaches its class's static members by their names, and an instance method's too", () =>
+    ResetKept() && Run("""
+        @public def Statics328 {
+            @public @static fun one(): Int32 { return 1; }
+            @public @static fun two(): Int32 { return one() + one(); }
+            @public fun three(): Int32 { return two() + one(); }
+        }
+        Keep(Statics328.two());
+        Keep(Statics328().three());
+        """) is null && Probe.Kept is [2, 3] && ResetKept());
+
+Try("a static method's code can't reach an object's member by its name, as it has no object", () =>
+    Run("""
+        @public def NoObject329 {
+            @public let name: String;
+            @public @static fun read(): String { return name; }
+        }
+        NoObject329.read();
+        """) is { } e && e.Contains("no member named name"));
 
 Try("a class nested in a class is a CLR nested type, a member of its class, private unless it says otherwise", () =>
 {
