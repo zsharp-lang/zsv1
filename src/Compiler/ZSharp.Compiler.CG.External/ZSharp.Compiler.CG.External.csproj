@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.Compiler.CG\ZSharp.Compiler.CG.csproj" />
-    <ProjectReference Include="..\ZSharp.Compiler.Overloading.Static\ZSharp.Compiler.Overloading.Static.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.Overloading\ZSharp.Compiler.Overloading.csproj" />
   </ItemGroup>
 
 </Project>
