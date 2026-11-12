@@ -6,7 +6,10 @@ namespace Package.DotNet
     public sealed class Constructor
         : ZSharp.HIR.Definition
         , ZSharp.HIR.Instance
+        , Accessible
     {
+        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+
         public This This { get; } = new();
 
         public List<CustomMetadata> CustomMetadata { get; } = [];

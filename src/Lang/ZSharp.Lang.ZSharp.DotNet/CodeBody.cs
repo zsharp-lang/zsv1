@@ -104,6 +104,7 @@ namespace ZSharp.Lang.DotNet
             var block = new Code.Block();
 
             block.Statements.Add(new Code.Declare(field));
+            block.Statements.Add(Accessible(field, MemberDefaults.FieldsIn(compiler)));
 
             if (let.Value is not null)
             {
@@ -127,6 +128,36 @@ namespace ZSharp.Lang.DotNet
                 Statements = block.Statements,
                 Result = new Code.Get(field)
             });
+        }
+
+        /// <summary>
+        /// A container's fields: a <c>let</c> in it is a field, which decorators on it are
+        /// given, as a definition is, rather than the code that builds it.
+        /// </summary>
+        public ASTCompiler WithFields(ASTCompiler compiler, Code.Local owner, string list, bool bind)
+        {
+            var fork = compiler.Fork();
+            var expressions = fork.Expression;
+            var statements = fork.Statement;
+
+            fork.Expression = (current, expression) => expression is AST.LetExpression let
+                ? Field(current, let, owner, list, bind)
+                : expressions(current, expression);
+
+            fork.Statement = (current, statement) =>
+            {
+                if (Language.Undecorate(statement, out var decorators) is not AST.ExpressionStatement { Expression: AST.LetExpression let } || decorators.Count == 0)
+                    return statements(current, statement);
+
+                if (Field(current, let, owner, list, bind).When(out var field).Error(out var error))
+                    return Result<Code.Statement>.Error(error);
+
+                return Language.CompileDecorators(current, decorators).When(out var compiled).Error(out error)
+                    ? Result<Code.Statement>.Error(error)
+                    : Result<Code.Statement>.Ok(new Code.ExpressionStatement(Language.Decorate(field!, compiled!)));
+            };
+
+            return fork;
         }
 
         public Error? Body(ASTCompiler compiler, Code.Block block, Code.Local owner, AST.Statement? body)
@@ -159,6 +190,17 @@ namespace ZSharp.Lang.DotNet
         /// </summary>
         public Code.Call Register(Code.Local owner, string list, Code.Expression value)
             => Lang.Bodies.Call(new Code.NamedMember { Target = new Code.Get(il.Load(typeof(Registration))), Name = nameof(Registration.Register) }, Member(owner, list), value);
+
+        /// <summary>
+        /// Code that gives a definition being built its accessibility, which its decorators
+        /// can change after it.
+        /// </summary>
+        public Code.Statement Accessible(Code.Local owner, Package.DotNet.Accessibility accessibility)
+            => new Code.ExpressionStatement(new Code.Set
+            {
+                Target = Member(owner, nameof(Package.DotNet.Accessible.Accessibility)),
+                Value = new Code.Get(il.Expose(accessibility))
+            });
 
         public static Code.NamedMember Member(Code.Local owner, string name)
             => Lang.Bodies.Member(owner, name);

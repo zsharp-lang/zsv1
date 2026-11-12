@@ -21,7 +21,7 @@
 // The nodes are the platform's own definitions, written with one meta-type, `Node`, so
 // another platform reimplements them by giving that name its own.
 
-import { String, Object, Boolean, List, DotNet_Class as Node, explicitThis } from "core:runtime";
+import { String, Object, Boolean, List, DotNet_Class as Node, explicitThis, public } from "core:runtime";
 import { importers } from "core:zsharp";
 import { entrypoint } from "std:framework";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
@@ -32,36 +32,36 @@ import { Positional } from "std:functions";
 
 // The object a constructor makes, as its code refers to it: an instance, of the class it
 // makes, and not a definition. (A method's object is its first parameter.)
-def Receiver of Node : Instance {
-    let Type: Type;
+@public def Receiver of Node : Instance {
+    @public let Type: Type;
 }
 
-def Field of Node : Instance, Definition {
-    let Name: String;
-    let Type: Type;
-    let DefaultValue: Expression;
-    let IsStatic: Boolean;
-    let IsClass: Boolean;
+@public def Field of Node : Instance, Definition {
+    @public let Name: String;
+    @public let Type: Type;
+    @public let DefaultValue: Expression;
+    @public let IsStatic: Boolean;
+    @public let IsClass: Boolean;
 
-    @explicitThis new(this, name: String) { this.Name = name; }
-    @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
+    @public @explicitThis new(this, name: String) { this.Name = name; }
+    @public @explicitThis new(this, name: String, type: Type) { this.Name = name; this.Type = type; }
 }
 
 // Methods of one name overload, as functions do.
-def Method of Node : Instance, Definition, Annotated, Overloadable {
-    let Name: String;
-    let Parameters: List[Definition];
-    let Locals: List[Local];
-    let ReturnType: Type;
-    let Body: Code;
+@public def Method of Node : Instance, Definition, Annotated, Overloadable {
+    @public let Name: String;
+    @public let Parameters: List[Definition];
+    @public let Locals: List[Local];
+    @public let ReturnType: Type;
+    @public let Body: Code;
     // Its object: its first parameter, of what it is a method of, unless it is static,
     // whose code still reaches its class's members by name through it.
-    let ThisParameter: Positional;
-    let IsStatic: Boolean;
-    let IsClass: Boolean;
-    let annotations: List[Object];
+    @public let ThisParameter: Positional;
+    @public let IsStatic: Boolean;
+    @public let IsClass: Boolean;
+    @public let annotations: List[Object];
 
-    @explicitThis new(this, name: String) {
+    @public @explicitThis new(this, name: String) {
         this.Name = name;
         this.Parameters = List[Definition]();
         this.Locals = List[Local]();
@@ -70,32 +70,32 @@ def Method of Node : Instance, Definition, Annotated, Overloadable {
         this.annotations = List[Object]();
     }
 
-    @explicitThis get Annotations(this): List[Object] { return this.annotations; }
+    @public @explicitThis get Annotations(this): List[Object] { return this.annotations; }
 }
 
 // A property: what its accessors read and write, which are methods of what holds it,
 // named for what they are, `get Name` and `set Name`.
-def Property of Node : Instance, Definition, NamedDefinition {
-    let name: String;
-    let Getter: Method;
-    let Setter: Method;
+@public def Property of Node : Instance, Definition, NamedDefinition {
+    @public let name: String;
+    @public let Getter: Method;
+    @public let Setter: Method;
 
-    @explicitThis new(this, name: String) { this.name = name; }
+    @public @explicitThis new(this, name: String) { this.name = name; }
 
-    @explicitThis get Name(this): String { return this.name; }
+    @public @explicitThis get Name(this): String { return this.name; }
 }
 
 // A constructor makes an object, runs its code on it, and gives it. The unnamed one is
 // what calling the class runs; a named one is a member of the class.
-def Constructor of Node : Instance, Definition, Annotated {
-    let Name: String;
-    let Parameters: List[Definition];
-    let Locals: List[Local];
-    let Body: Code;
-    let This: Receiver;
-    let annotations: List[Object];
+@public def Constructor of Node : Instance, Definition, Annotated {
+    @public let Name: String;
+    @public let Parameters: List[Definition];
+    @public let Locals: List[Local];
+    @public let Body: Code;
+    @public let This: Receiver;
+    @public let annotations: List[Object];
 
-    @explicitThis new(this, name: String) {
+    @public @explicitThis new(this, name: String) {
         this.Name = name;
         this.Parameters = List[Definition]();
         this.Locals = List[Local]();
@@ -103,21 +103,21 @@ def Constructor of Node : Instance, Definition, Annotated {
         this.annotations = List[Object]();
     }
 
-    @explicitThis get Annotations(this): List[Object] { return this.annotations; }
+    @public @explicitThis get Annotations(this): List[Object] { return this.annotations; }
 }
 
-def Class of Node : Instance, Definition, Type, NamedDefinition, Annotated {
-    let name: String;
-    let annotations: List[Object];
-    let Fields: List[Field];
-    let Methods: List[Method];
-    let Constructors: List[Constructor];
-    let Properties: List[Property];
-    let Interfaces: List[Type];
+@public def Class of Node : Instance, Definition, Type, NamedDefinition, Annotated {
+    @public let name: String;
+    @public let annotations: List[Object];
+    @public let Fields: List[Field];
+    @public let Methods: List[Method];
+    @public let Constructors: List[Constructor];
+    @public let Properties: List[Property];
+    @public let Interfaces: List[Type];
     // Any other definition written in it.
-    let Definitions: List[Definition];
+    @public let Definitions: List[Definition];
 
-    @explicitThis new(this, name: String) {
+    @public @explicitThis new(this, name: String) {
         this.name = name;
         this.Fields = List[Field]();
         this.Methods = List[Method]();
@@ -128,42 +128,42 @@ def Class of Node : Instance, Definition, Type, NamedDefinition, Annotated {
         this.annotations = List[Object]();
     }
 
-    @explicitThis get Name(this): String { return this.name; }
+    @public @explicitThis get Name(this): String { return this.name; }
 
-    @explicitThis get Annotations(this): List[Object] { return this.annotations; }
+    @public @explicitThis get Annotations(this): List[Object] { return this.annotations; }
 
     // Its property of a name: what its accessors of the name read and write.
-    @explicitThis fun defineProperty(this, name: String) { pairAccessors(this.Methods, this.Properties, name); }
+    @public @explicitThis fun defineProperty(this, name: String) { pairAccessors(this.Methods, this.Properties, name); }
 }
 
 // An interface: methods with no code, which a value of any class that implements it
 // has.
-def Interface of Node : Instance, Definition, Type, NamedDefinition {
-    let name: String;
-    let Methods: List[Method];
-    let Properties: List[Property];
+@public def Interface of Node : Instance, Definition, Type, NamedDefinition {
+    @public let name: String;
+    @public let Methods: List[Method];
+    @public let Properties: List[Property];
     // Any other definition written in it.
-    let Definitions: List[Definition];
+    @public let Definitions: List[Definition];
 
-    @explicitThis new(this, name: String) {
+    @public @explicitThis new(this, name: String) {
         this.name = name;
         this.Methods = List[Method]();
         this.Properties = List[Property]();
         this.Definitions = List[Definition]();
     }
 
-    @explicitThis get Name(this): String { return this.name; }
+    @public @explicitThis get Name(this): String { return this.name; }
 
     // Its property of a name: what its accessors of the name read and write.
-    @explicitThis fun defineProperty(this, name: String) { pairAccessors(this.Methods, this.Properties, name); }
+    @public @explicitThis fun defineProperty(this, name: String) { pairAccessors(this.Methods, this.Properties, name); }
 }
 
 // The type of a class's or an interface's type object: the class's metaclass, or the
 // interface's class shape.
-def ClassOf of Node : Instance, Definition, Type {
-    let Of: Type;
+@public def ClassOf of Node : Instance, Definition, Type {
+    @public let Of: Type;
 
-    @explicitThis new(this, of: Type) { this.Of = of; }
+    @public @explicitThis new(this, of: Type) { this.Of = of; }
 }
 
 // The property of a name a class or an interface has: what its accessors of the name,

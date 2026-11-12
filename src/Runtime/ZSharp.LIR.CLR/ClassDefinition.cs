@@ -8,6 +8,8 @@ namespace ZSharp.LIR.CLR
     public sealed class ClassDefinition(string name)
         : LIR.Type
     {
+        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+
         public string Name { get; set; } = name;
 
         /// <summary>
@@ -23,6 +25,16 @@ namespace ZSharp.LIR.CLR
         /// methods are abstract.
         /// </summary>
         public bool IsInterface { get; set; }
+
+        /// <summary>
+        /// The class it is nested in, if it is one, which defines it with itself.
+        /// </summary>
+        public ClassDefinition? DeclaringType { get; set; }
+
+        /// <summary>
+        /// The classes nested in it, defined with it.
+        /// </summary>
+        public List<ClassDefinition> NestedTypes { get; } = [];
 
         /// <summary>
         /// The interfaces it implements, or extends if it is one.
@@ -76,6 +88,8 @@ namespace ZSharp.LIR.CLR
     public sealed class ClassField(string name, LIR.Type type)
         : ClassMember
     {
+        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+
         public ClassDefinition? Owner { get; set; }
 
         public string Name { get; set; } = name;
@@ -104,6 +118,8 @@ namespace ZSharp.LIR.CLR
         : LIR.ICallable
         , ClassMember
     {
+        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+
         public ClassDefinition? Owner { get; set; }
 
         public LIR.Signature Signature { get; } = signature;
@@ -118,6 +134,8 @@ namespace ZSharp.LIR.CLR
         : LIR.ICallable
         , ClassMember
     {
+        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+
         public ClassDefinition? Owner { get; set; }
 
         public string Name { get; set; } = name;

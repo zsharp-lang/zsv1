@@ -1009,8 +1009,8 @@ namespace ZSharp.Importer.ILLoader
             if (node.StaticConstructor is not null)
                 return new ErrorMessage($"Class {node.Name} has a static constructor, which can't be defined yet.");
 
-            if (node.NestedDefinitions.Count > 0)
-                return new ErrorMessage($"Class {node.Name} has members that can't be defined yet.");
+            if (node.NestedDefinitions.FirstOrDefault(nested => nested is not Package.DotNet.Class) is { } other)
+                return new ErrorMessage($"Class {node.Name} has a {other.GetType().Name} in it, which can't be nested yet: only a class can.");
 
             if (node.Base is Package.DotNet.TypeReference known && nodeTypes.TryGetValue(known, out var type) && type.IsSealed)
                 return new ErrorMessage($"Class {node.Name} can't derive from {type.Name}, which is sealed.");

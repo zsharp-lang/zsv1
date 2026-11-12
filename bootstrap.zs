@@ -18,7 +18,6 @@
 
 import { Object, String, Type, Int32, Boolean, List, Path, Directory, File, Environment, DotNet_Module } from "core:runtime";
 
-let objectType: Type = Object;
 
 // The toolchain's directory: the one the standard library is in, at or above where this
 // runs from.
@@ -76,7 +75,7 @@ import { Module } from "std:modules";
 import { lower, failures } from "std:modules/compiler";
 import { encode } from "std:encoding";
 
-let objectAssembly = objectType.Assembly.Location;
+let objectAssembly = Object.Assembly.Location;
 import { Convert, AppContext } from objectAssembly;
 import { Process, ProcessStartInfo } from Path.Combine(Path.GetDirectoryName(objectAssembly), "System.Diagnostics.Process.dll");
 

@@ -33,6 +33,11 @@ namespace ZSharp.Importer.ILLoader
         private readonly Dictionary<(object Member, object Target), List<LIR.Parameter>> signatures = [];
 
         /// <summary>
+        /// The class each nested class is nested in, known once that class is loaded.
+        /// </summary>
+        private readonly Dictionary<Package.DotNet.Class, Package.DotNet.Class> nestedIn = new(ReferenceEqualityComparer.Instance);
+
+        /// <summary>
         /// What stands for no target, for code lowered for none.
         /// </summary>
         private static readonly object NoTarget = new();
@@ -155,6 +160,9 @@ namespace ZSharp.Importer.ILLoader
             var @class = new Objects.DefinedClass(this, node);
             defined[node] = @class;
 
+            foreach (var nested in node.NestedDefinitions.OfType<Package.DotNet.Class>())
+                nestedIn[nested] = node;
+
             foreach (var parameter in node.GenericParameters.Concat(node.Methods.SelectMany(method => method.GenericParameters)))
                 typeParameters[parameter] = new(parameter, target => @class.For(target).When(out var lowered).Error(out var failure)
                     ? Result<LIR.Type>.Error(failure)
@@ -218,7 +226,11 @@ namespace ZSharp.Importer.ILLoader
             return Lowering(target, key =>
             {
                 var node = @class.Node;
-                var lowered = new Objects.LoweredClass(new LIR.CLR.ClassDefinition(node.Name));
+                var lowered = new Objects.LoweredClass(new LIR.CLR.ClassDefinition(node.Name)
+                {
+                    // An interface's accessibility is the interface's, not the view's it is defined by.
+                    Accessibility = Lowered((Description(node) as Package.DotNet.Accessible ?? node).Accessibility)
+                });
 
                 // What is said of the class to keep is kept on what it lowers to: of an
                 // interface, what is said of the interface, not of the view it is defined by.
@@ -237,6 +249,20 @@ namespace ZSharp.Importer.ILLoader
 
                 @class.Lowerings[key] = lowered;
 
+                // A nested class is defined with the class it is nested in, which is lowered
+                // first.
+                if (nestedIn.TryGetValue(node, out var outerNode) && defined.TryGetValue(outerNode, out var outer))
+                {
+                    if (Lower(outer, target).When(out var enclosing).Error(out var failure))
+                    {
+                        @class.Lowerings.Remove(key);
+                        return Result<Objects.LoweredClass>.Error(failure);
+                    }
+
+                    lowered.Definition.DeclaringType = enclosing!.Definition;
+                    enclosing.Definition.NestedTypes.Add(lowered.Definition);
+                }
+
                 if (Declare(@class, lowered, target) is { } error)
                 {
                     @class.Lowerings.Remove(key);
@@ -248,6 +274,21 @@ namespace ZSharp.Importer.ILLoader
                 return Result<Objects.LoweredClass>.Ok(lowered);
             });
         }
+
+        /// <summary>
+        /// A definition's accessibility, as CLR LIR has it.
+        /// </summary>
+        private static LIR.CLR.Accessibility Lowered(Package.DotNet.Accessibility accessibility)
+            => accessibility switch
+            {
+                Package.DotNet.Accessibility.Public => LIR.CLR.Accessibility.Public,
+                Package.DotNet.Accessibility.Private => LIR.CLR.Accessibility.Private,
+                Package.DotNet.Accessibility.Internal => LIR.CLR.Accessibility.Internal,
+                Package.DotNet.Accessibility.Protected => LIR.CLR.Accessibility.Protected,
+                Package.DotNet.Accessibility.ProtectedInternal => LIR.CLR.Accessibility.ProtectedInternal,
+                Package.DotNet.Accessibility.PrivateProtected => LIR.CLR.Accessibility.PrivateProtected,
+                _ => throw new ArgumentOutOfRangeException(nameof(accessibility)),
+            };
 
         /// <summary>
         /// What the CLR names a method: an accessor for its property, as <c>get_Name</c> and
@@ -286,7 +327,7 @@ namespace ZSharp.Importer.ILLoader
                     return error;
                 else
                 {
-                    var declared = new LIR.CLR.ClassField(field.Name, type!);
+                    var declared = new LIR.CLR.ClassField(field.Name, type!) { Accessibility = Lowered(field.Accessibility) };
 
                     definition.Fields.Add(declared);
                     lowered.Fields[field] = declared;
@@ -307,7 +348,7 @@ namespace ZSharp.Importer.ILLoader
                 var creation = new LIR.Signature { ReturnType = definition };
                 creation.Parameters.AddRange(code.Parameters.Skip(1));
 
-                var declared = new LIR.CLR.ClassConstructor(creation, new(code) { Body = new() });
+                var declared = new LIR.CLR.ClassConstructor(creation, new(code) { Body = new() }) { Accessibility = Lowered(constructor.Accessibility) };
 
                 definition.Constructors.Add(declared);
                 lowered.Constructors.Add(declared);
@@ -352,6 +393,7 @@ namespace ZSharp.Importer.ILLoader
                     new(signature) { Name = name, Body = new() }
                 )
                 {
+                    Accessibility = Lowered(method.Accessibility),
                     IsVirtual = method.IsVirtual,
                     IsAbstract = method.IsAbstract || definition.IsInterface,
                     IsOverride = method.IsOverride
@@ -377,6 +419,11 @@ namespace ZSharp.Importer.ILLoader
                         Getter = property.Getter is { } getter ? lowered.Methods[getter] : null,
                         Setter = property.Setter is { } setter ? lowered.Methods[setter] : null,
                     });
+
+            // Its nested classes are lowered with it, as the CLR defines them with it.
+            foreach (var nested in node.NestedDefinitions.OfType<Package.DotNet.Class>())
+                if (Defined(nested).When(out var loaded).Error(out var failure) || Lower((Objects.DefinedClass)loaded!, target).When(out _).Error(out failure))
+                    return failure;
 
             return null;
         }

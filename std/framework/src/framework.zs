@@ -8,7 +8,7 @@
 // they declare, in their order, then calls its explicit entry points: what importing the
 // module calls, built or compiled from its sources, and building it doesn't.
 
-import { String, Object, Boolean, Int32, List, Func, DotNet_Class, DotNet_Module, explicitThis } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Func, DotNet_Class, DotNet_Module, explicitThis, public } from "core:runtime";
 import { Instance, Definition, Annotated, Type } from "std:zsharp/hir";
 import { Code, Block, Get, Call, Cast, Index, NamedMember, Argument, Expression, ExpressionStatement } from "std:zsharp/hir/code";
 import { Function, Positional } from "std:functions";
@@ -24,30 +24,30 @@ fun say(member: Instance, annotation: Object): Instance {
 }
 
 // It is called when the module is imported, after what the module's declarations do.
-def EntryPoint of DotNet_Class {
+@public def EntryPoint of DotNet_Class {
 }
 
 // It is what loads a kind of node, the type of its parameter, into a CO: as a definition,
 // as an instance, or as a type, by the loader's registry of that name.
-def Loader of DotNet_Class {
-    let Registry: String;
+@public def Loader of DotNet_Class {
+    @public let Registry: String;
 
-    @explicitThis new(this, registry: String) { this.Registry = registry; }
+    @public @explicitThis new(this, registry: String) { this.Registry = registry; }
 }
 
 // It is what binds a kind of node, the type of its first parameter, to what it was built
 // as, which it is given second, as an importer of built definitions binds them.
-def Binder of DotNet_Class {
+@public def Binder of DotNet_Class {
 }
 
 // It is the meta-compiler of a meta-type, the definition it describes.
-def MetaType of DotNet_Class {
-    let Type: Instance;
+@public def MetaType of DotNet_Class {
+    @public let Type: Instance;
 
-    @explicitThis new(this, type: Instance) { this.Type = type; }
+    @public @explicitThis new(this, type: Instance) { this.Type = type; }
 
     // As a decorator: says it of the function it is given.
-    @explicitThis fun apply(this, member: Instance): Instance { return say(member, this); }
+    @public @explicitThis fun apply(this, member: Instance): Instance { return say(member, this); }
 }
 
 // ---- The decorators

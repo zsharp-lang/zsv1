@@ -33,14 +33,17 @@ namespace ZSharp.Lang.DotNet
 
         private IResult<Code.Block, Error> Fill(ASTCompiler compiler, AST.TypeDefinition definition, Code.Local self)
         {
-            var filled = container.Compile(
+            // An interface is public, and so are its members unless they say otherwise.
+            var filled = MemberDefaults.Within(compiler, Package.DotNet.Accessibility.Public, Package.DotNet.Accessibility.Public, () => container.Compile(
                 body.WithMethods(compiler),
                 definition.Content?.Statements ?? [],
                 (member, value) => new Code.ExpressionStatement(body.Register(self, nameof(Package.DotNet.Interface.Methods), value))
-            );
+            ));
 
             if (filled.When(out var block).Error(out var error))
                 return Result<Code.Block>.Error(error);
+
+            block!.Statements.Insert(0, body.Accessible(self, Package.DotNet.Accessibility.Public));
 
             return classes.Bases(compiler, definition, self, block!) is { } invalid ? Result<Code.Block>.Error(invalid) : filled;
         }

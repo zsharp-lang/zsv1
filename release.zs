@@ -15,8 +15,7 @@ import { arguments } from "core:zsharp";
 import { inNuGet } from "core:packages";
 import { Object, String, Type, Int32, Boolean, List, Path, File, Directory, Environment } from "core:runtime";
 
-let objectType: Type = Object;
-let objectAssembly = objectType.Assembly.Location;
+let objectAssembly = Object.Assembly.Location;
 let runtimeFolder = Path.GetDirectoryName(objectAssembly);
 import { AppContext, RuntimeInformation, DateTime, SearchOption } from objectAssembly;
 import { Process, ProcessStartInfo } from Path.Combine(runtimeFolder, "System.Diagnostics.Process.dll");

@@ -11,16 +11,16 @@ fun fail(message: String): Object {
     return failed.Unwrap();
 }
 
-def References of DotNet_Class {
-    let main: ModuleDefinition;
-    let version: String;
-    let index: Dictionary[String, TypeDefinition];
-    let read: Dictionary[String, Boolean];
-    let types: Dictionary[ClrType, TypeReference];
-    let methods: Dictionary[ClrMethod, MethodReference];
-    let fields: Dictionary[ClrField, FieldReference];
+@public def References of DotNet_Class {
+    @public let main: ModuleDefinition;
+    @public let version: String;
+    @public let index: Dictionary[String, TypeDefinition];
+    @public let read: Dictionary[String, Boolean];
+    @public let types: Dictionary[ClrType, TypeReference];
+    @public let methods: Dictionary[ClrMethod, MethodReference];
+    @public let fields: Dictionary[ClrField, FieldReference];
 
-    @explicitThis new(this, main: ModuleDefinition, version: String) {
+    @public @explicitThis new(this, main: ModuleDefinition, version: String) {
         this.main = main;
         this.version = version;
         this.index = Dictionary[String, TypeDefinition]();
@@ -31,15 +31,14 @@ def References of DotNet_Class {
         if (version != null) this.pack(version);
     }
 
-    @explicitThis fun live(this): Boolean { return this.version == null; }
+    @public @explicitThis fun live(this): Boolean { return this.version == null; }
 
     // ---- The assemblies of a version
 
     // The reference assemblies of a version, as `net8.0`: those of the newest pack of it
     // installed with the running .NET.
-    @explicitThis fun pack(this, version: String) {
-        let core: Type = Object;
-        let root = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(core.Assembly.Location))));
+    @public @explicitThis fun pack(this, version: String) {
+        let root = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Object.Assembly.Location))));
         let packs = Path.Combine(root, "packs", "Microsoft.NETCore.App.Ref");
         let wanted = version.Substring(3) + ".";
 
@@ -72,7 +71,7 @@ def References of DotNet_Class {
     }
 
     // Indexes the types of a module by their full names, the first of a name kept.
-    @explicitThis fun add(this, source: ModuleDefinition) {
+    @public @explicitThis fun add(this, source: ModuleDefinition) {
         let index = 0;
         while (index < source.Types.Count) {
             this.addType(source.Types[index]);
@@ -80,7 +79,7 @@ def References of DotNet_Class {
         }
     }
 
-    @explicitThis fun addType(this, type: TypeDefinition) {
+    @public @explicitThis fun addType(this, type: TypeDefinition) {
         if (this.index.ContainsKey(type.FullName) == false) this.index[type.FullName] = type;
         let index = 0;
         while (index < type.NestedTypes.Count) {
@@ -92,7 +91,7 @@ def References of DotNet_Class {
     // Reads the file of an assembly of the running process, for what a version's
     // reference assemblies don't have. One the process made has no file, and can't be
     // referred to by an assembly.
-    @explicitThis fun readLoaded(this, name: String) {
+    @public @explicitThis fun readLoaded(this, name: String) {
         if (this.read.ContainsKey(name)) return;
         this.read[name] = true;
         let file = Assemblies.FileOf(this.loaded(name));
@@ -100,7 +99,7 @@ def References of DotNet_Class {
         this.add(ModuleDefinition.ReadModule(file));
     }
 
-    @explicitThis fun loaded(this, name: String): Assembly {
+    @public @explicitThis fun loaded(this, name: String): Assembly {
         let assemblies = AppDomain.CurrentDomain.GetAssemblies();
         let index = 0;
         while (index < assemblies.Length) {
@@ -113,7 +112,7 @@ def References of DotNet_Class {
         return fail("No assembly " + name + " is loaded.") as Assembly;
     }
 
-    @explicitThis fun definition(this, type: ClrType): TypeDefinition {
+    @public @explicitThis fun definition(this, type: ClrType): TypeDefinition {
         let key = cecilName(type);
         if (this.index.ContainsKey(key) == false) this.readLoaded(type.Assembly);
         if (this.index.ContainsKey(key) == false) fail("The assemblies of " + this.version + " have no type " + key + ".");
@@ -122,11 +121,11 @@ def References of DotNet_Class {
 
     // ---- The running process
 
-    @explicitThis fun system(this, type: ClrType): Type {
+    @public @explicitThis fun system(this, type: ClrType): Type {
         return this.moduleOf(type).ResolveType(type.Token);
     }
 
-    @explicitThis fun moduleOf(this, entity: ClrEntity): ReflectedModule {
+    @public @explicitThis fun moduleOf(this, entity: ClrEntity): ReflectedModule {
         let modules = this.loaded(entity.Assembly).GetModules();
         let index = 0;
         while (index < modules.Length) {
@@ -136,19 +135,19 @@ def References of DotNet_Class {
         return fail("The assembly " + entity.Assembly + " has no module " + entity.Module + ".") as ReflectedModule;
     }
 
-    @explicitThis fun declared(this): BindingFlags {
+    @public @explicitThis fun declared(this): BindingFlags {
         return BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
     }
 
     // ---- Handles
 
     // The definition of the type a member is declared by, a generic instance's included.
-    @explicitThis fun owner(this, type: LIRType): ClrType {
+    @public @explicitThis fun owner(this, type: LIRType): ClrType {
         if (type is let instance: GenericInstance) return instance.Definition as ClrType;
         return type as ClrType;
     }
 
-    @explicitThis fun type(this, type: ClrType): TypeReference {
+    @public @explicitThis fun type(this, type: ClrType): TypeReference {
         if (this.types.ContainsKey(type)) return this.types[type];
 
         let result: TypeReference = null;
@@ -161,7 +160,7 @@ def References of DotNet_Class {
 
     // A method as it is defined: by its token in the running process, or else by its name
     // and declared signature.
-    @explicitThis fun method(this, method: ClrMethod): MethodReference {
+    @public @explicitThis fun method(this, method: ClrMethod): MethodReference {
         if (this.methods.ContainsKey(method)) return this.methods[method];
 
         let owner = this.owner(method.DeclaringType);
@@ -207,7 +206,7 @@ def References of DotNet_Class {
     // A type of a member's signature, as the version has it: a member read from the
     // running process's assemblies names the running .NET's types, which are the
     // version's, by their names.
-    @explicitThis fun retarget(this, type: TypeReference): TypeReference {
+    @public @explicitThis fun retarget(this, type: TypeReference): TypeReference {
         if (type is let parameter: GenericParameter) return type;
         if (type is let instance: GenericInstanceType) {
             let made = GenericInstanceType(this.retarget(instance.ElementType));
@@ -227,7 +226,7 @@ def References of DotNet_Class {
         return this.main.ImportReference(type);
     }
 
-    @explicitThis fun retargetMethod(this, method: MethodReference): MethodReference {
+    @public @explicitThis fun retargetMethod(this, method: MethodReference): MethodReference {
         if (method is let instance: GenericInstanceMethod) {
             let made = GenericInstanceMethod(this.retargetMethod(instance.ElementMethod));
             let index = 0;
@@ -257,7 +256,7 @@ def References of DotNet_Class {
         return reference;
     }
 
-    @explicitThis fun matches(this, candidate: MethodDefinition, method: ClrMethod): Boolean {
+    @public @explicitThis fun matches(this, candidate: MethodDefinition, method: ClrMethod): Boolean {
         if (candidate.Name != method.Name) return false;
         if (candidate.GenericParameters.Count != method.GenericArity) return false;
         if (candidate.Parameters.Count != method.Parameters.Count) return false;
@@ -270,7 +269,7 @@ def References of DotNet_Class {
         return true;
     }
 
-    @explicitThis fun field(this, field: ClrField): FieldReference {
+    @public @explicitThis fun field(this, field: ClrField): FieldReference {
         if (this.fields.ContainsKey(field)) return this.fields[field];
 
         let owner = this.owner(field.DeclaringType);

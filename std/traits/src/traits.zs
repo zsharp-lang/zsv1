@@ -11,7 +11,7 @@
 // std:traits/static decides from the static type, and std:traits/dynamic looks an
 // implementation up by the type a value has as the code runs.
 
-import { String, Object, Boolean, Int32, List, Type as ClrType, DotNet_Class, explicitThis, static, DotNet_Module, ilLoader } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Type as ClrType, DotNet_Class, explicitThis, static, DotNet_Module, ilLoader, public } from "core:runtime";
 import { Instance, Definition, Type } from "std:zsharp/hir";
 import { Local, Get, Block, Declare, ExpressionStatement, Set, StringLiteral, Cast, Expression } from "std:zsharp/hir/code";
 import { Definition as DefinitionSyntax, TypeDefinition as TypeSyntax } from "std:zsharp/lang/ast";
@@ -28,17 +28,17 @@ import { ts, hirLoader, mappedLoader } from "core:compiler";
 
 // The meta-type of an implementation of a trait for a type. It only says what is
 // implemented for what, by its type arguments.
-def Implementation[Trait, For] of DotNet_Class {}
+@public def Implementation[Trait, For] of DotNet_Class {}
 
 // An implementation of a trait for a type: the trait, the type, and the class whose
 // objects hold a value of the type as the trait.
-def TraitImplementation of DotNet_Class : Instance, Definition {
-    let Name: String;
-    let Trait: Type;
-    let For: Type;
-    let Adapter: Instance;
+@public def TraitImplementation of DotNet_Class : Instance, Definition {
+    @public let Name: String;
+    @public let Trait: Type;
+    @public let For: Type;
+    @public let Adapter: Instance;
 
-    @explicitThis new(this, name: String, trait: Type, implemented: Type) {
+    @public @explicitThis new(this, name: String, trait: Type, implemented: Type) {
         this.Name = name;
         this.Trait = trait;
         this.For = implemented;
@@ -49,15 +49,15 @@ def TraitImplementation of DotNet_Class : Instance, Definition {
 
 // One implementation, as the dispatchers use it: the types and adapter as COs, for
 // code being compiled, and as CLR types, for code that runs.
-def Entry of DotNet_Class {
-    let implemented: CompilerObject;
-    let trait: CompilerObject;
-    let adapter: CompilerObject;
-    let implementedType: ClrType;
-    let traitType: ClrType;
-    let adapterType: ClrType;
+@public def Entry of DotNet_Class {
+    @public let implemented: CompilerObject;
+    @public let trait: CompilerObject;
+    @public let adapter: CompilerObject;
+    @public let implementedType: ClrType;
+    @public let traitType: ClrType;
+    @public let adapterType: ClrType;
 
-    @explicitThis new(this, implemented: CompilerObject, trait: CompilerObject, adapter: CompilerObject, implementedType: ClrType, traitType: ClrType, adapterType: ClrType) {
+    @public @explicitThis new(this, implemented: CompilerObject, trait: CompilerObject, adapter: CompilerObject, implementedType: ClrType, traitType: ClrType, adapterType: ClrType) {
         this.implemented = implemented;
         this.trait = trait;
         this.adapter = adapter;
@@ -70,11 +70,11 @@ def Entry of DotNet_Class {
 // The implementations loaded.
 let entries: List[Entry] = List[Entry]();
 
-def Traits of DotNet_Class {
-    @static fun add(entry: Entry) { entries.Add(entry); }
+@public def Traits of DotNet_Class {
+    @public @static fun add(entry: Entry) { entries.Add(entry); }
 
     // Whether a type is a trait that something implements.
-    @static fun isTrait(type: CompilerObject): Boolean {
+    @public @static fun isTrait(type: CompilerObject): Boolean {
         let index = 0;
         while (index < entries.Count) {
             let entry = entries[index];
@@ -87,7 +87,7 @@ def Traits of DotNet_Class {
     }
 
     // The adapter that makes a value of the static type of a CO the trait, if any.
-    @static fun adapterFor(object: CompilerObject, trait: CompilerObject): CompilerObject {
+    @public @static fun adapterFor(object: CompilerObject, trait: CompilerObject): CompilerObject {
         let typed = ts.TypeOf(object);
         if (typed.IsError) return null;
 
@@ -105,7 +105,7 @@ def Traits of DotNet_Class {
     }
 
     // The implementation of a trait for the type a value has, as the code runs.
-    @static fun find(value: Object, trait: ClrType): Entry {
+    @public @static fun find(value: Object, trait: ClrType): Entry {
         if (value == null) return null;
 
         let index = 0;
@@ -121,13 +121,13 @@ def Traits of DotNet_Class {
 }
 
 // What code calls as it runs to match a value against a trait or make it one.
-def Lookup of DotNet_Class {
-    @static fun has(value: Object, trait: ClrType): Boolean {
+@public def Lookup of DotNet_Class {
+    @public @static fun has(value: Object, trait: ClrType): Boolean {
         if (trait.IsInstanceOfType(value)) return true;
         return Traits.find(value, trait) != null;
     }
 
-    @static fun adapt(value: Object, trait: ClrType): Object {
+    @public @static fun adapt(value: Object, trait: ClrType): Object {
         if (trait.IsInstanceOfType(value)) return value;
 
         let entry = Traits.find(value, trait);
@@ -141,8 +141,8 @@ def Lookup of DotNet_Class {
 
 // Code that gives a type's node, not the type: the type cast to what describes it, which
 // is reflection, as what describes it is given.
-def Described of DotNet_Class {
-    @static fun node(type: Type, description: Instance): Expression {
+@public def Described of DotNet_Class {
+    @public @static fun node(type: Type, description: Instance): Expression {
         let cast = Cast();
         cast.Value = Get(type as Instance);
         cast.Type = Get(description);
@@ -152,20 +152,20 @@ def Described of DotNet_Class {
 
 // What fills an implementation as it is built: its adapter, a CLR class compiled from
 // the definition's own members, which implements the trait.
-def Filler of DotNet_Class {
-    let compiler: ASTCompiler;
-    let definition: DefinitionSyntax;
-    let self: Local;
-    let trait: Type;
+@public def Filler of DotNet_Class {
+    @public let compiler: ASTCompiler;
+    @public let definition: DefinitionSyntax;
+    @public let self: Local;
+    @public let trait: Type;
 
-    @explicitThis new(this, compiler: ASTCompiler, definition: DefinitionSyntax, self: Local, trait: Type) {
+    @public @explicitThis new(this, compiler: ASTCompiler, definition: DefinitionSyntax, self: Local, trait: Type) {
         this.compiler = compiler;
         this.definition = definition;
         this.self = self;
         this.trait = trait;
     }
 
-    @explicitThis fun fill(this): IResult[Block, Error] {
+    @public @explicitThis fun fill(this): IResult[Block, Error] {
         let compiled = metaTypes.Compile(this.compiler, this.definition, DotNet_Class as Instance);
         if (compiled.IsError) return Result[Block].Error(compiled.UnwrapError());
 

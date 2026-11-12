@@ -42,6 +42,7 @@ namespace ZSharp.Lang.DotNet
             if (body.TypeParameters(compiler, function.GenericParameters, self, nameof(Package.DotNet.Method.GenericParameters)).When(out var typeParameters).Error(out var failure))
                 return Result<Code.Block>.Error(failure);
 
+            block.Statements.Add(body.Accessible(self, MemberDefaults.MethodsIn(compiler)));
             block.Statements.AddRange(typeParameters!);
 
             if (body.Parameters(

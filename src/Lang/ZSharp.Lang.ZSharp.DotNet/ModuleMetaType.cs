@@ -35,13 +35,8 @@ namespace ZSharp.Lang.DotNet
 
             // In a module, an import runs as the module is constructed, unless it can run now,
             // and a fun is a function of the module.
-            var fork = body.WithMethods(compiler);
+            var fork = body.WithFields(body.WithMethods(compiler), self, nameof(Package.DotNet.Module.Fields), bind: true);
             var statements = fork.Statement;
-            var expressions = fork.Expression;
-
-            fork.Expression = (current, expression) => expression is AST.LetExpression let
-                ? body.Field(current, let, self, nameof(Package.DotNet.Module.Fields), bind: true)
-                : expressions(current, expression);
 
             fork.Statement = (current, statement) => statement is AST.ImportStatement import
                 ? body.Imported(current, import).When(out var holder).Error(out var error)
@@ -53,7 +48,9 @@ namespace ZSharp.Lang.DotNet
                 self,
                 CodeBody.Construct(underlyingType, new Code.StringLiteral(name)),
                 underlyingType,
-                () => container.Compile(
+                // A module is public, as its functions are unless they say otherwise, while its
+                // globals are private, so a public one is written.
+                () => MemberDefaults.Within(compiler, Package.DotNet.Accessibility.Public, Package.DotNet.Accessibility.Private, () => container.Compile(
                     fork,
                     content,
                     (member, value) => new Code.ExpressionStatement(body.Register(
@@ -63,7 +60,7 @@ namespace ZSharp.Lang.DotNet
                             : nameof(Package.DotNet.Module.Definitions),
                         value
                     ))
-                )
+                ))
             ));
         }
     }

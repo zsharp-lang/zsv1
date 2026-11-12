@@ -104,6 +104,13 @@ namespace ZSharp.Platform.Runtime
 
             batch.Add(definition);
 
+            // A nested class is defined with the class it is in, and that class with it.
+            if (definition.DeclaringType is { } outer)
+                Reach(outer, batch);
+
+            foreach (var nested in definition.NestedTypes)
+                Reach(nested, batch);
+
             Reach(definition.Base, batch);
 
             foreach (var @interface in definition.Interfaces)
@@ -177,15 +184,20 @@ namespace ZSharp.Platform.Runtime
         {
             var builders = new Dictionary<ClassDefinition, Emit.TypeBuilder>();
 
-            // Everything is declared first, as any of them can refer to any other.
-            foreach (var definition in definitions.Where(definition => !classes.ContainsKey(definition)))
-                classes[definition] = builders[definition] = module.DefineType(
-                    classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name),
-                    definition.IsInterface
-                        ? IL.TypeAttributes.Public | IL.TypeAttributes.Interface | IL.TypeAttributes.Abstract
-                        : IL.TypeAttributes.Public | IL.TypeAttributes.Class
-                            | (definition.Methods.Any(method => method.IsAbstract) ? IL.TypeAttributes.Abstract : 0)
-                );
+            // Everything is declared first, as any of them can refer to any other: a class
+            // nested in another after it, through it.
+            foreach (var definition in definitions.Where(definition => !classes.ContainsKey(definition)).OrderBy(Depth))
+            {
+                var attributes = definition.IsInterface
+                    ? Visibility(definition) | IL.TypeAttributes.Interface | IL.TypeAttributes.Abstract
+                    : Visibility(definition) | IL.TypeAttributes.Class
+                        | (definition.Methods.Any(method => method.IsAbstract) ? IL.TypeAttributes.Abstract : 0);
+
+                classes[definition] = builders[definition] = definition.DeclaringType is { } outer
+                    ? (classes[outer] as Emit.TypeBuilder ?? throw new NotSupportedException($"Class {definition.Name} is nested in {outer.Name}, which is already created."))
+                        .DefineNestedType(definition.Name, attributes)
+                    : module.DefineType(classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name), attributes);
+            }
 
             foreach (var (definition, builder) in builders.Where(pair => pair.Key.GenericParameters.Count > 0))
             {
@@ -199,6 +211,12 @@ namespace ZSharp.Platform.Runtime
 
             foreach (var (definition, builder) in builders)
                 DeclareMembers(definition, builder);
+
+            // Once every member is declared, a method that implements an interface's but
+            // isn't public says which one it implements, as the CLR's explicit
+            // implementations do.
+            foreach (var (definition, builder) in builders)
+                DefineImplementations(definition, builder);
 
             foreach (var definition in builders.Keys)
             {
@@ -237,14 +255,14 @@ namespace ZSharp.Platform.Runtime
             var implemented = Implemented(definition);
 
             foreach (var field in definition.Fields)
-                classFields[field] = builder.DefineField(field.Name, ImportType(field.Type), IL.FieldAttributes.Public);
+                classFields[field] = builder.DefineField(field.Name, ImportType(field.Type), FieldVisibility(field.Accessibility));
 
             foreach (var member in definition.Fields.Cast<object>().Concat(definition.Constructors).Concat(definition.Methods))
                 owners[member] = definition;
 
             foreach (var constructor in definition.Constructors)
                 classConstructors[constructor] = builder.DefineConstructor(
-                    IL.MethodAttributes.Public,
+                    MethodVisibility(constructor.Accessibility),
                     IL.CallingConventions.Standard,
                     [.. constructor.Signature.Parameters.Select(parameter => ImportType(parameter.Type))]
                 );
@@ -288,7 +306,7 @@ namespace ZSharp.Platform.Runtime
         /// </summary>
         private static IL.MethodAttributes Attributes(ClassDefinition definition, ClassMethod method, HashSet<string> implemented)
         {
-            var attributes = IL.MethodAttributes.Public | IL.MethodAttributes.HideBySig;
+            var attributes = MethodVisibility(method.Accessibility) | IL.MethodAttributes.HideBySig;
 
             if (method.IsStatic)
                 return attributes | IL.MethodAttributes.Static;
@@ -305,6 +323,93 @@ namespace ZSharp.Platform.Runtime
             return implemented.Contains(method.Name)
                 ? attributes | IL.MethodAttributes.Virtual | IL.MethodAttributes.NewSlot | IL.MethodAttributes.Final
                 : attributes;
+        }
+
+        /// <summary>
+        /// A type's visibility: a top-level type is public or else internal to its assembly.
+        /// </summary>
+        private static IL.TypeAttributes Visibility(ClassDefinition definition)
+            => definition.DeclaringType is null
+                ? definition.Accessibility == Accessibility.Public ? IL.TypeAttributes.Public : IL.TypeAttributes.NotPublic
+                : definition.Accessibility switch
+                {
+                    Accessibility.Public => IL.TypeAttributes.NestedPublic,
+                    Accessibility.Private => IL.TypeAttributes.NestedPrivate,
+                    Accessibility.Internal => IL.TypeAttributes.NestedAssembly,
+                    Accessibility.Protected => IL.TypeAttributes.NestedFamily,
+                    Accessibility.ProtectedInternal => IL.TypeAttributes.NestedFamORAssem,
+                    Accessibility.PrivateProtected => IL.TypeAttributes.NestedFamANDAssem,
+                    _ => throw new ArgumentOutOfRangeException(nameof(definition)),
+                };
+
+        /// <summary>
+        /// How deep a class is nested: a class is defined after the one it is in.
+        /// </summary>
+        private static int Depth(ClassDefinition definition)
+            => definition.DeclaringType is { } outer ? Depth(outer) + 1 : 0;
+
+        private static IL.MethodAttributes MethodVisibility(Accessibility accessibility)
+            => accessibility switch
+            {
+                Accessibility.Public => IL.MethodAttributes.Public,
+                Accessibility.Private => IL.MethodAttributes.Private,
+                Accessibility.Internal => IL.MethodAttributes.Assembly,
+                Accessibility.Protected => IL.MethodAttributes.Family,
+                Accessibility.ProtectedInternal => IL.MethodAttributes.FamORAssem,
+                Accessibility.PrivateProtected => IL.MethodAttributes.FamANDAssem,
+                _ => throw new ArgumentOutOfRangeException(nameof(accessibility)),
+            };
+
+        private static IL.FieldAttributes FieldVisibility(Accessibility accessibility)
+            => accessibility switch
+            {
+                Accessibility.Public => IL.FieldAttributes.Public,
+                Accessibility.Private => IL.FieldAttributes.Private,
+                Accessibility.Internal => IL.FieldAttributes.Assembly,
+                Accessibility.Protected => IL.FieldAttributes.Family,
+                Accessibility.ProtectedInternal => IL.FieldAttributes.FamORAssem,
+                Accessibility.PrivateProtected => IL.FieldAttributes.FamANDAssem,
+                _ => throw new ArgumentOutOfRangeException(nameof(accessibility)),
+            };
+
+        /// <summary>
+        /// Says which interface method each method of a class that isn't public implements,
+        /// as the CLR maps only a public one by its name: one of its name and number of
+        /// parameters, of each interface the class implements.
+        /// </summary>
+        private void DefineImplementations(ClassDefinition definition, Emit.TypeBuilder builder)
+        {
+            if (definition.IsInterface)
+                return;
+
+            foreach (var method in definition.Methods.Where(method => !method.IsStatic && method.Accessibility != Accessibility.Public))
+                foreach (var @interface in definition.Interfaces)
+                    foreach (var (name, taken, target) in InterfaceMethods(@interface))
+                        if (name == method.Name && taken == method.Signature.Parameters.Count - 1)
+                            builder.DefineMethodOverride(classMethods[method], target);
+        }
+
+        /// <summary>
+        /// The methods of an interface and of the interfaces it extends, as a class that
+        /// implements it refers to them, with their names and how many values they take. An
+        /// interface defined with the class isn't created yet, so its methods say what they
+        /// take as LIR does.
+        /// </summary>
+        private IEnumerable<(string Name, int Taken, IL.MethodInfo Method)> InterfaceMethods(LIR.Type @interface)
+        {
+            if (@interface is ClassDefinition own)
+                return own.Methods
+                    .Select(method => (method.Name, method.Signature.Parameters.Count - 1, (IL.MethodInfo)classMethods[method]))
+                    .Concat(own.Interfaces.SelectMany(InterfaceMethods));
+
+            if (@interface is LIR.GenericInstance { Definition: ClassDefinition generic })
+            {
+                var instance = ImportType(@interface);
+                return generic.Methods.Select(method => (method.Name, method.Signature.Parameters.Count - 1, Emit.TypeBuilder.GetMethod(instance, classMethods[method])));
+            }
+
+            var type = ImportType(@interface);
+            return type.GetInterfaces().Append(type).SelectMany(each => each.GetMethods()).Select(method => (method.Name, method.GetParameters().Length, method));
         }
 
         /// <summary>
@@ -410,6 +515,10 @@ namespace ZSharp.Platform.Runtime
         {
             if (classes[definition] is not Emit.TypeBuilder builder || !uncreated.Remove(definition))
                 return;
+
+            // The CLR creates a nested class after the class it is in.
+            if (definition.DeclaringType is { } outer)
+                CreateClass(outer);
 
             if (definition.Base is ClassDefinition @base)
                 CreateClass(@base);

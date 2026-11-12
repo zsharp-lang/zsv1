@@ -44,23 +44,20 @@ namespace ZSharp.Lang.DotNet
                 return Result<Code.Block>.Error(invalid);
 
             // In a class, a let is a field and a fun a method.
-            var fork = body.WithMethods(compiler);
-            var previous = fork.Expression;
+            var fork = body.WithFields(body.WithMethods(compiler), self, nameof(Package.DotNet.Class.Fields), bind: false);
 
-            fork.Expression = (current, expression) => expression is AST.LetExpression let
-                ? body.Field(current, let, self, nameof(Package.DotNet.Class.Fields), bind: false)
-                : previous(current, expression);
-
-            var filled = container.Compile(
+            // A class is private, and so are its members unless they say otherwise.
+            var filled = MemberDefaults.Within(compiler, Package.DotNet.Accessibility.Private, Package.DotNet.Accessibility.Private, () => container.Compile(
                 fork,
                 definition.Content?.Statements ?? [],
                 (member, value) => new Code.ExpressionStatement(body.Register(self, ListOf(member), value))
-            );
+            ));
 
             if (filled.When(out var block).Error(out var error))
                 return Result<Code.Block>.Error(error);
 
             block!.Statements.InsertRange(0, parameters!);
+            block.Statements.Insert(0, body.Accessible(self, Package.DotNet.Accessibility.Private));
 
             // A property is defined once its accessors are, as they are what it is.
             foreach (var property in (definition.Content?.Statements ?? [])
