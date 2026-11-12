@@ -125,8 +125,12 @@ Decided in the review of the reimplementation, for the language features to come
 
 - CLR HIR represents the CLR, so it has the CLR's accessibility: public, private,
   internal, protected, protected internal and private protected, as a property of each
-  node that has one. Decorators from `core:runtime` set it, `@public`, `@private`,
-  `@internal` and `@protected`, and they apply to CLR HIR nodes only. A top-level type
+  node that has one. Decorators of CLR HIR's own module, `std:zsharp/package/dotnet`,
+  set it: `@public`, `@private`, `@internal` and `@protected`. Each is one generic
+  function over the `Accessible` capability, which gives back what it was given, typed
+  as it was. They are HIR's alone and need nothing that runs, so they aren't
+  `core:runtime`'s; nor are `@static`, `@virtual`, `@abstract` and `@override`, which
+  are there too. A top-level type
   has public or internal alone on the CLR, so a private one is internal.
 - A meta-compiler gives each node its default, as it interprets what is written:
   - a class and its contents are private;

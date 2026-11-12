@@ -30,37 +30,6 @@ namespace Core.Runtime
         public static readonly ZSharp.HIR.Instance OutFamily = new Package.DotNet.RefFamily(isOut: true);
 
         /// <summary>
-        /// Makes a method one a derived class can override.
-        /// </summary>
-        [Alias("virtual")]
-        public static Package.DotNet.Method Virtual(Package.DotNet.Method method)
-        {
-            method.IsVirtual = true;
-            return method;
-        }
-
-        /// <summary>
-        /// Makes a method one with no code of its own, which a derived class must override.
-        /// </summary>
-        [Alias("abstract")]
-        public static Package.DotNet.Method Abstract(Package.DotNet.Method method)
-        {
-            method.IsAbstract = true;
-            return method;
-        }
-
-        /// <summary>
-        /// Makes a method override the virtual method of the base class it shares a
-        /// signature with.
-        /// </summary>
-        [Alias("override")]
-        public static Package.DotNet.Method Override(Package.DotNet.Method method)
-        {
-            method.IsOverride = true;
-            return method;
-        }
-
-        /// <summary>
         /// Makes the first parameter the object the method runs on.
         /// </summary>
         [Alias("explicitThis")]
@@ -78,13 +47,6 @@ namespace Core.Runtime
         {
             constructor.CustomMetadata.Add(ExplicitThis());
             return constructor;
-        }
-
-        [Alias("static")]
-        public static Package.DotNet.Method Static(Package.DotNet.Method method)
-        {
-            method.IsStatic = true;
-            return method;
         }
 
         private static Package.DotNet.CustomMetadata ExplicitThis()

@@ -9,8 +9,9 @@ import "std:dotnet";
 import { compile, emit } from "core:project";
 import {
     Object, String, Boolean, Int16, Int32, Int64, UInt64, Single, Double, Type, List, Dictionary, DotNet_Class, DotNet_Module,
-    explicitThis, static, Path, Directory, File, Environment, Assembly, AppDomain, ClrPlatform
-, public } from "core:runtime";
+    explicitThis, Path, Directory, File, Environment, Assembly, AppDomain, ClrPlatform
+ } from "core:runtime";
+import { static, public } from "std:zsharp/package/dotnet";
 
 import { BindingFlags, Convert, Enum, Version, AppContext, Byte, Module as ReflectedModule } from Object.Assembly.Location;
 import { Assemblies } from Path.Combine(AppContext.BaseDirectory, "ZSharp.Importer.ILLoader.dll");

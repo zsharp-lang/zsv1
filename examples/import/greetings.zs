@@ -1,4 +1,4 @@
-import { String, static } from "core:runtime";
+import { String } from "core:runtime"; import { static } from "std:zsharp/package/dotnet";
 import { export } from "core:zsharp";
 
 @export

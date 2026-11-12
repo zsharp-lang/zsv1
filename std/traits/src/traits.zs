@@ -11,7 +11,7 @@
 // std:traits/static decides from the static type, and std:traits/dynamic looks an
 // implementation up by the type a value has as the code runs.
 
-import { String, Object, Boolean, Int32, List, Type as ClrType, DotNet_Class, explicitThis, static, DotNet_Module, ilLoader, public } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Type as ClrType, DotNet_Class, explicitThis, DotNet_Module, ilLoader } from "core:runtime"; import { static, public } from "std:zsharp/package/dotnet";
 import { Instance, Definition, Type } from "std:zsharp/hir";
 import { Local, Get, Block, Declare, ExpressionStatement, Set, StringLiteral, Cast, Expression } from "std:zsharp/hir/code";
 import { Definition as DefinitionSyntax, TypeDefinition as TypeSyntax } from "std:zsharp/lang/ast";

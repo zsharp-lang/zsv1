@@ -6,7 +6,7 @@
 // compiler needs of them. Importing it makes `fun` a Z# function wherever nothing else
 // compiles one.
 
-import { String, Object, Boolean, Int32, List, Dictionary, explicitThis, DotNet_Class, DotNet_Module, public } from "core:runtime";
+import { String, Object, Boolean, Int32, List, Dictionary, explicitThis, DotNet_Class, DotNet_Module } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get } from "std:zsharp/hir/code";
 import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "std:zsharp/lang/ast";
