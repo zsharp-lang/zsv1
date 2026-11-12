@@ -5,27 +5,27 @@
 import { Polymorphism, PlatformInterfaces } from "std:zsharp/capabilities";
 import { Implementation, implement } from "std:traits";
 import { entrypoint } from "std:framework";
-import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest, explicitThis } from "core:runtime";
+import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest, explicitThis, public } from "core:runtime";
 import { Structure, Function, Type as LIRType } from "std:zsharp/lir";
 
 // The CLR has polymorphism: a polymorphic structure is a CLR class or interface, and a
 // method of one is a method of the class.
 def ClrPolymorphism of Implementation[Polymorphism, ClrPlatform] {
-    let value: ClrPlatform;
+    @public let value: ClrPlatform;
 
-    @explicitThis new(this, value: ClrPlatform) { this.value = value; }
+    @public @explicitThis new(this, value: ClrPlatform) { this.value = value; }
 
-    @explicitThis fun objects(this, structure: Structure) {
+    @public @explicitThis fun objects(this, structure: Structure) {
         structure.Metadata.Add(Polymorphic());
     }
 
-    @explicitThis fun interfaces(this, structure: Structure) {
+    @public @explicitThis fun interfaces(this, structure: Structure) {
         let mark = Polymorphic();
         mark.IsInterface = true;
         structure.Metadata.Add(mark);
     }
 
-    @explicitThis fun implements(this, structure: Structure, implemented: Structure) {
+    @public @explicitThis fun implements(this, structure: Structure, implemented: Structure) {
         let index = 0;
         while (index < structure.Metadata.Count) {
             if (structure.Metadata[index] is let mark: Polymorphic) mark.Interfaces.Add(implemented);
@@ -33,15 +33,15 @@ def ClrPolymorphism of Implementation[Polymorphism, ClrPlatform] {
         }
     }
 
-    @explicitThis fun method(this, function: Function, owner: Structure) {
+    @public @explicitThis fun method(this, function: Function, owner: Structure) {
         function.Metadata.Add(MethodOf(owner));
     }
 
-    @explicitThis fun cast(this, function: Function, to: Structure) {
+    @public @explicitThis fun cast(this, function: Function, to: Structure) {
         function.Metadata.Add(CastDown(to));
     }
 
-    @explicitThis fun test(this, function: Function, target: Structure) {
+    @public @explicitThis fun test(this, function: Function, target: Structure) {
         function.Metadata.Add(TypeTest(target));
     }
 }
@@ -49,11 +49,11 @@ def ClrPolymorphism of Implementation[Polymorphism, ClrPlatform] {
 // A CLR class can implement the CLR's own interfaces, as the toolchain's are: the class
 // a polymorphic structure is implements them.
 def ClrInterfaces of Implementation[PlatformInterfaces, ClrPlatform] {
-    let value: ClrPlatform;
+    @public let value: ClrPlatform;
 
-    @explicitThis new(this, value: ClrPlatform) { this.value = value; }
+    @public @explicitThis new(this, value: ClrPlatform) { this.value = value; }
 
-    @explicitThis fun implements(this, structure: Structure, implemented: LIRType) {
+    @public @explicitThis fun implements(this, structure: Structure, implemented: LIRType) {
         let index = 0;
         while (index < structure.Metadata.Count) {
             if (structure.Metadata[index] is let mark: Polymorphic) mark.Implements.Add(implemented);

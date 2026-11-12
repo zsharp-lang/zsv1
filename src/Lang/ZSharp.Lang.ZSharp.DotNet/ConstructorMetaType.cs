@@ -33,6 +33,7 @@ namespace ZSharp.Lang.DotNet
             var signature = constructor.Signature;
 
             var block = new Code.Block();
+            block.Statements.Add(body.Accessible(self, MemberDefaults.MethodsIn(compiler)));
 
             if (body.Parameters(
                 compiler,

@@ -104,6 +104,33 @@ print("" + wide + " " + text.Length + " " + (nothing == null));
 3 4 True
 ```
 
+## Accessibility of the CLR's definitions
+
+A class of the CLR's defined in Z#, as `def Name of DotNet_Class`, has the CLR's
+accessibility, which `core:runtime`'s decorators set: `@public`, `@private`, `@internal`
+and `@protected`. They apply to the CLR's definitions alone. What isn't written is
+decided by where it is:
+
+- a class and its members are private, and a top-level class, which the CLR can't make
+  private, is internal to its assembly;
+- an interface and its members are public;
+- a module's functions are public, and its globals private, so a public global is
+  always written.
+
+```zs fragment
+import { Int32, DotNet_Class, explicitThis, public } from "core:runtime";
+
+@public def Counter of DotNet_Class {
+    let count: Int32;                                   // private
+    @public @explicitThis new(this) { this.count = 0; }
+    @public @explicitThis fun next(this): Int32 { this.count = this.count + 1; return this.count; }
+}
+```
+
+A method that implements an interface's needn't be public: one that isn't implements it
+explicitly, as C#'s explicit implementations do. Accessibility is checked by the CLR as
+the code runs, not yet as it's compiled.
+
 ## Importing an assembly
 
 An assembly is imported by its path, as a document is:

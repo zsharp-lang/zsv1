@@ -48,7 +48,9 @@ namespace ZSharp.Lang.DotNet
                 self,
                 CodeBody.Construct(underlyingType, new Code.StringLiteral(name)),
                 underlyingType,
-                () => container.Compile(
+                // A module is public, as its functions are unless they say otherwise, while its
+                // globals are private, so a public one is written.
+                () => MemberDefaults.Within(compiler, Package.DotNet.Accessibility.Public, Package.DotNet.Accessibility.Private, () => container.Compile(
                     fork,
                     content,
                     (member, value) => new Code.ExpressionStatement(body.Register(
@@ -58,7 +60,7 @@ namespace ZSharp.Lang.DotNet
                             : nameof(Package.DotNet.Module.Definitions),
                         value
                     ))
-                )
+                ))
             ));
         }
     }
