@@ -64,6 +64,9 @@ namespace ZSharp.Importer.ILLoader.Objects
                 if (Scope.HIRLoader.LoadInstance(capture).When(out var captured).Error(out error))
                     return Result<LIR.Expression>.Error(error);
 
+                if (!ILLoader.InCell(captured!))
+                    continue;
+
                 if (Scope.IR.CompileReference<LIR.Expression>(captured!, target).When(out var cell).Error(out error))
                     return Result<LIR.Expression>.Error(error);
 
@@ -116,7 +119,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             foreach (var capture in node.Captures)
                 if (Scope.HIRLoader.LoadInstance(capture).When(out var captured).Error(out error))
                     return Result.Error(error);
-                else
+                else if (ILLoader.InCell(captured!))
                     cells.Add(new CellOf(captured!));
 
             return Result.Ok(new Call(

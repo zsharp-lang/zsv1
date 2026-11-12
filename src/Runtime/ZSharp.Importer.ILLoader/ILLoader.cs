@@ -865,14 +865,15 @@ namespace ZSharp.Importer.ILLoader
         /// <summary>
         /// Lowers code into a function on the CLR: it checks that the code returns what the
         /// function returns, and a return converts its value to that. The function's
-        /// parameters are the lowerer's, so its code reaches them as the lowerer loads them.
+        /// parameters are the lowerer's, so its code reaches them as the lowerer loads them,
+        /// and so is the object it runs on, if it has one.
         /// </summary>
-        private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned, List<HIR.Code.Parameter> parameters, object? target)
+        private Error? Lower(HIR.Code.Code body, LIR.Function function, HIR.Type? returned, Package.DotNet.This? @this, List<HIR.Code.Parameter> parameters, object? target)
         {
             if (Returns.Check(body.Block, returned is not null) is { } invalid)
                 return invalid;
 
-            if (Cells(parameters, function, target) is { } failed)
+            if (Cells(@this, parameters, function, target) is { } failed)
                 return failed;
 
             var outer = CodeLoaders.Returns;
@@ -904,6 +905,14 @@ namespace ZSharp.Importer.ILLoader
         }
 
         /// <summary>
+        /// Whether a capture is passed to a local function as the cell of what it captures.
+        /// What isn't a variable, as a static method's object, which is its class, is
+        /// referred to as it is, as only variables are captured.
+        /// </summary>
+        internal static bool InCell(CompilerObject captured)
+            => captured is not Objects.DefinedClass;
+
+        /// <summary>
         /// Lowers a local function to a function of its own, once. It takes the cell of
         /// each variable it captures, then its own parameters.
         /// </summary>
@@ -923,6 +932,12 @@ namespace ZSharp.Importer.ILLoader
                 if (ZSharp.Compiler.Current.HIRLoader.LoadInstance((HIR.Instance)capture.Captured).When(out var captured).Error(out var error))
                     return Result<LIR.Function>.Error(error);
 
+                if (!InCell(captured!))
+                {
+                    cells[capture] = captured!;
+                    continue;
+                }
+
                 if (ZSharp.Compiler.Current.TS.TypeOf(captured!).When(out var type).Error(out error))
                     return Result<LIR.Function>.Error(error);
 
@@ -932,7 +947,12 @@ namespace ZSharp.Importer.ILLoader
                 var parameter = new LIR.Parameter(new LIR.Reference(compiled!)) { Name = "capture" };
 
                 signature.Parameters.Add(parameter);
-                cells[capture] = new Objects.Cell(parameter, type!);
+
+                // The object a method runs on is still what its class's members' names are
+                // reached through.
+                cells[capture] = captured is Objects.ImplicitObject implicitly
+                    ? implicitly.With(new Objects.Cell(parameter, type!))
+                    : new Objects.Cell(parameter, type!);
             }
 
             // A local function's captures are the running process's cells, so it runs there.
@@ -959,7 +979,7 @@ namespace ZSharp.Importer.ILLoader
 
             try
             {
-                if (Lower(node.Body, function, node.ReturnType, node.Parameters, runtime) is { } error)
+                if (Lower(node.Body, function, node.ReturnType, null, node.Parameters, runtime) is { } error)
                 {
                     localFunctions.Remove(node);
                     return Result<LIR.Function>.Error(error);
@@ -976,28 +996,41 @@ namespace ZSharp.Importer.ILLoader
         /// <summary>
         /// A parameter that a function inside the code captures is copied into a cell when
         /// the code starts, and the code uses the cell from then on, so it and the
-        /// functions that capture it share it.
+        /// functions that capture it share it. So is the object the code runs on, which a
+        /// function captures to reach its class's members by their names.
         /// </summary>
-        private Error? Cells(List<HIR.Code.Parameter> parameters, LIR.Function function, object? target)
+        private Error? Cells(Package.DotNet.This? @this, List<HIR.Code.Parameter> parameters, LIR.Function function, object? target)
         {
             foreach (var parameter in parameters.Where(parameter => parameter.IsCaptured))
-            {
-                if (!CodeLoaders.Defined(parameter).Ok(out var defined) || defined is not Objects.Variable variable)
-                    continue;
+                if (CodeLoaders.Defined(parameter).Ok(out var defined) && defined is Objects.Variable variable)
+                    if (Cell(parameter.Name, variable, function, target).When(out var cell).Error(out var error))
+                        return error;
+                    else
+                        CodeLoaders.Define(parameter, cell!);
 
-                var type = ((ITyped)variable).Type;
-
-                if (ZSharp.Compiler.Current.IR.CompileType(type, target).When(out var compiled).Error(out var error))
+            // A static method's object is its class, which isn't a variable.
+            if (@this is { IsCaptured: true } && CodeLoaders.Defined(@this).Ok(out var self) && self is Objects.ImplicitObject { Receiver: Objects.Variable receiver } implicitly)
+                if (Cell("this", receiver, function, target).When(out var cell).Error(out var error))
                     return error;
-
-                var cell = new LIR.Local(new LIR.Reference(compiled!)) { Name = parameter.Name };
-
-                function.Body!.Block.Locals.Add(cell);
-                function.Body.Block.Statements.Add(new LIR.SetLocal(cell, new LIR.Allocate(new LIR.GetLocal(variable.For(target)))));
-                CodeLoaders.Define(parameter, new Objects.Cell(cell, type));
-            }
+                else
+                    CodeLoaders.Define(@this, implicitly.With(cell!));
 
             return null;
+        }
+
+        private IResult<CompilerObject, Error> Cell(string name, Objects.Variable variable, LIR.Function function, object? target)
+        {
+            var type = ((ITyped)variable).Type;
+
+            if (ZSharp.Compiler.Current.IR.CompileType(type, target).When(out var compiled).Error(out var error))
+                return Result<CompilerObject>.Error(error);
+
+            var cell = new LIR.Local(new LIR.Reference(compiled!)) { Name = name };
+
+            function.Body!.Block.Locals.Add(cell);
+            function.Body.Block.Statements.Add(new LIR.SetLocal(cell, new LIR.Allocate(new LIR.GetLocal(variable.For(target)))));
+
+            return Result<CompilerObject>.Ok(new Objects.Cell(cell, type));
         }
 
         private Error? Check(Package.DotNet.Class node)

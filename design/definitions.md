@@ -206,8 +206,12 @@ variable of that code, the function captures it:
   in asks the middle function, which captures the variable first, and then shares the
   middle function's capture.
 
-Only variables are captured, as `HIR.Variable` marks them: locals and parameters. A
-definition or any other instance is referred to as it is.
+Only variables are captured, as `HIR.Variable` marks them: locals, parameters, and the
+object a method or constructor runs on, its `this` node, which a function captures when it
+uses a member of the class by its name. No name is bound to the object, so its capture is
+bound over nothing: the method's functions share it, and a function nested in one shares
+the one around it. A definition or any other instance is referred to as it is, as a static
+method's object is, which is its class.
 
 The same `Capture` loads differently in each place. Outside the functions that capture
 it, it is what it captures, loaded as an instance, so in the capturee it is the
@@ -218,8 +222,8 @@ a branch needs no special handling. Inside a function that captures it, it is wh
 function was given. How a captured variable is stored is up to the platform. On the CLR:
 
 - A marked local lives in a cell, an `LIR.Allocate`d reference made when its declaration
-  runs. A marked parameter is copied into a cell when its function starts, and the
-  function uses the cell from then on.
+  runs. A marked parameter, or a marked object, is copied into a cell when its function
+  starts, and the function uses the cell from then on.
 - A local function is a function of its own, which takes the cell of each capture as a
   hidden parameter before its own. Calling it passes the cells as the caller has them, so
   calling it from another local function passes on what that one was given.
