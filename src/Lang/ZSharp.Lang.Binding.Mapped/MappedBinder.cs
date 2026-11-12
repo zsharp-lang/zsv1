@@ -48,7 +48,7 @@ namespace ZSharp.Lang
 
         private Error? Bind(Scope scope, string name, HIR.Code.Expression value)
         {
-            if (@base.Bind(scope, name, value) is not UnsupportedError and var result)
+            if (@base.Bind(scope, name, value) is var result && !result.IsUnsupported())
                 return result;
 
             if (scope.Local(name) is { } existing)

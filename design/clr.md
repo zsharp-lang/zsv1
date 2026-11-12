@@ -227,8 +227,8 @@ C#'s rules rather than new ones:
   as in C#. A cast also goes down, to a type that derives from the value's or between an
   interface and a type that isn't sealed, and an object cast to a value type is unboxed.
   A cast that fails throws as the code runs, as C#'s `(T)x` does.
-- `value is of T` is a `Match` in HIR, which stands for the `CG.Match` operation, with
-  the type as its pattern. A CLR type answers it through `IRTTypeMatch`: a reference is
+- `value is of T` is a `Match` in HIR, which stands for the matching REI's pattern
+  match, with the type as its pattern. A CLR type answers it through `IRTMatch`: a reference is
   checked as the code runs, so `null` is of no type, and a value of a value type is
   known to be of a type or not.
 - The part between `is` and `of` is a pattern. Patterns will be several things,

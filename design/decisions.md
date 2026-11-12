@@ -34,6 +34,13 @@
   `LoaderMap` keeps its name for now, and `Annotated.Annotations` stays a list of objects
   until there is a way: a seed that binds by name, or a step that builds the standard
   library with the toolchain it was built for.
+- **A generation writes over the seed.** Each generation of the bootstrap writes its
+  builds where the seed is. So a generation that compiles wrongly, as one did when a
+  hook the seed installs was no longer called, replaces a good seed with a broken one,
+  and the next generation fails with nothing to go back to. The seed was recovered from
+  the release's builds and rebuilt forward through each change's transitions. A
+  bootstrap could write each generation apart and replace the seed only once a
+  generation builds itself the same.
 - **A module's global whose type's code uses the global.** A global is declared once its
   type is lowered, and lowering a class lowers its code, so a global of type
   `List[ClassObject]` that `ClassObject`'s code uses isn't declared when that code asks

@@ -17,12 +17,17 @@ all REIs.
 
 ### CG and TS
 
-- `ZSharp.Compiler.Core` holds what the REIs share, including the known
-  `UnsupportedError`. A dispatcher falls through only on that error, so a real
-  failure is never replaced by a later dispatcher.
+- `ZSharp.Compiler.Core` holds what the REIs share, including `Unsupported`, the
+  capability of an error that says an entrypoint doesn't support an operation, which
+  `UnsupportedError` has. A dispatcher falls through only on an error with it, so a
+  real failure is never replaced by a later dispatcher.
+- **An error's capabilities.** What an error can say beyond why it failed is a
+  capability, found with `Is<T>` as a CO's are. An error that wraps another, as one
+  with where it happened would, has the capabilities of the one it wraps, so wrapping
+  an unsupported error keeps it unsupported.
 - `CG` and `TS` are plain instance classes and know nothing about a current
   instance. Dispatchers receive the instances they use.
-- `CG` and `TS` know nothing about LIR, so `MatchResult` carries no instructions.
+- `CG` and `TS` know nothing about LIR.
 - `TS` names no types. An extension or the runtime exposes the ones it wants.
 - `CG.Typed` asks `TS.IsAssignableTo` whether a cast is a no-op, rather than
   comparing COs or asking a separate reflection service.
@@ -37,6 +42,41 @@ all REIs.
     assignable to the type, which makes the cast a no-op.
 
   So a value that knows how it converts wins over a type that knows how to take it.
+  There is no typed cast *from*: a runtime descriptor speaks for a value, as its type,
+  and on the receiving side that is the target type itself, which `CG.Direct` already
+  asks through `ICTImplicitCastFrom`.
+
+### Matching
+
+`Matching` is an REI of its own, since matching isn't part of the general operations
+of code: a CO can use it when it is called or set, but doesn't have to. HIR has no
+node for matching arguments, which is why it isn't CG's.
+
+| Entrypoint | Question |
+|------------|----------|
+| `Pattern`, through `Match(value, pattern)` | What condition, as a CO, says whether a value matches a pattern, as `value is of T`? |
+| `Parameter`, through `Match(parameter, arguments)` | What value does a parameter take for a call, from its arguments? |
+
+Its static dispatcher asks what the COs say of themselves: a parameter's
+`ICTParameter`, then a value's `ICTMatch`, then its runtime descriptor's `IRTMatch`.
+A match gives the condition as a CO, with nothing around it: what else a match does,
+as running other code when it fails, is an operation of that CO. `std:traits/dynamic`
+replaces `Pattern` to match a trait as the code runs.
+
+`ArgumentStream` is what a parameter takes from: the next positional argument, the
+one with its name, or `Rest()`, every argument left, which a parameter that takes the
+rest uses.
+
+### Overloading
+
+`Overloading` chooses between the candidates one object stands for. `Group` makes that
+object from the candidates, as the members of one name are, and a single candidate
+stands for itself; `Apply` applies an operation to each candidate and chooses whose
+result is the result; `IsMoreSpecific` decides between two that both apply. Nothing
+names the group object itself: the static dispatcher's `Group` gives an
+`OverloadGroup`, and without it more than one candidate is unsupported. A candidate
+says how specific it is through `ISpecific`, which `Parameters.AreAsSpecificAs`, a
+comparison of what each accepts, helps a candidate with parameters answer.
 
 ### IR
 

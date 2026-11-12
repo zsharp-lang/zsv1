@@ -13,7 +13,8 @@ import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "std:
 import { CompilerObject } from "std:zsharp/mir";
 import { Error, Result, IResult } from "std:zsharp/common";
 import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
-import { ICTCallable, ICTMatchParameter, ICTCastTo } from "std:zsharp/compiler/cg/direct";
+import { ICTCallable, ICTCastTo } from "std:zsharp/compiler/cg/direct";
+import { ICTParameter } from "std:zsharp/compiler/matching/static";
 import { ICompileIRExpression, ICompileIRDefinitionIn, ICompileIRReference } from "std:zsharp/compiler/ir";
 import { ITyped } from "std:zsharp/compiler/ts";
 import { FunctionHandle, Constant } from "std:zsharp/lir";
@@ -25,7 +26,7 @@ import { Holder, Held, keep } from "std:zsharp/lowering";
 import { metaTypes, bodies } from "core:zsharp";
 import { entrypoint, definitionLoader, instanceLoader, metaType, binder } from "std:framework";
 import { ilLoader } from "core:runtime";
-import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
+import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader, matching } from "core:compiler";
 import { Function, Positional, Named } from "std:functions";
 
 // ---- The COs
@@ -33,7 +34,7 @@ import { Function, Positional, Named } from "std:functions";
 // A parameter, as a call matches an argument to it and as its function's code uses it.
 // One CO is both, and it owns the LIR parameter the signature holds for each target, so
 // whatever lowers a function with it refers to it as that parameter.
-def ParameterObject of DotNet_Class : CompilerObject, ICTMatchParameter, ICompileIRExpression, ICompileIRReference[LIRParameter], ITyped {
+def ParameterObject of DotNet_Class : CompilerObject, ICTParameter, ICompileIRExpression, ICompileIRReference[LIRParameter], ITyped {
     let name: String;
     let named: Boolean;
     let type: Type;
@@ -281,7 +282,7 @@ def FunctionObject of DotNet_Class : CompilerObject, ICTCallable, ICTCastTo, Hel
 
         let index = 0;
         while (index < this.node.Parameters.Count) {
-            let value = cg.MatchParameter(this.parameter(index), stream);
+            let value = matching.Match(this.parameter(index), stream);
             if (value.IsError) return value;
             values.Add(value.Unwrap());
             index = index + 1;

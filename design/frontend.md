@@ -162,7 +162,7 @@ a custom type gets into the language to be used as a meta-type.
   table of what is implemented for what, as COs for code being compiled and as CLR types
   for code that runs. `std:traits/static` replaces `CG.ImplicitCast` and `CG.Cast`: a
   value whose static type implements the trait goes to it as its adapter.
-  `std:traits/dynamic` replaces `CG.Match` and `CG.Cast` for traits: a match or a cast
+  `std:traits/dynamic` replaces the matching REI's `Pattern` and `CG.Cast` for traits: a match or a cast
   calls what looks the implementation up by the value's runtime type, so an `Object`
   holding a value of an implementing type matches the trait. It applies to traits that
   have an implementation when the code is compiled. The prelude installs both.

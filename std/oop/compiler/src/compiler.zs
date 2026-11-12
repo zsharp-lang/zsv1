@@ -17,10 +17,11 @@ import {
 } from "std:zsharp/lang/ast";
 import { CompilerObject } from "std:zsharp/mir";
 import { Error, ErrorMessage, Result, IResult } from "std:zsharp/common";
-import { Argument, ArgumentStream, MatchResult } from "std:zsharp/compiler/cg";
+import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
+import { IRTMatch } from "std:zsharp/compiler/matching/static";
 import { UnsupportedError } from "std:zsharp/compiler";
 import { ICTCallable, ICTBound, ICTGetMember, ICTSet, ICTCastTo, ICTImplicitCastTo, ICTGetIndex, ICTGet } from "std:zsharp/compiler/cg/direct";
-import { IRTGetMember, IRTCastTo, IRTTypeMatch, IRTGetIndex } from "std:zsharp/compiler/cg/typed";
+import { IRTGetMember, IRTCastTo, IRTGetIndex } from "std:zsharp/compiler/cg/typed";
 import { ICompileIRExpression, ICompileIRType, ICompileIRStatement, ICompileIRDefinitionIn, ICompileIRReference } from "std:zsharp/compiler/ir";
 import { ITyped, IAssignableTo } from "std:zsharp/compiler/ts";
 import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTDefinition, CompileASTStatement, Context } from "std:zsharp/compiler/ast";
@@ -31,14 +32,13 @@ import {
     Field as LIRField, Module as LIRModule, Expression as LIRExpression, Statement as LIRStatement, Code as LIRCode, Evaluate, Type as LIRType, ICallable
 } from "std:zsharp/lir";
 import { Bodies, ContainerCompiler, CapabilityContext, Language, Operator } from "std:zsharp/lang";
-import { OverloadGroup } from "std:zsharp/compiler/overloading";
 import { CodeLoaders } from "std:zsharp/compiler/code";
 import { Positional, Named } from "std:functions";
 import { Holder, Held, Initializing, keep } from "std:zsharp/lowering";
 import { Polymorphism, PlatformInterfaces } from "std:zsharp/capabilities";
 import { metaTypes, bodies, language } from "core:zsharp";
 import { entrypoint, definitionLoader, instanceLoader, typeLoader, metaType, binder } from "std:framework";
-import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
+import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader, matching, overloading } from "core:compiler";
 import { Receiver, Field, Method, Property, Constructor, Class, Interface, ClassOf } from "std:oop";
 
 // ---- The COs
@@ -193,7 +193,7 @@ fun matchArguments(parameters: List[Definition], arguments: Argument[]): List[Co
 
     let index = 0;
     while (index < parameters.Count) {
-        let value = cg.MatchParameter(hirLoader.LoadDefinition(parameters[index]).Unwrap(), stream);
+        let value = matching.Match(hirLoader.LoadDefinition(parameters[index]).Unwrap(), stream);
         if (value.IsError) return null;
         values.Add(value.Unwrap());
         index = index + 1;
@@ -815,7 +815,7 @@ def Metaclass : CompilerObject, ICompileIRType, ICTCastTo, ICTImplicitCastTo, IR
             }
             index = index + 1;
         }
-        if (methods.Count > 0) return Result[CompilerObject].Ok(OverloadGroup.Of(methods));
+        if (methods.Count > 0) return overloading.Group(methods.ToArray());
         if (objects) return Result[CompilerObject].Error("There is no object here: method " + name + " is the objects' of the class " + this.owner.node.Name + ", and a class method runs on the class.");
 
         index = 0;
@@ -887,7 +887,7 @@ def InterfaceMetaclass : CompilerObject, ICompileIRType, ICTCastTo, ICTImplicitC
             }
             index = index + 1;
         }
-        if (methods.Count > 0) return Result[CompilerObject].Ok(OverloadGroup.Of(methods));
+        if (methods.Count > 0) return overloading.Group(methods.ToArray());
 
         return Result[CompilerObject].Error("The interface " + this.owner.node.Name + " has no class method named " + name + ".");
     }
@@ -957,7 +957,9 @@ fun callIndex(methods: List[Method], onClass: Boolean, object: CompilerObject, a
     }
 
     if (candidates.Count == 0) return Result[CompilerObject].Error(owner + " has no index operator.");
-    return cg.Call(OverloadGroup.Of(candidates), arguments);
+    let group = overloading.Group(candidates.ToArray());
+    if (group.IsError) return group;
+    return cg.Call(group.Unwrap(), arguments);
 }
 
 // A property of a class or an interface, by its name, reached through an object or a
@@ -1107,7 +1109,7 @@ def Narrowing : CompilerObject, ICompileIRExpression, ITyped {
 // A Z# interface. As a type, it is the object type of any class that implements it,
 // which its target's polymorphism makes. A value of it has its methods as members, and
 // is cast down to, and tested for, what implements it.
-def InterfaceObject : CompilerObject, Holder, ICompileIRType, ICTCastTo, ICTImplicitCastTo, ICTGetMember[String], IRTGetMember[String], IRTGetIndex, ICTGet, IRTCastTo, IRTTypeMatch, IAssignableTo, Held, ICompileIRDefinitionIn[LIRModule] {
+def InterfaceObject : CompilerObject, Holder, ICompileIRType, ICTCastTo, ICTImplicitCastTo, ICTGetMember[String], IRTGetMember[String], IRTGetIndex, ICTGet, IRTCastTo, IRTMatch, IAssignableTo, Held, ICompileIRDefinitionIn[LIRModule] {
     let node: Interface;
     let holder: Holder;
     let structures: Dictionary[Object, Structure];
@@ -1249,7 +1251,7 @@ def InterfaceObject : CompilerObject, Holder, ICompileIRType, ICTCastTo, ICTImpl
             }
             index = index + 1;
         }
-        if (methods.Count > 0) return Result[CompilerObject].Ok(OverloadGroup.Of(methods));
+        if (methods.Count > 0) return overloading.Group(methods.ToArray());
 
         return Result[CompilerObject].Error("The interface " + this.node.Name + " has no member named " + name + ".");
     }
@@ -1265,12 +1267,9 @@ def InterfaceObject : CompilerObject, Holder, ICompileIRType, ICTCastTo, ICTImpl
         return Result[CompilerObject].Error("A value of the interface " + this.node.Name + " can only be cast to what implements it.");
     }
 
-    fun Match(this, value: CompilerObject, type: CompilerObject): IResult[MatchResult, Error] {
-        if (this.narrows(type) == false) return Result[MatchResult].Error("A value of the interface " + this.node.Name + " can only be matched against what implements it.");
-
-        let result = MatchResult();
-        result.Match = Narrowing(value, this, type, true);
-        return Result[MatchResult].Ok(result);
+    fun Match(this, value: CompilerObject, type: CompilerObject): IResult[CompilerObject, Error] {
+        if (this.narrows(type) == false) return Result[CompilerObject].Error("A value of the interface " + this.node.Name + " can only be matched against what implements it.");
+        return Result[CompilerObject].Ok(Narrowing(value, this, type, true));
     }
 }
 
@@ -1621,7 +1620,7 @@ def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo
             }
             index = index + 1;
         }
-        if (methods.Count > 0) return Result[CompilerObject].Ok(OverloadGroup.Of(methods));
+        if (methods.Count > 0) return overloading.Group(methods.ToArray());
         if (objects) return Result[CompilerObject].Error("Method " + name + " of the class " + this.node.Name + " is its objects'.");
 
         return ownedMember(this.node.Definitions, name, "The class " + this.node.Name);
@@ -1669,7 +1668,7 @@ def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo
             }
             index = index + 1;
         }
-        if (methods.Count > 0) return Result[CompilerObject].Ok(OverloadGroup.Of(methods));
+        if (methods.Count > 0) return overloading.Group(methods.ToArray());
 
         return Result[CompilerObject].Error("The class " + this.node.Name + " has no member named " + name + ".");
     }

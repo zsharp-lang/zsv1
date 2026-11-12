@@ -17,7 +17,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             var values = new List<CompilerObject>();
 
             foreach (var parameter in parameters)
-                if (Scope.CG.MatchParameter(parameter, stream).Ok(out var value))
+                if (Scope.Matching.Match(parameter, stream).Ok(out var value))
                     values.Add(value);
                 else
                     return null;
@@ -78,7 +78,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     /// </summary>
     internal sealed class ClrParameter(ParameterInfo parameter, ILLoader loader)
         : CompilerObject
-        , ICTMatchParameter
+        , ICTParameter
     {
         public IResult Match(ArgumentStream arguments)
         {
@@ -125,7 +125,7 @@ namespace ZSharp.Importer.ILLoader.Objects
     /// </summary>
     internal sealed class DefinedParameter(Package.DotNet.Parameter node)
         : CompilerObject
-        , ICTMatchParameter
+        , ICTParameter
     {
         public IResult Match(ArgumentStream arguments)
         {

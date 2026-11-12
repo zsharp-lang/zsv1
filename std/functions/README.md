@@ -37,7 +37,7 @@ function, as a decorator says it is an entry point, is its annotations.
 |---|---|---|
 | `FunctionObject` | A function. Calling it matches the arguments to its parameters. It lowers once per target, to an LIR function of what holds it, if something does. | `ICTCallable`, `ICTCastTo`, `Held`, `ICompileIRDefinitionIn[LIRModule]`, `ICompileIRReference[ICallable]` |
 | `FunctionCall` | A call of a function, with its matched values. | `ICompileIRExpression`, `ITyped` |
-| `ParameterObject` | A parameter, both as a call matches an argument to it and as its function's code uses it. It owns the LIR parameter for each target. | `ICTMatchParameter`, `ICompileIRExpression`, `ICompileIRReference[LIRParameter]`, `ITyped` |
+| `ParameterObject` | A parameter, both as a call matches an argument to it, through the matching REI, and as its function's code uses it. It owns the LIR parameter for each target. | `ICTParameter`, `ICompileIRExpression`, `ICompileIRReference[LIRParameter]`, `ITyped` |
 | `Known` | A value that exists as the code is compiled, as a definition's node does. | `ICompileIRExpression`, `ITyped` |
 
 ### How it plugs into the compiler
@@ -75,7 +75,9 @@ registration call the compiler needs.
   the compiler's state, kept in the library rather than passed.
 - **`Known` is defined twice**, here and in `std:oop/compiler`, with the same meaning. It
   belongs in one shared place.
-- **`ParameterObject` loads HIR while it matches**, its default value, as the C#
-  `ParameterMatch` does. The review of #19 covers both, and the CG REIs PR fixes them.
+- **`ParameterObject` loads its own node's HIR while it matches**: its type and its
+  default value, each time, as both mean what the call's context makes them. The C#
+  `ParameterMatch` is given functions for them instead, so it knows no HIR. This CO is
+  its node's own, so it may read it, but loading belongs to what loads it.
 - **The parameter kinds are fixed**: a parameter is `Positional` or `Named`. A new kind is
   a new node and a new loader here, rather than something this library opens up.

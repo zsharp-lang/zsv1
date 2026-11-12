@@ -37,7 +37,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             return candidates.Count == 0
                 ? Result.Error(new UnsupportedError($"The operands define no {name}."))
-                : ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(candidates), arguments);
+                : Candidates.Call(candidates, arguments);
         }
     }
 }

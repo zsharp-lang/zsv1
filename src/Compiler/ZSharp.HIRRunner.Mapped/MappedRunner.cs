@@ -37,12 +37,12 @@ namespace ZSharp.Compiler
         {
             var error = @base.RunStatement(statement);
 
-            if (error is not UnsupportedError)
+            if (!error.IsUnsupported())
                 return error;
 
             if (
                 statements.TryGetValue(statement.GetType(), out var run)
-                && (error = run(statement)) is not UnsupportedError
+                && !(error = run(statement)).IsUnsupported()
             ) return error;
 
             return loader.LoadStatement(statement)

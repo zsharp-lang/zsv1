@@ -19,7 +19,15 @@ var plain = new Plain();
 
 Report("default entrypoint is unsupported", cg.Call(plain, []).IsUnsupported());
 Report("default typeof is unsupported", ts.TypeOf(plain).IsUnsupported());
-Report("default match is unsupported", cg.Match(plain, plain).IsUnsupported());
+Report("default match is unsupported", ZSharp.Compiler.Current.Matching.Match(plain, plain).IsUnsupported());
+
+var stream = new ArgumentStream([new Argument(plain), new Argument(new Plain()), new Argument("named", new Plain())]);
+stream.Pop();
+var rest = stream.Rest();
+Report("the rest of the arguments is what no parameter took, positional then named", rest is [{ Name: null }, { Name: "named" }] && !stream.HasArguments);
+
+Report("an error that wraps another has its capabilities", Res.Error(new Located(new UnsupportedError("not here"))).IsUnsupported());
+Report("an error without the capability isn't unsupported", !Res.Error(new Located(new ErrorMessage("failed"))).IsUnsupported());
 
 new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(cg).Apply();
 new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(cg, ts).Apply();
@@ -97,4 +105,13 @@ class TypeDescriptor : CompilerObject, IRTCallable
 class Typed(CompilerObject type) : CompilerObject, ITyped
 {
     public CompilerObject Type { get; } = type;
+}
+
+/// <summary>
+/// An error with where it happened, which has what the error it wraps has.
+/// </summary>
+class Located(Error inner) : Error
+{
+    public override bool Is<T>(out T? capability) where T : class
+        => base.Is(out capability) || inner.Is(out capability);
 }

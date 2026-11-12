@@ -37,7 +37,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 .ToArray<CompilerObject>();
 
             if (functions.Length > 0)
-                return Result.Ok(OverloadGroup.Of(functions));
+                return Candidates.Of(functions);
 
             if (Node.Fields.FirstOrDefault(field => field.Name == member) is { } field)
                 return Result.Ok(new ModuleGlobal(this, field));

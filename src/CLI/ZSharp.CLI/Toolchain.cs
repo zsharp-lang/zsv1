@@ -70,9 +70,10 @@ namespace ZSharp.CLI
             // Each dispatcher asks the ones applied before it first.
             new Compiler.CGDispatchers.Direct.Dispatcher(Scope.CG).Apply();
             new Compiler.CGDispatchers.Typed.Dispatcher(Scope.CG, Scope.TS).Apply();
+            new Compiler.MatchingDispatchers.Static.Dispatcher(Scope.Matching, Scope.TS).Apply();
 
             // Members from outside an object's own, as extension methods, come after its own.
-            var external = new Compiler.CGDispatchers.External.Dispatcher(Scope.CG);
+            var external = new Compiler.CGDispatchers.External.Dispatcher(Scope.CG, Scope.Overloading);
             external.Apply();
             external.Add(il.Extensions);
 
@@ -80,7 +81,7 @@ namespace ZSharp.CLI
             new Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
             new Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
-            CodeLoaders.Register(codeLoader, loader, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
+            CodeLoaders.Register(codeLoader, loader, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG, Scope.Matching, Scope.Overloading);
             il.Install(loader, codeLoader);
 
             reifier.Apply();

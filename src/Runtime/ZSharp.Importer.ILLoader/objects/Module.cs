@@ -30,7 +30,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 .ToArray();
 
             if (imported.Length > 0)
-                return Result.Ok(OverloadGroup.Of(imported));
+                return Candidates.Of(imported);
 
             var types = il.GetTypes();
 
@@ -73,7 +73,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             }
 
             if (found.Length > 0)
-                return Result.Ok(OverloadGroup.Of(found.Select(Imported)));
+                return Candidates.Of(found.Select(Imported));
 
             return Result.Error(new UnsupportedError($"Module {il.Name} has no member named {member}."));
         }

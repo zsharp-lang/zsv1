@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 
 namespace ZSharp.Importer.ILLoader.Objects
 {
@@ -124,8 +124,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         }
 
         public IResult Call(Argument[] arguments)
-            => ZSharp.Compiler.Current.CG.Call(
-                OverloadGroup.Of(definition.GetConstructors().Select(constructor => new InstantiationMember(loader, this, constructor, null))),
+            => Candidates.Call(definition.GetConstructors().Select(constructor => new InstantiationMember(loader, this, constructor, null)),
                 arguments
             );
 
@@ -153,7 +152,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 .ToArray();
 
             if (methods.Length > 0)
-                return Result.Ok(OverloadGroup.Of(methods.Select(method => new InstantiationMember(loader, this, method, receiver))));
+                return Candidates.Of(methods.Select(method => new InstantiationMember(loader, this, method, receiver)));
 
             if (definition.GetProperties(flags).FirstOrDefault(property => property.Name == member && property.GetIndexParameters().Length == 0) is { } property)
                 return Result.Ok(new Accessor(
@@ -174,7 +173,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (getters.Length == 0)
                 return Result.Error(new UnsupportedError($"{definition.Name} has no indexer that can be read."));
 
-            if (ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(getters), arguments).When(out var read).Error(out var error))
+            if (Candidates.Call(getters, arguments).When(out var read).Error(out var error))
                 return Result.Error(error);
 
             return Result.Ok(new Indexed(read!, value => Index(@object, arguments, value)));
@@ -187,7 +186,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             return setters.Length == 0
                 ? Result.Error($"The indexer of {definition.Name} can't be assigned.")
-                : ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(setters), [.. arguments, new Argument(value)]);
+                : Candidates.Call(setters, [.. arguments, new Argument(value)]);
         }
 
         private PropertyInfo[] Indexers()
@@ -226,7 +225,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
     internal sealed class InstantiationParameter(Instantiation owner, ParameterInfo parameter, ILLoader loader)
         : CompilerObject
-        , ICTMatchParameter
+        , ICTParameter
     {
         public IResult Match(ArgumentStream arguments)
             => Arguments.Take(

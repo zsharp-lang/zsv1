@@ -25,7 +25,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , IAssignableTo
         , ICompileIRExpression
         , ITyped
-        , IRTTypeMatch
+        , IRTMatch
         , IRTCastTo
     {
         /// <summary>
@@ -52,11 +52,9 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// <c>is</c>: a reference is checked as the code runs, both types as the target
         /// lowers them.
         /// </summary>
-        public IResult<MatchResult, Error> Match(CompilerObject value, CompilerObject pattern)
+        public IResult Match(CompilerObject value, CompilerObject pattern)
             => pattern.Is<ICompileIRType>(out _)
-                ? Result<MatchResult>.Ok(new MatchResult
-                {
-                    Match = new Call(
+                ? Result.Ok(new Call(
                         target => Scope.IR.CompileType(this, target).When(out var from).Error(out var error)
                             ? Result<LIR.ICallable>.Error(error)
                             : Scope.IR.CompileType(pattern, target).When(out var to).Error(out error)
@@ -64,9 +62,8 @@ namespace ZSharp.Importer.ILLoader.Objects
                                 : Result<LIR.ICallable>.Ok(loader.IsOf(from!, to!)),
                         [value],
                         () => loader.Class(typeof(bool))
-                    )
-                })
-                : Result<MatchResult>.Error(new UnsupportedError($"A value of {Name} can only be matched against a type."));
+                    ))
+                : Result.Error(new UnsupportedError($"A value of {Name} can only be matched against a type."));
 
         public string Name => Node.Name;
 
@@ -159,8 +156,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                     : $"{Name} takes {Node.GenericParameters.Count} type arguments."));
 
         public IResult Call(Argument[] arguments)
-            => Scope.CG.Call(
-                OverloadGroup.Of(Constructors.Select((constructor, index) => new Callable(
+            => Candidates.Call(Constructors.Select((constructor, index) => new Callable(
                     $"A constructor of {Name}",
                     target => For(target).When(out var lowered).Error(out var error)
                         ? Result<LIR.ICallable>.Error(error)
@@ -170,7 +166,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                     () => this,
                     loader,
                     isMethod: false
-                ))),
+                )),
                 arguments
             );
 
@@ -187,7 +183,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 .ToArray();
 
             if (methods.Length > 0)
-                return Result.Ok(OverloadGroup.Of(methods.Select(method => Callable(method, receiver, Method(method), null))));
+                return Candidates.Of(methods.Select(method => Callable(method, receiver, Method(method), null)));
 
             if (Node.Properties.FirstOrDefault(property => property.Name == member && property.IsStatic == receiver is null) is { } property)
                 return Result.Ok(new Accessor(

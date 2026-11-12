@@ -7,12 +7,13 @@ import { Traits, Lookup } from "std:traits";
 import { String, DotNet_Module } from "core:runtime";
 import { Error, Result, IResult } from "std:zsharp/common";
 import { CompilerObject } from "std:zsharp/mir";
-import { Argument, Match, Cast, MatchResult } from "std:zsharp/compiler/cg";
+import { Argument, Cast } from "std:zsharp/compiler/cg";
+import { PatternMatch } from "std:zsharp/compiler/matching";
 import { entrypoint } from "std:framework";
-import { cg, hirLoader } from "core:compiler";
+import { cg, matching, hirLoader } from "core:compiler";
 import { Instance } from "std:zsharp/hir";
 
-let previousMatch: Match;
+let previousMatch: PatternMatch;
 let previousCast: Cast;
 let lookup: CompilerObject;
 
@@ -23,15 +24,8 @@ fun call(name: String, object: CompilerObject, trait: CompilerObject): IResult[C
     return cg.Call(member.Unwrap(), [Argument(object), Argument(trait)]);
 }
 
-fun match(object: CompilerObject, pattern: CompilerObject): IResult[MatchResult, Error] {
-    if (Traits.isTrait(pattern)) {
-        let has = call("has", object, pattern);
-        if (has.IsError) return Result[MatchResult].Error(has.UnwrapError());
-
-        let result = MatchResult();
-        result.Match = has.Unwrap();
-        return Result[MatchResult].Ok(result);
-    }
+fun match(object: CompilerObject, pattern: CompilerObject): IResult[CompilerObject, Error] {
+    if (Traits.isTrait(pattern)) return call("has", object, pattern);
 
     return previousMatch(object, pattern);
 }
@@ -54,8 +48,8 @@ fun cast(object: CompilerObject, type: CompilerObject): IResult[CompilerObject, 
 @entrypoint
 fun install() {
     lookup = hirLoader.LoadInstance(Lookup as Instance).Unwrap();
-    previousMatch = cg.Match;
-    cg.Match = match;
+    previousMatch = matching.Pattern;
+    matching.Pattern = match;
     previousCast = cg.Cast;
     cg.Cast = cast;
 }

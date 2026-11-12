@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.Matching.Static\ZSharp.Compiler.Matching.Static.csproj" />
     <ProjectReference Include="..\ZSharp.Platform.Runtime\ZSharp.Platform.Runtime.csproj" />
     <ProjectReference Include="..\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
     <ProjectReference Include="..\..\Packages\ZSharp.Package.DotNet\ZSharp.Package.DotNet.csproj" />

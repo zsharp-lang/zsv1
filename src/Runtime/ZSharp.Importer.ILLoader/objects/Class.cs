@@ -22,7 +22,7 @@ namespace ZSharp.Importer.ILLoader.Objects
         , IRTGetIndex
         , IRTSetIndex
         , IRTCastTo
-        , IRTTypeMatch
+        , IRTMatch
         , IILType
         , IAssignableTo
         , ICompileIRExpression
@@ -65,8 +65,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 ? Result.Error($"An array of {IL.GetElementType()!.Name} is made by giving {IL.GetElementType()!.Name} its length, as in {IL.GetElementType()!.Name}[4].")
                 : IL.IsValueType && arguments.Length == 0 && IL.GetConstructor(Type.EmptyTypes) is null
                 ? Result.Ok(new Literal(null, IL, loader))
-                : ZSharp.Compiler.Current.CG.Call(
-                OverloadGroup.Of(IL.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
+                : Candidates.Call(IL.GetConstructors().Select(constructor => new Method(loader, constructor, null)),
                 arguments
             );
 
@@ -128,25 +127,22 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// A value type is known to be of a type or not; a reference is checked as the
         /// code runs, and <c>null</c> is of no type.
         /// </summary>
-        public IResult<MatchResult, Error> Match(CompilerObject value, CompilerObject pattern)
+        public IResult Match(CompilerObject value, CompilerObject pattern)
         {
             if (IL.IsValueType)
                 return pattern.Is<IILType>(out var known) && known.GetILType() is { } type
-                    ? Result<MatchResult>.Ok(new MatchResult { Match = new Literal(type.IsAssignableFrom(IL), typeof(bool), loader) })
-                    : Result<MatchResult>.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a CLR type."));
+                    ? Result.Ok(new Literal(type.IsAssignableFrom(IL), typeof(bool), loader))
+                    : Result.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a CLR type."));
 
             return pattern.Is<ICompileIRType>(out _)
-                ? Result<MatchResult>.Ok(new MatchResult
-                {
-                    Match = new Call(
+                ? Result.Ok(new Call(
                         target => ZSharp.Compiler.Current.IR.CompileType(pattern, target).When(out var lowered).Error(out var error)
                             ? Result<LIR.ICallable>.Error(error)
                             : Result<LIR.ICallable>.Ok(loader.IsOf(IL, lowered!)),
                         [value],
                         () => loader.Class(typeof(bool))
-                    )
-                })
-                : Result<MatchResult>.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a type."));
+                    ))
+                : Result.Error(new UnsupportedError($"A value of {IL.Name} can only be matched against a type."));
         }
 
         /// <summary>
@@ -168,7 +164,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             if (getters.Length == 0)
                 return Result.Error($"The indexer of {IL.Name} can't be read.");
 
-            if (ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(getters), arguments).When(out var read).Error(out var error))
+            if (Candidates.Call(getters, arguments).When(out var read).Error(out var error))
                 return Result.Error(error);
 
             return Result.Ok(new Indexed(read!, value => Index(@object, arguments, value)));
@@ -188,7 +184,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             return setters.Length == 0
                 ? Result.Error($"The indexer of {IL.Name} can't be assigned.")
-                : ZSharp.Compiler.Current.CG.Call(OverloadGroup.Of(setters), [.. arguments, new Argument(value)]);
+                : Candidates.Call(setters, [.. arguments, new Argument(value)]);
         }
 
         /// <summary>
@@ -256,8 +252,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             var array = arguments.Length == 1 ? IL.MakeArrayType() : IL.MakeArrayType(arguments.Length);
 
-            return ZSharp.Compiler.Current.CG.Call(
-                OverloadGroup.Of(array.GetConstructors().Select(constructor => new Method(loader, constructor, null))),
+            return Candidates.Call(array.GetConstructors().Select(constructor => new Method(loader, constructor, null)),
                 arguments
             );
         }
@@ -393,7 +388,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 .ToArray<MethodBase>();
 
             if (methods.Length > 0)
-                return Result.Ok(OverloadGroup.Of(methods.Select(method => new Method(loader, method, receiver))));
+                return Candidates.Of(methods.Select(method => new Method(loader, method, receiver)));
 
             if (searched.SelectMany(type => type.GetProperties(flags)).FirstOrDefault(property => Named(property, member)) is { } found)
                 return Result.Ok(new Accessor(

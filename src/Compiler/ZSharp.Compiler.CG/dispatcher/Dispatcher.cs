@@ -5,9 +5,6 @@ namespace ZSharp.Compiler
         public static IResult Call(CompilerObject callee, Argument[] arguments)
             => Unsupported($"Object [{callee}] does not support call operation.");
 
-        public static IResult MatchParameter(CompilerObject parameter, ArgumentStream arguments)
-            => Unsupported($"Object [{parameter}] does not support matching arguments.");
-
         public static IResult Declare(CompilerObject definition)
             => Unsupported($"Object [{definition}] does not support declaration.");
 
@@ -22,11 +19,6 @@ namespace ZSharp.Compiler
 
         public static IResult Index(CompilerObject @object, Argument[] arguments, CompilerObject value)
             => Unsupported($"Object [{@object}] does not support index assignment operation.");
-
-        public static IResult<MatchResult, Error> Match(CompilerObject @object, CompilerObject pattern)
-            => Result<MatchResult>.Error(
-                new UnsupportedError($"Object [{@object}] does not support pattern matching.")
-            );
 
         public static IResult Member(CompilerObject @object, MemberIndex index)
             => Unsupported($"Object [{@object}] does not support member access by index.");

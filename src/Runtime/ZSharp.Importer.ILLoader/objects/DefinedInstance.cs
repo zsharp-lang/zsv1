@@ -100,8 +100,7 @@ namespace ZSharp.Importer.ILLoader.Objects
             };
 
         public IResult Call(Argument[] arguments)
-            => Scope.CG.Call(
-                OverloadGroup.Of(Class.Constructors.Select((constructor, index) => new Callable(
+            => Candidates.Call(Class.Constructors.Select((constructor, index) => new Callable(
                     $"A constructor of {Class.Name}",
                     On(lowered => lowered.Constructors[index]),
                     loader.CallParameters(constructor.Parameters, constructor.CustomMetadata),
@@ -110,7 +109,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                     loader,
                     isMethod: false,
                     Substitution
-                ))),
+                )),
                 arguments
             );
 
@@ -121,7 +120,7 @@ namespace ZSharp.Importer.ILLoader.Objects
                 .ToArray();
 
             if (methods.Length > 0)
-                return Result.Ok(OverloadGroup.Of(methods.Select(method => Class.Callable(method, @object, On(lowered => lowered.Methods[method]), Substitution))));
+                return Candidates.Of(methods.Select(method => Class.Callable(method, @object, On(lowered => lowered.Methods[method]), Substitution)));
 
             if (Class.Node.Fields.FirstOrDefault(field => field.Name == member) is { } field)
                 return Result.Ok(new Accessor(
