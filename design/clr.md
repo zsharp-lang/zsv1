@@ -227,17 +227,19 @@ C#'s rules rather than new ones:
   as in C#. A cast also goes down, to a type that derives from the value's or between an
   interface and a type that isn't sealed, and an object cast to a value type is unboxed.
   A cast that fails throws as the code runs, as C#'s `(T)x` does.
-- `value is of T` is a `Match` in HIR, which stands for the matching REI's pattern
-  match, with the type as its pattern. A CLR type answers it through `IRTMatch`: a reference is
+- `value is T` is a `Match` in HIR, which stands for the matching REI's pattern
+  match, with the type as a value pattern. A CLR type answers it through `IRTMatch`: a reference is
   checked as the code runs, so `null` is of no type, and a value of a value type is
   known to be of a type or not.
-- The part between `is` and `of` is a pattern. Patterns will be several things,
-  deconstruction `{}`, arrays `[]`, tuples `()` and names, but only names exist so far,
-  and how they work isn't settled. For now `value is name of T` defines `name` as a local
-  of `T`, through whatever compiles a `let` where the match is, so it is a variable like
-  any other: it can be read and assigned after the match, in a document, a method or a
-  function. It is assigned the value, cast to `T`, only if the value matched, and the
-  value is evaluated once. `_` names nothing.
+- What follows `is` is a pattern, a node kind of HIR's own (see the patterns in the
+  review's decisions). A value pattern, as a type, is matched with the match operator.
+  `value is let name: T` is a name pattern: it declares `name` as a local of `T`, through
+  whatever compiles a `let` where the match is, so it is a variable like any other, read
+  and assigned after the match. It loads to a binding, which the matching REI asks first:
+  the value is evaluated once, matched against `T`, and if it matched, the binding's
+  target, which is anything that can be set, is set to the value cast to `T`. `var` binds
+  one that can be set again. A name pattern needs its type for now, since a local is
+  declared with its type or its value, and a binding has no value where it is declared.
 - A `params` parameter takes the rest of the positional arguments, through the argument
   stream as any parameter takes what it needs: one argument that is already an array of
   its type is the array, as C#'s normal form has it, and otherwise each is converted to an

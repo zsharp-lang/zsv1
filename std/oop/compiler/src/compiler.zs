@@ -7,7 +7,7 @@
 // and `def Name of Interface` a Z# interface.
 
 import { String, Object, Boolean, Int32, List, Dictionary, HashSet, DotNet_Interface, explicitThis, static as clrStatic, DotNet_Class, DotNet_Module, ilLoader, Type as ClrType } from "core:runtime";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition, OperatorDefinition, Annotated, Overloadable } from "std:zsharp/hir";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, NamedMember, Get, Declare, BlockExpression, Statement, Cast as CastCode } from "std:zsharp/hir/code";
 import {
     Function as FunctionSyntax, Definition as DefinitionSyntax, TypeDefinition as TypeSyntax,
@@ -31,7 +31,7 @@ import {
     Global as LIRGlobal, GetGlobal, SetGlobal,
     Field as LIRField, Module as LIRModule, Expression as LIRExpression, Statement as LIRStatement, Code as LIRCode, Evaluate, Type as LIRType, ICallable
 } from "std:zsharp/lir";
-import { Bodies, ContainerCompiler, CapabilityContext, Language, Operator } from "std:zsharp/lang";
+import { Bodies, ContainerCompiler, CapabilityContext, Language, Operator, OperatorAnnotation } from "std:zsharp/lang";
 import { CodeLoaders } from "std:zsharp/compiler/code";
 import { Positional, Named } from "std:functions";
 import { Holder, Held, Initializing, keep } from "std:zsharp/lowering";
@@ -699,7 +699,7 @@ def Metaclass : CompilerObject, ICompileIRType, ICTCastTo, ICTImplicitCastTo, IR
 
         let index = 0;
         while (index < this.owner.node.Interfaces.Count) {
-            if (this.owner.node.Interfaces[index] is shape of Interface) {
+            if (this.owner.node.Interfaces[index] is let shape: Interface) {
                 if (ts.IsAssignableTo(target, typeOfValue(this.owner.base(index)))) return true;
             }
             index = index + 1;
@@ -730,7 +730,7 @@ def Metaclass : CompilerObject, ICompileIRType, ICTCastTo, ICTImplicitCastTo, IR
 
         index = 0;
         while (index < this.owner.node.Interfaces.Count) {
-            if (this.owner.node.Interfaces[index] is implemented of Interface) {
+            if (this.owner.node.Interfaces[index] is let implemented: Interface) {
                 let shape = ir.CompileType(typeOfValue(this.owner.base(index)), target);
                 if (shape.IsOk) polymorphism.implements(structure, shape.Unwrap() as Structure);
             }
@@ -940,6 +940,18 @@ def Evaluated : CompilerObject, ICompileIRStatement {
     }
 }
 
+// Whether a method is an operator, as `@operator` says of it.
+fun isOperator(method: Method, which: Object): Boolean {
+    let index = 0;
+    while (index < method.Annotations.Count) {
+        if (method.Annotations[index] is let said: OperatorAnnotation) {
+            if (which.Equals(said.Operator)) return true;
+        }
+        index = index + 1;
+    }
+    return false;
+}
+
 // What indexing a class or one of its values calls: its methods that are its index
 // operator, the class's for the class and the objects' for a value, called with what
 // is indexed as a call of them is.
@@ -948,7 +960,7 @@ fun callIndex(methods: List[Method], onClass: Boolean, object: CompilerObject, a
     let index = 0;
     while (index < methods.Count) {
         let method = methods[index];
-        if (Operator.Index.Equals(method.Operator)) {
+        if (isOperator(method, Operator.Index)) {
             if (method.IsClass == onClass) {
                 if (method.IsStatic == false) candidates.Add(Bound(hirLoader.LoadDefinition(method).Unwrap(), object));
             }
@@ -989,7 +1001,7 @@ fun accessorOf(property: Property): Method {
 fun ownedMember(definitions: List[Definition], name: String, owner: String): IResult[CompilerObject, Error] {
     let index = 0;
     while (index < definitions.Count) {
-        if (definitions[index] is named of NamedDefinition) {
+        if (definitions[index] is let named: NamedDefinition) {
             if (named.Name == name) return hirLoader.LoadDefinition(definitions[index]);
         }
         index = index + 1;
@@ -1077,7 +1089,7 @@ def Narrowing : CompilerObject, ICompileIRExpression, ITyped {
     }
 
     fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
-        if (target is polymorphism of Polymorphism) {
+        if (target is let polymorphism: Polymorphism) {
             let object = ir.CompileExpression(this.value, target);
             if (object.IsError) return object;
 
@@ -1170,7 +1182,7 @@ def InterfaceObject : CompilerObject, Holder, ICompileIRType, ICTCastTo, ICTImpl
     fun structure(this, target: Object): Structure {
         if (this.structures.ContainsKey(target)) return this.structures[target];
 
-        if (target is polymorphism of Polymorphism) {
+        if (target is let polymorphism: Polymorphism) {
             let container = this.container(target);
             if (this.structures.ContainsKey(target)) return this.structures[target];
 
@@ -1226,7 +1238,7 @@ def InterfaceObject : CompilerObject, Holder, ICompileIRType, ICTCastTo, ICTImpl
     fun holdMembers(this) {
         let index = 0;
         while (index < this.node.Methods.Count) {
-            if (this.method(index) is held of Held) held.hold(this);
+            if (this.method(index) is let held: Held) held.hold(this);
             index = index + 1;
         }
     }
@@ -1258,7 +1270,7 @@ def InterfaceObject : CompilerObject, Holder, ICompileIRType, ICTCastTo, ICTImpl
 
     // What a value of it might be: a class that implements it, or another interface.
     fun narrows(this, type: CompilerObject): Boolean {
-        if (type is other of InterfaceObject) return true;
+        if (type is let other: InterfaceObject) return true;
         return ts.IsAssignableTo(this, type);
     }
 
@@ -1399,7 +1411,7 @@ def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo
     fun structure(this, target: Object): Structure {
         if (this.structures.ContainsKey(target)) return this.structures[target];
 
-        if (target is polymorphism of Polymorphism) {
+        if (target is let polymorphism: Polymorphism) {
             let container = this.container(target);
             if (this.structures.ContainsKey(target)) return this.structures[target];
 
@@ -1428,11 +1440,11 @@ def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo
             // platform's own type is implemented as the platform implements it.
             index = 0;
             while (index < this.node.Interfaces.Count) {
-                if (this.node.Interfaces[index] is shape of Interface) {
+                if (this.node.Interfaces[index] is let shape: Interface) {
                     let implemented = ir.CompileType(this.base(index), target);
                     if (implemented.IsOk) polymorphism.implements(structure, implemented.Unwrap() as Structure);
                 } else {
-                    if (target is platform of PlatformInterfaces) {
+                    if (target is let platform: PlatformInterfaces) {
                         let type = ir.CompileType(this.base(index), target);
                         if (type.IsOk) platform.implements(structure, type.Unwrap());
                     }
@@ -1467,7 +1479,7 @@ def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo
         // can't have the class if it can't implement it.
         let index = 0;
         while (index < this.node.Interfaces.Count) {
-            if (this.node.Interfaces[index] is shape of Interface) {
+            if (this.node.Interfaces[index] is let shape: Interface) {
                 let implemented = ir.CompileType(this.base(index), target);
                 if (implemented.IsError) return this.failed(target, implemented.UnwrapError().ToString());
 
@@ -1478,7 +1490,7 @@ def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo
                     method = method + 1;
                 }
             } else {
-                if ((target is platform of PlatformInterfaces) == false) return this.failed(target, "The class " + this.node.Name + " implements a type of a platform's own, which this target can't implement.");
+                if ((target is let platform: PlatformInterfaces) == false) return this.failed(target, "The class " + this.node.Name + " implements a type of a platform's own, which this target can't implement.");
                 let type = ir.CompileType(this.base(index), target);
                 if (type.IsError) return this.failed(target, "The class " + this.node.Name + " implements what can't be lowered for this target: " + type.UnwrapError());
             }
@@ -1538,13 +1550,13 @@ def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo
     fun holdMembers(this) {
         let index = 0;
         while (index < this.node.Methods.Count) {
-            if (this.method(index) is held of Held) held.hold(this);
+            if (this.method(index) is let held: Held) held.hold(this);
             index = index + 1;
         }
 
         index = 0;
         while (index < this.node.Constructors.Count) {
-            if (this.constructor(index) is held of Held) held.hold(this);
+            if (this.constructor(index) is let held: Held) held.hold(this);
             index = index + 1;
         }
     }
@@ -1828,19 +1840,19 @@ def Members {
     }
 
     fun expression(this, compiler: ASTCompiler, node: ExpressionSyntax): IResult[Expression, Error] {
-        if (node is local of LetSyntax) return this.field(compiler, local, List[Expression]());
+        if (node is let local: LetSyntax) return this.field(compiler, local, List[Expression]());
         return this.expressions(compiler, node);
     }
 
     // A field can be decorated, as a member defined with `fun` can: its decorators are
     // given the field as it is built, before it is added.
     fun statement(this, compiler: ASTCompiler, node: StatementSyntax): IResult[Statement, Error] {
-        if (node is decorated of DecoratedSyntax) {
+        if (node is let decorated: DecoratedSyntax) {
             let decorators: List[ExpressionSyntax] = null;
             let inner = Language.Undecorate(decorated, decorators);
 
-            if (inner is expression of ExpressionStatementSyntax) {
-                if (expression.Expression is local of LetSyntax) {
+            if (inner is let expression: ExpressionStatementSyntax) {
+                if (expression.Expression is let local: LetSyntax) {
                     let compiled = Language.CompileDecorators(compiler, decorators);
                     if (compiled.IsError) return Result[Statement].Error(compiled.UnwrapError());
 
@@ -1859,11 +1871,11 @@ def Members {
         // of its property, and a new a constructor of a class. Anything else is compiled as
         // it would be anywhere, and held.
         if (Bodies.DefinitionOf(compiler.Contexts.Current) == this.owner) {
-            if (node is accessor of AccessorSyntax) {
+            if (node is let accessor: AccessorSyntax) {
                 if (this.names.Contains(accessor.Name) == false) this.names.Add(accessor.Name);
                 return metaTypes.Compile(compiler, node, Method as Instance);
             }
-            if (node is function of FunctionSyntax) {
+            if (node is let function: FunctionSyntax) {
                 if (function.Name != null) {
                     if (function.Name.Length > 0) {
                         if (this.names.Contains(function.Name) == false) this.names.Add(function.Name);
@@ -1871,7 +1883,7 @@ def Members {
                 }
                 return metaTypes.Compile(compiler, node, Method as Instance);
             }
-            if (node is constructor of ConstructorSyntax) {
+            if (node is let constructor: ConstructorSyntax) {
                 if (this.isClass) return metaTypes.Compile(compiler, node, Constructor as Instance);
             }
         }
@@ -2119,8 +2131,8 @@ def ClassFiller {
         while (index < this.definition.Content.Statements.Count) {
             let decorators: List[ExpressionSyntax] = null;
             let statement = Language.Undecorate(this.definition.Content.Statements[index], decorators);
-            if (statement is written of DefinitionStatementSyntax) {
-                if (written.Definition is accessor of AccessorSyntax) {
+            if (statement is let written: DefinitionStatementSyntax) {
+                if (written.Definition is let accessor: AccessorSyntax) {
                     if (defined.Contains(accessor.Name) == false) {
                         defined.Add(accessor.Name);
                         let callee = NamedMember();
@@ -2150,7 +2162,7 @@ fun members(compiler: ASTCompiler): Members {
 
 @metaType(Class)
 fun compileClass(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
-    if (definition is type of TypeSyntax) {
+    if (definition is let type: TypeSyntax) {
         let filler = ClassFiller(compiler, type, self, true);
         return Result[CompiledDefinition].Ok(CompiledDefinition(self, Bodies.Construct(Class as Instance, StringLiteral(type.Name)), Class as Instance, filler.fill, null));
     }
@@ -2159,7 +2171,7 @@ fun compileClass(compiler: ASTCompiler, definition: DefinitionSyntax, self: Loca
 
 @metaType(Interface)
 fun compileInterface(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
-    if (definition is type of TypeSyntax) {
+    if (definition is let type: TypeSyntax) {
         let filler = ClassFiller(compiler, type, self, false);
         return Result[CompiledDefinition].Ok(CompiledDefinition(self, Bodies.Construct(Interface as Instance, StringLiteral(type.Name)), Interface as Instance, filler.fill, null));
     }
@@ -2168,11 +2180,11 @@ fun compileInterface(compiler: ASTCompiler, definition: DefinitionSyntax, self: 
 
 @metaType(Method)
 fun compileMethod(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
-    if (definition is function of FunctionSyntax) {
+    if (definition is let function: FunctionSyntax) {
         // An accessor is the method of its property that reads or writes it.
         let name = function.Name;
         if (name == null) name = "";
-        if (definition is accessor of AccessorSyntax) {
+        if (definition is let accessor: AccessorSyntax) {
             name = "get " + accessor.Name;
             if (accessor.Kind == AccessorKind.Set) name = "set " + accessor.Name;
         }
@@ -2185,7 +2197,7 @@ fun compileMethod(compiler: ASTCompiler, definition: DefinitionSyntax, self: Loc
 
 @metaType(Constructor)
 fun compileConstructor(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
-    if (definition is constructor of ConstructorSyntax) {
+    if (definition is let constructor: ConstructorSyntax) {
         let name = constructor.Name;
         if (name == null) name = "";
 

@@ -27,7 +27,7 @@ class wherever nothing else compiles one, and `def Name of Interface` a Z# inter
 | `Class` | `Instance`, `Definition`, `Type`, `Named`, `Annotated` | a class: its fields, methods, properties, constructors and the interfaces it implements |
 | `Interface` | `Instance`, `Definition`, `Type`, `Named` | an interface: methods with no code |
 | `Field` | `Instance`, `Definition` | a field |
-| `Method` | `Instance`, `Definition`, `OperatorDefinition`, `Annotated`, `Overloadable` | a method. Its object is its first parameter, `ThisParameter`, unless it is static. Methods of one name overload. |
+| `Method` | `Instance`, `Definition`, `Annotated`, `Overloadable` | a method. Its object is its first parameter, `ThisParameter`, unless it is static. Methods of one name overload. |
 | `Property` | `Instance`, `Definition`, `Named` | what its accessors, the methods `get Name` and `set Name`, read and write |
 | `Constructor` | `Instance`, `Definition`, `Annotated` | makes an object, runs its code on it, and gives it. The unnamed one is what calling the class runs; a named one is a member of the class. |
 | `Receiver` | `Instance` | the object a constructor makes, as its code refers to it |
@@ -38,6 +38,7 @@ class wherever nothing else compiles one, and `def Name of Interface` a Z# inter
 | Decorator | What it marks |
 |---|---|
 | `@static` | a member as the class's own, not its objects'. A static field is one variable, and a static method is a function with no object. |
+| `@operator` | (from `core:zsharp`) a method as an operator, as `@operator(Operator.Index)` makes it the class's index operator: an `OperatorAnnotation` the class finds among its methods' annotations. |
 | `@class` | a member as the class's type object's. A class field is one for the class, and a class method runs on the class. An interface's class method is one that the class of each of its values has. |
 
 A class is a value: the one object of its metaclass, whose fields are the class fields

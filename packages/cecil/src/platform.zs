@@ -12,7 +12,7 @@ def Body of DotNet_Class {
     let il: ILProcessor;
     let locals: Dictionary[LIRLocal, VariableDefinition];
     let starts: Dictionary[LIRLoop, Instruction];
-    let ends: Dictionary[LIRLoop, Instruction];
+    let ends: Dictionary[Breakable, Instruction];
 
     @explicitThis new(this, method: MethodDefinition, function: LIRFunction) {
         this.method = method;
@@ -20,7 +20,7 @@ def Body of DotNet_Class {
         this.il = method.Body.GetILProcessor();
         this.locals = Dictionary[LIRLocal, VariableDefinition]();
         this.starts = Dictionary[LIRLoop, Instruction]();
-        this.ends = Dictionary[LIRLoop, Instruction]();
+        this.ends = Dictionary[Breakable, Instruction]();
         method.Body.InitLocals = true;
     }
 
@@ -42,7 +42,7 @@ def Body of DotNet_Class {
     }
 
     @explicitThis fun variable(this, variable: LIRVariable): VariableDefinition {
-        if (variable is local of LIRLocal) {
+        if (variable is let local: LIRLocal) {
             if (this.locals.ContainsKey(local)) return this.locals[local];
         }
         return fail("A local isn't one of its function's.") as VariableDefinition;
@@ -143,8 +143,8 @@ def Cecil of DotNet_Class : ClrPlatform {
         // marked as one, as the IL loader's importer reads it.
         index = 0;
         while (index < unit.Metadata.Count) {
-            if (unit.Metadata[index] is defines of DefinesClass) this.classDefinition(defines.Definition);
-            if (unit.Metadata[index] is entry of LIREntryPoint) this.function(entry.Function).CustomAttributes.Add(CustomAttribute(this.attribute(EntryPointAttribute)));
+            if (unit.Metadata[index] is let defines: DefinesClass) this.classDefinition(defines.Definition);
+            if (unit.Metadata[index] is let entry: LIREntryPoint) this.function(entry.Function).CustomAttributes.Add(CustomAttribute(this.attribute(EntryPointAttribute)));
             index = index + 1;
         }
 
@@ -258,7 +258,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     @explicitThis fun annotate(this, target: ICustomAttributeProvider, metadata: List[LIRMetadata]) {
         let index = 0;
         while (index < metadata.Count) {
-            if (metadata[index] is kept of KeptAnnotation) target.CustomAttributes.Add(this.metadataOf(kept.Value));
+            if (metadata[index] is let kept: KeptAnnotation) target.CustomAttributes.Add(this.metadataOf(kept.Value));
             index = index + 1;
         }
     }
@@ -287,10 +287,10 @@ def Cecil of DotNet_Class : ClrPlatform {
     // A constant of an attribute, as its own type gives it.
     @explicitThis fun constant(this, value: Object): CustomAttributeArgument {
         let system = this.main.TypeSystem;
-        if (value is text of String) return CustomAttributeArgument(system.String, text);
-        if (value is number of Int32) return CustomAttributeArgument(system.Int32, number);
-        if (value is long of Int64) return CustomAttributeArgument(system.Int64, long);
-        if (value is flag of Boolean) return CustomAttributeArgument(system.Boolean, flag);
+        if (value is let text: String) return CustomAttributeArgument(system.String, text);
+        if (value is let number: Int32) return CustomAttributeArgument(system.Int32, number);
+        if (value is let long: Int64) return CustomAttributeArgument(system.Int64, long);
+        if (value is let flag: Boolean) return CustomAttributeArgument(system.Boolean, flag);
         return fail("An annotation kept as metadata has state that isn't a constant.") as CustomAttributeArgument;
     }
 
@@ -424,17 +424,17 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     @explicitThis fun type(this, type: LIRType): TypeReference {
         if (type == null) return this.system("System.Void");
-        if (type is clr of ClrType) return this.references.type(clr);
-        if (type is array of ClrArrayType) {
+        if (type is let clr: ClrType) return this.references.type(clr);
+        if (type is let array: ClrArrayType) {
             if (array.Rank == 1) return ArrayType(this.type(array.Element));
             return ArrayType(this.type(array.Element), array.Rank);
         }
-        if (type is reference of ByRefType) return ByReferenceType(this.type(reference.Target));
-        if (type is pointer of ClrPointerType) return PointerType(this.type(pointer.Target));
-        if (type is instance of GenericInstance) {
+        if (type is let reference: ByRefType) return ByReferenceType(this.type(reference.Target));
+        if (type is let pointer: ClrPointerType) return PointerType(this.type(pointer.Target));
+        if (type is let instance: GenericInstance) {
             // An instance is of the definition itself, not of what its own code calls it.
             let definition: TypeReference = null;
-            if (instance.Definition is own of ClassDefinition) definition = this.classDefinition(own);
+            if (instance.Definition is let own: ClassDefinition) definition = this.classDefinition(own);
             else definition = this.type(instance.Definition);
             let made = GenericInstanceType(definition);
             let index = 0;
@@ -444,11 +444,11 @@ def Cecil of DotNet_Class : ClrPlatform {
             }
             return made;
         }
-        if (type is functionType of LIRFunctionType) return this.system("System.IntPtr");
-        if (type is boxed of LIRReference) return this.boxOf(this.type(boxed.Target));
-        if (type is structure of LIRStructure) return this.structure(structure);
-        if (type is defined of ClassDefinition) return this.selfOf(this.classDefinition(defined));
-        if (type is parameter of ClassGenericParameter) {
+        if (type is let functionType: LIRFunctionType) return this.system("System.IntPtr");
+        if (type is let boxed: LIRReference) return this.boxOf(this.type(boxed.Target));
+        if (type is let structure: LIRStructure) return this.structure(structure);
+        if (type is let defined: ClassDefinition) return this.selfOf(this.classDefinition(defined));
+        if (type is let parameter: ClassGenericParameter) {
             if (this.definedParameters.ContainsKey(parameter)) return this.definedParameters[parameter];
             return fail("A type parameter of a class is only known inside its class.") as TypeReference;
         }
@@ -456,9 +456,9 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     @explicitThis fun isValueType(this, type: LIRType): Boolean {
-        if (type is clr of ClrType) return clr.IsValueType;
-        if (type is instance of GenericInstance) return this.isValueType(instance.Definition);
-        if (type is structure of LIRStructure) return this.polymorphicOf(structure) == null;
+        if (type is let clr: ClrType) return clr.IsValueType;
+        if (type is let instance: GenericInstance) return this.isValueType(instance.Definition);
+        if (type is let structure: LIRStructure) return this.polymorphicOf(structure) == null;
         return false;
     }
 
@@ -524,10 +524,10 @@ def Cecil of DotNet_Class : ClrPlatform {
         if (this.methods.ContainsKey(method)) return this.methods[method];
 
         let result: MethodReference = null;
-        if (method.DeclaringType is array of ClrArrayType) result = this.arrayMethod(method, array);
+        if (method.DeclaringType is let array: ClrArrayType) result = this.arrayMethod(method, array);
         else {
             result = this.references.method(method);
-            if (method.DeclaringType is instance of GenericInstance) result = this.onType(result, this.type(instance));
+            if (method.DeclaringType is let instance: GenericInstance) result = this.onType(result, this.type(instance));
         }
 
         if (method.TypeArguments.Count > 0) {
@@ -588,7 +588,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     @explicitThis fun field(this, field: ClrField): FieldReference {
         let definition = this.references.field(field);
-        if (field.DeclaringType is instance of GenericInstance) return FieldReference(definition.Name, definition.FieldType, this.type(instance));
+        if (field.DeclaringType is let instance: GenericInstance) return FieldReference(definition.Name, definition.FieldType, this.type(instance));
         return definition;
     }
 
@@ -597,7 +597,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     @explicitThis fun polymorphicOf(this, structure: LIRStructure): Polymorphic {
         let index = 0;
         while (index < structure.Metadata.Count) {
-            if (structure.Metadata[index] is mark of Polymorphic) return mark;
+            if (structure.Metadata[index] is let mark: Polymorphic) return mark;
             index = index + 1;
         }
         return null;
@@ -606,7 +606,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     @explicitThis fun ownerOf(this, function: LIRFunction): LIRStructure {
         let index = 0;
         while (index < function.Metadata.Count) {
-            if (function.Metadata[index] is method of MethodOf) return method.Owner;
+            if (function.Metadata[index] is let method: MethodOf) return method.Owner;
             index = index + 1;
         }
         return null;
@@ -730,8 +730,8 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     @explicitThis fun structureOf(this, target: LIRExpression): LIRStructure {
         let type = this.typeOf(target);
-        if (type is boxed of LIRReference) type = boxed.Target;
-        if (type is structure of LIRStructure) return structure;
+        if (type is let boxed: LIRReference) type = boxed.Target;
+        if (type is let structure: LIRStructure) return structure;
         return fail("A field is read from a structure, or a reference to one.") as LIRStructure;
     }
 
@@ -744,7 +744,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     // address of a value.
     @explicitThis fun fieldOwner(this, body: Body, target: LIRExpression) {
         let type = this.typeOf(target);
-        if (type is boxed of LIRReference) {
+        if (type is let boxed: LIRReference) {
             this.expression(body, target);
             body.il.Emit(OpCodes.Ldflda, this.boxValue(this.type(type)));
             return;
@@ -922,7 +922,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     @explicitThis fun baseConstructor(this, definition: ClassDefinition): MethodReference {
         if (definition.Base == null) return this.objectConstructor();
 
-        if (definition.Base is defined of ClassDefinition) {
+        if (definition.Base is let defined: ClassDefinition) {
             this.classDefinition(defined);
             let index = 0;
             while (index < defined.Constructors.Count) {
@@ -932,7 +932,7 @@ def Cecil of DotNet_Class : ClrPlatform {
             return fail("The base of " + definition.Name + " has no constructor that takes nothing.") as MethodReference;
         }
 
-        if (definition.Base is clr of ClrType) {
+        if (definition.Base is let clr: ClrType) {
             let flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
             let found = this.references.system(clr).GetConstructor(flags, Type.EmptyTypes);
             if (found == null) fail("The base of " + definition.Name + " has no constructor that takes nothing.");
@@ -963,28 +963,28 @@ def Cecil of DotNet_Class : ClrPlatform {
     @explicitThis fun classFieldOf(this, field: ClassField): FieldReference {
         let owner = this.ownerOfMember(field.Owner);
         let declared = this.definedFields[field];
-        if (owner is instance of GenericInstanceType) return FieldReference(declared.Name, declared.FieldType, owner);
+        if (owner is let instance: GenericInstanceType) return FieldReference(declared.Name, declared.FieldType, owner);
         return declared;
     }
 
     @explicitThis fun classMethodOf(this, method: ClassMethod): MethodReference {
         let owner = this.ownerOfMember(method.Owner);
         let declared = this.definedMethods[method];
-        if (owner is instance of GenericInstanceType) return this.onType(declared, owner);
+        if (owner is let instance: GenericInstanceType) return this.onType(declared, owner);
         return declared;
     }
 
     @explicitThis fun classConstructorOf(this, constructor: ClassConstructor): MethodReference {
         let owner = this.ownerOfMember(constructor.Owner);
         let declared = this.definedConstructors[constructor];
-        if (owner is instance of GenericInstanceType) return this.onType(declared, owner);
+        if (owner is let instance: GenericInstanceType) return this.onType(declared, owner);
         return declared;
     }
 
     // ---- Statements
 
     @explicitThis fun statement(this, body: Body, statement: LIRStatement) {
-        if (statement is block of LIRBlock) {
+        if (statement is let block: LIRBlock) {
             let index = 0;
             while (index < block.Locals.Count) {
                 body.locals[block.Locals[index]] = body.local(this.type(block.Locals[index].Type));
@@ -997,36 +997,36 @@ def Cecil of DotNet_Class : ClrPlatform {
             }
             return;
         }
-        if (statement is evaluated of Evaluate) {
+        if (statement is let evaluated: Evaluate) {
             this.expression(body, evaluated.Expression);
             if (this.typeOf(evaluated.Expression) != null) body.il.Emit(OpCodes.Pop);
             return;
         }
-        if (statement is assigned of SetLocal) {
+        if (statement is let assigned: SetLocal) {
             this.expression(body, assigned.Value);
-            if (assigned.Variable is parameter of LIRParameter) body.il.Emit(OpCodes.Starg, body.parameter(parameter));
+            if (assigned.Variable is let parameter: LIRParameter) body.il.Emit(OpCodes.Starg, body.parameter(parameter));
             else body.il.Emit(OpCodes.Stloc, body.variable(assigned.Variable));
             return;
         }
-        if (statement is assignedGlobal of SetGlobal) {
+        if (statement is let assignedGlobal: SetGlobal) {
             this.expression(body, assignedGlobal.Value);
             body.il.Emit(OpCodes.Stsfld, this.global(assignedGlobal.Global));
             return;
         }
-        if (statement is written of SetField) {
+        if (statement is let written: SetField) {
             this.structureOf(written.Target);
             this.fieldOwner(body, written.Target);
             this.expression(body, written.Value);
             body.il.Emit(OpCodes.Stfld, this.fieldOf(written.Field));
             return;
         }
-        if (statement is stored of Store) {
+        if (statement is let stored: Store) {
             this.expression(body, stored.Reference);
             this.expression(body, stored.Value);
             body.il.Emit(OpCodes.Stfld, this.boxValue(this.type(this.typeOf(stored.Reference))));
             return;
         }
-        if (statement is branch of LIRIf) {
+        if (statement is let branch: LIRIf) {
             let otherwise = body.label();
             let end = body.label();
             this.expression(body, branch.Condition);
@@ -1038,28 +1038,28 @@ def Cecil of DotNet_Class : ClrPlatform {
             body.il.Append(end);
             return;
         }
-        if (statement is repeated of LIRLoop) {
+        if (statement is let repeated: LIRLoop) {
             let start = body.label();
             let end = body.label();
             body.il.Append(start);
             body.starts[repeated] = start;
-            body.ends[repeated] = end;
+            body.ends[repeated as Breakable] = end;
             this.statement(body, repeated.Body);
             body.starts.Remove(repeated);
-            body.ends.Remove(repeated);
+            body.ends.Remove(repeated as Breakable);
             body.il.Emit(OpCodes.Br, start);
             body.il.Append(end);
             return;
         }
-        if (statement is left of LIRBreak) {
-            body.il.Emit(OpCodes.Br, body.ends[left.Loop]);
+        if (statement is let left: LIRBreak) {
+            body.il.Emit(OpCodes.Br, body.ends[left.Target]);
             return;
         }
-        if (statement is next of LIRContinue) {
+        if (statement is let next: LIRContinue) {
             body.il.Emit(OpCodes.Br, body.starts[next.Loop]);
             return;
         }
-        if (statement is returned of LIRReturn) {
+        if (statement is let returned: LIRReturn) {
             if (returned.Value != null) this.expression(body, returned.Value);
             body.il.Emit(OpCodes.Ret);
             return;
@@ -1070,76 +1070,76 @@ def Cecil of DotNet_Class : ClrPlatform {
     // ---- Expressions
 
     @explicitThis fun typeOf(this, expression: LIRExpression): LIRType {
-        if (expression is constant of Constant) return constant.Type;
-        if (expression is local of GetLocal) return local.Variable.Type;
-        if (expression is global of GetGlobal) return global.Global.Type;
-        if (expression is field of GetField) return field.Field.Type;
-        if (expression is pointer of GetFunction) return LIRFunctionType(pointer.Callable.Signature);
-        if (expression is call of LIRCall) return call.Callable.Signature.ReturnType;
-        if (expression is indirect of CallIndirect) return indirect.Signature.ReturnType;
-        if (expression is made of LIRNew) return made.Structure;
-        if (expression is allocated of Allocate) return LIRReference(this.typeOf(allocated.Value));
-        if (expression is loaded of LIRLoad) return (this.typeOf(loaded.Reference) as LIRReference).Target;
-        if (expression is sequence of Sequence) return this.typeOf(sequence.Result);
-        if (expression is address of AddressOf) return address.Type;
+        if (expression is let constant: Constant) return constant.Type;
+        if (expression is let local: GetLocal) return local.Variable.Type;
+        if (expression is let global: GetGlobal) return global.Global.Type;
+        if (expression is let field: GetField) return field.Field.Type;
+        if (expression is let pointer: GetFunction) return LIRFunctionType(pointer.Callable.Signature);
+        if (expression is let call: LIRCall) return call.Callable.Signature.ReturnType;
+        if (expression is let indirect: CallIndirect) return indirect.Signature.ReturnType;
+        if (expression is let made: LIRNew) return made.Structure;
+        if (expression is let allocated: Allocate) return LIRReference(this.typeOf(allocated.Value));
+        if (expression is let loaded: LIRLoad) return (this.typeOf(loaded.Reference) as LIRReference).Target;
+        if (expression is let sequence: Sequence) return this.typeOf(sequence.Result);
+        if (expression is let address: AddressOf) return address.Type;
         return fail("The Cecil platform can't type a " + expression.GetType().Name + ".") as LIRType;
     }
 
     @explicitThis fun expression(this, body: Body, expression: LIRExpression) {
-        if (expression is constant of Constant) {
+        if (expression is let constant: Constant) {
             this.constant(body, constant);
             return;
         }
-        if (expression is local of GetLocal) {
-            if (local.Variable is parameter of LIRParameter) body.il.Emit(OpCodes.Ldarg, body.parameter(parameter));
+        if (expression is let local: GetLocal) {
+            if (local.Variable is let parameter: LIRParameter) body.il.Emit(OpCodes.Ldarg, body.parameter(parameter));
             else body.il.Emit(OpCodes.Ldloc, body.variable(local.Variable));
             return;
         }
-        if (expression is global of GetGlobal) {
+        if (expression is let global: GetGlobal) {
             body.il.Emit(OpCodes.Ldsfld, this.global(global.Global));
             return;
         }
-        if (expression is pointer of GetFunction) {
-            if (pointer.Callable is target of LIRFunction) {
+        if (expression is let pointer: GetFunction) {
+            if (pointer.Callable is let target: LIRFunction) {
                 body.il.Emit(OpCodes.Ldftn, this.function(target));
                 return;
             }
             fail("Only a function defined in LIR can be used as a value.");
         }
-        if (expression is call of LIRCall) {
+        if (expression is let call: LIRCall) {
             this.call(body, call);
             return;
         }
-        if (expression is indirect of CallIndirect) {
+        if (expression is let indirect: CallIndirect) {
             this.callIndirect(body, indirect);
             return;
         }
-        if (expression is field of GetField) {
+        if (expression is let field: GetField) {
             this.structureOf(field.Target);
             this.fieldOwner(body, field.Target);
             body.il.Emit(OpCodes.Ldfld, this.fieldOf(field.Field));
             return;
         }
-        if (expression is made of LIRNew) {
+        if (expression is let made: LIRNew) {
             this.construct(body, made);
             return;
         }
-        if (expression is allocated of Allocate) {
+        if (expression is let allocated: Allocate) {
             this.expression(body, allocated.Value);
             body.il.Emit(OpCodes.Newobj, this.boxConstructor(this.type(this.typeOf(allocated))));
             return;
         }
-        if (expression is loaded of LIRLoad) {
+        if (expression is let loaded: LIRLoad) {
             this.expression(body, loaded.Reference);
             body.il.Emit(OpCodes.Ldfld, this.boxValue(this.type(this.typeOf(loaded.Reference))));
             return;
         }
-        if (expression is sequence of Sequence) {
+        if (expression is let sequence: Sequence) {
             this.statement(body, sequence.Block);
             this.expression(body, sequence.Result);
             return;
         }
-        if (expression is address of AddressOf) {
+        if (expression is let address: AddressOf) {
             this.address(body, address.Variable);
             return;
         }
@@ -1154,24 +1154,24 @@ def Cecil of DotNet_Class : ClrPlatform {
             this.zero(body, constant.Type);
             return;
         }
-        if (value is text of String) {
+        if (value is let text: String) {
             body.il.Emit(OpCodes.Ldstr, text);
             return;
         }
-        if (value is flag of Boolean) {
+        if (value is let flag: Boolean) {
             if (flag) body.il.Emit(OpCodes.Ldc_I4_1);
             else body.il.Emit(OpCodes.Ldc_I4_0);
             return;
         }
-        if (value is number of Int32) {
+        if (value is let number: Int32) {
             body.il.Emit(OpCodes.Ldc_I4, number);
             return;
         }
-        if (value is long of Int64) {
+        if (value is let long: Int64) {
             body.il.Emit(OpCodes.Ldc_I8, long);
             return;
         }
-        if (value is type of Type) {
+        if (value is let type: Type) {
             body.il.Emit(OpCodes.Ldtoken, this.type(this.reflected.Type(type)));
             let types: Type = Type;
             body.il.Emit(OpCodes.Call, this.method(this.reflected.Method(types.GetMethod("GetTypeFromHandle"))));
@@ -1231,62 +1231,62 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     @explicitThis fun takesAddress(this, callable: ICallable): Boolean {
-        if (callable is clr of ClrMethod) return clr.TakesAddress;
-        if (callable is member of InstanceMember) return this.takesAddress(member.Member);
-        if (callable is instance of MethodInstance) return this.takesAddress(instance.Method);
+        if (callable is let clr: ClrMethod) return clr.TakesAddress;
+        if (callable is let member: InstanceMember) return this.takesAddress(member.Member);
+        if (callable is let instance: MethodInstance) return this.takesAddress(instance.Method);
         return false;
     }
 
     // Calls what is called, its arguments on the stack.
     @explicitThis fun invoke(this, body: Body, callable: ICallable) {
-        if (callable is function of LIRFunction) {
+        if (callable is let function: LIRFunction) {
             if (this.operation(body, function)) return;
             let declared = this.function(function);
             if (this.instanceMethods.ContainsKey(function)) body.il.Emit(OpCodes.Callvirt, declared);
             else body.il.Emit(OpCodes.Call, declared);
             return;
         }
-        if (callable is clr of ClrMethod) {
+        if (callable is let clr: ClrMethod) {
             this.callClr(body, clr, this.method(clr));
             return;
         }
-        if (callable is code of ClrCode) {
+        if (callable is let code: ClrCode) {
             this.code(body, code);
             return;
         }
-        if (callable is defined of ClassMethod) {
+        if (callable is let defined: ClassMethod) {
             if (defined.IsStatic) body.il.Emit(OpCodes.Call, this.classMethodOf(defined));
             else body.il.Emit(OpCodes.Callvirt, this.classMethodOf(defined));
             return;
         }
-        if (callable is constructor of ClassConstructor) {
+        if (callable is let constructor: ClassConstructor) {
             body.il.Emit(OpCodes.Newobj, this.classConstructorOf(constructor));
             return;
         }
-        if (callable is access of ClassFieldAccess) {
+        if (callable is let access: ClassFieldAccess) {
             if (access.IsSet) body.il.Emit(OpCodes.Stfld, this.classFieldOf(access.Field));
             else body.il.Emit(OpCodes.Ldfld, this.classFieldOf(access.Field));
             return;
         }
-        if (callable is member of InstanceMember) {
+        if (callable is let member: InstanceMember) {
             let owner = this.type(member.Owner);
-            if (member.Member is onDefinition of ClrMethod) {
+            if (member.Member is let onDefinition: ClrMethod) {
                 this.callClr(body, onDefinition, this.onType(this.references.method(onDefinition), owner));
                 return;
             }
-            if (member.Member is method of ClassMethod) {
+            if (member.Member is let method: ClassMethod) {
                 this.classMethodOf(method);
                 let reference = this.onType(this.definedMethods[method], owner);
                 if (method.IsStatic) body.il.Emit(OpCodes.Call, reference);
                 else body.il.Emit(OpCodes.Callvirt, reference);
                 return;
             }
-            if (member.Member is made of ClassConstructor) {
+            if (member.Member is let made: ClassConstructor) {
                 this.classConstructorOf(made);
                 body.il.Emit(OpCodes.Newobj, this.onType(this.definedConstructors[made], owner));
                 return;
             }
-            if (member.Member is field of ClassFieldAccess) {
+            if (member.Member is let field: ClassFieldAccess) {
                 this.classFieldOf(field.Field);
                 let declared = this.definedFields[field.Field];
                 let reference = FieldReference(declared.Name, declared.FieldType, owner);
@@ -1295,19 +1295,19 @@ def Cecil of DotNet_Class : ClrPlatform {
                 return;
             }
         }
-        if (callable is instance of MethodInstance) {
-            if (instance.Method is generic of ClrMethod) {
+        if (callable is let instance: MethodInstance) {
+            if (instance.Method is let generic: ClrMethod) {
                 this.callClr(body, generic, this.instantiated(this.method(generic), instance));
                 return;
             }
             let isStatic = false;
             let element: MethodReference = null;
-            if (instance.Method is own of ClassMethod) {
+            if (instance.Method is let own: ClassMethod) {
                 element = this.classMethodOf(own);
                 isStatic = own.IsStatic;
             }
-            if (instance.Method is onInstance of InstanceMember) {
-                if (onInstance.Member is inner of ClassMethod) {
+            if (instance.Method is let onInstance: InstanceMember) {
+                if (onInstance.Member is let inner: ClassMethod) {
                     this.classMethodOf(inner);
                     element = this.onType(this.definedMethods[inner], this.type(onInstance.Owner));
                     isStatic = inner.IsStatic;
@@ -1345,11 +1345,11 @@ def Cecil of DotNet_Class : ClrPlatform {
         let index = 0;
         while (index < function.Metadata.Count) {
             let metadata = function.Metadata[index];
-            if (metadata is cast of CastDown) {
+            if (metadata is let cast: CastDown) {
                 body.il.Emit(OpCodes.Unbox_Any, this.type(cast.Target));
                 return true;
             }
-            if (metadata is test of TypeTest) {
+            if (metadata is let test: TypeTest) {
                 body.il.Emit(OpCodes.Isinst, this.type(test.Target));
                 body.il.Emit(OpCodes.Ldnull);
                 body.il.Emit(OpCodes.Cgt_Un);
@@ -1363,8 +1363,8 @@ def Cecil of DotNet_Class : ClrPlatform {
     @explicitThis fun isOperation(this, function: LIRFunction): Boolean {
         let index = 0;
         while (index < function.Metadata.Count) {
-            if (function.Metadata[index] is cast of CastDown) return true;
-            if (function.Metadata[index] is test of TypeTest) return true;
+            if (function.Metadata[index] is let cast: CastDown) return true;
+            if (function.Metadata[index] is let test: TypeTest) return true;
             index = index + 1;
         }
         return false;
@@ -1387,21 +1387,21 @@ def Cecil of DotNet_Class : ClrPlatform {
             let operand = instruction.Operand;
 
             if (operand == null) body.il.Emit(opcode);
-            else if (operand is number of Int32) body.il.Emit(opcode, number);
-            else if (operand is long of Int64) body.il.Emit(opcode, long);
-            else if (operand is text of String) body.il.Emit(opcode, text);
-            else if (operand is local of ClrLocal) body.il.Emit(opcode, locals[local.Index]);
-            else if (operand is field of ClrField) body.il.Emit(opcode, this.field(field));
-            else if (operand is method of ClrMethod) body.il.Emit(opcode, this.method(method));
-            else if (operand is function of LIRFunction) body.il.Emit(opcode, this.function(function));
-            else if (operand is defined of ClassMethod) body.il.Emit(opcode, this.classMethodOf(defined));
+            else if (operand is let number: Int32) body.il.Emit(opcode, number);
+            else if (operand is let long: Int64) body.il.Emit(opcode, long);
+            else if (operand is let text: String) body.il.Emit(opcode, text);
+            else if (operand is let local: ClrLocal) body.il.Emit(opcode, locals[local.Index]);
+            else if (operand is let field: ClrField) body.il.Emit(opcode, this.field(field));
+            else if (operand is let method: ClrMethod) body.il.Emit(opcode, this.method(method));
+            else if (operand is let function: LIRFunction) body.il.Emit(opcode, this.function(function));
+            else if (operand is let defined: ClassMethod) body.il.Emit(opcode, this.classMethodOf(defined));
             // The token of a class is of its definition, as a type object of a generic
             // class with no arguments is.
-            else if (operand is token of ClassDefinition) {
+            else if (operand is let token: ClassDefinition) {
                 if (opcode == OpCodes.Ldtoken) body.il.Emit(opcode, this.classDefinition(token) as TypeReference);
                 else body.il.Emit(opcode, this.type(token));
             }
-            else if (operand is type of LIRType) body.il.Emit(opcode, this.type(type));
+            else if (operand is let type: LIRType) body.il.Emit(opcode, this.type(type));
             else fail("The Cecil platform can't write an instruction whose operand is a " + operand.GetType().Name + " yet.");
             index = index + 1;
         }
@@ -1432,26 +1432,26 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // The address of a variable, or of a temporary holding a value that isn't one.
     @explicitThis fun address(this, body: Body, expression: LIRExpression) {
-        if (expression is local of GetLocal) {
-            if (local.Variable is parameter of LIRParameter) body.il.Emit(OpCodes.Ldarga, body.parameter(parameter));
+        if (expression is let local: GetLocal) {
+            if (local.Variable is let parameter: LIRParameter) body.il.Emit(OpCodes.Ldarga, body.parameter(parameter));
             else body.il.Emit(OpCodes.Ldloca, body.variable(local.Variable));
             return;
         }
-        if (expression is global of GetGlobal) {
+        if (expression is let global: GetGlobal) {
             body.il.Emit(OpCodes.Ldsflda, this.global(global.Global));
             return;
         }
-        if (expression is field of GetField) {
+        if (expression is let field: GetField) {
             this.fieldOwner(body, field.Target);
             body.il.Emit(OpCodes.Ldflda, this.fieldOf(field.Field));
             return;
         }
-        if (expression is loaded of LIRLoad) {
+        if (expression is let loaded: LIRLoad) {
             this.expression(body, loaded.Reference);
             body.il.Emit(OpCodes.Ldflda, this.boxValue(this.type(this.typeOf(loaded.Reference))));
             return;
         }
-        if (expression is sequence of Sequence) {
+        if (expression is let sequence: Sequence) {
             if (AddressOf.Has(sequence.Result)) {
                 this.statement(body, sequence.Block);
                 this.address(body, sequence.Result);

@@ -50,6 +50,8 @@ namespace ZSharp.Compiler
             expressions.Register<Code.WhileExpression>(Reify);
 
             statements.Register<Code.ExpressionStatement>(Reify);
+            mapped.Patterns.Register<Code.ValuePattern>(Reify);
+            mapped.Patterns.Register<Code.NamePattern>(Reify);
             statements.Register<Code.Block>(Reify);
             statements.Register<Code.IfStatement>(Reify);
             statements.Register<Code.Return>(Reify);
@@ -148,9 +150,27 @@ namespace ZSharp.Compiler
             if (Expression(match.Value).When(out var value).Error(out var error))
                 return Fail(error);
 
-            return Expression(match.Pattern).When(out var pattern).Error(out error)
+            return reifier.ReifyPattern(match.Pattern).When(out var pattern).Error(out error)
                 ? Fail(error)
                 : Ok(Call("Match", value!, pattern!));
+        }
+
+        private Reified Reify(Code.ValuePattern pattern)
+            => Expression(pattern.Value).When(out var value).Error(out var error)
+                ? Fail(error)
+                : Ok(Call("ValuePattern", value!));
+
+        private Reified Reify(Code.NamePattern pattern)
+        {
+            if (Expression(pattern.Target).When(out var target).Error(out var error))
+                return Fail(error);
+
+            if (pattern.Type is null)
+                return Ok(Call("NamePattern", target!));
+
+            return Expression(pattern.Type).When(out var type).Error(out error)
+                ? Fail(error)
+                : Ok(Call("NamePattern", target!, type!));
         }
 
         private Reified Reify(Code.Call call)

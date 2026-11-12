@@ -28,7 +28,7 @@ def ClrPolymorphism of Implementation[Polymorphism, ClrPlatform] {
     @explicitThis fun implements(this, structure: Structure, implemented: Structure) {
         let index = 0;
         while (index < structure.Metadata.Count) {
-            if (structure.Metadata[index] is mark of Polymorphic) mark.Interfaces.Add(implemented);
+            if (structure.Metadata[index] is let mark: Polymorphic) mark.Interfaces.Add(implemented);
             index = index + 1;
         }
     }
@@ -56,7 +56,7 @@ def ClrInterfaces of Implementation[PlatformInterfaces, ClrPlatform] {
     @explicitThis fun implements(this, structure: Structure, implemented: LIRType) {
         let index = 0;
         while (index < structure.Metadata.Count) {
-            if (structure.Metadata[index] is mark of Polymorphic) mark.Implements.Add(implemented);
+            if (structure.Metadata[index] is let mark: Polymorphic) mark.Implements.Add(implemented);
             index = index + 1;
         }
     }

@@ -427,9 +427,11 @@ a custom type gets into the language to be used as a meta-type.
   type object too, until `Get` is renamed `Reference` and reading a value is always
   `GetValue`, which is the change that remains.
 - An operator is a definition that is one: `@operator(Operator.Index)`, or
-  `@operator((/))` with an operator literal, marks a definition that has the HIR
-  `OperatorDefinition` capability, as a Z# method does. A decorator takes and gives the
-  definition, so decorators compose. `M[T]` is `CG.Index`, which a CO handles if it
+  `@operator((/))` with an operator literal, says of a definition that it is the
+  operator, as an `OperatorAnnotation` among its annotations: what holds the definition
+  understands it, as a Z# class finds its index operator among its methods' annotations.
+  HIR has no notion of an operator. A decorator takes and gives the definition, so
+  decorators compose. `M[T]` is `CG.Index`, which a CO handles if it
   defines `ICTGetIndex`, or else the typed dispatcher by the type of the value: a Z# class
   defines both, calling its class methods that are its index operator for the class, and
   its methods that are for one of its objects. The operator's left operand is what the

@@ -43,7 +43,7 @@ namespace ZSharp.Lang
             mapped.Expressions.Register<AST.BinaryExpression>(Compile);
             mapped.Expressions.Register<AST.UnaryExpression>(Compile);
             mapped.Expressions.Register<AST.CastExpression>(Compile);
-            mapped.Expressions.Register<AST.IsOfExpression>(Compile);
+            mapped.Expressions.Register<AST.IsExpression>(Compile);
             mapped.Expressions.Register<AST.ArrayLiteral>(Compile);
             mapped.Expressions.Register<AST.LetExpression>(Compile);
             mapped.Expressions.Register<AST.Function>(CompileDefinition);
@@ -306,62 +306,66 @@ namespace ZSharp.Lang
         }
 
         /// <summary>
-        /// <c>value is of T</c> tests whether the value is of a type. The only pattern so
-        /// far is a name, as in <c>value is name of T</c>, which also defines a variable of
-        /// the type and assigns it what matched, cast to the type. <c>_</c> names nothing.
+        /// <c>value is pattern</c> matches the value against the pattern. A name the pattern
+        /// binds is a local like any other, declared where the match is by whatever declares
+        /// locals there, so it can be read after it; the match sets it if it matched.
         /// </summary>
-        private static IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.IsOfExpression match)
+        private static IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.IsExpression match)
         {
             if (compiler.CompileExpression(match.Expression).When(out var value).Error(out var error))
                 return Result<HIRExpression>.Error(error);
 
-            if (compiler.CompileExpression(match.OfType).When(out var type).Error(out error))
+            var declarations = new List<HIRStatement>();
+
+            if (Pattern(compiler, match.Pattern, declarations).When(out var pattern).Error(out error))
                 return Result<HIRExpression>.Error(error);
 
-            if (match.Name is not { Length: > 0 } name || name == "_")
-                return Result<HIRExpression>.Ok(new HIR.Code.Match { Value = value!, Pattern = type! });
+            HIRExpression matched = new HIR.Code.Match { Value = value!, Pattern = pattern! };
 
-            return Named(compiler, name, match.OfType, value!, type!);
+            return declarations.Count == 0
+                ? Result<HIRExpression>.Ok(matched)
+                : Result<HIRExpression>.Ok(new HIR.Code.BlockExpression { Statements = declarations, Result = matched });
         }
 
         /// <summary>
-        /// A name pattern is a local like any other, defined where the match is by whatever
-        /// defines locals there, so it can be read and assigned after it. It is assigned
-        /// only if the value matched. The value is evaluated once.
+        /// A pattern as HIR, with what declares the names it binds, which go where the match
+        /// is.
         /// </summary>
-        private static IResult<HIRExpression, Error> Named(ASTCompiler compiler, string name, AST.Expression typeSyntax, HIRExpression value, HIRExpression type)
+        private static IResult<HIR.Code.Pattern, Error> Pattern(ASTCompiler compiler, AST.Pattern pattern, List<HIRStatement> declarations)
         {
-            if (compiler.CompileExpression(new AST.LetExpression { Name = name, Type = typeSyntax }).When(out var defined).Error(out var error))
-                return Result<HIRExpression>.Error(error);
-
-            if (Names(compiler)?.Get(name) is not { } variable)
-                return Result<HIRExpression>.Error($"The pattern {name} didn't define a name.");
-
-            var matched = new HIR.Code.Local(string.Empty, HIR.Infer.Value) { Init = value };
-            var result = new HIR.Code.Local(string.Empty, HIR.Infer.Value)
+            switch (pattern)
             {
-                Init = new HIR.Code.Match { Value = new HIR.Code.Get(matched), Pattern = type }
-            };
+                case AST.ValuePattern { Value: var expression }:
+                    return compiler.CompileExpression(expression).When(out var value).Error(out var error)
+                        ? Result<HIR.Code.Pattern>.Error(error)
+                        : Result<HIR.Code.Pattern>.Ok(new HIR.Code.ValuePattern { Value = value! });
 
-            return Result<HIRExpression>.Ok(new HIR.Code.BlockExpression
-            {
-                Statements =
-                [
-                    new HIR.Code.ExpressionStatement(defined!),
-                    new HIR.Code.Declare(matched),
-                    new HIR.Code.Declare(result),
-                    new HIR.Code.IfStatement
-                    {
-                        Condition = new HIR.Code.Get(result),
-                        Then = new HIR.Code.ExpressionStatement(new HIR.Code.Set
-                        {
-                            Target = variable,
-                            Value = new HIR.Code.Cast { Value = new HIR.Code.Get(matched), Type = type }
-                        })
-                    }
-                ],
-                Result = new HIR.Code.Get(result)
-            });
+                // A local is declared with its type or its value, and a binding has no value
+                // where it is declared, so it needs its type until a local can take the type
+                // of what first sets it.
+                case AST.NamePattern { Type: null } name:
+                    return Result<HIR.Code.Pattern>.Error($"The name pattern {name.Name} needs a type for now, as in `let {name.Name}: T`.");
+
+                case AST.NamePattern name:
+                    // Until the language has `var`, a local of either kind is declared as a
+                    // `let` is, which can be set again; `let`'s can't once `var` exists.
+                    AST.Expression declaration = new AST.LetExpression { Name = name.Name, Type = name.Type };
+
+                    if (compiler.CompileExpression(declaration).When(out var declared).Error(out error))
+                        return Result<HIR.Code.Pattern>.Error(error);
+
+                    if (Names(compiler)?.Get(name.Name) is not { } target)
+                        return Result<HIR.Code.Pattern>.Error($"The pattern {name.Name} didn't declare a name.");
+
+                    declarations.Add(new HIR.Code.ExpressionStatement(declared!));
+
+                    return compiler.CompileExpression(name.Type).When(out var type).Error(out error)
+                        ? Result<HIR.Code.Pattern>.Error(error)
+                        : Result<HIR.Code.Pattern>.Ok(new HIR.Code.NamePattern { Target = target, Type = type! });
+
+                default:
+                    return Result<HIR.Code.Pattern>.Error($"A {pattern.GetType().Name} can't be matched yet.");
+            }
         }
 
         private static IResult<HIRStatement, Error> Compile(ASTCompiler compiler, AST.ExpressionStatement statement)

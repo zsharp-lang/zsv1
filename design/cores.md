@@ -98,9 +98,9 @@ To be designed. Settled so far:
   it wants, but that has nothing to do with LIR itself.
 - Control flow is structured: `Block`, `If`, `Loop`, `Break`, `Continue` and
   `Return`. Python, JS and WebAssembly have no general jumps, and structured code
-  turns into jumps easily, while the reverse is hard. `Break` and `Continue` name
-  the `Loop` they act on, which need not be the innermost one, so named loops keep
-  their structure. WebAssembly branches by depth, JS has labels and the CLR jumps; a
+  turns into jumps easily, while the reverse is hard. `Break` names the statement it
+  leaves, anything `Breakable`, as a loop is, and `Continue` the `Loop` it repeats;
+  neither need be the innermost one, so named loops keep their structure. WebAssembly branches by depth, JS has labels and the CLR jumps; a
   target with only innermost breaks, such as Python, lowers them with flags.
 - Code is an expression tree, and child expressions are evaluated in order. A
   stack machine would suit only the CLR and WebAssembly. A tree is simple for

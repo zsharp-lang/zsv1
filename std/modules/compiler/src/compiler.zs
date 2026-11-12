@@ -153,14 +153,14 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
     }
 
     @explicitThis fun add(this, member: Definition) {
-        if (member is named of NamedDefinition) {
+        if (member is let named: NamedDefinition) {
             if (this.members.ContainsKey(named.Name) == false) this.members[named.Name] = List[Definition]();
             this.members[named.Name].Add(member);
         }
 
         let loaded = hirLoader.LoadDefinition(member);
         if (loaded.IsError) return;
-        if (loaded.Unwrap() is held of Held) held.hold(this);
+        if (loaded.Unwrap() is let held: Held) held.hold(this);
     }
 
     @explicitThis fun module(this, target: Object): LIRModule {
@@ -187,7 +187,7 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
         if (this.node.EntryPoint != null) {
             let entry = ir.CompileReference[ICallable](hirLoader.LoadInstance(this.node.EntryPoint).Unwrap(), target);
             if (entry.IsOk) {
-                if (entry.Unwrap() is function of LIRFunction) lowered.Metadata.Add(LIREntryPoint(function));
+                if (entry.Unwrap() is let function: LIRFunction) lowered.Metadata.Add(LIREntryPoint(function));
             }
         }
 
@@ -199,7 +199,7 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
     // it is used.
     @explicitThis fun lower(this, member: Definition, lowered: LIRModule, target: Object) {
         let name = "a definition";
-        if (member is named of NamedDefinition) name = named.Name;
+        if (member is let named: NamedDefinition) name = named.Name;
 
         let loaded = hirLoader.LoadDefinition(member);
         if (loaded.IsError) {
@@ -250,12 +250,12 @@ def Members of DotNet_Class {
     }
 
     @explicitThis fun expression(this, compiler: ASTCompiler, node: ExpressionSyntax): IResult[Expression, Error] {
-        if (node is local of LetSyntax) return this.global(compiler, local);
+        if (node is let local: LetSyntax) return this.global(compiler, local);
         return this.expressions(compiler, node);
     }
 
     @explicitThis fun statement(this, compiler: ASTCompiler, node: StatementSyntax): IResult[Statement, Error] {
-        if (node is imported of ImportSyntax) {
+        if (node is let imported: ImportSyntax) {
             let holder = bodies.Imported(compiler, imported);
             if (holder.IsError) return Result[Statement].Error(holder.UnwrapError());
             if (holder.Unwrap() == null) return Result[Statement].Ok(Block([]));
@@ -352,11 +352,11 @@ fun compileModule(compiler: ASTCompiler, definition: DefinitionSyntax, self: Loc
     let name: String = null;
     let body: List[StatementSyntax] = null;
 
-    if (definition is node of ModuleSyntax) {
+    if (definition is let node: ModuleSyntax) {
         name = node.Name;
         body = node.Body;
     }
-    if (definition is type of TypeSyntax) {
+    if (definition is let type: TypeSyntax) {
         name = type.Name;
         body = List[StatementSyntax]();
         if (type.Content != null) body = type.Content.Statements;

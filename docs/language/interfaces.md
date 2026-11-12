@@ -47,7 +47,7 @@ types, or it is an error when the class is used.
 ## Casts and type tests
 
 A value of an interface can be cast down to a class that implements it with `as`, and
-tested for one with `is`. `is name of Type` also names the value as that type, where the
+tested for one with `is`. `is let name: Type` also names the value as that type, where the
 test is true:
 
 ```zs
@@ -70,7 +70,7 @@ def Cat : Pet {
 }
 
 fun play(pet: Pet): String {
-    if (pet is dog of Dog) return dog.fetch();
+    if (pet is let dog: Dog) return dog.fetch();
     return pet.sound();
 }
 

@@ -45,8 +45,14 @@ namespace ZSharp.Compiler
         public static Code.Cast Cast(Code.Expression value, Code.Expression type)
             => new() { Value = value, Type = type };
 
-        public static Code.Match Match(Code.Expression value, Code.Expression pattern)
+        public static Code.Match Match(Code.Expression value, Code.Pattern pattern)
             => new() { Value = value, Pattern = pattern };
+
+        public static Code.ValuePattern ValuePattern(Code.Expression value) => new() { Value = value };
+
+        public static Code.NamePattern NamePattern(Code.Expression target) => new() { Target = target };
+
+        public static Code.NamePattern NamePattern(Code.Expression target, Code.Expression type) => new() { Target = target, Type = type };
 
         public static Code.NullLiteral Null() => new();
 

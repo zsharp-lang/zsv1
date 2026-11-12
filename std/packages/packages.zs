@@ -41,7 +41,7 @@ module Bootstrap {
     fun project(directory: String): IResult[Instance, Error] {
         let emitted = Compiler(discover(directory)).compile();
         if (emitted.Count == 0) return Result[Instance].Error("The project " + directory + " emits nothing.");
-        if (emitted[0] is built of Module) enter(built);
+        if (emitted[0] is let built: Module) enter(built);
         return Result[Instance].Ok(emitted[0]);
     }
 }

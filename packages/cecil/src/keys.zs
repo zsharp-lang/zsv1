@@ -4,12 +4,12 @@
 
 // A type of a CLR handle's signature.
 fun keyOf(type: LIRType): String {
-    if (type is clr of ClrType) return cecilName(clr);
-    if (type is array of ClrArrayType) return keyOf(array.Element) + rankKey(array.Rank);
-    if (type is reference of ByRefType) return keyOf(reference.Target) + "&";
-    if (type is pointer of ClrPointerType) return keyOf(pointer.Target) + "*";
-    if (type is parameter of ClrGenericParameter) return parameterKey(parameter.OfMethod, parameter.Position);
-    if (type is instance of GenericInstance) {
+    if (type is let clr: ClrType) return cecilName(clr);
+    if (type is let array: ClrArrayType) return keyOf(array.Element) + rankKey(array.Rank);
+    if (type is let reference: ByRefType) return keyOf(reference.Target) + "&";
+    if (type is let pointer: ClrPointerType) return keyOf(pointer.Target) + "*";
+    if (type is let parameter: ClrGenericParameter) return parameterKey(parameter.OfMethod, parameter.Position);
+    if (type is let instance: GenericInstance) {
         let key = keyOf(instance.Definition) + "<";
         let index = 0;
         while (index < instance.Arguments.Count) {
@@ -24,8 +24,8 @@ fun keyOf(type: LIRType): String {
 
 // A type of a Cecil signature. A modifier, as `in` has, doesn't tell overloads apart.
 fun cecilKeyOf(type: TypeReference): String {
-    if (type is parameter of GenericParameter) return parameterKey(parameter.Type == GenericParameterType.Method, parameter.Position);
-    if (type is instance of GenericInstanceType) {
+    if (type is let parameter: GenericParameter) return parameterKey(parameter.Type == GenericParameterType.Method, parameter.Position);
+    if (type is let instance: GenericInstanceType) {
         let key = cecilKeyOf(instance.ElementType) + "<";
         let index = 0;
         while (index < instance.GenericArguments.Count) {
@@ -35,11 +35,11 @@ fun cecilKeyOf(type: TypeReference): String {
         }
         return key + ">";
     }
-    if (type is array of ArrayType) return cecilKeyOf(array.ElementType) + rankKey(array.Rank);
-    if (type is reference of ByReferenceType) return cecilKeyOf(reference.ElementType) + "&";
-    if (type is pointer of PointerType) return cecilKeyOf(pointer.ElementType) + "*";
-    if (type is required of RequiredModifierType) return cecilKeyOf(required.ElementType);
-    if (type is optional of OptionalModifierType) return cecilKeyOf(optional.ElementType);
+    if (type is let array: ArrayType) return cecilKeyOf(array.ElementType) + rankKey(array.Rank);
+    if (type is let reference: ByReferenceType) return cecilKeyOf(reference.ElementType) + "&";
+    if (type is let pointer: PointerType) return cecilKeyOf(pointer.ElementType) + "*";
+    if (type is let required: RequiredModifierType) return cecilKeyOf(required.ElementType);
+    if (type is let optional: OptionalModifierType) return cecilKeyOf(optional.ElementType);
     return type.FullName;
 }
 

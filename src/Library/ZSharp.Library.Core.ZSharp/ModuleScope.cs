@@ -167,13 +167,18 @@ namespace Core.ZSharp
             => Marked(@operator);
 
         /// <summary>
-        /// A decorator takes and gives the definition, so decorators compose; it is an
-        /// operator as a definition that has that capability, which one without it can't be.
+        /// A decorator takes and gives the definition, so decorators compose. It says of the
+        /// definition that it is the operator, as an annotation, which only a definition that
+        /// is annotated can carry.
         /// </summary>
         private static Func<global::ZSharp.HIR.Instance, global::ZSharp.HIR.Instance> Marked(object @operator)
             => definition =>
             {
-                ((global::ZSharp.HIR.OperatorDefinition)definition).Operator = @operator;
+                if (definition is not global::ZSharp.HIR.Annotated annotated)
+                    throw new InvalidOperationException("Only a definition that has annotations can be an operator.");
+
+                annotated.Annotations.Add(new global::ZSharp.Lang.OperatorAnnotation(@operator));
+
                 return definition;
             };
 

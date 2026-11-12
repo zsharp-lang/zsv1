@@ -161,7 +161,7 @@ namespace ZSharp.Compiler
                 if (code.LoadExpression(match.Value).Error(out var error, out var value))
                     return Result.Error(error);
 
-                if (code.LoadExpression(match.Pattern).Error(out error, out var pattern))
+                if (code.LoadPattern(match.Pattern).Error(out error, out var pattern))
                     return Result.Error(error);
 
                 return matching.Match(value, pattern);
@@ -223,6 +223,26 @@ namespace ZSharp.Compiler
                 return code.LoadExpression(set.Value).Error(out error, out var value)
                     ? Result.Error(error)
                     : cg.Set(target, value);
+            });
+
+            // A value is a pattern as it is, matched by the match operator; a name pattern binds
+            // what it matched, and always matches without a type.
+            mapped.Patterns.Register<HIR.Code.ValuePattern>(pattern => code.LoadExpression(pattern.Value));
+
+            mapped.Patterns.Register<HIR.Code.NamePattern>(pattern =>
+            {
+                if (code.LoadExpression(pattern.Target).Error(out var error, out var target))
+                    return Result.Error(error);
+
+                if (code.LoadExpression(new HIR.Code.BooleanLiteral(true)).Error(out error, out var always))
+                    return Result.Error(error);
+
+                if (pattern.Type is null)
+                    return Result.Ok(new Objects.Binding(target, null, always));
+
+                return code.LoadExpression(pattern.Type).Error(out error, out var type)
+                    ? Result.Error(error)
+                    : Result.Ok(new Objects.Binding(target, type, always));
             });
 
             mapped.Statements.Register<HIR.Code.ExpressionStatement>(

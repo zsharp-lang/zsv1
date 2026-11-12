@@ -31,8 +31,8 @@ namespace ZSharp.Platform.Runtime
                     break;
                 case LIR.If node: If(node); break;
                 case LIR.Loop node: Loop(node); break;
-                case LIR.Break node: il.Emit(Emit.OpCodes.Br, Labels(node.Loop).End); break;
-                case LIR.Continue node: il.Emit(Emit.OpCodes.Br, Labels(node.Loop).Start); break;
+                case LIR.Break node: il.Emit(Emit.OpCodes.Br, End(node.Target)); break;
+                case LIR.Continue node: il.Emit(Emit.OpCodes.Br, Start(node.Loop)); break;
                 case LIR.Return node:
                     if (node.Value is not null)
                         Expression(node.Value);
@@ -43,10 +43,15 @@ namespace ZSharp.Platform.Runtime
             }
         }
 
-        private (Emit.Label Start, Emit.Label End) Labels(LIR.Loop loop)
-            => loops.TryGetValue(loop, out var labels)
-                ? labels
-                : throw new InvalidOperationException("Break or continue outside of its loop.");
+        private Emit.Label End(LIR.Breakable statement)
+            => ends.TryGetValue(statement, out var end)
+                ? end
+                : throw new InvalidOperationException("Break outside of what it leaves.");
+
+        private Emit.Label Start(LIR.Loop loop)
+            => starts.TryGetValue(loop, out var start)
+                ? start
+                : throw new InvalidOperationException("Continue outside of its loop.");
 
         private void Evaluate(LIR.Evaluate node)
         {
@@ -91,11 +96,13 @@ namespace ZSharp.Platform.Runtime
             var end = il.DefineLabel();
 
             il.MarkLabel(start);
-            loops[node] = (start, end);
+            starts[node] = start;
+            ends[node] = end;
 
             Statement(node.Body);
 
-            loops.Remove(node);
+            starts.Remove(node);
+            ends.Remove(node);
             il.Emit(Emit.OpCodes.Br, start);
             il.MarkLabel(end);
         }

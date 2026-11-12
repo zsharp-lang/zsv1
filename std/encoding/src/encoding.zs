@@ -96,7 +96,7 @@ fun idOn(entity: Object): Int32 {
     let kept = Metadata.Of(Metadata.Entity(entity));
     let index = 0;
     while (index < kept.Count) {
-        if (kept[index] is id of ReflectionId) return id.Id;
+        if (kept[index] is let id: ReflectionId) return id.Id;
         index = index + 1;
     }
     return -1;
@@ -218,7 +218,7 @@ def Encoder of DotNet_Class {
         this.objects.Add(value);
         this.indexes[value] = at;
 
-        if (value is annotated of Annotated) {
+        if (value is let annotated: Annotated) {
             this.annotationLists.Add(annotated.Annotations);
             this.identify(value);
         }
@@ -232,11 +232,11 @@ def Encoder of DotNet_Class {
         let id = this.ids.Count;
         this.ids[value] = id;
 
-        if (value is annotated of Annotated) {
+        if (value is let annotated: Annotated) {
             let index = 0;
             while (index < annotated.Annotations.Count) {
                 let removed = false;
-                if (annotated.Annotations[index] is earlier of ReflectionId) {
+                if (annotated.Annotations[index] is let earlier: ReflectionId) {
                     annotated.Annotations.RemoveAt(index);
                     removed = true;
                 }
@@ -253,22 +253,22 @@ def Encoder of DotNet_Class {
             w.Write(0);
             return;
         }
-        if (value is flag of Boolean) {
+        if (value is let flag: Boolean) {
             w.Write(1);
             w.Write(flag);
             return;
         }
-        if (value is number of Int32) {
+        if (value is let number: Int32) {
             w.Write(2);
             w.Write(number);
             return;
         }
-        if (value is long of Int64) {
+        if (value is let long: Int64) {
             w.Write(3);
             w.Write(long);
             return;
         }
-        if (value is text of String) {
+        if (value is let text: String) {
             w.Write(4);
             w.Write(text);
             return;
@@ -281,13 +281,13 @@ def Encoder of DotNet_Class {
             w.Write(Convert.ToInt64(value));
             return;
         }
-        if (value is clr of Type) {
+        if (value is let clr: Type) {
             w.Write(6);
             w.Write(clr.AssemblyQualifiedName);
             return;
         }
 
-        if (value is node of Instance) {
+        if (value is let node: Instance) {
             if (origins.ContainsKey(node)) {
                 w.Write(9);
                 w.Write(origins[node].Assembly.GetName().Name);
@@ -302,15 +302,15 @@ def Encoder of DotNet_Class {
                 return;
             }
 
-            if (node is defined of DotNetDefinition) {
-                if ((node is annotated of Annotated) == false) fail("A CLR definition that can't be annotated can't be encoded.");
+            if (node is let defined: DotNetDefinition) {
+                if ((node is let annotated: Annotated) == false) fail("A CLR definition that can't be annotated can't be encoded.");
                 w.Write(8);
                 w.Write(this.identify(node));
                 return;
             }
         }
 
-        if (value is callable of Delegate) fail("A delegate can't be encoded.");
+        if (value is let callable: Delegate) fail("A delegate can't be encoded.");
         if (type.Assembly.IsDynamic) fail("A " + type.Name + " is of a type the running process made, which can't be encoded.");
 
         w.Write(10);
@@ -320,25 +320,25 @@ def Encoder of DotNet_Class {
     // A CLR entity, by its names, as it is found again where it is decoded.
     @explicitThis fun entity(this, entity: Object) {
         let w = this.body;
-        if (entity is type of Type) {
+        if (entity is let type: Type) {
             w.Write(1);
             w.Write(type.AssemblyQualifiedName);
             return;
         }
-        if (entity is method of MethodInfo) {
+        if (entity is let method: MethodInfo) {
             w.Write(2);
             w.Write(method.DeclaringType.AssemblyQualifiedName);
             w.Write(method.Name);
             this.parameters(method.GetParameters());
             return;
         }
-        if (entity is constructor of ConstructorInfo) {
+        if (entity is let constructor: ConstructorInfo) {
             w.Write(3);
             w.Write(constructor.DeclaringType.AssemblyQualifiedName);
             this.parameters(constructor.GetParameters());
             return;
         }
-        if (entity is unit of ReflectedModule) {
+        if (entity is let unit: ReflectedModule) {
             w.Write(4);
             w.Write(unit.Assembly.FullName);
             return;
@@ -382,7 +382,7 @@ def Encoder of DotNet_Class {
                 let item = list.GetValue(index);
                 if (filter == false) kept.Add(item);
                 if (filter) {
-                    if (item is encoded of Encoded) kept.Add(item);
+                    if (item is let encoded: Encoded) kept.Add(item);
                 }
                 index = index + 1;
             }
@@ -537,7 +537,7 @@ def Decoder of DotNet_Class {
     }
 
     @explicitThis fun resolve(this, value: Object): Object {
-        if (value is pending of Pending) return this.objects[pending.Index];
+        if (value is let pending: Pending) return this.objects[pending.Index];
         return value;
     }
 
@@ -661,7 +661,7 @@ fun describe(value: Object): Instance {
             if (decoded.Nodes.ContainsKey(id)) return decoded.Nodes[id] as Instance;
         }
     }
-    if (value is type of Type) return ilLoader.Load(type);
+    if (value is let type: Type) return ilLoader.Load(type);
     return null;
 }
 

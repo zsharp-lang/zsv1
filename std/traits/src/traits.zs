@@ -192,7 +192,7 @@ let implementation: Instance;
 let metaCompiler: MetaCompiler;
 
 fun compileImplementation(compiler: ASTCompiler, definition: DefinitionSyntax, self: Local): IResult[CompiledDefinition, Error] {
-    if (definition is type of TypeSyntax) {
+    if (definition is let type: TypeSyntax) {
         let metaType = self.Type as GenericInstance;
         let trait = metaType.Arguments[0];
         let implemented = metaType.Arguments[1];
@@ -217,7 +217,7 @@ fun compileImplementation(compiler: ASTCompiler, definition: DefinitionSyntax, s
 
 // An instantiation of Implementation is compiled by this, and anything else as before.
 fun findMetaCompiler(metaType: Instance): IResult[MetaCompiler, Error] {
-    if (metaType is instance of GenericInstance) {
+    if (metaType is let instance: GenericInstance) {
         if (instance.Definition == implementation) return Result[MetaCompiler].Ok(metaCompiler);
     }
 
