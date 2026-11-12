@@ -8,12 +8,12 @@ import { String, DotNet_Module } from "core:runtime";
 import { Error, Result, IResult } from "std:zsharp/common";
 import { CompilerObject } from "std:zsharp/mir";
 import { Argument, Cast } from "std:zsharp/compiler/cg";
-import { PatternMatch } from "std:zsharp/compiler/matching";
+import { MatchPattern } from "std:zsharp/compiler/matching";
 import { entrypoint } from "std:framework";
 import { cg, matching, hirLoader } from "core:compiler";
 import { Instance } from "std:zsharp/hir";
 
-let previousMatch: PatternMatch;
+let previousMatch: MatchPattern;
 let previousCast: Cast;
 let lookup: CompilerObject;
 
@@ -48,8 +48,8 @@ fun cast(object: CompilerObject, type: CompilerObject): IResult[CompilerObject, 
 @entrypoint
 fun install() {
     lookup = hirLoader.LoadInstance(Lookup as Instance).Unwrap();
-    previousMatch = matching.Pattern;
-    matching.Pattern = match;
+    previousMatch = matching.MatchPattern;
+    matching.MatchPattern = match;
     previousCast = cg.Cast;
     cg.Cast = cast;
 }

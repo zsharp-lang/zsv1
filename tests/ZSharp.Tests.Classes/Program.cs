@@ -1,4 +1,4 @@
-﻿using CommonZ;
+using CommonZ;
 using ZSharp.Compiler;
 using ZSharp.Importer.ILLoader;
 using ZSharp.Lang;
@@ -5696,9 +5696,9 @@ public sealed class Injected(string name, ZSharp.HIR.Type? type, string value)
 /// </summary>
 sealed class InjectedMatch(string value)
     : ZSharp.MIR.CompilerObject
-    , ICTParameter
+    , ICTBind
 {
-    public IResult<ZSharp.MIR.CompilerObject, Error> Match(ArgumentStream arguments)
+    public IResult<ZSharp.MIR.CompilerObject, Error> Bind(ArgumentStream arguments)
         => Scope.HIRCodeLoader.LoadExpression(new C.StringLiteral(value));
 }
 

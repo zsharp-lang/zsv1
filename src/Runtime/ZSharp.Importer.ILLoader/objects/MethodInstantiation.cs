@@ -59,9 +59,9 @@ namespace ZSharp.Importer.ILLoader.Objects
 
     internal sealed class MethodInstantiationParameter(MethodInstantiation owner, ParameterInfo parameter, ILLoader loader)
         : CompilerObject
-        , ICTParameter
+        , ICTBind
     {
-        public IResult Match(ArgumentStream arguments)
+        public IResult Bind(ArgumentStream arguments)
         {
             if (!parameter.ParameterType.IsByRef)
                 return Arguments.Take(

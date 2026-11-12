@@ -32,7 +32,7 @@ namespace ZSharp.Toolchain
                 ("zsharp/compiler/code", typeof(Compiler.CodeLoaders).Module),
                 ("zsharp/compiler/overloading", typeof(Compiler.OverloadGroup).Module),
                 ("zsharp/compiler/matching", typeof(Compiler.Matching).Module),
-                ("zsharp/compiler/matching/static", typeof(Compiler.ICTParameter).Module),
+                ("zsharp/compiler/matching/static", typeof(Compiler.ICTBind).Module),
                 ("zsharp/package/dotnet", typeof(Package.DotNet.Class).Module),
             ];
     }

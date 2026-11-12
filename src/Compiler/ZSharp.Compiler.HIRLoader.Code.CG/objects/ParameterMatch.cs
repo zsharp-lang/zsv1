@@ -18,9 +18,9 @@ namespace ZSharp.Compiler.Objects
         bool byPosition
     )
         : CompilerObject
-        , ICTParameter
+        , ICTBind
     {
-        public IResult Match(ArgumentStream arguments)
+        public IResult Bind(ArgumentStream arguments)
         {
             if (type().When(out var parameterType).Error(out var error))
                 return Result.Error(error);

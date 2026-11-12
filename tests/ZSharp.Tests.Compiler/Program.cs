@@ -23,8 +23,10 @@ Report("default match is unsupported", ZSharp.Compiler.Current.Matching.Match(pl
 
 var stream = new ArgumentStream([new Argument(plain), new Argument(new Plain()), new Argument("named", new Plain())]);
 stream.Pop();
-var rest = stream.Rest();
-Report("the rest of the arguments is what no parameter took, positional then named", rest is [{ Name: null }, { Name: "named" }] && !stream.HasArguments);
+var restPositional = stream.RestPositional();
+Report("the positional arguments left are what no parameter took, in order", restPositional.Length == 1 && stream.HasArguments);
+var restNamed = stream.RestNamed();
+Report("the named arguments left are what no parameter took, by name", restNamed.Count == 1 && restNamed.ContainsKey("named") && !stream.HasArguments);
 
 Report("an error that wraps another has its capabilities", Res.Error(new Located(new UnsupportedError("not here"))).IsUnsupported());
 Report("an error without the capability isn't unsupported", !Res.Error(new Located(new ErrorMessage("failed"))).IsUnsupported());

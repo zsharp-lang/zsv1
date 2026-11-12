@@ -207,7 +207,7 @@ namespace ZSharp.Lang
             if (language.Importing(compiler, import).When(out var importing).Error(out var error))
                 return Result<Code.Local?>.Error(error);
 
-            if (CompileTime.Is(importing!))
+            if (language.CompileTime.Is(importing!))
             {
                 if (evaluate(importing!).When(out var value).Error(out error))
                     return Result<Code.Local?>.Error(error);

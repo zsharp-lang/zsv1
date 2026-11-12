@@ -14,7 +14,7 @@ import { CompilerObject } from "std:zsharp/mir";
 import { Error, Result, IResult } from "std:zsharp/common";
 import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
 import { ICTCallable, ICTCastTo } from "std:zsharp/compiler/cg/direct";
-import { ICTParameter } from "std:zsharp/compiler/matching/static";
+import { ICTBind } from "std:zsharp/compiler/matching/static";
 import { ICompileIRExpression, ICompileIRDefinitionIn, ICompileIRReference } from "std:zsharp/compiler/ir";
 import { ITyped } from "std:zsharp/compiler/ts";
 import { FunctionHandle, Constant } from "std:zsharp/lir";
@@ -34,7 +34,7 @@ import { Function, Positional, Named } from "std:functions";
 // A parameter, as a call matches an argument to it and as its function's code uses it.
 // One CO is both, and it owns the LIR parameter the signature holds for each target, so
 // whatever lowers a function with it refers to it as that parameter.
-@public def ParameterObject of DotNet_Class : CompilerObject, ICTParameter, ICompileIRExpression, ICompileIRReference[LIRParameter], ITyped {
+@public def ParameterObject of DotNet_Class : CompilerObject, ICTBind, ICompileIRExpression, ICompileIRReference[LIRParameter], ITyped {
     @public let name: String;
     @public let named: Boolean;
     @public let type: Type;
@@ -77,7 +77,7 @@ import { Function, Positional, Named } from "std:functions";
     }
 
     // The argument with its name, or the next positional one, or else the default.
-    @public @explicitThis fun Match(this, arguments: ArgumentStream): IResult[CompilerObject, Error] {
+    @public @explicitThis fun Bind(this, arguments: ArgumentStream): IResult[CompilerObject, Error] {
         let argument: CompilerObject = null;
 
         if (this.named) argument = arguments.Pop(this.name);
@@ -282,7 +282,7 @@ let premapped: Dictionary[Function, Instance] = Dictionary[Function, Instance]()
 
         let index = 0;
         while (index < this.node.Parameters.Count) {
-            let value = matching.Match(this.parameter(index), stream);
+            let value = matching.Bind(this.parameter(index), stream);
             if (value.IsError) return value;
             values.Add(value.Unwrap());
             index = index + 1;

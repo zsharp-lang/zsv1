@@ -27,8 +27,8 @@ namespace ZSharp.Syntax
         {
             if (parser.Is(Keywords.Let) || parser.Is(Keywords.Var))
             {
-                var isMutable = parser.Is(Keywords.Var);
-                parser.Eat(isMutable ? Keywords.Var : Keywords.Let);
+                var keyword = parser.Is(Keywords.Var) ? NameKeyword.Var : NameKeyword.Let;
+                parser.Eat(keyword == NameKeyword.Var ? Keywords.Var : Keywords.Let);
 
                 var name = parser.Eat(TokenType.Identifier).Value;
 
@@ -36,7 +36,7 @@ namespace ZSharp.Syntax
                 if (parser.Is(TokenType.Colon, eat: true))
                     type = ParseType(parser);
 
-                return new NamePattern { IsMutable = isMutable, Name = name, Type = type };
+                return new NamePattern { Keyword = keyword, Name = name, Type = type };
             }
 
             return new ValuePattern { Value = parser.Parse<Expression>() };

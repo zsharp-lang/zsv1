@@ -225,9 +225,9 @@ namespace ZSharp.Importer.ILLoader.Objects
 
     internal sealed class InstantiationParameter(Instantiation owner, ParameterInfo parameter, ILLoader loader)
         : CompilerObject
-        , ICTParameter
+        , ICTBind
     {
-        public IResult Match(ArgumentStream arguments)
+        public IResult Bind(ArgumentStream arguments)
             => Arguments.Take(
                 parameter.Name ?? string.Empty,
                 owner.TypeOf(parameter.ParameterType),

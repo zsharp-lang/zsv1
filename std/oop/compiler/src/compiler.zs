@@ -193,7 +193,7 @@ fun matchArguments(parameters: List[Definition], arguments: Argument[]): List[Co
 
     let index = 0;
     while (index < parameters.Count) {
-        let value = matching.Match(hirLoader.LoadDefinition(parameters[index]).Unwrap(), stream);
+        let value = matching.Bind(hirLoader.LoadDefinition(parameters[index]).Unwrap(), stream);
         if (value.IsError) return null;
         values.Add(value.Unwrap());
         index = index + 1;

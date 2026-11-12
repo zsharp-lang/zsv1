@@ -41,19 +41,23 @@ namespace ZSharp.Compiler
             => named.Remove(name, out var argument) ? argument : null;
 
         /// <summary>
-        /// Takes every argument left, the positional ones in order and then the named ones,
-        /// as a parameter that takes the rest does.
+        /// Takes the positional arguments left, in order, as a positional rest parameter
+        /// does.
         /// </summary>
-        public Argument[] Rest()
+        public CompilerObject[] RestPositional()
         {
-            Argument[] rest = [
-                .. positional.Select(argument => new Argument(argument)),
-                .. named.Select(pair => new Argument(pair.Key, pair.Value)),
-            ];
-
+            CompilerObject[] rest = [.. positional];
             positional.Clear();
-            named.Clear();
+            return rest;
+        }
 
+        /// <summary>
+        /// Takes the named arguments left, by name, as a named rest parameter does.
+        /// </summary>
+        public IReadOnlyDictionary<string, CompilerObject> RestNamed()
+        {
+            var rest = new Dictionary<string, CompilerObject>(named);
+            named.Clear();
             return rest;
         }
     }
