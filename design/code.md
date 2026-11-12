@@ -190,7 +190,7 @@ flags of an enum, which combine as its underlying integers.
 
 Parameters take their values from a call, as in `zsv1`. A call's arguments become an
 `ArgumentStream`: positional ones in order, and named ones by name, in any order. Each
-parameter, in order, takes what it needs from the stream through `CG.MatchParameter`,
+parameter, in order, takes what it needs from the stream through the matching REI,
 and an argument left over when they are done is one too many. A callable never looks at
 its parameters: it asks each one to match, and a candidate whose parameters don't match
 doesn't apply, so overloading doesn't change.

@@ -40,16 +40,17 @@ mappedCode.Apply();
 
 new ZSharp.Compiler.CGDispatchers.Direct.Dispatcher(Scope.CG).Apply();
 new ZSharp.Compiler.CGDispatchers.Typed.Dispatcher(Scope.CG, Scope.TS).Apply();
+new ZSharp.Compiler.MatchingDispatchers.Static.Dispatcher(Scope.Matching, Scope.TS).Apply();
 
 // Members from outside an object's own, as extension methods, come after its own.
-var external = new ZSharp.Compiler.CGDispatchers.External.Dispatcher(Scope.CG);
+var external = new ZSharp.Compiler.CGDispatchers.External.Dispatcher(Scope.CG, Scope.Overloading);
 external.Apply();
 external.Add(il.Extensions);
 new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(Scope.TS).Apply();
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
-CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG);
+CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG, Scope.Matching, Scope.Overloading);
 il.Install(mapped, mappedCode);
 
 // A kind of parameter defined outside the toolchain: it is injected, so a call gives it
@@ -5631,7 +5632,7 @@ public sealed class Injected(string name, ZSharp.HIR.Type? type, string value)
 /// </summary>
 sealed class InjectedMatch(string value)
     : ZSharp.MIR.CompilerObject
-    , ICTMatchParameter
+    , ICTParameter
 {
     public IResult<ZSharp.MIR.CompilerObject, Error> Match(ArgumentStream arguments)
         => Scope.HIRCodeLoader.LoadExpression(new C.StringLiteral(value));

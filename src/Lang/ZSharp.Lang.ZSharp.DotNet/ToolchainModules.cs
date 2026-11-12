@@ -30,6 +30,8 @@ namespace ZSharp.Lang.DotNet
                 ("zsharp/compiler/ts", typeof(Compiler.ITyped).Module),
                 ("zsharp/compiler/code", typeof(Compiler.CodeLoaders).Module),
                 ("zsharp/compiler/overloading", typeof(Compiler.OverloadGroup).Module),
+                ("zsharp/compiler/matching", typeof(Compiler.Matching).Module),
+                ("zsharp/compiler/matching/static", typeof(Compiler.ICTParameter).Module),
                 ("zsharp/package/dotnet", typeof(Package.DotNet.Class).Module),
             ];
     }

@@ -27,6 +27,8 @@
     <Project Path="src/Compiler/ZSharp.Compiler.IR/ZSharp.Compiler.IR.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.Overloading.Static/ZSharp.Compiler.Overloading.Static.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.Overloading/ZSharp.Compiler.Overloading.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.Matching/ZSharp.Compiler.Matching.csproj" />
+    <Project Path="src/Compiler/ZSharp.Compiler.Matching.Static/ZSharp.Compiler.Matching.Static.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.TS.Static/ZSharp.Compiler.TS.Static.csproj" />
     <Project Path="src/Compiler/ZSharp.Compiler.TS/ZSharp.Compiler.TS.csproj" />
     <Project Path="src/Compiler/ZSharp.HIRRunner.Mapped/ZSharp.HIRRunner.Mapped.csproj" />

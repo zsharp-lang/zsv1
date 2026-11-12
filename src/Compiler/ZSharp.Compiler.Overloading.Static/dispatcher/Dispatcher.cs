@@ -15,7 +15,15 @@ namespace ZSharp.Compiler.OverloadingDispatchers.Static
 
             overloading.Apply = Apply;
             overloading.IsMoreSpecific = IsMoreSpecific;
+            overloading.Group = Group;
         }
+
+        /// <summary>
+        /// Candidates stand for one overload group, which applies each operation to every
+        /// one of them and chooses whose result is the result.
+        /// </summary>
+        public IResult Group(CompilerObject[] candidates)
+            => Result.Ok(OverloadGroup.Of(candidates));
 
         public IResult Apply(CompilerObject[] candidates, Func<CompilerObject, IResult> operation)
         {
@@ -62,7 +70,7 @@ namespace ZSharp.Compiler.OverloadingDispatchers.Static
 
             var errors = results.Select(result => result.UnwrapError()).ToArray();
 
-            if (errors.All(error => error is UnsupportedError))
+            if (errors.All(error => error.IsUnsupported()))
                 return Result.Error(errors[0]);
 
             return Result.Error(

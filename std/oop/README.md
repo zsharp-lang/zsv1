@@ -53,7 +53,7 @@ The types and values:
 | CO | What it is |
 |---|---|
 | `ClassObject` | A class. As a type, it is the object type its target lowers it to. Calling it runs its unnamed constructor, and its named constructors are its members. A value of it has its fields and methods as members. |
-| `InterfaceObject` | An interface. As a type, it is the object type of any class that implements it, which the target's polymorphism makes. A value of it can be cast down to, and tested for, what implements it. |
+| `InterfaceObject` | An interface. As a type, it is the object type of any class that implements it, which the target's polymorphism makes. A value of it can be cast down to, and tested for, what implements it, through `IRTMatch`. |
 | `Metaclass` | A class's metaclass: the type of its type object, which is one object per target, a global of the class's module. It implements the class shape of each interface its class implements. |
 | `InterfaceMetaclass` | An interface's class shape: the type of the type object of any class that implements it. |
 | `TypeObject`, `InterfaceValue` | a class's value, its type object, and an interface's value |
@@ -131,9 +131,6 @@ a class is given as its bases are the interfaces it implements.
   would fit a shared library, where any definition that reaches a function through an
   object could use them.
 - **`Known` is defined twice**, here and in `std:functions/compiler`.
-- **Indexing calls `OverloadGroup.Of`** (`callIndex`), the same coupling to one object that
-  the review found in the external CG dispatcher. The merging REI from the CG REIs PR
-  replaces both.
 - **A built class's metaclass is found by its name**, the class's name plus `.Class`
   (`builtTypeObjectField`), rather than bound by its kept metadata. Because of this,
   `reflect` of a built class's type object gives null. It's a follow-up.

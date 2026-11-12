@@ -18,6 +18,9 @@ namespace Core.Compiler
         [Alias("overloading")]
         public static ZSharp.Compiler.Overloading Overloading { get => Current.Overloading; set => Current.Overloading = value; }
 
+        [Alias("matching")]
+        public static ZSharp.Compiler.Matching Matching { get => Current.Matching; set => Current.Matching = value; }
+
         [Alias("ir")]
         public static ZSharp.Compiler.IR IR { get => Current.IR; set => Current.IR = value; }
 

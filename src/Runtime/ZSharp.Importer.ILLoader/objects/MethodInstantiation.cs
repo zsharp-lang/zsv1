@@ -59,7 +59,7 @@ namespace ZSharp.Importer.ILLoader.Objects
 
     internal sealed class MethodInstantiationParameter(MethodInstantiation owner, ParameterInfo parameter, ILLoader loader)
         : CompilerObject
-        , ICTMatchParameter
+        , ICTParameter
     {
         public IResult Match(ArgumentStream arguments)
         {

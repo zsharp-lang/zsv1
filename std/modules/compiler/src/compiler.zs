@@ -31,12 +31,11 @@ import {
     Expression as LIRExpression, Statement as LIRStatement, Function as LIRFunction, ICallable, EntryPoint as LIREntryPoint
 } from "std:zsharp/lir";
 import { Bodies, ContainerCompiler } from "std:zsharp/lang";
-import { OverloadGroup } from "std:zsharp/compiler/overloading";
 import { Holder, Held, Initializing, keep } from "std:zsharp/lowering";
 import { metaTypes, bodies, language, ct } from "core:zsharp";
 import { entrypoint, definitionLoader, instanceLoader, metaType, binder } from "std:framework";
 import { ilLoader } from "core:runtime";
-import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader } from "core:compiler";
+import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader, overloading } from "core:compiler";
 import { Global, Module } from "std:modules";
 
 // ---- The COs
@@ -226,7 +225,7 @@ def ModuleObject of DotNet_Class : CompilerObject, Holder, ICTGetMember[String] 
                 loaded.Add(each.Unwrap());
                 index = index + 1;
             }
-            return Result[CompilerObject].Ok(OverloadGroup.Of(loaded));
+            return overloading.Group(loaded.ToArray());
         }
         return Result[CompilerObject].Error("Module " + this.node.Name + " has no member named " + name + ".");
     }

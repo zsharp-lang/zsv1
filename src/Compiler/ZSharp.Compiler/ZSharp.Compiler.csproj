@@ -10,6 +10,7 @@
     <ProjectReference Include="..\ZSharp.Compiler.HIRLoader.Code.Mapped\ZSharp.Compiler.HIRLoader.Code.Mapped.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.HIRReifier\ZSharp.Compiler.HIRReifier.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.Overloading\ZSharp.Compiler.Overloading.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.Matching\ZSharp.Compiler.Matching.csproj" />
   </ItemGroup>
 
 </Project>

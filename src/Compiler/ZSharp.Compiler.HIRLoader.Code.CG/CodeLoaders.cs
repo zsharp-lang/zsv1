@@ -60,7 +60,20 @@ namespace ZSharp.Compiler
         private static CompilerObject Local(HIR.Code.Local local, CompilerObject type, CompilerObject? init)
             => local.IsCaptured ? new Objects.CellLocal(type, init) : new Objects.Local(type, init);
 
-        public static void Register(MappedCodeLoader mapped, MappedLoader instances, HIRCodeLoader code, HIRLoader loader, CG cg)
+        /// <summary>
+        /// A parameter as what a call matches arguments to: its type and its default value
+        /// are loaded where each call is.
+        /// </summary>
+        private static Objects.ParameterMatch Parameter(string name, HIR.Type? type, HIR.Code.Expression? defaultValue, bool byName, bool byPosition)
+            => new(
+                name,
+                () => type is null ? Result.Error($"Parameter {name} has no type.") : Current.HIRLoader.LoadType(type),
+                defaultValue is { } fallback ? () => Current.HIRCodeLoader.LoadExpression(fallback) : null,
+                byName,
+                byPosition
+            );
+
+        public static void Register(MappedCodeLoader mapped, MappedLoader instances, HIRCodeLoader code, HIRLoader loader, CG cg, Matching matching, Overloading overloading)
         {
             var expressions = mapped.Expressions;
 
@@ -80,7 +93,7 @@ namespace ZSharp.Compiler
                     else
                         overloads.Add(overload);
 
-                return Result.Ok(OverloadGroup.Of(overloads));
+                return overloading.Group([.. overloads]);
             });
 
             instances.Types.Register<HIR.Infer>(_ => Result.Error("A type was meant to be inferred, but wasn't."));
@@ -114,12 +127,8 @@ namespace ZSharp.Compiler
 
             // A parameter as defined is what a call matches arguments to. As an instance it is
             // the variable of the code it belongs to, which whatever lowers that code gives.
-            instances.Definitions.Register<HIR.Code.PositionalParameter>(parameter => Result.Ok(new Objects.ParameterMatch(
-                parameter.Name, parameter.Type, parameter.DefaultValue, byName: false, byPosition: true
-            )));
-            instances.Definitions.Register<HIR.Code.NamedParameter>(parameter => Result.Ok(new Objects.ParameterMatch(
-                parameter.Name, parameter.Type, parameter.DefaultValue, byName: true, byPosition: false
-            )));
+            instances.Definitions.Register<HIR.Code.PositionalParameter>(parameter => Result.Ok(Parameter(parameter.Name, parameter.Type, parameter.DefaultValue, byName: false, byPosition: true)));
+            instances.Definitions.Register<HIR.Code.NamedParameter>(parameter => Result.Ok(Parameter(parameter.Name, parameter.Type, parameter.DefaultValue, byName: true, byPosition: false)));
 
             // Outside the functions that capture it, a capture is what it captures.
             instances.Instances.Register<HIR.Code.Capture>(capture => capture.Captured is HIR.Instance captured
@@ -155,9 +164,7 @@ namespace ZSharp.Compiler
                 if (code.LoadExpression(match.Pattern).Error(out error, out var pattern))
                     return Result.Error(error);
 
-                return cg.Match(value, pattern).When(out var result).Error(out error)
-                    ? Result.Error(error)
-                    : Result.Ok(result!.Match);
+                return matching.Match(value, pattern);
             });
 
             expressions.Register<HIR.Code.BlockExpression>(block =>

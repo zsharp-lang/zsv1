@@ -39,5 +39,22 @@ namespace ZSharp.Compiler
         /// </summary>
         public CompilerObject? Pop(string name)
             => named.Remove(name, out var argument) ? argument : null;
+
+        /// <summary>
+        /// Takes every argument left, the positional ones in order and then the named ones,
+        /// as a parameter that takes the rest does.
+        /// </summary>
+        public Argument[] Rest()
+        {
+            Argument[] rest = [
+                .. positional.Select(argument => new Argument(argument)),
+                .. named.Select(pair => new Argument(pair.Key, pair.Value)),
+            ];
+
+            positional.Clear();
+            named.Clear();
+
+            return rest;
+        }
     }
 }

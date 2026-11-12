@@ -13,6 +13,8 @@ namespace ZSharp.Compiler
 
         public static Overloading Overloading { get; set; } = new();
 
+        public static Matching Matching { get; set; } = new();
+
         public static IR IR { get; set; } = new();
 
         public static HIRLoader HIRLoader { get; set; } = new();

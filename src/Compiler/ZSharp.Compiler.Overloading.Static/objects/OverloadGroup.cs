@@ -23,7 +23,7 @@ namespace ZSharp.Compiler
         /// <summary>
         /// What candidates stand for together. A single candidate stands for itself.
         /// </summary>
-        public static CompilerObject Of(IEnumerable<CompilerObject> candidates)
+        internal static CompilerObject Of(IEnumerable<CompilerObject> candidates)
             => candidates.ToArray() is var all && all is [var single] ? single : new OverloadGroup(all);
 
         /// <summary>

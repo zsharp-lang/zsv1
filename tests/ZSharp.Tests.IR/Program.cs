@@ -15,7 +15,7 @@ var ir = ZSharp.Compiler.Current.IR;
 
 var plain = new Plain();
 Report("default expression is unsupported", ir.CompileExpression(plain, null).IsUnsupported());
-Report("default placement is unsupported", ir.CompileDefinition(plain, new L.Module(), null) is UnsupportedError);
+Report("default placement is unsupported", ir.CompileDefinition(plain, new L.Module(), null).IsUnsupported());
 
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(ir).Apply();
 
@@ -38,7 +38,7 @@ var firstErrors = new[] { (CompilerObject)fn, global, imported }
 
 Report("function placed", firstErrors[0] is null && module.Functions.Count == 1);
 Report("global placed", firstErrors[1] is null && module.Globals.Count == 1);
-Report("imported object is skipped, not an error", firstErrors[2] is UnsupportedError);
+Report("imported object is skipped, not an error", firstErrors[2].IsUnsupported());
 
 // Asking for the entity places nothing, and placing again adds nothing.
 var early = new FunctionCo();

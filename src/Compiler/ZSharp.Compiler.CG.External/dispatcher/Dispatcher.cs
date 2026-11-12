@@ -3,16 +3,17 @@ namespace ZSharp.Compiler.CGDispatchers.External
     /// <summary>
     /// Members an object has from outside, found when it has none of its own by the name.
     /// Its own members always come first, as instance methods do before extension methods
-    /// in C#. What every provider gives is one overload group, so members of one name from
+    /// in C#. What every provider gives is grouped as overloads are, so members of one name from
     /// different providers compete as overloads.
     /// </summary>
     /// <remarks>
     /// A dispatcher belongs to the whole toolchain, so what is added is seen by everything
     /// compiled after it, not only by a scope.
     /// </remarks>
-    public sealed class Dispatcher(CG cg)
+    public sealed class Dispatcher(CG cg, Overloading overloading)
     {
         private readonly CG cg = cg;
+        private readonly Overloading overloading = overloading;
         private readonly List<IExternalMembers> providers = [];
         private CG @base = null!;
 
@@ -35,7 +36,7 @@ namespace ZSharp.Compiler.CGDispatchers.External
 
             var members = providers.SelectMany(provider => provider.Members(@object, name)).ToArray();
 
-            return members.Length == 0 ? result : Result.Ok(OverloadGroup.Of(members));
+            return members.Length == 0 ? result : overloading.Group(members);
         }
     }
 }

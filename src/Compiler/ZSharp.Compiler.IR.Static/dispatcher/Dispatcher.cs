@@ -69,7 +69,7 @@ namespace ZSharp.Compiler.IRDispatchers.Static
         {
             var error = @base.CompileDefinition(@object, owner, target);
 
-            if (error is UnsupportedError && @object.Is<ICompileIRDefinitionIn<Owner>>(out var compile))
+            if (error.IsUnsupported() && @object.Is<ICompileIRDefinitionIn<Owner>>(out var compile))
                 error = compile.CompileIRDefinition(owner, target);
 
             return error;
