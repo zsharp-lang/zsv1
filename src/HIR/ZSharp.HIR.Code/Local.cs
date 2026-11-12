@@ -14,11 +14,5 @@ namespace ZSharp.HIR.Code
         public Type Type { get; set; } = type;
 
         public Expression? Init { get; set; }
-
-        /// <summary>
-        /// Whether a function inside the code captures this local. The code it belongs to
-        /// then stores it so that it can be shared.
-        /// </summary>
-        public bool IsCaptured { get; set; }
     }
 }

@@ -1371,7 +1371,7 @@ Try("a local function's own names aren't captured", () => Captured("""
     Keep(Cap7.run());
     """) == "own");
 
-Try("a captured local is marked, and an uncaptured one isn't", () =>
+Try("a captured local is declared as its capture, which its function holds, and an uncaptured one as itself", () =>
 {
     if (Run("""
         Keep(def Cap8 {
@@ -1385,8 +1385,15 @@ Try("a captured local is marked, and an uncaptured one isn't", () =>
         """) is { } error)
         throw new Exception(error);
 
-    var locals = ((Package.DotNet.Class)Kept()).Methods.First(method => method.Name == "run").Locals;
-    return locals.First(local => local.Name == "x").IsCaptured && !locals.First(local => local.Name == "y").IsCaptured;
+    var run = ((Package.DotNet.Class)Kept()).Methods.First(method => method.Name == "run");
+    var x = run.Locals.First(local => local.Name == "x");
+    var y = run.Locals.First(local => local.Name == "y");
+    var declared = Nodes<ZSharp.HIR.Code.Declare>(run.Body!).Select(declare => declare.Definition).ToList();
+    var read = Nodes<Package.DotNet.LocalFunction>(run.Body!).Single();
+
+    return declared.Any(definition => definition is ZSharp.HIR.Code.Capture { Captured: var captured } && captured == x)
+        && declared.Contains(y) && !declared.Contains(x)
+        && read.Captures is [{ Captured: var held }] && held == x;
 });
 
 Try("a local function gets a document local's value from when it was built", () => Captured("""
@@ -1531,7 +1538,7 @@ Try("a local function captures a parameter of the local function it is in", () =
     Keep(CapP4.run());
     """) is "hi!");
 
-Try("a captured parameter is marked", () =>
+Try("a captured parameter is what its function's capture holds, and an uncaptured one isn't", () =>
 {
     if (Run("""
         Keep(def CapP5 {
@@ -1543,9 +1550,38 @@ Try("a captured parameter is marked", () =>
         """) is { } error)
         throw new Exception(error);
 
-    var parameters = ((Package.DotNet.Class)Kept()).Methods.First(method => method.Name == "run").Parameters;
-    return parameters[0].IsCaptured && !parameters[1].IsCaptured;
+    var run = ((Package.DotNet.Class)Kept()).Methods.First(method => method.Name == "run");
+    return Nodes<Package.DotNet.LocalFunction>(run.Body!).Single().Captures is [{ Captured: var held }] && held == run.Parameters[0];
 });
+
+// The nodes of a type that HIR holds, found through what each node holds.
+List<T> Nodes<T>(object root)
+{
+    var found = new List<T>();
+    var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
+    var pending = new Stack<object>([root]);
+
+    while (pending.TryPop(out var node))
+    {
+        if (!seen.Add(node))
+            continue;
+
+        if (node is T match)
+            found.Add(match);
+
+        if (node is System.Collections.IEnumerable items and not string)
+            foreach (var item in items)
+                if (item is not null)
+                    pending.Push(item);
+
+        if (node.GetType().Namespace is { } space && (space.StartsWith("ZSharp.HIR") || space.StartsWith("Package.")))
+            foreach (var property in node.GetType().GetProperties())
+                if (property.GetIndexParameters().Length == 0 && property.GetValue(node) is { } value && value is not string && !value.GetType().IsValueType)
+                    pending.Push(value);
+    }
+
+    return found;
+}
 
 object Captured2(string source)
 {
@@ -5893,8 +5929,6 @@ public sealed class Injected(string name, ZSharp.HIR.Type? type, string value)
     public string Name => name;
 
     public ZSharp.HIR.Type? Type => type;
-
-    public bool IsCaptured { get; set; }
 
     public string Value => value;
 }

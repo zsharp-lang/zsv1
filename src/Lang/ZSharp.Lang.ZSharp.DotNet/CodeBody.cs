@@ -105,7 +105,9 @@ namespace ZSharp.Lang.DotNet
             if (names.Count == 0)
                 return null;
 
-            var receiver = new Code.Local("this", (HIR.Type)il.Load(typeof(Package.DotNet.This)))
+            // The object is a variable, which the code refers to through a variable of the
+            // building code, as it does to a parameter, so a function can capture it.
+            var receiver = new Code.Local("this", (HIR.Type)il.Load(typeof(HIR.Variable)))
             {
                 Init = Member(owner, nameof(Package.DotNet.Method.This))
             };

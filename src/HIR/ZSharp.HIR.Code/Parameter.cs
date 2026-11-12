@@ -21,10 +21,5 @@ namespace ZSharp.HIR.Code
         /// </summary>
         public Type? Type { get; }
 
-        /// <summary>
-        /// Whether a function inside the code captures this parameter. The code it belongs
-        /// to then stores its value so that it can be shared.
-        /// </summary>
-        public bool IsCaptured { get; set; }
     }
 }

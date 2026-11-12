@@ -55,10 +55,32 @@ namespace ZSharp.Compiler
                 : Result.Error("A parameter can only be used by the code it belongs to.");
 
         /// <summary>
-        /// A captured local lives where the functions that capture it can share it.
+        /// A captured local lives where the functions that capture it can share it: the code
+        /// it belongs to declares its capture rather than the local itself.
         /// </summary>
         private static CompilerObject Local(HIR.Code.Local local, CompilerObject type, CompilerObject? init)
-            => local.IsCaptured ? new Objects.CellLocal(type, init) : new Objects.Local(type, init);
+            => shared.TryGetValue(local, out _) ? new Objects.CellLocal(type, init) : new Objects.Local(type, init);
+
+        /// <summary>
+        /// The locals whose code declares their capture, as it does once a function captures
+        /// them. It is what the code says, found as it is loaded, as a local is declared
+        /// before anything uses it.
+        /// </summary>
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<HIR.Code.Local, object> shared = new();
+
+        /// <summary>
+        /// What a capture captures, through the captures of captures, as functions nested in
+        /// one another capture what the one around captured.
+        /// </summary>
+        public static HIR.Variable Captured(HIR.Code.Capture capture)
+        {
+            HIR.Variable captured = capture;
+
+            while (captured is HIR.Code.Capture inner)
+                captured = inner.Captured;
+
+            return captured;
+        }
 
         public static void Register(MappedCodeLoader mapped, MappedLoader instances, HIRCodeLoader code, HIRLoader loader, CG cg, Matching matching, Overloading overloading)
         {
@@ -120,6 +142,17 @@ namespace ZSharp.Compiler
                 _ => Result.Error("A capture is of a variable that is neither an instance nor a definition.")
             });
             instances.Instances.Register<HIR.Code.Local>(local => loader.LoadDefinition(local));
+
+            // Declaring a capture declares the local it captures, which is then shared.
+            instances.Definitions.Register<HIR.Code.Capture>(capture =>
+            {
+                if (Captured(capture) is not HIR.Code.Local local)
+                    return Result.Error("Only a capture of a local is declared.");
+
+                shared.AddOrUpdate(local, true);
+
+                return loader.LoadDefinition(local);
+            });
 
             expressions.Register<HIR.Code.Get>(get => loader.LoadInstance(get.Instance));
 
