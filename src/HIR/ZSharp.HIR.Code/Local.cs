@@ -5,7 +5,8 @@ namespace ZSharp.HIR.Code
     /// value if it has one.
     /// </summary>
     public sealed class Local(string name, Type type)
-        : Variable
+        : Definition
+        , Variable
         , Instance
     {
         public string Name { get; set; } = name;
