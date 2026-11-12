@@ -11,15 +11,17 @@
 // std:traits/static decides from the static type, and std:traits/dynamic looks an
 // implementation up by the type a value has as the code runs.
 
-import { String, Object, Boolean, Int32, List, Type as ClrType, DotNet_Class, explicitThis, DotNet_Module, ilLoader } from "core:runtime"; import { static, public } from "std:zsharp/package/dotnet";
-import { Instance, Definition, Type } from "std:zsharp/hir";
-import { Local, Get, Block, Declare, ExpressionStatement, Set, StringLiteral, Cast, Expression } from "std:zsharp/hir/code";
-import { Definition as DefinitionSyntax, TypeDefinition as TypeSyntax } from "std:zsharp/lang/ast";
-import { CompilerObject } from "std:zsharp/mir";
-import { Error, Result, IResult } from "std:zsharp/common";
-import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
-import { Bodies, MetaCompilerOf, MetaCompiler } from "std:zsharp/lang";
-import { GenericInstance, TypeReference } from "std:zsharp/package/dotnet";
+import { String, Object, Boolean, Int32, List, Type as ClrType, explicitThis, ilLoader } from "core:runtime";
+import { Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { static, public } from "pkg:clr/hir";
+import { Instance, Definition, Type } from "pkg:zsharp/hir";
+import { Local, Get, Block, Declare, ExpressionStatement, Set, StringLiteral, Cast, Expression } from "pkg:zsharp/hir/code";
+import { Definition as DefinitionSyntax, TypeDefinition as TypeSyntax } from "pkg:zsharp/lang/ast";
+import { CompilerObject } from "pkg:zsharp/mir";
+import { Error, Result, IResult } from "pkg:zsharp/core";
+import { ASTCompiler, CompiledDefinition } from "core:zsharp/lang";
+import { Bodies, MetaCompilerOf, MetaCompiler } from "pkg:zsharp/lang/hir";
+import { GenericInstance, TypeReference } from "pkg:clr/hir";
 import { metaTypes, load } from "core:zsharp";
 import { entrypoint, definitionLoader, instanceLoader } from "std:framework";
 import { ts, hirLoader, mappedLoader } from "core:compiler";

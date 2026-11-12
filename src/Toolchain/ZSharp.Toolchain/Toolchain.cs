@@ -25,6 +25,7 @@ namespace ZSharp.Toolchain
         private readonly StringImporter importer = new();
         private readonly LibraryImporter std = new("standard");
         private readonly LibraryImporter core = new("core");
+        private readonly LibraryImporter packages = new("package");
         private readonly ASTCompiler compiler = new();
         private readonly MappedASTCompiler mappedCompiler;
         private readonly Binder binder = new();
@@ -117,7 +118,9 @@ namespace ZSharp.Toolchain
                 : Result<object?>.Ok(runtime.Evaluate(expression!));
 
         /// <summary>
-        /// The libraries the toolchain provides, `core:` and `std:`, by name.
+        /// The libraries the toolchain provides, `core:`, `std:` and its own packages under
+        /// `pkg:`, by name. What `pkg:` doesn't have is the package manager's, once it is
+        /// installed.
         /// </summary>
         private void SetUpLibraries()
         {
@@ -129,11 +132,17 @@ namespace ZSharp.Toolchain
             core.Add("zsharp", il.Load(typeof(global::Core.ZSharp.ModuleScope).Module));
             global::Core.ZSharp.ModuleScope.Libraries = core;
 
-            foreach (var (name, module) in ToolchainModules.All())
-                std.Add(name, il.Load(module));
+            foreach (var (name, module) in ToolchainModules.Core())
+                core.Add(name, il.Load(module));
+
+            foreach (var (name, module) in ToolchainModules.Packages())
+                packages.Add(name, il.Load(module));
+
+            global::Core.ZSharp.ModuleScope.Packages = packages;
 
             importer.Register("std", std);
             importer.Register("core", core);
+            importer.Register("pkg", packages);
         }
 
         /// <summary>

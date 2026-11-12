@@ -4,14 +4,15 @@
 // still matched by what its type implements.
 
 import { Traits, Lookup } from "std:traits";
-import { String, DotNet_Module } from "core:runtime";
-import { Error, Result, IResult } from "std:zsharp/common";
-import { CompilerObject } from "std:zsharp/mir";
-import { Argument, Cast } from "std:zsharp/compiler/cg";
-import { MatchPattern } from "std:zsharp/compiler/matching";
+import { String } from "core:runtime";
+import { Module as DotNet_Module } from "pkg:clr/hir";
+import { Error, Result, IResult } from "pkg:zsharp/core";
+import { CompilerObject } from "pkg:zsharp/mir";
+import { Argument, Cast } from "core:zsharp/mir/cg";
+import { MatchPattern } from "core:zsharp/mir/matching";
 import { entrypoint } from "std:framework";
 import { cg, matching, hirLoader } from "core:compiler";
-import { Instance } from "std:zsharp/hir";
+import { Instance } from "pkg:zsharp/hir";
 
 let previousMatch: MatchPattern;
 let previousCast: Cast;

@@ -1,10 +1,8 @@
-// std:dotnet — what a build of a .NET assembly needs.
-//
-// A `.dll` file is imported by its path, as a `.zs` file is, by the host: the assembly,
-// loaded unless it is loaded already, as its module, whose members are its public types.
-// The first time an assembly is imported, its modules are entered.
+// pkg:clr/platform — what a build of a .NET assembly needs, on the CLR. It was
+// std:dotnet: it is the CLR platform's, not the standard library's.
 
-import { Object, String, Type, Path, File, List } from "core:runtime";
+import { Object, String, Type, List } from "core:runtime";
+import { Path, File } from Object.Assembly;
 import {  } from "core:zsharp";
 
 

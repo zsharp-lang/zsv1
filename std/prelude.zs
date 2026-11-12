@@ -28,9 +28,8 @@ import { Type } from "std:types";
 import { reflect } from "std:reflection";
 import { premap } from "std:functions/compiler";
 import { describe } from "std:encoding";
-import { Instance } from "std:zsharp/hir";
+import { Instance } from "pkg:zsharp/hir";
 premap(reflect as Instance, describe as Instance);
 
-// .NET assemblies as files, and packages, as `pkg:`, from the package manager.
-import "std:dotnet";
+// Packages beyond the toolchain's own, as `pkg:`, from the package manager.
 import "std:packages";

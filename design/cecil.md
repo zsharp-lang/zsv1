@@ -41,8 +41,8 @@ into the running platform, and gives it LIR:
   that builds itself builds what it was.
 - **What a build needs goes with it.** `dependencies()` gives the files of the
   assemblies the written one needs that neither .NET nor the running toolchain has, as
-  Mono.Cecil, with what they need in turn, and `std:dotnet`'s `bundle` copies them into
-  the build's folder, leaving one already there the same, as it may be in use.
+  Mono.Cecil, with what they need in turn, and `pkg:clr/platform`'s `bundle` copies them
+  into the build's folder, leaving one already there the same, as it may be in use.
 - **Not yet:**
   - A CLR method with a local function, whose captures only the running process has.
   - A Z# class's constructor is a function of its module, not a CLR constructor, and a

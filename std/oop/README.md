@@ -120,7 +120,8 @@ a class is given as its bases are the interfaces it implements.
 - **`std:zsharp/capabilities`:** `Polymorphism` and `PlatformInterfaces`, the target's
   polymorphism.
 - **`core:runtime`**, **`core:zsharp`** and **`core:compiler`**.
-- **The `std:zsharp/...` modules:** HIR, MIR, LIR, AST, and the compiler's protocols.
+- **The toolchain's packages and layers:** HIR, MIR, LIR and the AST, under `pkg:`, and
+  the compiler's protocols, under `core:zsharp/`.
 - **`std:framework`** and **`std:zsharp/lowering`**.
 
 ## Open points for review

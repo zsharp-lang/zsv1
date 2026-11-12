@@ -6,9 +6,11 @@
 // reaches, asks what holds it. Belonging is how a definition is lowered, so it is in the
 // COs, and the nodes stay structure.
 
-import { Object, Boolean, Int32, List, DotNet_Interface, DotNet_Class } from "core:runtime"; import { static, public } from "std:zsharp/package/dotnet";
-import { Module as LIRModule, Definition as LIRDefinition, Statement as LIRStatement, Initialized, Metadata, KeptAnnotation } from "std:zsharp/lir";
-import { Annotated, Kept } from "std:zsharp/hir";
+import { Object, Boolean, Int32, List } from "core:runtime";
+import { Interface as DotNet_Interface, Class as DotNet_Class } from "pkg:clr/hir";
+import { static, public } from "pkg:clr/hir";
+import { Module as LIRModule, Definition as LIRDefinition, Statement as LIRStatement, Initialized, Metadata, KeptAnnotation } from "pkg:zsharp/lir";
+import { Annotated, Kept } from "pkg:zsharp/hir";
 
 // What holds definitions, as its CO: they lower into its LIR module for a target, which
 // it lowers with them.

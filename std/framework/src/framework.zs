@@ -8,9 +8,11 @@
 // they declare, in their order, then calls its explicit entry points: what importing the
 // module calls, built or compiled from its sources, and building it doesn't.
 
-import { String, Object, Boolean, Int32, List, Func, DotNet_Class, DotNet_Module, explicitThis } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
-import { Instance, Definition, Annotated, Type } from "std:zsharp/hir";
-import { Code, Block, Get, Call, Cast, Index, NamedMember, Argument, Expression, ExpressionStatement } from "std:zsharp/hir/code";
+import { String, Object, Boolean, Int32, List, Func, explicitThis } from "core:runtime";
+import { Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { public } from "pkg:clr/hir";
+import { Instance, Definition, Annotated, Type } from "pkg:zsharp/hir";
+import { Code, Block, Get, Call, Cast, Index, NamedMember, Argument, Expression, ExpressionStatement } from "pkg:zsharp/hir/code";
 import { Function, Positional } from "std:functions";
 import { Module } from "std:modules";
 import { core } from "core:zsharp";

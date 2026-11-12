@@ -6,10 +6,10 @@
 // once that HIR is loaded. So it takes nothing of a meta-type beyond the value its CO
 // gives: a definition whose CO gives none, as a module's, has no type.
 
-import { DotNet_Class } from "core:runtime";
-import { Instance, Type as HIRType } from "std:zsharp/hir";
-import { Get, GetValue, TypeOf } from "std:zsharp/hir/code";
-import { Operator } from "std:zsharp/lang";
+import { Class as DotNet_Class } from "pkg:clr/hir";
+import { Instance, Type as HIRType } from "pkg:zsharp/hir";
+import { Get, GetValue, TypeOf } from "pkg:zsharp/hir/code";
+import { Operator } from "pkg:zsharp/lang/hir";
 import { class, Class } from "std:oop";
 import { operator } from "core:zsharp";
 

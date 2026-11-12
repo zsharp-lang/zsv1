@@ -41,6 +41,14 @@ namespace Core.ZSharp
         public static global::ZSharp.Importer.String.LibraryImporter Libraries { get; set; } = null!;
 
         /// <summary>
+        /// The <c>pkg:</c> library: the toolchain's own packages, which have no state, as
+        /// <c>pkg:zsharp/hir</c>. What it has no module for is its fallback's, which the
+        /// package manager sets.
+        /// </summary>
+        [Alias("packages")]
+        public static global::ZSharp.Importer.String.LibraryImporter Packages { get; set; } = null!;
+
+        /// <summary>
         /// What imports a source with no prefix, a file, by what is registered for its
         /// extension.
         /// </summary>

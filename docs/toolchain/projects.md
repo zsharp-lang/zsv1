@@ -50,7 +50,8 @@ This script writes a project into its folder, builds it, and calls what it built
 ```zs
 import "std:prelude";
 import { print } from "std:io";
-import { Path, File, Directory } from "core:runtime";
+import { Object } from "core:runtime";
+import { Path, File, Directory } from Object.Assembly;
 import { discover, Compiler } from "std:project";
 import { Module } from "std:modules";
 import { lower } from "std:modules/compiler";

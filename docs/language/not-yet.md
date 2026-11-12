@@ -11,7 +11,7 @@ write instead for now.
 | `for` loops | `while`, with a variable for the index. |
 | `try`, `catch` and `throw` | Nothing yet: a .NET exception ends the script. |
 | A document's function as a delegate | A function of a [module](modules.md) is one. |
-| Generic classes in Z# | A class of .NET's, or one defined in Z# with `def Name of DotNet_Class`. |
+| Generic classes in Z# | A class of .NET's, or one defined in Z# with `def Name of Class`, with `Class` from `pkg:clr/hir`. |
 
 And what isn't planned, by design:
 

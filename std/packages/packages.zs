@@ -1,15 +1,16 @@
-// std:packages — `pkg:`, from the package manager. The package manager is a project of
-// the toolchain's, in `packages/package-manager`: its assembly, once it is built into its
-// `build`, or else the project, compiled now. Either is `core:packages`, whose roots code
-// can add to, and a package that is a project is compiled by the project compiler. An
-// assembly the running .NET can't find, as one a package's assembly refers to, it asks
-// the package manager for.
+// std:packages — what `pkg:` has beyond the toolchain's own packages, from the package
+// manager. The package manager is a project of the toolchain's, in
+// `packages/package-manager`: its assembly, once it is built into its `build`, or else
+// the project, compiled now. Either is `core:packages`, whose roots code can add to, and
+// a package that is a project is compiled by the project compiler. An assembly the
+// running .NET can't find, as one a package's assembly refers to, it asks the package
+// manager for.
 
-import { Object, String, Type, Path, File, Directory, Assembly, ilLoader } from "core:runtime";
-import { Instance } from "std:zsharp/hir";
-import { Error, Result, IResult } from "std:zsharp/common";
-import { core, importers, Importer } from "core:zsharp";
-import "std:dotnet";
+import { Object, String, Type, ilLoader } from "core:runtime";
+import { Path, File, Directory, Assembly } from Object.Assembly;
+import { Instance } from "pkg:zsharp/hir";
+import { Error, Result, IResult } from "pkg:zsharp/core";
+import { core, packages, Importer } from "core:zsharp";
 import { discover, Compiler } from "std:project";
 import { Module } from "std:modules";
 import { enter } from "std:modules/compiler";
@@ -49,5 +50,5 @@ core.Add("packages", Bootstrap.manager());
 
 import { load, compileProjectsWith, resolveAssembly } from "core:packages";
 compileProjectsWith(Bootstrap.project);
-importers.Register("pkg", load);
+packages.FallBackTo(load);
 AssemblyLoadContext.Default.Resolving.add(resolveAssembly);

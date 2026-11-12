@@ -31,7 +31,7 @@ import "std:prelude";
 import { print } from "std:io";
 import { reflect } from "std:reflection";
 import { Module } from "std:modules";
-import { Named } from "std:zsharp/hir";
+import { Named } from "pkg:zsharp/hir";
 import { Type } from "core:runtime";
 
 let built: Type = Module;

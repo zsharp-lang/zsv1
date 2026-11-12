@@ -9,11 +9,13 @@
 // The nodes are the platform's own definitions, written with one meta-type, `Node`, so
 // another platform reimplements them by giving that name its own.
 
-import { String, Object, List, DotNet_Class as Node, explicitThis } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
+import { String, Object, List, explicitThis } from "core:runtime";
+import { Class as Node } from "pkg:clr/hir";
+import { public } from "pkg:clr/hir";
 import { importers } from "core:zsharp";
 import { entrypoint } from "std:framework";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "std:zsharp/hir";
-import { Expression } from "std:zsharp/hir/code";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "pkg:zsharp/hir";
+import { Expression } from "pkg:zsharp/hir/code";
 
 // ---- The HIR
 

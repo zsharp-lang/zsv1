@@ -6,22 +6,24 @@
 // compiler needs of them. Importing it makes `fun` a Z# function wherever nothing else
 // compiles one.
 
-import { String, Object, Boolean, Int32, List, Dictionary, explicitThis, DotNet_Class, DotNet_Module } from "core:runtime"; import { public } from "std:zsharp/package/dotnet";
-import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "std:zsharp/hir";
-import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get } from "std:zsharp/hir/code";
-import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "std:zsharp/lang/ast";
-import { CompilerObject } from "std:zsharp/mir";
-import { Error, Result, IResult } from "std:zsharp/common";
-import { Argument, ArgumentStream } from "std:zsharp/compiler/cg";
-import { ICTCallable, ICTCastTo } from "std:zsharp/compiler/cg/direct";
-import { ICTBind } from "std:zsharp/compiler/matching/static";
-import { ICompileIRExpression, ICompileIRDefinitionIn, ICompileIRReference } from "std:zsharp/compiler/ir";
-import { ITyped } from "std:zsharp/compiler/ts";
-import { FunctionHandle, Constant } from "std:zsharp/lir";
-import { ASTCompiler, CompiledDefinition } from "std:zsharp/compiler/ast";
-import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Statement as LIRStatement, Code as LIRCode, Module as LIRModule, ICallable } from "std:zsharp/lir";
-import { Bodies } from "std:zsharp/lang";
-import { CodeLoaders } from "std:zsharp/compiler/code";
+import { String, Object, Boolean, Int32, List, Dictionary, explicitThis } from "core:runtime";
+import { Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { public } from "pkg:clr/hir";
+import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "pkg:zsharp/hir";
+import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get } from "pkg:zsharp/hir/code";
+import { Function as FunctionSyntax, Definition as DefinitionSyntax } from "pkg:zsharp/lang/ast";
+import { CompilerObject } from "pkg:zsharp/mir";
+import { Error, Result, IResult } from "pkg:zsharp/core";
+import { Argument, ArgumentStream } from "core:zsharp/mir/cg";
+import { ICTCallable, ICTCastTo } from "core:zsharp/mir/cg/direct";
+import { ICTBind } from "core:zsharp/mir/matching/static";
+import { ICompileIRExpression, ICompileIRDefinitionIn, ICompileIRReference } from "core:zsharp/m2l";
+import { ITyped } from "core:zsharp/mir/ts";
+import { FunctionHandle, Constant } from "pkg:zsharp/lir";
+import { ASTCompiler, CompiledDefinition } from "core:zsharp/lang";
+import { Function as LIRFunction, Parameter as LIRParameter, Signature, Call as LIRCall, GetLocal, Expression as LIRExpression, Statement as LIRStatement, Code as LIRCode, Module as LIRModule, ICallable } from "pkg:zsharp/lir";
+import { Bodies } from "pkg:zsharp/lang/hir";
+import { CodeLoaders } from "core:zsharp/h2m";
 import { Holder, Held, keep } from "std:zsharp/lowering";
 import { metaTypes, bodies } from "core:zsharp";
 import { entrypoint, definitionLoader, instanceLoader, metaType, binder } from "std:framework";

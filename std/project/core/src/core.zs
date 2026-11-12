@@ -6,12 +6,13 @@
 // in the document's scope: the sources see what the module file imported. Its sources need
 // not import one another, as they are one module.
 
-import { String, List, Directory, File, Path } from "core:runtime";
-import { Instance, Type as HIRType } from "std:zsharp/hir";
-import { Statement as StatementSyntax, Module as ModuleSyntax, ModuleTokens } from "std:zsharp/lang/ast";
-import { Parser } from "std:zsharp/lang/parser";
-import { Tokenizer, TextStream } from "std:zsharp/lang/tokenizer";
-import { Grammar } from "std:zsharp/lang/syntax";
+import { Object, String, List } from "core:runtime";
+import { Directory, File, Path } from Object.Assembly;
+import { Instance, Type as HIRType } from "pkg:zsharp/hir";
+import { Statement as StatementSyntax, Module as ModuleSyntax, ModuleTokens } from "pkg:zsharp/lang/ast";
+import { Parser } from "pkg:zsharp/lang/parser";
+import { Tokenizer, TextStream } from "pkg:zsharp/lang/tokenizer";
+import { Grammar } from "pkg:zsharp/lang/syntax";
 import { Module } from "std:modules";
 import { compiler, metaTypes, ct, documents } from "core:zsharp";
 

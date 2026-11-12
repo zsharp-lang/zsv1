@@ -16,7 +16,9 @@
 // library is built with it, and the package manager is built with it once the standard
 // library builds itself the same.
 
-import { Object, String, Type, Int32, Boolean, List, Path, Directory, File, Environment, DotNet_Module } from "core:runtime";
+import { Object, String, Type, Int32, Boolean, List } from "core:runtime";
+import { Module as DotNet_Module } from "pkg:clr/hir";
+import { Path, Directory, File, Environment } from Object.Assembly;
 
 
 // The toolchain's directory: the one the standard library is in, at or above where this
@@ -46,7 +48,6 @@ libraries.Add("modules/compiler"); needs.Add("modules,zsharp/lowering");
 libraries.Add("oop"); needs.Add("functions,zsharp/capabilities,zsharp/lowering");
 libraries.Add("oop/compiler"); needs.Add("oop,functions,zsharp/capabilities,zsharp/lowering");
 libraries.Add("framework"); needs.Add("functions,modules");
-libraries.Add("dotnet"); needs.Add("");
 libraries.Add("encoding"); needs.Add("");
 libraries.Add("reflection"); needs.Add("");
 libraries.Add("types"); needs.Add("oop");
