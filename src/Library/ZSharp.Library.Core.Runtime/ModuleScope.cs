@@ -30,9 +30,6 @@ namespace Core.Runtime
         public static readonly ZSharp.HIR.Instance OutFamily = new Package.DotNet.RefFamily(isOut: true);
 
         /// <summary>
-        /// Makes the first parameter the object the method runs on.
-        /// </summary>
-        /// <summary>
         /// Makes a method one a derived class can override.
         /// </summary>
         [Alias("virtual")]
@@ -63,6 +60,9 @@ namespace Core.Runtime
             return method;
         }
 
+        /// <summary>
+        /// Makes the first parameter the object the method runs on.
+        /// </summary>
         [Alias("explicitThis")]
         public static Package.DotNet.Method ExplicitThis(Package.DotNet.Method method)
         {

@@ -7,7 +7,10 @@ namespace Package.DotNet
     public sealed class Module(string name)
         : ZSharp.HIR.Instance
         , ZSharp.HIR.Named
+        , Accessible
     {
+        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+
         public string Name { get; set; } = name;
 
         public List<DotNetDefinition> Definitions { get; } = [];

@@ -5,7 +5,10 @@ namespace Package.DotNet
         , DotNetDefinition
         , ZSharp.HIR.Named
         , ZSharp.HIR.Annotated
+        , Accessible
     {
+        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+
         public List<object> Annotations { get; } = [];
 
         public string Name { get; set; } = name;

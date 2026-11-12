@@ -4,7 +4,10 @@ namespace Package.DotNet
         : ZSharp.HIR.Definition
         , ZSharp.HIR.Instance
         , ZSharp.HIR.Named
+        , Accessible
     {
+        public Accessibility Accessibility { get; set; } = Accessibility.Public;
+
         public string Name { get; set; } = name;
 
         public bool IsStatic { get; set; }

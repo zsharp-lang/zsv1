@@ -44,12 +44,7 @@ namespace ZSharp.Lang.DotNet
                 return Result<Code.Block>.Error(invalid);
 
             // In a class, a let is a field and a fun a method.
-            var fork = body.WithMethods(compiler);
-            var previous = fork.Expression;
-
-            fork.Expression = (current, expression) => expression is AST.LetExpression let
-                ? body.Field(current, let, self, nameof(Package.DotNet.Class.Fields), bind: false)
-                : previous(current, expression);
+            var fork = body.WithFields(body.WithMethods(compiler), self, nameof(Package.DotNet.Class.Fields), bind: false);
 
             var filled = container.Compile(
                 fork,

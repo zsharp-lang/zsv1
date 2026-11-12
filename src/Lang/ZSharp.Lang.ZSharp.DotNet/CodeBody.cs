@@ -129,6 +129,36 @@ namespace ZSharp.Lang.DotNet
             });
         }
 
+        /// <summary>
+        /// A container's fields: a <c>let</c> in it is a field, which decorators on it are
+        /// given, as a definition is, rather than the code that builds it.
+        /// </summary>
+        public ASTCompiler WithFields(ASTCompiler compiler, Code.Local owner, string list, bool bind)
+        {
+            var fork = compiler.Fork();
+            var expressions = fork.Expression;
+            var statements = fork.Statement;
+
+            fork.Expression = (current, expression) => expression is AST.LetExpression let
+                ? Field(current, let, owner, list, bind)
+                : expressions(current, expression);
+
+            fork.Statement = (current, statement) =>
+            {
+                if (Language.Undecorate(statement, out var decorators) is not AST.ExpressionStatement { Expression: AST.LetExpression let } || decorators.Count == 0)
+                    return statements(current, statement);
+
+                if (Field(current, let, owner, list, bind).When(out var field).Error(out var error))
+                    return Result<Code.Statement>.Error(error);
+
+                return Language.CompileDecorators(current, decorators).When(out var compiled).Error(out error)
+                    ? Result<Code.Statement>.Error(error)
+                    : Result<Code.Statement>.Ok(new Code.ExpressionStatement(Language.Decorate(field!, compiled!)));
+            };
+
+            return fork;
+        }
+
         public Error? Body(ASTCompiler compiler, Code.Block block, Code.Local owner, AST.Statement? body)
             => Bodies.Body(compiler, block, owner, body);
 
