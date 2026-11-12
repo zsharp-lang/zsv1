@@ -60,19 +60,6 @@ namespace ZSharp.Compiler
         private static CompilerObject Local(HIR.Code.Local local, CompilerObject type, CompilerObject? init)
             => local.IsCaptured ? new Objects.CellLocal(type, init) : new Objects.Local(type, init);
 
-        /// <summary>
-        /// A parameter as what a call matches arguments to: its type and its default value
-        /// are loaded where each call is.
-        /// </summary>
-        private static Objects.ParameterMatch Parameter(string name, HIR.Type? type, HIR.Code.Expression? defaultValue, bool byName, bool byPosition)
-            => new(
-                name,
-                () => type is null ? Result.Error($"Parameter {name} has no type.") : Current.HIRLoader.LoadType(type),
-                defaultValue is { } fallback ? () => Current.HIRCodeLoader.LoadExpression(fallback) : null,
-                byName,
-                byPosition
-            );
-
         public static void Register(MappedCodeLoader mapped, MappedLoader instances, HIRCodeLoader code, HIRLoader loader, CG cg, Matching matching, Overloading overloading)
         {
             var expressions = mapped.Expressions;
@@ -124,11 +111,6 @@ namespace ZSharp.Compiler
                     ? Result.Error($"The type of local {local.Name} can't be inferred from its initial value.")
                     : Result.Ok(Local(local, inferred, init));
             });
-
-            // A parameter as defined is what a call matches arguments to. As an instance it is
-            // the variable of the code it belongs to, which whatever lowers that code gives.
-            instances.Definitions.Register<HIR.Code.PositionalParameter>(parameter => Result.Ok(Parameter(parameter.Name, parameter.Type, parameter.DefaultValue, byName: false, byPosition: true)));
-            instances.Definitions.Register<HIR.Code.NamedParameter>(parameter => Result.Ok(Parameter(parameter.Name, parameter.Type, parameter.DefaultValue, byName: true, byPosition: false)));
 
             // Outside the functions that capture it, a capture is what it captures.
             instances.Instances.Register<HIR.Code.Capture>(capture => capture.Captured is HIR.Instance captured

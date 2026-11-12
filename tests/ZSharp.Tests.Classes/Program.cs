@@ -1483,9 +1483,9 @@ Try("a local function sees a parameter assigned after it is defined", () => Capt
     Keep(CapP2.run("a"));
     """) is "a!");
 
-Try("a named parameter can be captured", () => Captured2("""
+Try("a parameter given by name can be captured", () => Captured2("""
     @public def CapP3 {
-        @public @static fun run({n: Int32}): Int32 {
+        @public @static fun run(n: Int32): Int32 {
             fun twice(): Int32 { return n * 2; }
             return twice();
         }
@@ -1833,45 +1833,48 @@ Try("overloads are chosen by the names of the arguments", () =>
     ResetKept() &&
     Run("""Keep(NamedBy(text: "x")); Keep(NamedBy(count: 1));""") is null && Probe.Kept is ["text", "count"]);
 
-Try("a Z# method takes positional and named parameters, with default values", () =>
+Try("a CLR method's parameter is given by position or by name, with its default value", () =>
     ResetKept() &&
     Run("""
         @public def Named1 {
-            @public @static fun greet(name: String, {greeting: String = "Hello"}): String { return greeting + ", " + name; }
+            @public @static fun greet(name: String, greeting: String = "Hello"): String { return greeting + ", " + name; }
         }
         Keep(Named1.greet("Ann"));
         Keep(Named1.greet("Bo", greeting: "Hi"));
         """) is null && Probe.Kept is ["Hello, Ann", "Hi, Bo"]);
 
-Try("a Z# constructor takes named arguments and default values", () =>
+Try("a CLR constructor takes named arguments and default values", () =>
     ResetKept() &&
     Run("""
         @public def WithDefaultTag {
             @public let tag: String;
-            @public @explicitThis new(this, {tag: String = "default"}) { this.tag = tag; }
+            @public @explicitThis new(this, tag: String = "default") { this.tag = tag; }
         }
         Keep(WithDefaultTag().tag);
         Keep(WithDefaultTag(tag: "given").tag);
         """) is null && Probe.Kept is ["default", "given"]);
 
-Try("a Z# positional parameter takes only a positional argument", () =>
+Try("a CLR method's parameters can all be given by name, as C# lets any be", () =>
     Run("""
         @public def Named5 {
-            @public @static fun join(a: String, {b: String}): String { return a + b; }
+            @public @static fun join(a: String, b: String): String { return a + b; }
         }
         Keep(Named5.join(a: "A", b: "B"));
-        """) is { } e && e.Contains("can't be called with these arguments"));
+        """) is null && (string)Kept() == "AB");
 
-Try("a Z# named parameter takes only a named argument", () =>
-    Run("""Keep(Named5.join("A", "B"));""") is { } e && e.Contains("can't be called with these arguments"));
+Try("a parameter of the CLR's can't be named only, as each can be given by position", () =>
+    Run("""@public def Named8 { @public @static fun join(a: String, {b: String}): String { return a + b; } }""") is { } e && e.Contains("is named only"));
 
-Try("arguments to a Z# method can come in any order", () =>
+Try("a CLR method's parameters can all be given by position", () =>
+    Run("""Keep(Named5.join("A", "B"));""") is null && (string)Kept() == "AB");
+
+Try("arguments to a CLR method can come in any order", () =>
     Run("""Keep(Named5.join(b: "B", "A"));""") is null && (string)Kept() == "AB");
 
 Try("a parameter is named outside by its external name and inside by its alias", () =>
     Run("""
         @public def Named6 {
-            @public @static fun label(value as v: String, {text as t: String = "none"}): String { return v + "/" + t; }
+            @public @static fun label(value as v: String, text as t: String = "none"): String { return v + "/" + t; }
         }
         Keep(Named6.label("a", text: "b"));
         """) is null && (string)Kept() == "a/b");
@@ -1886,7 +1889,7 @@ Try("a local function takes named arguments and default values", () =>
     Run("""
         @public def Named3 {
             @public @static fun run(): String {
-                fun join(a: String, {b: String = "!"}): String { return a + b; }
+                fun join(a: String, b: String = "!"): String { return a + b; }
                 return join("x") + join(b: "?", "y");
             }
         }
@@ -5666,7 +5669,7 @@ public static class Probe
         => new ZSharp.HIR.Code.Block(new ZSharp.HIR.Code.ExpressionStatement(expression), new ZSharp.HIR.Code.ExpressionStatement(expression));
 
     [ZSharp.Importer.ILLoader.Alias("inject")]
-    public static ZSharp.HIR.Code.Parameter Inject(ZSharp.HIR.Code.PositionalParameter parameter)
+    public static ZSharp.HIR.Code.Parameter Inject(Package.DotNet.Parameter parameter)
         => new Injected(parameter.Name, parameter.Type, "injected");
 
     [ZSharp.Importer.ILLoader.Alias("mark")]
