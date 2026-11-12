@@ -182,11 +182,9 @@ foreach (var (name, member) in new[] { ("PairOf", "Pair"), ("GreetWith", "Greet"
     document.Scope.Add(name, new C.NamedMember { Target = probe, Name = member });
 document.Scope.Add("Either", new C.NamedMember { Target = probe, Name = "Either" });
 
-var coreRuntime = new C.Get(il.Load(typeof(Core.Runtime.ModuleScope).Module));
-document.Scope.Add("explicitThis", new C.NamedMember { Target = coreRuntime, Name = "explicitThis" });
 var dotNet = new C.Get(il.Load(typeof(Package.DotNet.Decorators).Module));
 document.Scope.Add("DotNet_Interface", new C.NamedMember { Target = dotNet, Name = "Interface" });
-foreach (var name in new[] { "static", "virtual", "abstract", "override", "public", "private", "internal", "protected" })
+foreach (var name in new[] { "static", "virtual", "abstract", "override", "public", "private", "internal", "protected", "explicitThis" })
     document.Scope.Add(name, new C.NamedMember { Target = dotNet, Name = name });
 document.Scope.Add("export", new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "export" });
 foreach (var name in new[] { "ct", "load" })
@@ -2758,7 +2756,7 @@ Try("a variable of another type is not passed by reference", () =>
     Run("""let text169: String = ""; Keep(Int32.TryParse("1", text169));""") is { } e && e.Contains("overloads applies"));
 
 Try("Ref and Out are types of references", () =>
-    ResetKept() && Run("""import { Ref, Out } from "core:runtime"; Keep(Ref[Int32]); Keep(Out[Int32]);""") is null
+    ResetKept() && Run("""import { Ref, Out } from "pkg:clr/hir"; Keep(Ref[Int32]); Keep(Out[Int32]);""") is null
         && Probe.Kept is [Type a, Type b] && a == typeof(int).MakeByRefType() && b == a);
 
 // ---- CLR events
@@ -4780,7 +4778,7 @@ Try("the Cecil platform writes a module as an assembly, for a version of .NET, i
         import { compile, emit } from "core:project";
         import { Int32, String } from "core:runtime";
         import { Interface as Interface286, static as static286, class as class286 } from "std:oop";
-        import { explicitThis as explicitThis286 } from "core:runtime"; import { Class as DotNet_Class286, Interface as DotNet_Interface286 } from "pkg:clr/hir"; import { virtual as virtual286, override as override286, public as public286 } from "pkg:clr/hir";
+        import { Class as DotNet_Class286, Interface as DotNet_Interface286 } from "pkg:clr/hir"; import { virtual as virtual286, override as override286, public as public286, explicitThis as explicitThis286 } from "pkg:clr/hir";
         emit(compile("Twice286"));
         """);
     File.WriteAllText(Path.Combine(source, "clr.zs"), """
@@ -4975,7 +4973,7 @@ string Plugin(string name)
         emit(build(compile("{{name}}")));
         """);
     File.WriteAllText(Path.Combine(source, "plugin.zs"), """
-        import { String, Int32, Boolean, explicitThis } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { public } from "pkg:clr/hir";
+        import { String, Int32, Boolean } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { public, explicitThis } from "pkg:clr/hir";
         import { Instance, Definition } from "pkg:zsharp/hir";
         import { Local } from "pkg:zsharp/hir/code";
         import { CompilerObject } from "pkg:zsharp/mir";
@@ -5075,7 +5073,7 @@ Try("a class of a module lowered for the running process lowers again for the Ce
         emit(compile("Twice293"));
         """);
     File.WriteAllText(Path.Combine(source, "counter.zs"), """
-        import { Object, String, Int32, List, explicitThis } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { public } from "pkg:clr/hir";
+        import { Object, String, Int32, List } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { public, explicitThis } from "pkg:clr/hir";
         @public def Counter of DotNet_Class {
             @public @explicitThis new(this) { }
             @public @explicitThis fun count(this, items: List[Object]): Int32 {
@@ -5156,7 +5154,7 @@ Try("an assembly that carries what was encoded of its module is imported as that
         emit(compile("Encoded295"));
         """);
     File.WriteAllText(Path.Combine(source, "encoded.zs"), """
-        import { String, Int32, explicitThis } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { public } from "pkg:clr/hir";
+        import { String, Int32 } from "core:runtime"; import { Class as DotNet_Class } from "pkg:clr/hir"; import { public, explicitThis } from "pkg:clr/hir";
         @public def Thing of DotNet_Class {
             @public let Name: String;
             @public @explicitThis new(this, name: String) { this.Name = name; }

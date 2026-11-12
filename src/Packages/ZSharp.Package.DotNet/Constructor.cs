@@ -15,6 +15,12 @@ namespace Package.DotNet
 
         public This This { get; } = new();
 
+        /// <summary>
+        /// Whether the first parameter is the object it runs on, which a call passes no
+        /// argument to. It stands for <see cref="This"/>.
+        /// </summary>
+        public bool HasExplicitThis { get; set; }
+
         public List<CustomMetadata> CustomMetadata { get; } = [];
 
         public List<ZSharp.HIR.Code.Parameter> Parameters { get; } = [];

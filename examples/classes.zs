@@ -1,6 +1,6 @@
 import { print } from "std:io";
-import { String, explicitThis } from "core:runtime";
-import { static } from "pkg:clr/hir";
+import { String } from "core:runtime";
+import { static, explicitThis } from "pkg:clr/hir";
 
 module Program {
     def Greeter {

@@ -13,10 +13,8 @@ toolchain and of the compiler.
 | Types and generics | `Type`, `Nullable`, `IDisposable` |
 | Collections | `List`, `Dictionary`, `HashSet`, `IEnumerable`, `Enumerable` |
 | Delegates | `Func`, `Action` |
-| References | `Ref`, `Out`, for parameters passed by reference |
 
-It also has the running platform, `runtime`, and `explicitThis`, the decorator that makes
-a CLR method's first parameter its object.
+It also has the running platform, `runtime`, and its IL loader, `ilLoader`.
 
 The rest of .NET is imported from its assemblies, as [Using .NET](../language/dotnet.md)
 shows: `Path`, `File`, `Directory` and `Environment` are in `Object`'s, as in
@@ -86,7 +84,7 @@ are there before the package manager is:
 | `pkg:zsharp/mir` | MIR: the compiler objects. |
 | `pkg:zsharp/lir` | LIR. |
 | `pkg:zsharp/lang/hir`, `/ast`, `/parser`, `/syntax`, `/tokenizer` | The language: its HIR, its AST, and what reads source. |
-| `pkg:clr/hir` | The CLR's HIR: `Class`, `Module`, `Interface` and the rest, and their decorators, as `public`, `static`, `virtual` and `override`. |
+| `pkg:clr/hir` | The CLR's HIR: `Class`, `Module`, `Interface` and the rest; their decorators, as `public`, `static`, `virtual`, `override` and `explicitThis`, which makes a method's first parameter its object; and `Ref` and `Out`, the types of parameters passed by reference. |
 | `pkg:clr/lir` | The CLR's LIR, as `ClrPlatform`. |
 | `pkg:clr/platform` | What a build of a .NET assembly needs, as `bundle`. |
 
