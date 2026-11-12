@@ -44,12 +44,10 @@ fun fail(message: String): Object {
 
 // What of a node is its code, which a built definition was built as, so it isn't written.
 fun isCode(field: FieldInfo): Boolean {
-    let code: Type = Code;
-    let local: Type = Local;
-    if (field.FieldType == code) return true;
+    if (field.FieldType == Code) return true;
     if (field.FieldType.IsGenericType) {
         let arguments = field.FieldType.GetGenericArguments();
-        if (arguments.Length == 1) return arguments[0] == local;
+        if (arguments.Length == 1) return arguments[0] == Local;
     }
     return false;
 }
@@ -60,8 +58,7 @@ fun listed(list: Object): Array {
 }
 
 fun objectType(): Type {
-    let found: Type = Object;
-    return found;
+    return Object;
 }
 
 // The fields of an object, its type's and its bases'.

@@ -5,11 +5,10 @@ import { compile, emit } from "core:project";
 import { build } from "std:framework";
 import { Object, Type, Path } from "core:runtime";
 
-let objectType: Type = Object;
 import {
     BinaryWriter, BinaryReader, MemoryStream, BindingFlags, FieldInfo, MethodInfo, ConstructorInfo, MemberInfo, ParameterInfo,
     RuntimeHelpers, Activator, Array, Enum, Convert, Delegate, AppContext, Module as ReflectedModule
-} from objectType.Assembly.Location;
+} from Object.Assembly.Location;
 import { Metadata } from Path.Combine(AppContext.BaseDirectory, "ZSharp.Importer.ILLoader.Attributes.dll");
 
 emit(build(compile("encoding")));

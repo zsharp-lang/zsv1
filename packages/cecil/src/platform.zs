@@ -105,8 +105,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         this.prologues = Dictionary[LIRFunction, MethodReference]();
 
         this.opcodes = Dictionary[Int16, OpCode]();
-        let table: Type = OpCodes;
-        let fields = table.GetFields(BindingFlags.Public | BindingFlags.Static);
+        let fields = OpCodes.GetFields(BindingFlags.Public | BindingFlags.Static);
         let index = 0;
         while (index < fields.Length) {
             let opcode = fields[index].GetValue(null) as OpCode;
@@ -176,8 +175,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     @explicitThis fun depend(this, name: String, found: List[String]) {
-        let core: Type = Object;
-        let framework = Path.GetDirectoryName(core.Assembly.Location);
+        let framework = Path.GetDirectoryName(Object.Assembly.Location);
         let toolchain = Path.GetDirectoryName(Path.GetFullPath(AppContext.BaseDirectory));
 
         let assemblies = AppDomain.CurrentDomain.GetAssemblies();
@@ -277,7 +275,6 @@ def Cecil of DotNet_Class : ClrPlatform {
             index = index + 1;
         }
 
-        let core: Type = Object;
         written.ConstructorArguments.Add(CustomAttributeArgument(this.system("System.Type"), this.type(this.reflected.Type(annotation.GetType()))));
         written.ConstructorArguments.Add(CustomAttributeArgument(ArrayType(system.String), names.ToArray()));
         written.ConstructorArguments.Add(CustomAttributeArgument(ArrayType(system.Object), values.ToArray()));
@@ -306,8 +303,7 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // The constructor of the reflection blob attribute that names the decoder too.
     @explicitThis fun blobAttribute(this): MethodReference {
-        let attribute: Type = ReflectionBlobAttribute;
-        let constructors = attribute.GetConstructors();
+        let constructors = ReflectionBlobAttribute.GetConstructors();
         let each = 0;
         while (each < constructors.Length) {
             if (constructors[each].GetParameters().Length == 2) return this.method(this.reflected.Method(constructors[each]));
@@ -418,8 +414,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     // ---- Types
 
     @explicitThis fun system(this, name: String): TypeReference {
-        let core: Type = Object;
-        return this.references.type(this.reflected.Type(core.Assembly.GetType(name)) as ClrType);
+        return this.references.type(this.reflected.Type(Object.Assembly.GetType(name)) as ClrType);
     }
 
     @explicitThis fun type(this, type: LIRType): TypeReference {
@@ -494,8 +489,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     @explicitThis fun objectConstructor(this): MethodReference {
-        let core: Type = Object;
-        let constructors = core.GetConstructors();
+        let constructors = Object.GetConstructors();
         return this.method(this.reflected.Method(constructors[0]));
     }
 
@@ -1173,8 +1167,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         }
         if (value is let type: Type) {
             body.il.Emit(OpCodes.Ldtoken, this.type(this.reflected.Type(type)));
-            let types: Type = Type;
-            body.il.Emit(OpCodes.Call, this.method(this.reflected.Method(types.GetMethod("GetTypeFromHandle"))));
+            body.il.Emit(OpCodes.Call, this.method(this.reflected.Method(Type.GetMethod("GetTypeFromHandle"))));
             return;
         }
 
@@ -1182,21 +1175,17 @@ def Cecil of DotNet_Class : ClrPlatform {
         if (kind.IsEnum or kind.IsPrimitive) {
             let underlying = kind;
             if (kind.IsEnum) underlying = Enum.GetUnderlyingType(kind);
-            let single: Type = Single;
-            let double: Type = Double;
-            let long: Type = Int64;
-            let unsignedLong: Type = UInt64;
-            if (underlying == single) {
+            if (underlying == Single) {
                 body.il.Emit(OpCodes.Ldc_R4, Convert.ToSingle(value));
                 return;
             }
-            if (underlying == double) {
+            if (underlying == Double) {
                 body.il.Emit(OpCodes.Ldc_R8, Convert.ToDouble(value));
                 return;
             }
             body.il.Emit(OpCodes.Ldc_I8, Convert.ToInt64(value));
-            if (underlying != long) {
-                if (underlying != unsignedLong) body.il.Emit(OpCodes.Conv_I4);
+            if (underlying != Int64) {
+                if (underlying != UInt64) body.il.Emit(OpCodes.Conv_I4);
             }
             return;
         }

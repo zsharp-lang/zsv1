@@ -38,8 +38,7 @@ def References of DotNet_Class {
     // The reference assemblies of a version, as `net8.0`: those of the newest pack of it
     // installed with the running .NET.
     @explicitThis fun pack(this, version: String) {
-        let core: Type = Object;
-        let root = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(core.Assembly.Location))));
+        let root = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Object.Assembly.Location))));
         let packs = Path.Combine(root, "packs", "Microsoft.NETCore.App.Ref");
         let wanted = version.Substring(3) + ".";
 
