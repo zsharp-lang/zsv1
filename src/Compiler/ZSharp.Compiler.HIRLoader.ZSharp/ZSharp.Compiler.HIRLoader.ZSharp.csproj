@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- What loads the Z# language's own HIR, its documents, as COs. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Packages\ZSharp.Package.ZSharp\ZSharp.Package.ZSharp.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.HIRLoader.Mapped\ZSharp.Compiler.HIRLoader.Mapped.csproj" />
+    <ProjectReference Include="..\ZSharp.Compiler.CG.Direct\ZSharp.Compiler.CG.Direct.csproj" />
+  </ItemGroup>
+
+</Project>

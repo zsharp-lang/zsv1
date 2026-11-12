@@ -149,7 +149,7 @@ namespace ZSharp.Toolchain
             global::Core.ZSharp.ModuleScope.Runner = statement => runner.RunStatement(statement);
             global::Core.ZSharp.ModuleScope.Evaluator = expression => runner.EvaluateExpression(expression);
             global::Core.ZSharp.ModuleScope.Importer = importer.Import;
-            DocumentCompiler.Install(loader, Scope.HIRLoader);
+            DocumentLoaders.Install(loader, Scope.HIRLoader);
             language.Install(mappedCompiler, IsUnderlyingType);
             DocumentCompiler.Install(mappedBinder);
 

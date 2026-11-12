@@ -91,7 +91,7 @@ Core.ZSharp.ModuleScope.Compiler = compiler;
 Core.ZSharp.ModuleScope.Language = language;
 Core.ZSharp.ModuleScope.Runner = statement => runner.RunStatement(statement);
 Core.ZSharp.ModuleScope.Evaluator = expression => runner.EvaluateExpression(expression);
-DocumentCompiler.Install(mapped, Scope.HIRLoader);
+ZSharp.Compiler.DocumentLoaders.Install(mapped, Scope.HIRLoader);
 
 var core = new ZSharp.Importer.String.LibraryImporter("core");
 core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));

@@ -1,41 +1,6 @@
 namespace ZSharp.Lang
 {
     /// <summary>
-    /// A context that is a document.
-    /// </summary>
-    public interface IDocument
-    {
-        public Package.ZSharp.Document Document { get; }
-    }
-
-    /// <summary>
-    /// What running a document needs from what runs it.
-    /// </summary>
-    public interface IDocumentHost
-    {
-        /// <summary>
-        /// Runs a statement of the document, with the document's locals.
-        /// </summary>
-        public Error? Execute(Package.ZSharp.Document document, HIRStatement statement);
-
-        /// <summary>
-        /// Evaluates an expression of the document, with the document's locals.
-        /// </summary>
-        public IResult<object?, Error> Evaluate(Package.ZSharp.Document document, HIRExpression expression);
-
-        /// <summary>
-        /// Code that gives the value of code written as a type where an HIR type goes, so
-        /// it converts as any value going there does: a type to what describes it.
-        /// </summary>
-        public HIRExpression Described(HIRExpression type);
-
-        /// <summary>
-        /// Loads a definition that was just built, returning why it could not be.
-        /// </summary>
-        public Error? Load(HIR.Instance definition);
-    }
-
-    /// <summary>
     /// The meta-compiler of a document. A document runs statement by statement, and so
     /// does every statement nested in it: each one is compiled and run before the next
     /// one is compiled. Nothing builds the code of a document, so the definitions in a
@@ -48,7 +13,7 @@ namespace ZSharp.Lang
     /// statement with it.
     /// </para>
     /// </summary>
-    public sealed class DocumentCompiler(Language language, IDocumentHost host, string path = "")
+    public sealed partial class DocumentCompiler(Language language, IDocumentHost host, string path = "")
     {
         /// <summary>
         /// The names of the document.
@@ -102,14 +67,6 @@ namespace ZSharp.Lang
         /// </summary>
         public T Within<T>(ASTCompiler compiler, Func<T> compile)
             => compiler.Contexts.Within(new DocumentContext(this, Scope), compile);
-
-        /// <summary>
-        /// Loads a document as an object whose members are what it exports.
-        /// </summary>
-        public static void Install(MappedLoader loader, HIRLoader hir)
-            => loader.Instances.Register<Package.ZSharp.Document>(
-                document => Result<MIR.CompilerObject>.Ok(new DocumentObject(document, hir))
-            );
 
         /// <summary>
         /// A name bound to a local of a document can be bound to another one, which is how
@@ -191,149 +148,6 @@ namespace ZSharp.Lang
                         return Run(compiled!);
                     });
             }
-        }
-
-        /// <summary>
-        /// Runs a loop statement. Its body runs while its condition holds, and its else part
-        /// runs when the condition stops holding, but not when a break leaves the loop. A
-        /// statement in the loop is compiled the first time it is reached and runs on each
-        /// iteration after that, and a block in it keeps its names, so what the first
-        /// iteration defined is still defined.
-        /// </summary>
-        private Error? Loop(ASTCompiler compiler, AST.WhileExpression<AST.Statement> loop, Scope names)
-        {
-            var outermost = running.Count == 0;
-            var self = new RunningLoop(loop.Name);
-
-            if (outermost)
-                remembered = new(ReferenceEqualityComparer.Instance);
-
-            running.Push(self);
-
-            try
-            {
-                while (true)
-                {
-                    if (Condition(compiler, loop.Condition, names, out var condition) is { } failure)
-                        return failure;
-
-                    if (!condition)
-                        break;
-
-                    switch (Run(compiler, loop.Body, names))
-                    {
-                        case null:
-                            continue;
-                        case Leaving { Next: true } next when next.Loop == self:
-                            continue;
-                        case Leaving { Next: false } leave when leave.Loop == self:
-                            return null;
-                        case { } error:
-                            return error;
-                    }
-                }
-            }
-            finally
-            {
-                running.Pop();
-
-                if (outermost)
-                    remembered = null;
-            }
-
-            return loop.Else is null ? null : Run(compiler, loop.Else, names);
-        }
-
-        private Error? Condition(ASTCompiler compiler, AST.Expression expression, Scope names, out bool condition)
-        {
-            condition = false;
-
-            if (Evaluate(compiler, expression, names).When(out var value).Error(out var error))
-                return error;
-
-            if (value is not bool result)
-                return new ErrorMessage($"A condition must be a boolean, but got {value?.GetType().Name ?? "null"}.");
-
-            condition = result;
-            return null;
-        }
-
-        private IResult<object?, Error> Evaluate(ASTCompiler compiler, AST.Expression expression, Scope names)
-        {
-            if (Remembered(expression) is HIRExpression known)
-                return host.Evaluate(Document, known);
-
-            var context = new DocumentContext(this, names);
-
-            return compiler.Contexts.Within(context, () =>
-            {
-                if (compiler.CompileExpression(expression).When(out var compiled).Error(out var error))
-                    return Result<object?>.Error(error);
-
-                foreach (var defined in context.Defined)
-                    if (Run(defined) is { } failed)
-                        return Result<object?>.Error(failed);
-
-                Remember(expression, compiled!);
-
-                return host.Evaluate(Document, compiled!);
-            });
-        }
-
-        /// <summary>
-        /// The loops running, innermost first.
-        /// </summary>
-        private readonly Stack<RunningLoop> running = [];
-
-        /// <summary>
-        /// While a loop runs, what each of its statements was compiled to, and the names of
-        /// each of its blocks.
-        /// </summary>
-        private Dictionary<AST.Node, object>? remembered;
-
-        private object? Remembered(AST.Node node)
-            => remembered is not null && remembered.TryGetValue(node, out var known) ? known : null;
-
-        private T Remembered<T>(AST.Node node, Func<T> make)
-            where T : class
-        {
-            if (Remembered(node) is T known)
-                return known;
-
-            var made = make();
-            Remember(node, made);
-            return made;
-        }
-
-        private void Remember(AST.Node node, object value)
-        {
-            if (remembered is not null)
-                remembered[node] = value;
-        }
-
-        private RunningLoop? Running(string? name)
-            => name is null ? running.Peek() : running.FirstOrDefault(loop => loop.Name == name);
-
-        private static ErrorMessage NoLoop(string statement, string? name)
-            => new(name is null
-                ? $"A {statement} needs a loop around it."
-                : $"There is no loop named {name} around this {statement}.");
-
-        private sealed class RunningLoop(string name)
-        {
-            public string Name { get; } = name;
-        }
-
-        /// <summary>
-        /// A break or continue on its way to the loop it names. It is not an error, but it
-        /// leaves every statement between them the way one does.
-        /// </summary>
-        private sealed class Leaving(RunningLoop loop, bool next)
-            : ErrorMessage(next ? $"A continue of loop {loop.Name} got outside it." : $"A break of loop {loop.Name} got outside it.")
-        {
-            public RunningLoop Loop { get; } = loop;
-
-            public bool Next { get; } = next;
         }
 
         /// <summary>
@@ -499,16 +313,6 @@ namespace ZSharp.Lang
 
                 return Result<HIRExpression>.Ok(new HIR.Code.Get(result));
             }
-        }
-
-        private sealed class DocumentObject(Package.ZSharp.Document document, HIRLoader loader)
-            : MIR.CompilerObject
-            , ICTGetMember<string>
-        {
-            public IResult<MIR.CompilerObject, Error> Member(string member)
-                => document.Exports.TryGetValue(member, out var exported)
-                    ? loader.LoadInstance(exported)
-                    : Result<MIR.CompilerObject>.Error(new UnsupportedError($"Document {document.Path} exports nothing named {member}."));
         }
     }
 }
