@@ -7,7 +7,7 @@ using Result = CommonZ.Result<ZSharp.MIR.CompilerObject>;
 using IResult = IResult<ZSharp.MIR.CompilerObject, CommonZ.Error>;
 using Toolchain = ZSharp.Compiler.Current;
 
-namespace ZSharp.Lang.DotNet
+namespace ZSharp.Lang.Runtime
 {
     /// <summary>
     /// Runs documents on the CLR. Each document has a frame: an array of objects with one
@@ -16,7 +16,7 @@ namespace ZSharp.Lang.DotNet
     /// made, so any code loaded to run now can use document locals, wherever it comes
     /// from. Document level belongs to the runtime, so tying it to the process is fine.
     /// </summary>
-    public sealed class DotNetDocuments(
+    public sealed class RuntimeDocuments(
         Platform.Runtime.Runtime runtime,
         ILLoader il,
         Func<HIR.Instance, Error?> load
@@ -210,7 +210,7 @@ namespace ZSharp.Lang.DotNet
     /// it takes its initial value.
     /// </summary>
     internal sealed class FrameSlot(
-        DotNetDocuments documents,
+        RuntimeDocuments documents,
         DocumentFrame frame,
         int slot,
         CompilerObject type,

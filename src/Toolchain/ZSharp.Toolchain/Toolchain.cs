@@ -30,7 +30,7 @@ namespace ZSharp.Toolchain
         private readonly Binder binder = new();
         private readonly MappedBinder mappedBinder;
         private readonly Language language;
-        private Lang.DotNet.DotNetDocuments host = null!;
+        private Lang.Runtime.RuntimeDocuments host = null!;
         private DocumentImporter documents = null!;
 
         public Toolchain(bool traceReification, bool dumpDefinitions)
@@ -165,7 +165,7 @@ namespace ZSharp.Toolchain
                 language.Add(syntax, function);
 
             // Each document runs with a frame holding its locals.
-            host = new Lang.DotNet.DotNetDocuments(runtime, il, instance =>
+            host = new Lang.Runtime.RuntimeDocuments(runtime, il, instance =>
             {
                 if (dumpDefinitions)
                     Console.Error.WriteLine("definition:" + Environment.NewLine + Diagnostics.HIRPrinter.Print(instance) + Environment.NewLine);

@@ -105,7 +105,7 @@ foreach (var (name, module) in ZSharp.Toolchain.ToolchainModules.All())
     std.Add(name, il.Load(module));
 
 var importer = new ZSharp.Importer.String.StringImporter();
-var host = new DotNetDocuments(
+var host = new ZSharp.Lang.Runtime.RuntimeDocuments(
     runtime, il,
     instance => Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
 );

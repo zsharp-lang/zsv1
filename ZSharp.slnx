@@ -57,6 +57,7 @@
     <Project Path="src/Lang/ZSharp.Lang.ZSharp/ZSharp.Lang.ZSharp.csproj" />
     <Project Path="src/Lang/ZSharp.Parser/ZSharp.Parser.csproj" />
     <Project Path="src/Lang/ZSharp.Syntax/ZSharp.Syntax.csproj" />
+    <Project Path="src/Lang/ZSharp.Lang.ZSharp.Runtime/ZSharp.Lang.ZSharp.Runtime.csproj" />
     <Project Path="src/Lang/ZSharp.Text/ZSharp.Text.csproj" />
     <Project Path="src/Lang/ZSharp.Tokenizer/ZSharp.Tokenizer.csproj" />
   </Folder>

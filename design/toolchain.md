@@ -123,7 +123,8 @@ src/
              ZSharp.Compiler, the compiler in use, which they make up
   Importers/ Language-neutral importers, such as the string importer
   Lang/      Text, Tokenizer, AST, Parser (an extensible parser, no grammar of its
-             own), Syntax (Z#'s grammar), AST -> HIR, the Z# language
+             own), Syntax (Z#'s grammar), AST -> HIR, the Z# language, and its
+             documents run on the runtime platform (ZSharp.Lang.ZSharp.Runtime)
   Library/   What `core:` and `std:` expose, of what is below them, which nothing
              below reaches
   Packages/  DotNet (CLR entities, pure structure, HIR level)
