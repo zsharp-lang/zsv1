@@ -197,6 +197,8 @@ namespace ZSharp.Platform.Runtime
                     ? (classes[outer] as Emit.TypeBuilder ?? throw new NotSupportedException($"Class {definition.Name} is nested in {outer.Name}, which is already created."))
                         .DefineNestedType(definition.Name, attributes)
                     : module.DefineType(classNames.Add(definition.Name) ? definition.Name : Unique(definition.Name), attributes);
+
+                Keep(definition.Metadata, builders[definition].SetCustomAttribute);
             }
 
             foreach (var (definition, builder) in builders.Where(pair => pair.Key.GenericParameters.Count > 0))
@@ -255,17 +257,26 @@ namespace ZSharp.Platform.Runtime
             var implemented = Implemented(definition);
 
             foreach (var field in definition.Fields)
-                classFields[field] = builder.DefineField(field.Name, ImportType(field.Type), FieldVisibility(Accessible.Of(field.Metadata)));
+            {
+                var declared = builder.DefineField(field.Name, ImportType(field.Type), FieldVisibility(Accessible.Of(field.Metadata)));
+                Keep(field.Metadata, declared.SetCustomAttribute);
+                classFields[field] = declared;
+            }
 
             foreach (var member in definition.Fields.Cast<object>().Concat(definition.Constructors).Concat(definition.Methods))
                 owners[member] = definition;
 
             foreach (var constructor in definition.Constructors)
-                classConstructors[constructor] = builder.DefineConstructor(
+            {
+                var declared = builder.DefineConstructor(
                     MethodVisibility(Accessible.Of(constructor.Metadata)),
                     IL.CallingConventions.Standard,
                     [.. constructor.Signature.Parameters.Select(parameter => ImportType(parameter.Type))]
                 );
+
+                Keep(constructor.Metadata, declared.SetCustomAttribute);
+                classConstructors[constructor] = declared;
+            }
 
             foreach (var method in definition.Methods)
             {
@@ -278,6 +289,7 @@ namespace ZSharp.Platform.Runtime
 
                 declared.SetReturnType(ImportType(method.Signature.ReturnType));
                 declared.SetParameters([.. method.Signature.Parameters.Skip(method.IsStatic ? 0 : 1).Select(parameter => ImportType(parameter.Type))]);
+                Keep(method.Metadata, declared.SetCustomAttribute);
 
                 classMethods[method] = declared;
             }
@@ -593,10 +605,14 @@ namespace ZSharp.Platform.Runtime
                 throw new InvalidOperationException("Only members of a module can be loaded.");
 
             if (!holders.TryGetValue(owner, out var holder))
+            {
                 holders[owner] = holder = module.DefineType(
                     Unique(owner.Name),
                     IL.TypeAttributes.Public | IL.TypeAttributes.Abstract | IL.TypeAttributes.Sealed
                 );
+
+                Keep(owner.Metadata, holder.SetCustomAttribute);
+            }
 
             return holder;
         }
@@ -608,6 +624,8 @@ namespace ZSharp.Platform.Runtime
                 IL.TypeAttributes.Public | IL.TypeAttributes.Sealed | IL.TypeAttributes.SequentialLayout,
                 typeof(ValueType)
             );
+
+            Keep(structure.Metadata, type.SetCustomAttribute);
 
             // Recorded first, as a structure can refer to itself.
             structures[structure] = type;
@@ -631,6 +649,7 @@ namespace ZSharp.Platform.Runtime
                 FieldVisibility(Accessible.Of(global.Metadata)) | IL.FieldAttributes.Static
             );
 
+            Keep(global.Metadata, field.SetCustomAttribute);
             globals[global] = field;
             pendingGlobals.Add(global);
 
@@ -649,6 +668,7 @@ namespace ZSharp.Platform.Runtime
                 [.. function.Signature.Parameters.Select(parameter => ImportType(parameter.Type))]
             );
 
+            Keep(function.Metadata, method.SetCustomAttribute);
             functions[function] = method;
             pendingFunctions.Add(function);
 

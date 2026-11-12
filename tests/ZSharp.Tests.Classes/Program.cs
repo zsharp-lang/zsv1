@@ -228,8 +228,8 @@ string? Run(string source)
     return null;
 }
 
-// Whether what the Cecil platform wrote of a named constructor says it is one: its
-// static method and its constructor carry the kept annotation, as [Metadata].
+// Whether what a CLR platform wrote of a named constructor says it is one: its static
+// method and its constructor carry the kept annotation, as [Metadata].
 bool Fail(string error) => throw new Exception(error);
 
 bool NamedConstructorWritten(Type type, string name)
@@ -2265,7 +2265,21 @@ Try("a CLR class's named constructor is a static method of its name, calling a p
         && marker is { IsNestedPrivate: true }
         && constructor is { IsPrivate: true }
         && factory is { IsStatic: true, IsPublic: true } && factory.ReturnType == type && factory.GetParameters() is [{ ParameterType: var start }] && start == typeof(int)
-        && type.GetMethod("hidden", flags) is { IsPrivate: true };
+        && type.GetMethod("hidden", flags) is { IsPrivate: true }
+        && NamedConstructorWritten(type, "from");
+});
+
+Try("what the runtime platform builds carries its kept annotations, which read back as they were", () =>
+{
+    if (Run("""
+        @public def Kept325 { @public @explicitThis new made(this) { } }
+        Keep(Kept325);
+        """) is { } error)
+        throw new Exception(error);
+
+    var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static;
+    return Kept() is Type type
+        && ZSharp.Importer.ILLoader.Metadata.Of(type.GetMethod("made", flags)!) is [Package.DotNet.NamedConstructor { Name: "made" }];
 });
 
 Try("a named constructor of a generic CLR class is an error, for now", () =>

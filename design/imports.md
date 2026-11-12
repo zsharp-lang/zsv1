@@ -180,8 +180,8 @@ module gives HIR too. Where an importer's HIR comes from is its own business.
   metadata)`, of `std:zsharp/lowering`, is how a CO carries a node's kept annotations
   onto the LIR it makes, as LIR `KeptAnnotation`; the IL loader does it for a CLR class
   and its methods and constructors.
-  The Cecil platform writes each as `[Metadata]` on the method, field or type it writes.
-  The runtime platform doesn't yet, as what it makes is reflected in the process anyway.
+  Both CLR platforms write each as `[Metadata]` on the method, constructor, field or type
+  they write, so what the runtime makes carries them too, as `Metadata.Of` reads them.
 - **`std:encoding`** is the encoder and the decoder, in Z#. `encode(module)` gives each
   annotated node it writes an id, kept as a `ReflectionId`, and gives the bytes. What it
   writes is inferred from fields, a graph with each shared object once; code, a
@@ -219,7 +219,6 @@ module gives HIR too. Where an importer's HIR comes from is its own business.
   `Shape.Class`, in the namespace before its last dot, so its full name is its name
   however it is found, as a module Reflection.Emit builds finds a type by its namespace
   and name.
-- **Not yet:** importing that reads metadata without loading; the runtime platform
-  writing kept annotations; a Z# interface built and imported; a description of a Z#
-  definition in code a platform writes, which is a known value of the process that
-  compiles it; and generated (de)serializers.
+- **Not yet:** importing that reads metadata without loading; a Z# interface built and
+  imported; a description of a Z# definition in code a platform writes, which is a known
+  value of the process that compiles it; and generated (de)serializers.
