@@ -218,7 +218,11 @@ namespace ZSharp.Importer.ILLoader
             return Lowering(target, key =>
             {
                 var node = @class.Node;
-                var lowered = new Objects.LoweredClass(new LIR.CLR.ClassDefinition(node.Name));
+                var lowered = new Objects.LoweredClass(new LIR.CLR.ClassDefinition(node.Name)
+                {
+                    // An interface's accessibility is the interface's, not the view's it is defined by.
+                    Accessibility = Lowered((Description(node) as Package.DotNet.Accessible ?? node).Accessibility)
+                });
 
                 // What is said of the class to keep is kept on what it lowers to: of an
                 // interface, what is said of the interface, not of the view it is defined by.
@@ -248,6 +252,21 @@ namespace ZSharp.Importer.ILLoader
                 return Result<Objects.LoweredClass>.Ok(lowered);
             });
         }
+
+        /// <summary>
+        /// A definition's accessibility, as CLR LIR has it.
+        /// </summary>
+        private static LIR.CLR.Accessibility Lowered(Package.DotNet.Accessibility accessibility)
+            => accessibility switch
+            {
+                Package.DotNet.Accessibility.Public => LIR.CLR.Accessibility.Public,
+                Package.DotNet.Accessibility.Private => LIR.CLR.Accessibility.Private,
+                Package.DotNet.Accessibility.Internal => LIR.CLR.Accessibility.Internal,
+                Package.DotNet.Accessibility.Protected => LIR.CLR.Accessibility.Protected,
+                Package.DotNet.Accessibility.ProtectedInternal => LIR.CLR.Accessibility.ProtectedInternal,
+                Package.DotNet.Accessibility.PrivateProtected => LIR.CLR.Accessibility.PrivateProtected,
+                _ => throw new ArgumentOutOfRangeException(nameof(accessibility)),
+            };
 
         /// <summary>
         /// What the CLR names a method: an accessor for its property, as <c>get_Name</c> and
@@ -286,7 +305,7 @@ namespace ZSharp.Importer.ILLoader
                     return error;
                 else
                 {
-                    var declared = new LIR.CLR.ClassField(field.Name, type!);
+                    var declared = new LIR.CLR.ClassField(field.Name, type!) { Accessibility = Lowered(field.Accessibility) };
 
                     definition.Fields.Add(declared);
                     lowered.Fields[field] = declared;
@@ -307,7 +326,7 @@ namespace ZSharp.Importer.ILLoader
                 var creation = new LIR.Signature { ReturnType = definition };
                 creation.Parameters.AddRange(code.Parameters.Skip(1));
 
-                var declared = new LIR.CLR.ClassConstructor(creation, new(code) { Body = new() });
+                var declared = new LIR.CLR.ClassConstructor(creation, new(code) { Body = new() }) { Accessibility = Lowered(constructor.Accessibility) };
 
                 definition.Constructors.Add(declared);
                 lowered.Constructors.Add(declared);
@@ -352,6 +371,7 @@ namespace ZSharp.Importer.ILLoader
                     new(signature) { Name = name, Body = new() }
                 )
                 {
+                    Accessibility = Lowered(method.Accessibility),
                     IsVirtual = method.IsVirtual,
                     IsAbstract = method.IsAbstract || definition.IsInterface,
                     IsOverride = method.IsOverride

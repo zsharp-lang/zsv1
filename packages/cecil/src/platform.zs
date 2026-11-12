@@ -74,6 +74,10 @@ def Cecil of DotNet_Class : ClrPlatform {
     let definitions: Dictionary[ClassDefinition, TypeDefinition];
     let definedFields: Dictionary[ClassField, FieldDefinition];
     let definedMethods: Dictionary[ClassMethod, MethodDefinition];
+    // The methods that aren't public and implement an interface's, with their classes, which
+    // say which ones once every class is declared.
+    let explicitMethods: List[ClassMethod];
+    let explicitOwners: List[ClassDefinition];
     let definedConstructors: Dictionary[ClassConstructor, MethodDefinition];
     let definedParameters: Dictionary[ClassGenericParameter, GenericParameter];
     let prologues: Dictionary[LIRFunction, MethodReference];
@@ -100,6 +104,8 @@ def Cecil of DotNet_Class : ClrPlatform {
         this.definitions = Dictionary[ClassDefinition, TypeDefinition]();
         this.definedFields = Dictionary[ClassField, FieldDefinition]();
         this.definedMethods = Dictionary[ClassMethod, MethodDefinition]();
+        this.explicitMethods = List[ClassMethod]();
+        this.explicitOwners = List[ClassDefinition]();
         this.definedConstructors = Dictionary[ClassConstructor, MethodDefinition]();
         this.definedParameters = Dictionary[ClassGenericParameter, GenericParameter]();
         this.prologues = Dictionary[LIRFunction, MethodReference]();
@@ -369,7 +375,62 @@ def Cecil of DotNet_Class : ClrPlatform {
 
     // Emits the bodies of the functions declared, and the initializers of the modules,
     // which may declare more.
+    // Says which interface method each method that isn't public implements: one of its name
+    // and number of parameters, of each interface its class implements.
+    @explicitThis fun implementations(this) {
+        while (this.explicitMethods.Count > 0) {
+            let method = this.explicitMethods[0];
+            let owner = this.explicitOwners[0];
+            this.explicitMethods.RemoveAt(0);
+            this.explicitOwners.RemoveAt(0);
+
+            let index = 0;
+            while (index < owner.Interfaces.Count) {
+                this.implement(this.definedMethods[method], method, owner.Interfaces[index]);
+                index = index + 1;
+            }
+        }
+    }
+
+    @explicitThis fun implement(this, declared: MethodDefinition, method: ClassMethod, implemented: LIRType) {
+        let taken = method.Signature.Parameters.Count - 1;
+
+        if (implemented is let own: ClassDefinition) {
+            this.classDefinition(own);
+            let index = 0;
+            while (index < own.Methods.Count) {
+                let target = own.Methods[index];
+                if (target.Name == method.Name) {
+                    if (target.Signature.Parameters.Count - 1 == taken) declared.Overrides.Add(this.definedMethods[target]);
+                }
+                index = index + 1;
+            }
+            return;
+        }
+
+        if (implemented is let clr: ClrType) {
+            let types = List[Type]();
+            let type = this.references.system(clr);
+            types.Add(type);
+            types.AddRange(type.GetInterfaces());
+
+            let each = 0;
+            while (each < types.Count) {
+                let methods = types[each].GetMethods();
+                let index = 0;
+                while (index < methods.Length) {
+                    if (methods[index].Name == method.Name) {
+                        if (methods[index].GetParameters().Length == taken) declared.Overrides.Add(this.method(this.reflected.Method(methods[index])));
+                    }
+                    index = index + 1;
+                }
+                each = each + 1;
+            }
+        }
+    }
+
     @explicitThis fun flush(this) {
+        this.implementations();
         while (this.pending.Count > 0 or this.initializers.Count > 0) {
             if (this.pending.Count > 0) {
                 let function = this.pending[0];
@@ -789,8 +850,8 @@ def Cecil of DotNet_Class : ClrPlatform {
     @explicitThis fun classDefinition(this, definition: ClassDefinition): TypeDefinition {
         if (this.definitions.ContainsKey(definition)) return this.definitions[definition];
 
-        let attributes = TypeAttributes.Public | TypeAttributes.Class;
-        if (definition.IsInterface) attributes = TypeAttributes.Public | TypeAttributes.Interface | TypeAttributes.Abstract;
+        let attributes = typeVisibility(definition.Accessibility) | TypeAttributes.Class;
+        if (definition.IsInterface) attributes = typeVisibility(definition.Accessibility) | TypeAttributes.Interface | TypeAttributes.Abstract;
 
         let type = TypeDefinition("", this.unique(definition.Name, "Class"), attributes, null);
         this.main.Types.Add(type);
@@ -819,7 +880,7 @@ def Cecil of DotNet_Class : ClrPlatform {
         index = 0;
         while (index < definition.Fields.Count) {
             let field = definition.Fields[index];
-            let declared = FieldDefinition(field.Name, FieldAttributes.Public, this.type(field.Type));
+            let declared = FieldDefinition(field.Name, fieldVisibility(field.Accessibility), this.type(field.Type));
             type.Fields.Add(declared);
             this.definedFields[field] = declared;
             index = index + 1;
@@ -852,7 +913,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     }
 
     @explicitThis fun declareConstructor(this, definition: ClassDefinition, constructor: ClassConstructor, type: TypeDefinition) {
-        let attributes = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName;
+        let attributes = methodVisibility(constructor.Accessibility) | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName;
         let declared = MethodDefinition(".ctor", attributes, this.system("System.Void"));
 
         let index = 0;
@@ -872,7 +933,7 @@ def Cecil of DotNet_Class : ClrPlatform {
     // How a method is declared: a method that implements an interface method by its name
     // is virtual and final, as C# makes it, so the CLR maps it to the interface's.
     @explicitThis fun declareClassMethod(this, definition: ClassDefinition, method: ClassMethod, type: TypeDefinition) {
-        let attributes = MethodAttributes.Public | MethodAttributes.HideBySig;
+        let attributes = methodVisibility(method.Accessibility) | MethodAttributes.HideBySig;
         if (method.IsStatic) attributes = attributes | MethodAttributes.Static;
         else if (definition.IsInterface or method.IsAbstract) attributes = attributes | MethodAttributes.Abstract | MethodAttributes.Virtual | MethodAttributes.NewSlot;
         else if (method.IsOverride) attributes = attributes | MethodAttributes.Virtual;
@@ -905,6 +966,19 @@ def Cecil of DotNet_Class : ClrPlatform {
 
         type.Methods.Add(declared);
         this.definedMethods[method] = declared;
+
+        // One that implements an interface's but isn't public says which, once every class is
+        // declared, as the CLR maps only a public one by its name.
+        if (method.IsStatic == false) {
+            if (definition.IsInterface == false) {
+                if (definition.Interfaces.Count > 0) {
+                    if (method.Accessibility != ClrAccessibility.Public) {
+                        this.explicitMethods.Add(method);
+                        this.explicitOwners.Add(definition);
+                    }
+                }
+            }
+        }
         this.functions[method.Function] = declared;
         if (method.IsAbstract == false) {
             if (definition.IsInterface == false) this.pending.Add(method.Function);
@@ -1453,4 +1527,28 @@ def Cecil of DotNet_Class : ClrPlatform {
         body.il.Emit(OpCodes.Stloc, temporary);
         body.il.Emit(OpCodes.Ldloca, temporary);
     }
+}
+
+// A type's visibility: a top-level type is public or else internal to its assembly.
+fun typeVisibility(accessibility: ClrAccessibility): TypeAttributes {
+    if (accessibility == ClrAccessibility.Public) return TypeAttributes.Public;
+    return TypeAttributes.NotPublic;
+}
+
+fun methodVisibility(accessibility: ClrAccessibility): MethodAttributes {
+    if (accessibility == ClrAccessibility.Private) return MethodAttributes.Private;
+    if (accessibility == ClrAccessibility.Internal) return MethodAttributes.Assembly;
+    if (accessibility == ClrAccessibility.Protected) return MethodAttributes.Family;
+    if (accessibility == ClrAccessibility.ProtectedInternal) return MethodAttributes.FamORAssem;
+    if (accessibility == ClrAccessibility.PrivateProtected) return MethodAttributes.FamANDAssem;
+    return MethodAttributes.Public;
+}
+
+fun fieldVisibility(accessibility: ClrAccessibility): FieldAttributes {
+    if (accessibility == ClrAccessibility.Private) return FieldAttributes.Private;
+    if (accessibility == ClrAccessibility.Internal) return FieldAttributes.Assembly;
+    if (accessibility == ClrAccessibility.Protected) return FieldAttributes.Family;
+    if (accessibility == ClrAccessibility.ProtectedInternal) return FieldAttributes.FamORAssem;
+    if (accessibility == ClrAccessibility.PrivateProtected) return FieldAttributes.FamANDAssem;
+    return FieldAttributes.Public;
 }

@@ -176,7 +176,7 @@ document.Scope.Add("Either", new C.NamedMember { Target = probe, Name = "Either"
 var coreRuntime = new C.Get(il.Load(typeof(Core.Runtime.ModuleScope).Module));
 document.Scope.Add("explicitThis", new C.NamedMember { Target = coreRuntime, Name = "explicitThis" });
 document.Scope.Add("static", new C.NamedMember { Target = coreRuntime, Name = "static" });
-foreach (var name in new[] { "virtual", "abstract", "override", "DotNet_Interface" })
+foreach (var name in new[] { "virtual", "abstract", "override", "DotNet_Interface", "public", "private", "internal", "protected" })
     document.Scope.Add(name, new C.NamedMember { Target = coreRuntime, Name = name });
 document.Scope.Add("export", new C.NamedMember { Target = new C.Get(il.Load(typeof(Core.ZSharp.ModuleScope).Module)), Name = "export" });
 foreach (var name in new[] { "ct", "load" })
@@ -2150,6 +2150,29 @@ Try("a class implements an interface defined in Z#", () =>
         let greeter121: IGreeter121 = English121();
         Keep(greeter121.greet());
         """) is null && (string)Kept() == "hello");
+
+Try("a member's accessibility is the CLR's, as its decorator says", () =>
+{
+    if (Run("""
+        def Open316 { @public let shown: Int32; @private let hidden: Int32; @internal fun inside() { } @protected fun derived() { } }
+        Keep(Open316);
+        """) is not null || Kept() is not Type type)
+        return false;
+
+    var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;
+    return type.GetField("shown", flags)!.IsPublic
+        && type.GetField("hidden", flags)!.IsPrivate
+        && type.GetMethod("inside", flags)!.IsAssembly
+        && type.GetMethod("derived", flags)!.IsFamily;
+});
+
+Try("a method that implements an interface's but isn't public implements it explicitly", () =>
+    Run("""
+        def IGreeter317 of DotNet_Interface { fun greet(): String; }
+        def Quiet317 : IGreeter317 { @private fun greet(): String { return "hi"; } }
+        let greeter317: IGreeter317 = Quiet317();
+        Keep(greeter317.greet());
+        """) is null && (string)Kept() == "hi");
 
 Try("a virtual method is overridden", () =>
     Run("""

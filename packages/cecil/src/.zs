@@ -41,7 +41,8 @@ import {
 import {
     ClrEntity, ClrType, ClrArrayType, ClrPointerType, ClrGenericParameter, ClrMethod, ClrField, ClrCode, ClrLocal,
     ByRefType, AddressOf, CastDown, TypeTest, MethodOf, Polymorphic, Reflected,
-    ClassDefinition, ClassMethod, ClassConstructor, ClassField, ClassFieldAccess, ClassGenericParameter, ClassProperty, DefinesClass
+    ClassDefinition, ClassMethod, ClassConstructor, ClassField, ClassFieldAccess, ClassGenericParameter, ClassProperty, DefinesClass,
+    Accessibility as ClrAccessibility
 } from "std:zsharp/lir/clr";
 import { Error, Result, IResult } from "std:zsharp/common";
 
