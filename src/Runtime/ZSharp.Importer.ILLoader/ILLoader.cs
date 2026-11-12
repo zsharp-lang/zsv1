@@ -941,7 +941,7 @@ namespace ZSharp.Importer.ILLoader
             if (Signature(node.Parameters, signature, runtime) is { } invalid)
                 return Result<LIR.Function>.Error(invalid);
 
-            Bind(null, null, node.Parameters, false, [.. signature.Parameters.Skip(capturing)], runtime);
+            Bind(null, null, false, node.Parameters, false, [.. signature.Parameters.Skip(capturing)], runtime);
 
             if (node.ReturnType is not null)
                 if (CompileType(node.ReturnType, runtime).When(out var type).Error(out var error))

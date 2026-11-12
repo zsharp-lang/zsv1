@@ -52,6 +52,10 @@ namespace ZSharp.Lang.DotNet
             ) is { } error)
                 return Result<Code.Block>.Error(error);
 
+            // The class's members are its code's names, not its signature's.
+            if (body.Members(compiler, block, self, signature) is { } hidden)
+                return Result<Code.Block>.Error(hidden);
+
             return body.Body(body.WithLocals(compiler, block, self, nameof(Package.DotNet.Constructor.Locals)), block, self, constructor.Body) is { } invalid
                 ? Result<Code.Block>.Error(invalid)
                 : Result<Code.Block>.Ok(block);

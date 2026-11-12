@@ -118,12 +118,25 @@ alone. What isn't written is decided by where it is:
 
 ```zs fragment
 import { Int32 } from "core:runtime";
-import { Class, public, explicitThis } from "pkg:clr/hir";
+import { Class, public } from "pkg:clr/hir";
 
 @public def Counter of Class {
     let count: Int32;                                   // private
-    @public @explicitThis new(this) { this.count = 0; }
-    @public @explicitThis fun next(this): Int32 { this.count = this.count + 1; return this.count; }
+    @public new() { count = 0; }
+    @public fun next(): Int32 { count = count + 1; return count; }
+}
+```
+
+A method's code reaches its class's members by their names, as C# code does, over a name
+outside the class of the same name. A parameter of the name hides one, and a base class's
+members are reached through `this`. `@explicitThis` names the object a method runs on as
+its first parameter, `this`, for code that needs it as a value:
+
+```zs fragment
+import { Class, public, explicitThis } from "pkg:clr/hir";
+
+@public def Node of Class {
+    @public @explicitThis fun register(this, registry: Registry) { registry.add(this); }
 }
 ```
 
@@ -133,12 +146,12 @@ A constructor can have a name, as a Z# class's can, and is called through it:
 import "std:prelude";
 import { print } from "std:io";
 import { Int32 } from "core:runtime";
-import { Class, public, explicitThis } from "pkg:clr/hir";
+import { Class, public } from "pkg:clr/hir";
 
 @public def Counter of Class {
     @public let count: Int32;
-    @public @explicitThis new(this) { this.count = 0; }
-    @public @explicitThis new from(this, start: Int32) { this.count = start; }
+    @public new() { count = 0; }
+    @public new from(start: Int32) { count = start; }
 }
 
 print(Counter.from(41).count);

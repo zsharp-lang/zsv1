@@ -8,7 +8,8 @@ namespace ZSharp.Lang.DotNet
 {
     /// <summary>
     /// The CLR method meta-compiler. A method is an instance method unless something
-    /// marks it static, and no name is bound to the object it runs on.
+    /// marks it static, and no name is bound to the object it runs on: its code reaches
+    /// its class's members by their names, through it.
     /// </summary>
     public sealed class MethodMetaType(
         ILLoader il,
@@ -69,6 +70,10 @@ namespace ZSharp.Lang.DotNet
             // A method with no body has no code of its own: it is abstract, or an interface's.
             if (function.Body is null)
                 return Result<Code.Block>.Ok(block);
+
+            // The class's members are its code's names, not its signature's.
+            if (body.Members(compiler, block, self, signature) is { } hidden)
+                return Result<Code.Block>.Error(hidden);
 
             return body.Body(body.WithLocals(compiler, block, self, nameof(Package.DotNet.Method.Locals)), block, self, function.Body) is { } invalid
                 ? Result<Code.Block>.Error(invalid)

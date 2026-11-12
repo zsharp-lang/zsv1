@@ -289,9 +289,24 @@ are implicit `this` by default, with no name bound to it. A free name compiles t
 `NamedMember` on that node. Code that needs the object uses `@explicitThis`, which sets
 `HasExplicitThis` on the method. Its mapper, registered for the .NET `Method` node, then
 pre-maps that parameter to the CO that `this` maps to, instead of constructing a new one.
-The decorator doesn't touch the code. **Not yet:** a CLR method binds no name through its
-`this` node, so a free name doesn't reach the class's members, and code reaches them
-through an explicit `this`.
+The decorator doesn't touch the code.
+
+A CLR method's code reaches its class's members by their names, as C# code does. The
+class compiles its members with their names, a `let`'s, a `fun`'s, an accessor's
+property's and a named constructor's, and a method or constructor defined directly in it
+binds each to `NamedMember` on its `this` node, once its signature is compiled: they are
+its code's names, not its signature's, so a parameter's type `Type` is still the type
+where the class has a field `Type`. A parameter of the name hides the member. The binding
+is in the method's own names, so a member is reached over a name outside the class of the
+same name. What the node means is what lowers the code says: in an instance method or a
+constructor, the object, whose member a name is, or else the class's, as C# resolves a
+simple name; in a static method, the class, so a static member is reached and an object's
+member fails as it does through the class. A base class's members are reached through
+`this`, since the class doesn't know them as it compiles.
+
+**Not yet:** a local function in a method can't reach the class's members by their names,
+since it would capture the method's object, which isn't a variable it can capture yet. It
+reaches them through an explicit `this`, which it captures as a parameter.
 
 A constructor call and a base call use the same call syntax, which covers both
 `new Foo()` and `base()` in C#. A base call passes the constructor's first parameter
