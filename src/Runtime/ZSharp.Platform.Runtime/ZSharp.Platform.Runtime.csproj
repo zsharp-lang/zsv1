@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Core\ZSharp.LIR\ZSharp.LIR.csproj" />
     <ProjectReference Include="..\ZSharp.LIR.CLR\ZSharp.LIR.CLR.csproj" />
+    <ProjectReference Include="..\ZSharp.Importer.ILLoader.Attributes\ZSharp.Importer.ILLoader.Attributes.csproj" />
   </ItemGroup>
 
 </Project>
