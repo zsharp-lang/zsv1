@@ -75,6 +75,49 @@ Decided in the review of the reimplementation, for the language features to come
 - **Integers.** The integer concept is a set of operator functions and casts. A
   fixed-width integer is a type of its own `Integer` meta-type, which gives its width.
 
+### Captures
+
+- Closures capture variables, not values: a write in either function is seen by the
+  other.
+- A capture is the capturing function's relation to the code around it. HIR represents
+  it, if at all, on the function's node; neither `Local` nor `Parameter` knows it. For
+  implicit captures, as Z#'s, the structure says it already: the inner code gets the outer
+  local.
+- The code loader realizes a variable as a variable. Whether it is a cell is the
+  platform's: lowering the outer function, the CLR asks the functions nested in its code
+  what they capture, and lowers those variables as cells. Loading comes before lowering,
+  so they all exist by then.
+
+### Patterns
+
+- A pattern is a node kind of its own, not an expression. It tests a value and binds
+  parts of it; binding is setting, so what is bound can be any settable CO.
+- A name pattern always says `let` or `var`, as in `{ .x: 0, .y: let y }`, so where a
+  name comes from, and whether it can be set again, is written. `let circle: Circle` is a
+  name and a type test at once. A bare expression in a pattern is a value pattern,
+  matched with an operator: in `case`, its `of` operator, `~=` by default.
+- `case`'s `when` takes patterns.
+- What a failed match reached stays bound. Where a binding can be read is decided by its
+  type, as a type with a fallback value, as a nullable has, can be read anywhere; where
+  scoping is vague, as in a condition, reading a binding the match didn't reach is a
+  runtime error until there is flow analysis.
+- A literal is a pattern that can be evaluated: `[]` is both, and a sequence pattern is
+  closed, `[a, ..rest]` opening it. Inside brackets a prefix `..rest` is the rest, and an
+  infix `0..20` a range.
+- In `{}`, a key is an expression, as `{ x: 0 }` is keyed by `x`'s value, and `.x` is the
+  member `x` of the matched value, as an implicit member is of its type. As a literal,
+  `{ .x: 1 }` is an object with a member `x`; `{ x: 1 }` a mapping. A mapping pattern is
+  closed, opened with `..`; a member pattern is open. Members and keys together are a
+  pattern, not a literal. `{}` is the empty mapping, as position and the matched value's
+  type and capabilities decide.
+- An error for `{ x: ... }` against a value with no mapping but a member `x` suggests `.x`.
+- `not` in a pattern is a pattern combinator, apart from the boolean `not`; a pattern under
+  it binds nothing.
+- Deconstructing a value for a positional pattern is an operation of the matching REI,
+  which whatever dispatchers are applied answer.
+- Narrowing through `and`, as `nullable and nullable.do()`, is flow typing, a future
+  feature.
+
 ## Choices and restrictions from 2026-11-09
 
 Made without you on 2026-11-09. The choices are design for you to keep or change; the
