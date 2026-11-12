@@ -91,7 +91,7 @@ Core.ZSharp.ModuleScope.Compiler = compiler;
 Core.ZSharp.ModuleScope.Language = language;
 Core.ZSharp.ModuleScope.Runner = statement => runner.RunStatement(statement);
 Core.ZSharp.ModuleScope.Evaluator = expression => runner.EvaluateExpression(expression);
-DocumentCompiler.Install(mapped, Scope.HIRLoader);
+ZSharp.Compiler.DocumentLoaders.Install(mapped, Scope.HIRLoader);
 
 var core = new ZSharp.Importer.String.LibraryImporter("core");
 core.Add("runtime", il.Load(typeof(Core.Runtime.ModuleScope).Module));
@@ -101,11 +101,11 @@ Core.ZSharp.ModuleScope.Libraries = core;
 
 var std = new ZSharp.Importer.String.LibraryImporter("standard");
 
-foreach (var (name, module) in ToolchainModules.All())
+foreach (var (name, module) in ZSharp.Toolchain.ToolchainModules.All())
     std.Add(name, il.Load(module));
 
 var importer = new ZSharp.Importer.String.StringImporter();
-var host = new DotNetDocuments(
+var host = new ZSharp.Lang.Runtime.RuntimeDocuments(
     runtime, il,
     instance => Scope.HIRLoader.LoadInstance(instance).When(out _).Error(out var error) ? error : null
 );
@@ -192,7 +192,7 @@ document.Scope.Add("FieldCount", new C.NamedMember { Target = probe, Name = "Fie
 ZSharp.AST.Statement ParseOne(string source)
 {
     var parser = new Parser(Tokenizer.Tokenize(new(new StringReader(source))));
-    return Syntax.Install(parser).Document.ParseStatement(parser);
+    return ZSharp.Syntax.Grammar.Install(parser).Document.ParseStatement(parser);
 }
 
 // Runs source statement by statement, returning the first error.
@@ -213,7 +213,7 @@ bool Fails(string source)
 string? Run(string source)
 {
     var parser = new Parser(Tokenizer.Tokenize(new(new StringReader(source))));
-    var syntax = Syntax.Install(parser);
+    var syntax = ZSharp.Syntax.Grammar.Install(parser);
 
     while (parser.HasTokens && !parser.Is(ZSharp.Text.TokenType.EOF))
     {

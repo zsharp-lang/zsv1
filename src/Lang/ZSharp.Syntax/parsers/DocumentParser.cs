@@ -1,0 +1,30 @@
+using ZSharp.Parser;
+using ZSharp.AST;
+
+namespace ZSharp.Syntax
+{
+    using Parser = global::ZSharp.Parser.Parser;
+
+    public sealed class DocumentParser
+        : ContextParser<Document, Statement>
+    {
+        public override Document Parse(Parser parser)
+        {
+            List<Statement> content = [];
+
+            while (parser.HasTokens && !parser.Is(Text.TokenType.EOF))
+                content.Add(ParseContextItem(parser));
+
+            return new()
+            {
+                Statements = content
+            };
+        }
+
+        public Statement ParseStatement(Parser parser)
+            => ParseContextItem(parser);
+
+        protected override Statement ParseDefaultContextItem(Parser parser)
+            => LangParser.ParseExpressionStatement(parser);
+    }
+}

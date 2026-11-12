@@ -6,17 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Library\ZSharp.Library.Core.Compiler\ZSharp.Library.Core.Compiler.csproj" />
-    <ProjectReference Include="..\..\Lang\ZSharp.Lang.ZSharp\ZSharp.Lang.ZSharp.csproj" />
-    <ProjectReference Include="..\..\Lang\ZSharp.Lang.ZSharp.DotNet\ZSharp.Lang.ZSharp.DotNet.csproj" />
-    <ProjectReference Include="..\..\Runtime\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />
-    <ProjectReference Include="..\..\Runtime\ZSharp.Compiler.HIRReifier.CLR\ZSharp.Compiler.HIRReifier.CLR.csproj" />
-    <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader.Code.CG\ZSharp.Compiler.HIRLoader.Code.CG.csproj" />
-    <ProjectReference Include="..\..\Importers\ZSharp.Importer.String\ZSharp.Importer.String.csproj" />
-    <ProjectReference Include="..\..\Library\ZSharp.Library.Core.Runtime\ZSharp.Library.Core.Runtime.csproj" />
-    <ProjectReference Include="..\..\Library\ZSharp.Library.Standard.IO\ZSharp.Library.Standard.IO.csproj" />
-    <ProjectReference Include="..\..\Diagnostics\ZSharp.Diagnostics.HIR\ZSharp.Diagnostics.HIR.csproj" />
-    <ProjectReference Include="..\..\Library\ZSharp.Library.Core.ZSharp\ZSharp.Library.Core.ZSharp.csproj" />
+    <ProjectReference Include="..\..\Toolchain\ZSharp.Toolchain\ZSharp.Toolchain.csproj" />
   </ItemGroup>
 
 </Project>

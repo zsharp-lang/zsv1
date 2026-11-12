@@ -58,7 +58,7 @@ What a project's module file runs with: `compile()`, `compile(name)` and `emit(v
 
 The toolchain's own modules, as Z# code reaches them, named after what they are:
 `std:zsharp/hir`, `std:zsharp/hir/code`, `std:zsharp/mir`, `std:zsharp/lir`,
-`std:zsharp/lang`, `std:zsharp/lang/ast`, `std:zsharp/lang/parser`,
+`std:zsharp/lang`, `std:zsharp/lang/ast`, `std:zsharp/lang/parser`, `std:zsharp/lang/syntax`,
 `std:zsharp/compiler`, `std:zsharp/compiler/cg`, `std:zsharp/compiler/ir`,
 `std:zsharp/compiler/ts`, and more. They are what a library that extends Z# is written
 against.

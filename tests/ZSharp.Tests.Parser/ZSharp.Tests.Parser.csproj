@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>disable</Nullable><NoWarn>$(NoWarn);CS8632</NoWarn></PropertyGroup>
-  <ItemGroup><ProjectReference Include="..\..\src\Lang\ZSharp.Parser\ZSharp.Parser.csproj" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="..\..\src\Lang\ZSharp.Syntax\ZSharp.Syntax.csproj" /></ItemGroup>
 </Project>

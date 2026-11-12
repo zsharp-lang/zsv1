@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Z# language's documents, run on the runtime platform: each document's frame,
+       and its locals as slots of it. -->
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Lang.ZSharp\ZSharp.Lang.ZSharp.csproj" />
+    <ProjectReference Include="..\..\Runtime\ZSharp.Importer.ILLoader\ZSharp.Importer.ILLoader.csproj" />
+    <ProjectReference Include="..\..\Runtime\ZSharp.Compiler.HIRReifier.CLR\ZSharp.Compiler.HIRReifier.CLR.csproj" />
+  </ItemGroup>
+
+</Project>

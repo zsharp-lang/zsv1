@@ -122,12 +122,16 @@ src/
   Compiler/  The CG, TS, IR, loader and runner REIs and implementations, and
              ZSharp.Compiler, the compiler in use, which they make up
   Importers/ Language-neutral importers, such as the string importer
-  Lang/      Text, Tokenizer, AST, Parser, AST -> HIR, the Z# language
+  Lang/      Text, Tokenizer, AST, Parser (an extensible parser, no grammar of its
+             own), Syntax (Z#'s grammar), AST -> HIR, the Z# language, and its
+             documents run on the runtime platform (ZSharp.Lang.ZSharp.Runtime)
   Library/   What `core:` and `std:` expose, of what is below them, which nothing
              below reaches
   Packages/  DotNet (CLR entities, pure structure, HIR level)
   Runtime/   IL loader, LIR -> IL
-  CLI/
+  Toolchain/ ZSharp.Toolchain: the toolchain put together from its parts, and the
+             modules of its types Z# imports
+  CLI/       The command line, which runs a script with the toolchain
 tests/
 std/         The standard library: its sources, and its builds, the seed
 packages/    The toolchain's packages: the Cecil platform and the package manager

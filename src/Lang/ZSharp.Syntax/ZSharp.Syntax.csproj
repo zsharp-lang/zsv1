@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Z# language's syntax: its grammar, as it is registered with the parser. -->
+  <ItemGroup>
+    <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />
+  </ItemGroup>
+
+</Project>

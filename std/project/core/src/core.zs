@@ -11,7 +11,7 @@ import { Instance, Type as HIRType } from "std:zsharp/hir";
 import { Statement as StatementSyntax, Module as ModuleSyntax, ModuleTokens } from "std:zsharp/lang/ast";
 import { Parser } from "std:zsharp/lang/parser";
 import { Tokenizer, TextStream } from "std:zsharp/lang/tokenizer";
-import { Syntax } from "std:zsharp/lang";
+import { Grammar } from "std:zsharp/lang/syntax";
 import { Module } from "std:modules";
 import { compiler, metaTypes, ct, documents } from "core:zsharp";
 
@@ -59,7 +59,7 @@ fun run(submodule: Submodule) {
 
 fun parse(path: String): List[StatementSyntax] {
     let parser = Parser(Tokenizer.Tokenize(TextStream(File.ReadAllText(path))));
-    return Syntax.Install(parser).Parse(parser).Statements;
+    return Grammar.Parse(parser).Statements;
 }
 
 // Runs a project's module files, from its root's, and gives what they emitted, in the

@@ -250,6 +250,17 @@ namespace ZSharp.Importer.ILLoader
         }
 
         /// <summary>
+        /// What the CLR names a method: an accessor for its property, as <c>get_Name</c> and
+        /// <c>set_Name</c>, which is how the CLR and the languages on it find a property's
+        /// accessors, and how a class implements an interface's property; anything else by
+        /// its own name.
+        /// </summary>
+        private static string ClrName(Package.DotNet.Class owner, Package.DotNet.Method method)
+            => owner.Properties.FirstOrDefault(property => ReferenceEquals(property.Getter, method)) is { } read ? "get_" + read.Name
+            : owner.Properties.FirstOrDefault(property => ReferenceEquals(property.Setter, method)) is { } written ? "set_" + written.Name
+            : method.Name;
+
+        /// <summary>
         /// Declares the members of a class, so that all the code can refer to them.
         /// </summary>
         private Error? Declare(Objects.DefinedClass @class, Objects.LoweredClass lowered, object? target)
@@ -334,10 +345,11 @@ namespace ZSharp.Importer.ILLoader
                     else
                         signature.ReturnType = type;
 
+                var name = ClrName(node, method);
                 var declared = new LIR.CLR.ClassMethod(
-                    method.Name,
+                    name,
                     method.IsStatic,
-                    new(signature) { Name = method.Name, Body = new() }
+                    new(signature) { Name = name, Body = new() }
                 )
                 {
                     IsVirtual = method.IsVirtual,

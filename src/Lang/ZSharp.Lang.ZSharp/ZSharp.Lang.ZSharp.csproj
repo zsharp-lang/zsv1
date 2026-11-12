@@ -7,7 +7,7 @@
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler.HIRLoader.Mapped\ZSharp.Compiler.HIRLoader.Mapped.csproj" />
     <ProjectReference Include="..\ZSharp.Lang.Binding.Mapped\ZSharp.Lang.Binding.Mapped.csproj" />
     <ProjectReference Include="..\ZSharp.Compiler.AST.Mapped\ZSharp.Compiler.AST.Mapped.csproj" />
-    <ProjectReference Include="..\ZSharp.Parser\ZSharp.Parser.csproj" />
+    <ProjectReference Include="..\ZSharp.Syntax\ZSharp.Syntax.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.HIRRunner.Mapped\ZSharp.HIRRunner.Mapped.csproj" />
     <ProjectReference Include="..\..\Compiler\ZSharp.Compiler\ZSharp.Compiler.csproj" />
   </ItemGroup>

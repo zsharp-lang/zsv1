@@ -254,7 +254,7 @@ mappedCompiler.Definitions.Register<A.TypeDefinition>((_, definition) =>
 A.Statement Parse(string source)
 {
     var parser = new Parser(Tokenizer.Tokenize(new(new StringReader(source))));
-    return Syntax.Install(parser).Document.ParseStatement(parser);
+    return ZSharp.Syntax.Grammar.Install(parser).Document.ParseStatement(parser);
 }
 
 A.Definition Definition() => (A.Definition)((A.DefinitionStatement)Parse("def A {}")).Definition;

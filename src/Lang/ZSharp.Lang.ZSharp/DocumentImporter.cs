@@ -58,7 +58,7 @@ namespace ZSharp.Lang
                 using var stream = File.OpenText(path);
 
                 var parser = new Parser.Parser(Tokenizer.Tokenizer.Tokenize(new(stream)));
-                var syntax = Syntax.Install(parser);
+                var syntax = ZSharp.Syntax.Grammar.Install(parser);
 
                 while (parser.HasTokens && !parser.Is(Text.TokenType.EOF))
                     if (document.Run(compiler, syntax.Document.ParseStatement(parser)) is { } error)
