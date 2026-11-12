@@ -33,8 +33,9 @@ import { Positional } from "std:functions";
 // ---- The HIR
 
 // The object a constructor makes, as its code refers to it: an instance, of the class it
-// makes, and not a definition. (A method's object is its first parameter.)
-@public def Receiver of Node : Instance {
+// makes, and not a definition. It is a variable, as it exists only while the code runs.
+// (A method's object is its first parameter.)
+@public def Receiver of Node : Instance, Variable {
     @public let Type: Type;
 }
 

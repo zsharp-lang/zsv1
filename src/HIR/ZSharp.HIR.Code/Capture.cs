@@ -6,7 +6,8 @@ namespace ZSharp.HIR.Code
     /// holds what it captures, so it can be turned back into it.
     /// </summary>
     public sealed class Capture(Variable captured)
-        : Variable
+        : Definition
+        , Variable
         , Instance
     {
         public Variable Captured { get; } = captured;

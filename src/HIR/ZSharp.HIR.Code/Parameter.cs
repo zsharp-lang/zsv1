@@ -5,7 +5,8 @@ namespace ZSharp.HIR.Code
     /// from an argument, a default, or somewhere else entirely, is up to its kind.
     /// </summary>
     public interface Parameter
-        : Variable
+        : Definition
+        , Variable
         , Instance
     {
         /// <summary>

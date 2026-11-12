@@ -113,9 +113,12 @@ namespace ZSharp.Compiler
             });
 
             // Outside the functions that capture it, a capture is what it captures.
-            instances.Instances.Register<HIR.Code.Capture>(capture => capture.Captured is HIR.Instance captured
-                ? loader.LoadInstance(captured)
-                : loader.LoadDefinition(capture.Captured));
+            instances.Instances.Register<HIR.Code.Capture>(capture => capture.Captured switch
+            {
+                HIR.Instance captured => loader.LoadInstance(captured),
+                HIR.Definition defined => loader.LoadDefinition(defined),
+                _ => Result.Error("A capture is of a variable that is neither an instance nor a definition.")
+            });
             instances.Instances.Register<HIR.Code.Local>(local => loader.LoadDefinition(local));
 
             expressions.Register<HIR.Code.Get>(get => loader.LoadInstance(get.Instance));

@@ -47,6 +47,11 @@ because that is hidden behind the same API.
 - `Type` marks a slot where a type is expected, as in `Field.Type: Type`. It
   does not derive from `Instance`. For a type to be an instance, it implements
   both markers.
+- `Variable` marks what has a value only while code runs: a local, a parameter, or the
+  object a method or constructor runs on. It isn't a definition: a local and a parameter
+  are definitions as well, and the object is an instance that is only a variable. What
+  decides by it, as whether code can run while compiling and how the reifier places a
+  value, asks whether something exists only while code runs, which the object does.
 - `Expression` and `Statement` are extensions of HIR, not core concepts. They
   provide code-like elements.
 - A reference is how code refers to an `Instance` (see `Get` in `zsv1`).
