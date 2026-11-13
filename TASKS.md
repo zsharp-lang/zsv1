@@ -48,20 +48,24 @@ them to its own types when it lowers them, so the runtime is one platform among 
   capability. `std:functions/compiler`'s `premap` table and the `FunctionHandle` of a
   declared function go (by a transition: the seed binds `premap`), and `@binder`'s built
   functions are the runtime's premaps.
-- [ ] **`reflect` is an ordinary function**, which calls where the encoder put its data
-  (`std:encoding`'s `describe`); the prelude no longer premaps it.
+- [ ] **Embedding data is a platform capability.** Asked to embed some data, a platform
+  gives a node that reads it back once its output runs. The encoder's blob is one use,
+  composed with its decoder; an asset is another. Cecil's `embed`, which knows the
+  reflection blob's attribute, becomes it. Reflection itself doesn't change, but the
+  prelude premaps `reflect` with `std:functions`' `premap`, which goes.
 - [ ] **The CLR's types have no operators of their own** where a std type is what they
   are: `Int32` goes to `I32`, whose `+` the platform premaps, so nothing is ambiguous.
-  `core:runtime`'s `[Operator]` methods are no longer the language's (needs a transition
-  over two generations); `String`'s stay until `std:string`.
+  `core:runtime`'s `[Operator]` methods are no longer the language's. The IL loader,
+  which translates the CLR to Z#, premaps the CLR's operators. Note: the change spans two
+  generations of the seed; `String`'s stay until `std:string`.
 - [ ] **An import loads what it imports.** `import "lib";`, which binds no names, gives
   the module's node and nothing loads it, so its module's CO, which makes its operators
   the language's, is never made. Importing is using it, names or not. Then
   `std:zsharp/clr` no longer loads the libraries it implements.
-- [?] **The default string's encoding.** Fixed width, so indexing is O(1) (decided).
-  UTF-32 holds every character, but the CLR's `String` (UTF-16) then isn't what it is, so
-  passing one to the CLR transcodes; UCS-2 is what the CLR's `String` is, but holds only
-  the BMP.
+- [ ] **The default string's encoding** is fixed width, so indexing is O(1), and can
+  change without changing an API: the prelude's `String` is typed `Type[String[Unicode]]`,
+  so code sees only what a string of the set has, never the encoding. `Type[T]`, a type
+  known only to be a `T`, needs handling in std, not in core.
 - [ ] **`x as A as B`** parses as `x as (A as B)`; left, `(x as A) as B`, as C# chains it,
   is proposed. Easy to turn back.
 - [ ] **Overloads match exactly first.** A candidate every argument goes to without an
@@ -78,9 +82,9 @@ them to its own types when it lowers them, so the runtime is one platform among 
   - [x] A Z# type the platform realizes as one of its own says so (`IRepresented`), so
     it boxes where an `Object` is expected and isn't compared as a reference (a bug of
     #39: `print(5 as I32)` crashed).
-  - [ ] Conditions taking `Bool`, and comparisons giving it, once Z#'s types and the
-    platform's convert (a condition takes the CLR's `Boolean`, and LIR has no boolean,
-    `decisions.md`).
+  - [x] Conditions taking `Bool`: neither MIR nor LIR types a condition, so `if (b)`
+    with `b: Bool` already works.
+  - [ ] Comparisons giving `Bool` (std's are declared to give `Boolean`).
   - [ ] `not`, `and` and `or` on `Bool`: `not` and `and` aren't operators of the language
     yet, and `(or)` isn't an operator literal, as `or` is a word.
 - [ ] **`std:void`: `Void`**, its own library. A function that returns `Void` returns
