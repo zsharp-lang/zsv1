@@ -60,7 +60,15 @@ them to its own types when it lowers them, so the runtime is one platform among 
     condition is in LIR, which has no boolean (`decisions.md`).
   - [ ] `not`, `and` and `or` on `Bool`: `not` and `and` aren't operators of the language
     yet, and `(or)` isn't an operator literal, as `or` is a word.
-- [ ] **`Void`.** The type of no value, its own type.
+- [?] **`Void`.** The type of no value, its own type. Today a function that returns
+  nothing has no return type (`null`), and every place that reads one says so: Z#'s
+  functions, the CLR's methods, the check that a body returns what it says, and LIR, whose
+  signature has no return type for nothing. Giving `Void` a type of its own means each of
+  them asks the type whether it has values, rather than special-casing it. Waits on:
+  - whether `Void` is a unit type, with one value a `let` can hold, or has none;
+  - whether a function with no return type written returns `Void`;
+  - and `Never` (`NoReturn` in the review notes), a type that goes to any type, which is
+    best decided with it.
 - [?] **The literals' default types.** The prelude sets what a literal is where nothing
   asks for a type (`I32`, `F64`, `String`). Waits on how Z#'s types and the CLR's convert:
   if each goes to the other implicitly, an operator on one of each is ambiguous between
