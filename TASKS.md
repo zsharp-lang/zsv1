@@ -129,9 +129,13 @@ them to its own types when it lowers them, so the runtime is one platform among 
   its generator's argument (`fun outer(src) { return fun() { import { print } from src;
   … } as Function; }`), because the generator builds the `Import` node with that value.
   The `Import` node adds the operators' mappings to the loader's scope as it is loaded.
-  Open: a module function's body is loaded with the module, outside the building code's
-  load, so its operators are either unquoted building code (resolved in the building
-  code's scope) or reach the body some other way.
+  A module function's body is loaded with the module, outside the building code's load,
+  so it gets its operators as it gets a document variable: the reifier turns a reference
+  to a variable of the building code into `Encode(...)`, read when the building code runs
+  and placed in the body (checked: `let greeting = "built"; fun show() { print(greeting);
+  } greeting = "changed"; show();` prints `built`). So an operator's marker is such a
+  variable: the `Import` node's load maps it in the scope, and the body gets the group.
+  The group is placed as HIR, as an import's value already is.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
