@@ -50,7 +50,16 @@ them to its own types when it lowers them, so the runtime is one platform among 
 - [?] **`x as A as B`** parses as `x as (A as B)`. Waits on whether `as` is to chain left.
 - [ ] **Literals into Z#'s types.** An integer or decimal literal goes to any of the types
   that holds its value.
-- [ ] **`std:boolean`.** `Bool`, its operators, and conditions taking it.
+- [x] **`std:boolean`** (#40). `Bool`, of the `Truth` meta-type, with `==` and `!=`,
+  which the CLR runs as its `Boolean`; casts to and from it.
+  - [x] A Z# type the platform realizes as one of its own says so (`IRepresented`), so
+    it boxes where an `Object` is expected and isn't compared as a reference (a bug of
+    #39: `print(5 as I32)` crashed).
+  - [?] Conditions taking `Bool`, and comparisons giving it: waits on how Z#'s types and
+    the platform's convert, as a condition takes the CLR's `Boolean`, and on what a
+    condition is in LIR, which has no boolean (`decisions.md`).
+  - [ ] `not`, `and` and `or` on `Bool`: `not` and `and` aren't operators of the language
+    yet, and `(or)` isn't an operator literal, as `or` is a word.
 - [ ] **`Void`.** The type of no value, its own type.
 - [?] **The literals' default types.** The prelude sets what a literal is where nothing
   asks for a type (`I32`, `F64`, `String`). Waits on how Z#'s types and the CLR's convert:

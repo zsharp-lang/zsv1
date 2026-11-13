@@ -19,9 +19,10 @@ namespace ZSharp.Importer.ILLoader.Objects
 
             foreach (var argument in new[] { left, right })
             {
-                // A value of a value type is no reference, though it would box to one.
+                // A value of a value type is no reference, though it would box to one, nor is a
+                // value of a type the platform realizes as one, as Z#'s numbers.
                 if (ZSharp.Compiler.Current.TS.TypeOf(argument.Object).Ok(out var type)
-                    && type.Is<IILType>(out var known) && known.GetILType().IsValueType && !operand.IsValueType)
+                    && (Class.Represented(argument.Object) ?? type).Is<IILType>(out var known) && known.GetILType().IsValueType && !operand.IsValueType)
                     return Result.Error(new UnsupportedError("A value type is compared by what its type defines."));
 
                 if (ZSharp.Compiler.Current.CG.ImplicitCast(argument.Object, loader.Class(operand)).Ok(out var value))
