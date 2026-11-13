@@ -109,20 +109,22 @@ them to its own types when it lowers them, so the runtime is one platform among 
   (proposed): compiling a module generates its building code (HIR, loaded, then run), as
   a function body is. A type stays code in it: `let x: String?` builds
   `Global("x", String?)`, so loading that code calls `(?)` on `String`. An import does two
-  things: (1) its details, while the code that holds it is loaded: what its names are, so
-  `String?` resolves, and its operators; (2) its references, when that code runs: the live
-  objects. So an import leaves a record on what it is in (the building code, and the
-  module it builds), which the loader handles when it loads that node, in a loader scope of
-  that load alone: either a module's list of imports, or metadata with a handler (HIR's
-  annotations exist, on .NET package nodes only). The operator table holds markers, not
-  groups: `a + b` calls the marker for `+`, and a loader scope maps each marker to an
-  overload group, an outer one plus what its imports give. Module code is ordered: a
+  things: (1) its details, while the code that holds it is loaded: an HIR `Import` node
+  (an HIR change) that the loader resolves, giving the import's names their types and
+  mapping the operators it brings, for the code after it; (2) its references, when that
+  code runs: a plain call of `import`, which gives the live objects. No record stays on
+  the definition: a body is reified in the building code, so what it uses of an import
+  (an operator's group, a name) is unquoted building code, resolved where the `Import`
+  node is in scope. The operator table holds markers, not groups: `a + b` calls the marker
+  for `+`, and the loader's scope maps each marker to an overload
+  group, an outer one plus what its imports give. Module code is ordered: a
   definition comes after the imports it uses. A group with the same entity twice (the
   prelude's `String` and std:string's) is the overload object's concern. Compile-time slots
   (`of`) use the context around them: a project's module file is that context for its
   other files, which already works (a meta-type imported in `src/.zs` reaches
   `def B of Truth()` in another file), so std's 23 `def … of` files move their meta-type
-  imports to their module files. Needs: loader scopes; the import record's shape.
+  imports to their module files. A source known only when the code runs has no `Import`
+  node, so its names have no types where the code is loaded.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
