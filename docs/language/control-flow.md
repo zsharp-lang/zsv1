@@ -6,7 +6,6 @@
 otherwise:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 
 let size = 12;
@@ -33,7 +32,6 @@ some
 the condition stops holding:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 
 let index = 0;
@@ -60,7 +58,6 @@ A loop can have a name, after `while`, which `break from` and `continue from` us
 or continue an outer loop:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 
 let row = 0;
@@ -86,7 +83,6 @@ A loop is an expression too. `break` with a value leaves it with that value, and
 `else` is its value when its condition stops holding, so a loop used as a value needs one:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 
 let index = 0;
@@ -107,7 +103,6 @@ the first square over 30 is of 6
 `return` leaves a function, with a value if the function gives one:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32 } from "core:runtime";
 

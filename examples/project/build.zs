@@ -1,6 +1,5 @@
 // Builds the project in src/ with std:project, and uses what it emitted: each module
 // is HIR, which this loads and calls into.
-import "std:prelude";
 import { print } from "std:io";
 import { discover, Compiler } from "std:project";
 import { Module } from "std:modules";

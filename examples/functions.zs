@@ -1,6 +1,5 @@
-// A script imports the prelude first, which brings the standard definitions:
+// zs imports the prelude before the script, which brings the standard definitions:
 // here, a fun is a Z# function, defined in Z# by std:functions.
-import "std:prelude";
 import { print } from "std:io";
 import { String, Int32 } from "core:runtime";
 

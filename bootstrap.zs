@@ -1,5 +1,6 @@
 // Builds the toolchain's Z# projects from their sources, as an installer would, and
-// checks the build: `zs bootstrap.zs`.
+// checks the build: `zs --no-prelude bootstrap.zs`, as it imports the prelude itself,
+// once what it removes is gone.
 //
 // The standard library is its own seed: a library that is a project is built by the
 // toolchain that loads its built assembly, as a compiler that compiles itself is. So each
@@ -106,6 +107,7 @@ def Bootstrap of DotNet_Module {
         let start = ProcessStartInfo();
         start.FileName = Environment.ProcessPath;
         if (Path.GetFileNameWithoutExtension(Environment.ProcessPath) == "dotnet") start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "zs.dll"));
+        start.ArgumentList.Add("--no-prelude");
         start.ArgumentList.Add(Path.Combine(root, "bootstrap.zs"));
         start.UseShellExecute = false;
         start.Environment["ZS_BOOTSTRAP_GENERATION"] = "" + (generation + 1);

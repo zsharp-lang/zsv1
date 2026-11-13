@@ -9,7 +9,6 @@
 // from its sources, the documentation and examples, and the installer. The bootstrap runs
 // first, unless told not to, so the seed is what the sources build.
 
-import "std:prelude";
 import { print } from "std:io";
 import { arguments } from "core:zsharp";
 import { inNuGet } from "core:packages";
@@ -258,6 +257,7 @@ if (bootstrapFirst) {
     print("Bootstrapping, so the seed is what the sources build.");
     let bootstrap = List[String]();
     if (Path.GetFileNameWithoutExtension(Environment.ProcessPath) == "dotnet") bootstrap.Add(Path.Combine(AppContext.BaseDirectory, "zs.dll"));
+    bootstrap.Add("--no-prelude");
     bootstrap.Add(Path.Combine(Release.root(), "bootstrap.zs"));
     if (Release.run(Environment.ProcessPath, bootstrap, Release.root()) != 0) {
         print("The bootstrap failed, so there is no release.");

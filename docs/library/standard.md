@@ -5,13 +5,13 @@ A library is imported as `std:name`; one with a part, as `std:project/core`.
 
 ## std:prelude
 
-What a script imports first, for what it installs: the standard definitions, so `fun` is
+What `zs` imports before a script's first statement, unless it's run with `--no-prelude`,
+for what it installs: the standard definitions, so `fun` is
 a function, `def` a class and `module` a module, the trait dispatchers, the CLR's
 capabilities, reflection, `.dll` imports and `pkg:`. It gives no names, so a script
 imports what it uses from each library itself:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Interface, static } from "std:oop";
 import { Type } from "std:types";
@@ -52,7 +52,6 @@ in [its README](../../std/oop/README.md).
 an interface, the type of any class that implements it.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Interface, class } from "std:oop";
 import { Type } from "std:types";
@@ -81,7 +80,6 @@ its HIR. It takes what carries the definition's metadata, as a .NET type of a bu
 library:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { reflect } from "std:reflection";
 import { Class } from "std:oop";

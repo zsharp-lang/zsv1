@@ -6,7 +6,6 @@
 anything, and its code.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32 } from "core:runtime";
 
@@ -35,7 +34,6 @@ Parameters in braces are named: a call gives them by name, in any order, and a d
 value fills one a call leaves out.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { String } from "core:runtime";
 
@@ -58,7 +56,6 @@ A parameter can have a name for callers and another for its code, written
 `name as alias`:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { String } from "core:runtime";
 
@@ -78,7 +75,6 @@ print(label());
 Functions of one name are overloads of it, and a call calls the one its arguments fit:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { String, Int32 } from "core:runtime";
 
@@ -102,7 +98,6 @@ A function of a [module](modules.md) goes where a .NET delegate is expected, as 
 delegate of it:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32, Func } from "core:runtime";
 

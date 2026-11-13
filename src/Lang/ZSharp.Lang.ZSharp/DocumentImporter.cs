@@ -42,6 +42,40 @@ namespace ZSharp.Lang
         /// what it gave the first time it was imported.
         /// </summary>
         public IResult<Package.ZSharp.Document, Error> Execute(string path)
+            => Execute(path, []);
+
+        /// <summary>
+        /// Runs a document as a script, with statements before its own, as if they were
+        /// written at its start, as the CLI puts the prelude's import before a script's.
+        /// </summary>
+        public IResult<Package.ZSharp.Document, Error> Run(string path, IReadOnlyList<AST.Statement> first)
+        {
+            path = Path.GetFullPath(path);
+
+            if (documents.TryGetValue(path, out var known))
+                return Result<Package.ZSharp.Document>.Ok(known);
+
+            return Execute(path, first).When(out var document).Error(out var error)
+                ? Result<Package.ZSharp.Document>.Error(error)
+                : Result<Package.ZSharp.Document>.Ok(documents[path] = document!);
+        }
+
+        /// <summary>
+        /// The statements of source code, as a document's are parsed.
+        /// </summary>
+        public static List<AST.Statement> Statements(string source)
+        {
+            var parser = new Parser.Parser(Tokenizer.Tokenizer.Tokenize(new(new StringReader(source))));
+            var syntax = ZSharp.Syntax.Grammar.Install(parser);
+            var statements = new List<AST.Statement>();
+
+            while (parser.HasTokens && !parser.Is(Text.TokenType.EOF))
+                statements.Add(syntax.Document.ParseStatement(parser));
+
+            return statements;
+        }
+
+        private IResult<Package.ZSharp.Document, Error> Execute(string path, IReadOnlyList<AST.Statement> first)
         {
             path = Path.GetFullPath(path);
 
@@ -54,6 +88,10 @@ namespace ZSharp.Lang
                     return Result<Package.ZSharp.Document>.Error($"There is no document at {path}.");
 
                 var document = new DocumentCompiler(language, host, path);
+
+                foreach (var statement in first)
+                    if (document.Run(compiler, statement) is { } failed)
+                        return Result<Package.ZSharp.Document>.Error(failed);
 
                 using var stream = File.OpenText(path);
 

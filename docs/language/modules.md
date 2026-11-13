@@ -7,7 +7,6 @@ classes. A global is initialized in its order, as the module is built, and what 
 module reaches the module's other members by their names.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { String, Int32 } from "core:runtime";
 
@@ -50,7 +49,6 @@ gives what it marks with `@export`, from `core:zsharp`:
 
 ```zs fragment
 // shapes.zs
-import "std:prelude";
 import { export } from "core:zsharp";
 import { Int32 } from "core:runtime";
 
@@ -64,7 +62,6 @@ def Square {
 
 ```zs fragment
 // main.zs
-import "std:prelude";
 import { print } from "std:io";
 import { Square } from "shapes.zs";
 

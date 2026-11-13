@@ -57,11 +57,10 @@ zs hello.zs
 ## The prelude
 
 Almost everything Z# has is defined in its standard library, not by the toolchain: even
-what `fun` and `def` mean. A script gets the standard definitions by importing the
-prelude first:
+what `fun` and `def` mean. A script gets the standard definitions from the prelude, which
+`zs` imports before the script's first statement:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32 } from "core:runtime";
 
@@ -74,8 +73,9 @@ print("twice 21 is " + twice(21));
 twice 21 is 42
 ```
 
-Without the prelude, a script has only what it imports itself. Every sample in these
-pages imports it, as almost every script does.
+Run with `zs --no-prelude`, a script has only what it imports itself, and
+`import "std:prelude";` gives it the standard definitions again. The samples in these
+pages are run with the prelude.
 
 `core:runtime` has .NET's own types, as `Int32` and `String`, which Z# uses for its values.
 [Using .NET](language/dotnet.md) says more.
@@ -89,7 +89,6 @@ zs greet.zs Ada Grace
 ```
 
 ```zs fragment
-import "std:prelude";
 import { print } from "std:io";
 import { arguments } from "core:zsharp";
 

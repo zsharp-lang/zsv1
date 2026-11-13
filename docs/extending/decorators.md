@@ -10,7 +10,6 @@ the definition's node as it is built, and gives the node that is defined: the sa
 changed, or another.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Function } from "std:functions";
 import { Int32 } from "core:runtime";
@@ -44,7 +43,6 @@ nothing of it in that code. In a function's body, it runs when the body is built
 when the function is called:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { ct } from "core:zsharp";
 import { Int32 } from "core:runtime";

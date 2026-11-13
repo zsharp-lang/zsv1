@@ -3,7 +3,6 @@
 // Shop is lowered for it, and it writes the assembly, for a version given, as net8.0, or
 // for the .NET that runs it, given null. Then the assembly is imported, as any .dll is,
 // and its module's functions called.
-import "std:prelude";
 import { print } from "std:io";
 import { Object } from "core:runtime";
 import { Path } from Object.Assembly;
