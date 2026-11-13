@@ -496,6 +496,12 @@ a custom type gets into the language to be used as a meta-type.
   represents it changes nothing, and a cast between two types of numbers is the
   platform's. Nothing converts implicitly yet: the literals' types, and how Z#'s types and
   the CLR's convert, wait on a decision (`TASKS.md`).
+- `Bool`, `std:boolean`'s, is the same: `def Bool of Truth() {}`, which lowers to what the
+  `Truths` capability says, and the CLR's `Boolean` represents. A type the platform
+  realizes as one of its own says so to the type system, `IRepresented`, and what realizes
+  the CLR's types converts a value of it as a value of its representation: a Z# number
+  goes where an `Object` is expected boxed, as its CLR type does, and isn't a reference
+  to compare by identity.
 - A property is written as its accessors, `get Name(): T { ... }` and
   `set Name(value: T) { ... }`, each a definition of its own named by its property, which
   binds no name. The CLR's meta-compiler compiles them as the methods the CLR names for

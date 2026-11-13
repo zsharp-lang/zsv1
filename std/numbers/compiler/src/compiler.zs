@@ -23,7 +23,7 @@ import { UnsupportedError } from "core:zsharp/mir/core";
 import { ICTCastFrom, ICTImplicitCastTo } from "core:zsharp/mir/cg/direct";
 import { IRTCastTo } from "core:zsharp/mir/cg/typed";
 import { ICompileIRType, ICompileIRExpression, ICompileIRDefinitionIn } from "core:zsharp/m2l";
-import { ITyped, IAssignableTo } from "core:zsharp/mir/ts";
+import { ITyped, IAssignableTo, IRepresented } from "core:zsharp/mir/ts";
 import { ASTCompiler, CompiledDefinition } from "core:zsharp/lang";
 import { Bodies, MetaCompilerOf, MetaCompiler } from "pkg:zsharp/lang/hir";
 import { metaTypes } from "core:zsharp";
@@ -55,7 +55,7 @@ fun represent(key: String, represented: CompilerObject) {
 }
 
 // A type of numbers: one for each kind, bit width and signedness.
-def NumberType : CompilerObject, ICompileIRType, IAssignableTo, IRTCastTo, ICTCastFrom, ICTImplicitCastTo, ICompileIRDefinitionIn[LIRModule] {
+def NumberType : CompilerObject, ICompileIRType, IAssignableTo, IRTCastTo, ICTCastFrom, ICTImplicitCastTo, ICompileIRDefinitionIn[LIRModule], IRepresented {
     let node: Instance;
     let key: String;
 
@@ -63,6 +63,9 @@ def NumberType : CompilerObject, ICompileIRType, IAssignableTo, IRTCastTo, ICTCa
         this.node = node;
         this.key = key;
     }
+
+    // What represents it on the platform, as the platform's own types see it.
+    fun get_Representation(this): CompilerObject { return this.representation(); }
 
     // What represents it on the platform, or null if the platform hasn't said.
     fun representation(this): CompilerObject {

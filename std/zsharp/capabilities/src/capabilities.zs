@@ -51,3 +51,9 @@ def Numbers of DotNet_Interface {
     // The type of floating-point numbers of a bit width.
     fun real(bitWidth: Int32): Type;
 }
+
+// Truths: what the platform's truth values are, which std:boolean's Bool lowers to.
+def Truths of DotNet_Interface {
+    // The type of truth values.
+    fun boolean(): Type;
+}

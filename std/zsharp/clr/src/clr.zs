@@ -4,7 +4,7 @@
 // are on the CLR: what represents each, and what implements each operator declared on
 // them.
 
-import { Polymorphism, PlatformInterfaces, Numbers } from "std:zsharp/capabilities";
+import { Polymorphism, PlatformInterfaces, Numbers, Truths } from "std:zsharp/capabilities";
 import { Implementation, implement } from "std:traits";
 import { entrypoint } from "std:framework";
 import { explicitThis } from "pkg:clr/hir";
@@ -21,6 +21,8 @@ import { Function as ZFunction, Positional } from "std:functions";
 import { premap } from "std:functions/compiler";
 import { Module } from "std:modules";
 import { keyOf, represent } from "std:numbers/compiler";
+import { represent as representTruth } from "std:boolean/compiler";
+import { Truth } from "std:boolean/truth";
 
 // The CLR has polymorphism: a polymorphic structure is a CLR class or interface, and a
 // method of one is a method of the class.
@@ -90,6 +92,15 @@ def ClrNumbers of Implementation[Numbers, ClrPlatform] {
     @public @explicitThis fun real(this, bitWidth: Int32): LIRType {
         return lowered(clrTypeOf(numberKey(bitWidth, true, true)), this.value);
     }
+}
+
+// The CLR's truth values: Bool is the CLR's Boolean.
+def ClrTruths of Implementation[Truths, ClrPlatform] {
+    @public let value: ClrPlatform;
+
+    @public @explicitThis new(this, value: ClrPlatform) { this.value = value; }
+
+    @public @explicitThis fun boolean(this): LIRType { return lowered(Boolean, this.value); }
 }
 
 // The key std:numbers/compiler gives a type of numbers: "I32", "U8", "F64".
@@ -221,15 +232,19 @@ fun implementationOf(own: Module, syntax: String, function: ZFunction): Instance
     return predefined(syntax, operands.ToArray());
 }
 
-// The CLR types a function's operands are computed with, if each is of a type of numbers.
+// The CLR types a function's operands are computed with, if each is of a type of numbers
+// or of truth values.
 fun operandsOf(function: ZFunction): List[ClrType] {
     let operands = List[ClrType]();
     let index = 0;
     while (index < function.Parameters.Count) {
         if ((function.Parameters[index] is let parameter: Positional) == false) return null;
-        let key = keyOf(parameter.Type as Instance);
-        if (key == null) return null;
-        operands.Add(operandOf(key));
+        if (parameter.Type is let truth: Truth) operands.Add(Boolean);
+        else {
+            let key = keyOf(parameter.Type as Instance);
+            if (key == null) return null;
+            operands.Add(operandOf(key));
+        }
         index = index + 1;
     }
     return operands;
@@ -242,11 +257,14 @@ fun install() {
     implement(Polymorphism, ClrPlatform, ClrPolymorphism);
     implement(PlatformInterfaces, ClrPlatform, ClrInterfaces);
     implement(Numbers, ClrPlatform, ClrNumbers);
+    implement(Truths, ClrPlatform, ClrTruths);
 
     // The libraries are held, as importing a name from one holds it, so their operators
     // are the language's before they are implemented.
     hirLoader.LoadInstance(importers.Import("std:numbers/integer").Unwrap()).Unwrap();
     hirLoader.LoadInstance(importers.Import("std:numbers/real").Unwrap()).Unwrap();
+    hirLoader.LoadInstance(importers.Import("std:boolean").Unwrap()).Unwrap();
+    representTruth(hirLoader.LoadType(ilLoader.Load(Boolean)).Unwrap());
 
     let keys: String[] = ["I8", "I16", "I32", "I64", "U8", "U16", "U32", "U64", "F16", "F32", "F64"];
     let index = 0;
