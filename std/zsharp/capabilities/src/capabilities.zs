@@ -6,6 +6,7 @@
 // definition. A platform that exists, as the CLR runtime, is given a capability by a
 // trait.
 
+import { Int32, Boolean } from "core:runtime";
 import { Structure, Function, Type } from "pkg:zsharp/lir";
 import { Interface as DotNet_Interface } from "pkg:clr/hir";
 
@@ -40,4 +41,13 @@ def Polymorphism of DotNet_Interface {
 def PlatformInterfaces of DotNet_Interface {
     // The class implements the platform's type.
     fun implements(structure: Structure, implemented: Type);
+}
+
+// Numbers: what the platform's numbers are, which std:numbers' types lower to.
+def Numbers of DotNet_Interface {
+    // The type of integers of a bit width, signed or not.
+    fun integer(bitWidth: Int32, signed: Boolean): Type;
+
+    // The type of floating-point numbers of a bit width.
+    fun real(bitWidth: Int32): Type;
 }

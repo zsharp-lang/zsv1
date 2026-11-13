@@ -481,6 +481,21 @@ a custom type gets into the language to be used as a meta-type.
   since the definition doesn't exist yet: loaded, it is a variable of the meta-type, and
   reading it gives the node. A definition that exists is its CO, whose value is its type
   object, which converts to the node where an HIR type is expected.
+- Z#'s numbers are its own, apart from the CLR's. A type of them is a definition whose
+  meta-type is a value that says what its numbers are: `def I32 of
+  FixedBitWidthInteger(32, true) {}`, or `def F64 of FloatingPoint(64) {}`, which
+  `std:numbers/compiler` finds a meta-compiler for, as `std:traits` does for
+  `Implementation[Trait, For]`. So each is a named node a module holds, encoded once, and
+  usable as a type anywhere its library is imported. Every node of one kind, width and
+  signedness is one type, one CO. It lowers to what its target says its numbers are, the
+  `Numbers` capability of `std:zsharp/capabilities`. The operators on them are declared
+  with no code, in `std:numbers/integer` and `std:numbers/real`, and `std:zsharp/clr`
+  implements each with the CLR's operator on the types that represent them, by
+  `premap`, finding them among the language's operators. A platform also says what
+  represents each type in its own types, `represent`, so a cast between a type and what
+  represents it changes nothing, and a cast between two types of numbers is the
+  platform's. Nothing converts implicitly yet: the literals' types, and how Z#'s types and
+  the CLR's convert, wait on a decision (`TASKS.md`).
 - A property is written as its accessors, `get Name(): T { ... }` and
   `set Name(value: T) { ... }`, each a definition of its own named by its property, which
   binds no name. The CLR's meta-compiler compiles them as the methods the CLR names for

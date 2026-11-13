@@ -21,13 +21,33 @@ them to its own types when it lowers them, so the runtime is one platform among 
     library's register when it is imported.
   - [ ] `(+)` used as a callable, as `(+)(1, 2)`: the literal is only a value naming the
     functions so far.
-- [ ] **`std:numbers/integer`.** `FixedBitWidthInteger`, a meta-type whose objects are
-  types, of a bit width and a signedness; `I8`, `I16`, `I32`, `I64`, `U8`, `U16`, `U32`,
-  `U64`; arithmetic and comparison operators declared for each, with no code.
-- [ ] **`std:numbers/real`.** The same for floating point: `F16`, `F32`, `F64`.
-- [ ] **The CLR's mapping.** `std:zsharp/clr` gives the runtime what the types and
-  operators are on the CLR: a capability the types lower through, and the operators
-  premapped to the CLR's.
+- [x] **`std:numbers`** (#39). `FixedBitWidthInteger` and `FloatingPoint`, meta-types
+  whose values say what a type's numbers are; a type of them is a definition, as `def I32
+  of FixedBitWidthInteger(32, true) {}`, and every node of one kind, width and signedness
+  is one type.
+  - [x] `std:numbers/integer`: `I8` … `I64`, `U8` … `U64`, with `+ - * /`, negation for
+    the signed ones, and the comparisons, declared with no code.
+  - [x] `std:numbers/real`: `F16`, `F32`, `F64`, the same.
+  - [x] The CLR's mapping in `std:zsharp/clr`: the `Numbers` capability, what represents
+    each type (`represent`), and the operators premapped to the CLR's, an integer
+    narrower than 32 bits computed as an `Int32` and narrowed back.
+  - [x] Casts: to and from what represents a type, and between types of numbers.
+  - [ ] Implicit widening between Z#'s types (`I8` to `I32`, `F32` to `F64`): needs a
+    conversion the platform implements, as a cast does.
+  - [ ] `%`, the bitwise operators and shifts.
+  - [ ] Comparisons give the CLR's `Boolean`; they give `Bool` once `std:boolean` is in.
+  - [ ] `I128`, `U128` and `F128`, which the CLR has only partly (`Int128`, no 128-bit
+    float).
+  - [ ] Casting a type of numbers to what describes it, `I32 as Instance`: its CO already
+    uses `Cast(value)` for a cast to it.
+- [ ] **A platform binds a declared function per target.** `premap` binds it for every
+  target; `std:zsharp/clr`'s premaps hold on both CLR platforms, but a platform that isn't
+  the CLR would need its own binding.
+- [ ] **Importing a library holds its module.** `import "lib";` and `importers.Import`
+  give the module's node without loading it, so `std:modules` doesn't hold it, and its
+  operators aren't the language's until something loads it, as importing a name from it
+  does. `std:zsharp/clr` loads the libraries it implements.
+- [?] **`x as A as B`** parses as `x as (A as B)`. Waits on whether `as` is to chain left.
 - [ ] **Literals into Z#'s types.** An integer or decimal literal goes to any of the types
   that holds its value.
 - [ ] **`std:boolean`.** `Bool`, its operators, and conditions taking it.
