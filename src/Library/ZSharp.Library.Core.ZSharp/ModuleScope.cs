@@ -168,11 +168,12 @@ namespace Core.ZSharp
 
         /// <summary>
         /// Marks a definition as one of the functions a piece of syntax stands for, as in
-        /// <c>@operator((/))</c>, which is given as what an operator literal is.
+        /// <c>@operator((/))</c>, which is given as what an operator literal is. What holds
+        /// the definition adds it to them.
         /// </summary>
         [Alias("operator")]
-        public static Func<global::ZSharp.HIR.Instance, global::ZSharp.HIR.Instance> Operator(global::ZSharp.HIR.Instance @operator)
-            => Marked(@operator);
+        public static Func<global::ZSharp.HIR.Instance, global::ZSharp.HIR.Instance> Operator(global::ZSharp.Lang.SyntaxFunctions functions)
+            => Marked(functions);
 
         /// <summary>
         /// A decorator takes and gives the definition, so decorators compose. It says of the

@@ -51,6 +51,22 @@ namespace ZSharp.Syntax
                 parser =>
                 {
                     parser.Eat(TokenType.LParen);
+
+                    // An operator alone in parentheses, as `(+)`, is an operator literal: the
+                    // functions the operator stands for. One that starts an expression, as
+                    // in `(-x)`, isn't.
+                    if (parser.Is(TokenType.Operator))
+                        using (var lookAhead = parser.LookAhead())
+                        {
+                            var @operator = parser.Eat(TokenType.Operator).Value;
+
+                            if (parser.Is(TokenType.RParen, eat: true))
+                            {
+                                lookAhead.Commit();
+                                return new ZSharp.AST.OperatorExpression { Operator = @operator };
+                            }
+                        }
+
                     var expression = parser.Parse<ZSharp.AST.Expression>();
                     parser.Eat(TokenType.RParen);
 

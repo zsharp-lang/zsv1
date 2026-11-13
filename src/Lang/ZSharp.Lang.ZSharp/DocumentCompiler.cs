@@ -180,6 +180,10 @@ namespace ZSharp.Lang
 
                     define.Result.Value = instance;
 
+                    // The document holds what it defines, so it understands what the
+                    // definition says it is of the language, as an operator.
+                    language.Understand(instance);
+
                     return host.Load(instance);
 
                 case Import import:

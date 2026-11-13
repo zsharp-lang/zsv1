@@ -92,6 +92,33 @@ the text forty-two
 
 A call none of them fits is an error, which says why each one doesn't.
 
+## Operators
+
+A function marked `@operator`, from `core:zsharp`, with an operator in parentheses, is one
+of the functions the operator stands for, so the operator calls it where its operands fit:
+
+```zs
+import { print } from "std:io";
+import { operator } from "core:zsharp";
+import { Int32 } from "core:runtime";
+
+def Money {
+    let cents: Int32;
+    new(this, cents: Int32) { this.cents = cents; }
+}
+
+@operator((+))
+fun add(a: Money, b: Money): Money { return Money(a.cents + b.cents); }
+
+print((Money(150) + Money(275)).cents);
+```
+
+```output
+425
+```
+
+A library's operators are the language's once it's imported.
+
 ## Functions as values
 
 A function of a [module](modules.md) goes where a .NET delegate is expected, as a
