@@ -1,7 +1,6 @@
 // Z#'s interfaces, static members and type objects, from std:oop: a call through an
 // interface, a cast down and a type test, and an interface's class methods, which each
 // class implementing it has, reached through a class used as a value.
-import "std:prelude";
 import { print } from "std:io";
 import { Interface, static, class } from "std:oop";
 import { Type } from "std:types";

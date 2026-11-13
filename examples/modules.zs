@@ -1,7 +1,6 @@
 // Z#'s own modules, from std:modules: globals initialized in their order, and functions
 // and classes that belong to the module they are defined in. A module is defined only in
 // a document, and one uses another's members as anything does.
-import "std:prelude";
 import { print } from "std:io";
 import { String, Int32 } from "core:runtime";
 

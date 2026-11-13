@@ -1,6 +1,8 @@
 // The entry point of Z#: the command line. It has the toolchain put together and runs a
 // script. What gets compiled after that, and how, is up to the script.
 
+// The script imports the prelude first, as if `import "std:prelude";` were its first
+// statement, unless it's run with --no-prelude.
 // Diagnostics print to standard error, so a program's own output stays as it is.
 //   --trace-reification  prints the code each reification receives and produces.
 //   --dump-definitions   prints the HIR of each definition a document defines.
@@ -9,9 +11,9 @@ var script = Array.FindIndex(args, arg => !arg.StartsWith("--"));
 var options = (script < 0 ? args : args[..script]).ToHashSet();
 var files = script < 0 ? [] : new[] { args[script] };
 
-if (files.Length != 1 || options.Except(["--trace-reification", "--dump-definitions"]).Any())
+if (files.Length != 1 || options.Except(["--no-prelude", "--trace-reification", "--dump-definitions"]).Any())
 {
-    Console.Error.WriteLine("Usage: zs [--trace-reification] [--dump-definitions] <file> [arguments...]");
+    Console.Error.WriteLine("Usage: zs [--no-prelude] [--trace-reification] [--dump-definitions] <file> [arguments...]");
 
     return 1;
 }
@@ -23,7 +25,7 @@ var toolchain = new ZSharp.Toolchain.Toolchain(
     dumpDefinitions: options.Contains("--dump-definitions")
 );
 
-if (toolchain.Run(files[0]) is { } failure)
+if (toolchain.Run(files[0], prelude: !options.Contains("--no-prelude")) is { } failure)
 {
     Console.Error.WriteLine($"error: {failure}");
 

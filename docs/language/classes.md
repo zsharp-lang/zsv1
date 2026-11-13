@@ -11,7 +11,6 @@ the object it makes. A method is a `fun`, which reaches the class's members by t
 names:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { String, Int32 } from "core:runtime";
 
@@ -45,7 +44,6 @@ A method names its object `this` if its first parameter is `this`, as a construc
 does, which it needs only where a parameter hides a member's name:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32 } from "core:runtime";
 
@@ -72,7 +70,6 @@ A constructor with a name is a member of the class. The unnamed one is what call
 class runs:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32 } from "core:runtime";
 
@@ -105,7 +102,6 @@ belongs to the class's type object: a class is a value too, the one object of it
 metaclass, and its class methods run on it.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { static, class } from "std:oop";
 import { String, Int32 } from "core:runtime";
@@ -135,7 +131,6 @@ print("" + third.number + " of " + Ticket.count() + ", a " + Ticket.kind());
 A property is its accessors: `get Name` reads it, and `set Name` writes it.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32 } from "core:runtime";
 
@@ -163,7 +158,6 @@ print(square.Area);
 Methods of one name are overloads, as functions are:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { String, Int32 } from "core:runtime";
 
@@ -189,7 +183,6 @@ A method reached through an object is a delegate bound to the object, where a .N
 delegate is expected:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32, Func } from "core:runtime";
 
@@ -213,7 +206,6 @@ A method marked as the index operator is what indexing an object calls. Marked `
 too, it is what indexing the class calls:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { class } from "std:oop";
 import { operator } from "core:zsharp";

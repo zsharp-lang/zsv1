@@ -1,7 +1,6 @@
 // Mono.Cecil from Z#: a .dll is imported by its path, and this one is found in the NuGet
 // cache, until a package manager resolves it. It writes an assembly, then imports it and
 // calls what it wrote.
-import "std:prelude";
 import { print } from "std:io";
 import { Object, String } from "core:runtime";
 import { Path, Environment } from Object.Assembly;

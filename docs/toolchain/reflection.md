@@ -27,7 +27,6 @@ gives the definitions it was built from.
 built library, and gives its node:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { reflect } from "std:reflection";
 import { Module } from "std:modules";

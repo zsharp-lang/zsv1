@@ -48,7 +48,6 @@ assembly is then imported by its path, as any is.
 This script writes a project into its folder, builds it, and calls what it built:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Object } from "core:runtime";
 import { Path, File, Directory } from Object.Assembly;

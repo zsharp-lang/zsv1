@@ -12,7 +12,6 @@ fields and operators. A method's overload is chosen by its arguments, which can 
 by name, and a parameter with a default value can be left out.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Object, String, Int32 } from "core:runtime";
 import { Math, DateTime } from Object.Assembly;
@@ -35,7 +34,6 @@ a, b, c
 A generic type is given its type arguments in brackets:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { String, Int32, List, Dictionary } from "core:runtime";
 
@@ -62,7 +60,6 @@ Values in brackets are an array where one is expected, and a type given a length
 array of that length:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32 } from "core:runtime";
 
@@ -87,7 +84,6 @@ print("" + squares[3] + " " + given.Length);
 type. `null` goes to any reference type.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Object, String, Int32, Int64 } from "core:runtime";
 
@@ -143,7 +139,6 @@ import { Class, public, explicitThis } from "pkg:clr/hir";
 A constructor can have a name, as a Z# class's can, and is called through it:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Int32 } from "core:runtime";
 import { Class, public } from "pkg:clr/hir";
@@ -184,7 +179,6 @@ The path is any code that gives a string, so a script can compute it, as from wh
 is, the folder of `Object`'s assembly:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Object } from "core:runtime";
 import { Path } from Object.Assembly;

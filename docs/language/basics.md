@@ -26,7 +26,7 @@ second
 ```zs fragment
 import { print } from "std:io";                 // a name
 import { String, Int32 as Number } from "core:runtime";  // several, one renamed
-import "std:prelude";                           // a library, for what it installs
+import "std:traits/static";                     // a library, for what it installs
 ```
 
 A source is any of these:
@@ -39,15 +39,15 @@ A source is any of these:
 | `"path.zs"` | Another document, relative to this one. It gives what it exports. |
 | `"path.dll"` | A .NET assembly. |
 
-An import that names nothing, as `import "std:prelude";`, imports the library for what it
-installs. The prelude installs the standard definitions, so a script imports it first.
+An import that names nothing, as `import "std:traits/static";`, imports the library for
+what it installs. The prelude is imported that way: `zs` imports it before a script's
+first statement, and it installs the standard definitions.
 
 ## Variables
 
 `let` makes a variable. Its type is the one written, or else its value's:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { String } from "core:runtime";
 
@@ -80,7 +80,6 @@ These are .NET's types, from `core:runtime`, and a value has every member its ty
 .NET:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 
 let text = "Hello";
@@ -112,7 +111,6 @@ An operator is chosen by the types of its operands, as .NET defines them: `+` ad
 numbers and joins strings, and a string joins with any value.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 
 print(1 + 2 * 3);

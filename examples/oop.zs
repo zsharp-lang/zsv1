@@ -1,6 +1,5 @@
 // Z#'s own classes, from std:oop: fields reached by name in methods, `this` when a
 // method names it, and named constructors.
-import "std:prelude";
 import { print } from "std:io";
 import { String, Int32 } from "core:runtime";
 

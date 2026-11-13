@@ -13,8 +13,11 @@ compiled from its sources.
 sources, as a compiler that compiles itself does. Run it from the toolchain's folder:
 
 ```text
-zs bootstrap.zs
+zs --no-prelude bootstrap.zs
 ```
+
+It imports the prelude itself, once it has removed what earlier bootstraps built of the
+packages, so it runs without the one `zs` would import first.
 
 It runs in generations. Each one builds every library with the libraries it has loaded,
 and if any of them built something else than what was loaded, the next generation, a new

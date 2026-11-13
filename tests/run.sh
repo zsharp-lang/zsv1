@@ -9,7 +9,7 @@ dotnet build ZSharp.slnx --nologo -v q || exit 1
 
 # The toolchain's Z# projects are built from their sources, and the Cecil platform must
 # build itself the same, so the tests run with what a bootstrap builds.
-bootstrap=$(dotnet src/CLI/ZSharp.CLI/bin/Debug/net10.0/zs.dll bootstrap.zs 2>&1) || { echo "$bootstrap"; exit 1; }
+bootstrap=$(dotnet src/CLI/ZSharp.CLI/bin/Debug/net10.0/zs.dll --no-prelude bootstrap.zs 2>&1) || { echo "$bootstrap"; exit 1; }
 echo "$bootstrap" | grep -v '^wrote '
 
 status=0

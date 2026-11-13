@@ -11,7 +11,6 @@
 // is the user's own, which a new terminal sees; elsewhere it is a few marked lines in the
 // shell's profiles, which a new shell runs.
 
-import "std:prelude";
 import { print } from "std:io";
 import { arguments } from "core:zsharp";
 import { Object, String, Type, Int32, Boolean, List } from "core:runtime";

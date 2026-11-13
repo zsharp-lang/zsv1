@@ -1,12 +1,19 @@
 # The zs command
 
 ```text
-zs [--trace-reification] [--dump-definitions] <script.zs> [arguments...]
+zs [--no-prelude] [--trace-reification] [--dump-definitions] <script.zs> [arguments...]
 ```
 
 `zs` runs a script, a document of Z#, and exits with 1 if it fails, printing why to
 standard error. What follows the script is the script's own, as `core:zsharp`'s
-`arguments`. The options before it are for looking into the compiler:
+`arguments`.
+
+The script imports the [prelude](../library/standard.md#stdprelude) before its first
+statement, as if `import "std:prelude";` were written there. `--no-prelude` runs it
+without, so it has only what it imports itself, as the bootstrap needs. Only `zs` does
+this: a document a script imports, or a project's module file, imports what it needs.
+
+The other options are for looking into the compiler:
 
 - `--trace-reification` prints the code each reification receives and produces.
 - `--dump-definitions` prints the HIR of each definition a document defines.

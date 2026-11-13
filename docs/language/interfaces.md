@@ -5,7 +5,6 @@ it has. `def Name of Interface` defines one, and a class lists what it implement
 colon.
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Interface } from "std:oop";
 import { String, Int32 } from "core:runtime";
@@ -51,7 +50,6 @@ tested for one with `is`. `is let name: Type` also names the value as that type,
 test is true:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Interface } from "std:oop";
 import { String, Int32 } from "core:runtime";
@@ -90,7 +88,6 @@ of any class that implements `Shape` is `Type[Shape]`, from `std:types`, so a cl
 as a value goes where one is expected:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { Interface, class } from "std:oop";
 import { Type } from "std:types";
@@ -135,7 +132,6 @@ A class can implement a .NET interface too, as `IDisposable`, and its objects go
 is expected:
 
 ```zs
-import "std:prelude";
 import { print } from "std:io";
 import { IDisposable, Int32 } from "core:runtime";
 

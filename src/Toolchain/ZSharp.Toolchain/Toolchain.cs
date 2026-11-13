@@ -51,8 +51,14 @@ namespace ZSharp.Toolchain
         /// <summary>
         /// Runs a document as the script, the first document.
         /// </summary>
-        public Error? Run(string file)
-            => documents.Run(file).When(out _).Error(out var failure) ? failure : null;
+        /// <summary>
+        /// Runs a file as a script. With the prelude, the script imports it before its own
+        /// statements, as if <c>import "std:prelude";</c> were its first.
+        /// </summary>
+        public Error? Run(string file, bool prelude)
+            => documents.Run(file, prelude ? DocumentImporter.Statements("import \"std:prelude\";") : []).When(out _).Error(out var failure)
+                ? failure
+                : null;
 
         /// <summary>
         /// The compiler's REIs, with the dispatchers, loaders and reifiers that implement
