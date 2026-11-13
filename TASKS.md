@@ -40,45 +40,52 @@ them to its own types when it lowers them, so the runtime is one platform among 
     float).
   - [ ] Casting a type of numbers to what describes it, `I32 as Instance`: its CO already
     uses `Cast(value)` for a cast to it.
-- [ ] **A platform binds a declared function per target.** `premap` binds it for every
-  target; `std:zsharp/clr`'s premaps hold on both CLR platforms, but a platform that isn't
-  the CLR would need its own binding.
-- [ ] **Importing a library holds its module.** `import "lib";` and `importers.Import`
-  give the module's node without loading it, so `std:modules` doesn't hold it, and its
-  operators aren't the language's until something loads it, as importing a name from it
-  does. `std:zsharp/clr` loads the libraries it implements.
-- [?] **`x as A as B`** parses as `x as (A as B)`. Waits on whether `as` is to chain left.
+- [ ] **The platform says what implements a declared function.** `premap` is a table in
+  `std:functions/compiler`, set before anything is lowered and read for every target, so
+  it means nothing without a platform. A declared function lowers to its handle, and the
+  target says what the handle is, through a capability, as it says what its numbers are;
+  `std:zsharp/clr` implements it for the CLR's platforms. The prelude's `reflect` and
+  `@binder`'s built functions move to it too, and `premap` goes, by a transition (the
+  seed binds it).
+- [ ] **An import loads what it imports.** `import "lib";`, which binds no names, gives
+  the module's node and nothing loads it, so its module's CO, which makes its operators
+  the language's, is never made. Importing is using it, names or not. Then
+  `std:zsharp/clr` no longer loads the libraries it implements.
+- [ ] **`x as A as B`** parses as `x as (A as B)`; left, `(x as A) as B`, as C# chains it,
+  is proposed. Easy to turn back.
+- [ ] **Overloads match exactly first.** A candidate every argument goes to without an
+  implicit conversion is chosen over one that needs one; then the most specific, as now.
+- [ ] **Z#'s types and the platform's convert implicitly, both ways** (decided). A type
+  goes to what represents it and back. Code uses std's types; the platform's are the
+  runtime's or Cecil's own, so an operator on one of each is ambiguous, and a cast says
+  which.
 - [ ] **Literals into Z#'s types.** An integer or decimal literal goes to any of the types
-  that holds its value.
+  that holds its value, and where nothing asks for a type, it is what the prelude sets
+  (`I32`, `F64`). Libraries built without the prelude keep the CLR's.
 - [x] **`std:boolean`** (#40). `Bool`, of the `Truth` meta-type, with `==` and `!=`,
   which the CLR runs as its `Boolean`; casts to and from it.
   - [x] A Z# type the platform realizes as one of its own says so (`IRepresented`), so
     it boxes where an `Object` is expected and isn't compared as a reference (a bug of
     #39: `print(5 as I32)` crashed).
-  - [?] Conditions taking `Bool`, and comparisons giving it: waits on how Z#'s types and
-    the platform's convert, as a condition takes the CLR's `Boolean`, and on what a
-    condition is in LIR, which has no boolean (`decisions.md`).
+  - [ ] Conditions taking `Bool`, and comparisons giving it, once Z#'s types and the
+    platform's convert (a condition takes the CLR's `Boolean`, and LIR has no boolean,
+    `decisions.md`).
   - [ ] `not`, `and` and `or` on `Bool`: `not` and `and` aren't operators of the language
     yet, and `(or)` isn't an operator literal, as `or` is a word.
-- [?] **`Void`.** The type of no value, its own type. Today a function that returns
-  nothing has no return type (`null`), and every place that reads one says so: Z#'s
-  functions, the CLR's methods, the check that a body returns what it says, and LIR, whose
-  signature has no return type for nothing. Giving `Void` a type of its own means each of
-  them asks the type whether it has values, rather than special-casing it. Waits on:
-  - whether `Void` is a unit type, with one value a `let` can hold, or has none;
-  - whether a function with no return type written returns `Void`;
-  - and `Never` (`NoReturn` in the review notes), a type that goes to any type, which is
-    best decided with it.
-- [?] **The literals' default types.** The prelude sets what a literal is where nothing
-  asks for a type (`I32`, `F64`, `String`). Waits on how Z#'s types and the CLR's convert:
-  if each goes to the other implicitly, an operator on one of each is ambiguous between
-  the two types' overloads, which std's own code, written with the CLR's types, would hit.
-- [?] **`std:string`.** `Text[X]`, of an `Encoding` (concrete) or a `CharSet` (any
+- [ ] **`std:void`: `Void`**, its own library. A function that returns `Void` returns
+  nothing: it has no value, so a `let` can't hold its call. Today a function with no
+  return type has `null` for one, and Z#'s functions, the CLR's methods, the check that a
+  body returns what it says, and LIR's signatures each special-case it: each asks the type
+  instead. A function with no return type written returns `Void`.
+- [ ] **`std:unit`: `Unit`**, its own library: a type with one value.
+- [ ] **`std:never`: `Never`**, its own library: a type with no value, which goes to any
+  type, the type of what doesn't return.
+- [ ] **`std:string`.** `Text[X]`, of an `Encoding` (concrete) or a `CharSet` (any
   encoding of it), `Char[CharSet]`, casts between encodings, and `String` the alias the
-  prelude sets. Waits on what a string's element is (a character of the set, with the
-  encoding's units apart, is proposed).
-- [?] **`std:collections`.** Conceptual list and dictionary types. Waits on generic Z#
-  classes or interfaces, which don't exist yet.
+  prelude sets. Its element is a character of the set, `Char[CharSet]` (decided); the
+  encoding's units are apart.
+- [?] **`std:collections`.** Conceptual list and dictionary types, related to strings but
+  apart from them. Waits on generic Z# classes or interfaces, which don't exist yet.
 
 ## Language and toolchain
 
