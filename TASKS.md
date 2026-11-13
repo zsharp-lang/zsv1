@@ -133,8 +133,9 @@ them to its own types when it lowers them, so the runtime is one platform among 
   so it gets its operators as it gets a document variable: the reifier turns a reference
   to a variable of the building code into `Encode(...)`, read when the building code runs
   and placed in the body (checked: `let greeting = "built"; fun show() { print(greeting);
-  } greeting = "changed"; show();` prints `built`). So an operator's marker is such a
-  variable: the `Import` node's load maps it in the scope, and the body gets the group.
+  } greeting = "changed"; show();` prints `built`). So an operator's marker is a node
+  that behaves as such a variable does while it is loaded (not a `let`): the `Import`
+  node's load maps it in the scope, and the body gets the group.
   The group is placed as HIR, as an import's value already is.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
