@@ -128,22 +128,20 @@ them to its own types when it lowers them, so the runtime is one platform among 
   import from a source known only at run time; a generated function can still import from
   its generator's argument (`fun outer(src) { return fun() { import { print } from src;
   … } as Function; }`), because the generator builds the `Import` node with that value.
-  Operators (proposed): for each operator the meta-compiler sees, the building code
-  declares an operator variable holding an HIR instance, `let op_+ = Operator("+")`,
-  which starts as the upper scope's group (which the meta-compiler gives), or an empty
-  group whose load fails ("`+` has no overloads"). Loading an `Import` node loads its
-  operators, maps a group extending the upper one in the loader's scope (by reference:
-  names are already resolved), and generates, for each operator that has a variable,
-  code that sets the variable to the group with them (`op_+ |= …`), each operator encoded
-  by the encoder (another module's as an HIR node; more if the encoder is extended). No
-  ambiguity is handled there. A body's `a + b` is `Call(op_+, …)`; the reifier reads
-  `op_+` when the building code runs and places its value in the body, as it does a
-  document variable's (checked: `let greeting = "built"; fun show() { print(greeting); }
-  greeting = "changed"; show();` prints `built`). Open: building code that calls an
-  operator itself (`String?` in a type) takes it from the loader's mapping, not the
-  variable; how the `Import` node finds the variables of operators used after it; how a
-  same-module `@operator((+))` definition joins `op_+`, which a body defined before it
-  must also see (forward references).
+  Late binding (proposed): building code resolves operators itself while it is loaded;
+  reified code (bodies) can't, so what it knows only by name (an overload group, an
+  operator, maybe more) is reified as a slot of a late-binding context, by name. An
+  `Import` node fills the context's slots while it is loaded, generating code that sets
+  each one to its group extended with what it imported, each encoded by the encoder (another
+  module's as an HIR node; more if the encoder is extended); no ambiguity is handled there.
+  An unfilled slot fails when it is loaded. A same-module `@operator((+))` sets the slot
+  too, the same way; such operators can't serve module-level expressions, as types.
+  Possible slot: `HIR.Code.Reference`, which exists for "set later", fails when loaded
+  unset ("A reference was used before it was set."), and is placed as itself in reified
+  code, so a body built before a later definition still sees it. Open: how the context
+  reaches the `Import` node's load (an input of the node, as its source is?); how imports
+  are extended now that an import has two halves (today: `import` overloads by source,
+  the importers' prefixes, the describers of assemblies).
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
