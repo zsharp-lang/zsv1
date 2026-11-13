@@ -123,8 +123,15 @@ them to its own types when it lowers them, so the runtime is one platform among 
   (`of`) use the context around them: a project's module file is that context for its
   other files, which already works (a meta-type imported in `src/.zs` reaches
   `def B of Truth()` in another file), so std's 23 `def … of` files move their meta-type
-  imports to their module files. A source known only when the code runs has no `Import`
-  node, so its names have no types where the code is loaded.
+  imports to their module files. An import's source is compile-time, as `of` is: it is
+  evaluated when the `Import` node is loaded, in the context around it. There is no
+  import from a source known only at run time; a generated function can still import from
+  its generator's argument (`fun outer(src) { return fun() { import { print } from src;
+  … } as Function; }`), because the generator builds the `Import` node with that value.
+  The `Import` node adds the operators' mappings to the loader's scope as it is loaded.
+  Open: a module function's body is loaded with the module, outside the building code's
+  load, so its operators are either unquoted building code (resolved in the building
+  code's scope) or reach the body some other way.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
