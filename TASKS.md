@@ -106,21 +106,23 @@ them to its own types when it lowers them, so the runtime is one platform among 
 
 - [?] **Imports run as their definition is constructed, not while compiling.** They run
   while compiling since c034a2c, so that a type could use an imported name. Direction
-  (proposed): compiling a module generates its building code, as a function body is,
-  without reifying it. An import is a local of that code; each name it gives is an
-  imported member (`NamedMember` on what it gave) that, when the name is already in scope,
-  joins it in an overload group, with no check there; a type is an expression the loader
-  resolves (`Global("x", Call((?), [String]))`), as `TypeOf` is (an HIR change). Compile-
-  time slots (`of`) use the context around them: a project's module file is that context
-  for its other files, which already works (a meta-type imported in `src/.zs` reaches
+  (proposed): compiling a module generates its building code (HIR, loaded, then run), as
+  a function body is. A type stays code in it: `let x: String?` builds
+  `Global("x", String?)`, so loading that code calls `(?)` on `String`. An import does two
+  things: (1) its details, while the code that holds it is loaded: what its names are, so
+  `String?` resolves, and its operators; (2) its references, when that code runs: the live
+  objects. So an import leaves a record on what it is in (the building code, and the
+  module it builds), which the loader handles when it loads that node, in a loader scope of
+  that load alone: either a module's list of imports, or metadata with a handler (HIR's
+  annotations exist, on .NET package nodes only). The operator table holds markers, not
+  groups: `a + b` calls the marker for `+`, and a loader scope maps each marker to an
+  overload group, an outer one plus what its imports give. Module code is ordered: a
+  definition comes after the imports it uses. A group with the same entity twice (the
+  prelude's `String` and std:string's) is the overload object's concern. Compile-time slots
+  (`of`) use the context around them: a project's module file is that context for its
+  other files, which already works (a meta-type imported in `src/.zs` reaches
   `def B of Truth()` in another file), so std's 23 `def … of` files move their meta-type
-  imports to their module files. Open: how operators are found (today a global table, read
-  while compiling: an operator a same-module import gives is "not defined"); a group of
-  the same entity reached twice (the prelude's `String` and std:string's); order, if a
-  definition's type is built before a later import rebinds the name; `@ct` on an import,
-  which runs at construction (one stage earlier than the code around it), not while
-  compiling; the construction API (`Global`, parameters, fields) taking type expressions,
-  through a transition.
+  imports to their module files. Needs: loader scopes; the import record's shape.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
