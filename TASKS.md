@@ -104,6 +104,14 @@ them to its own types when it lowers them, so the runtime is one platform among 
 
 ## Language and toolchain
 
+- [?] **Imports run as their definition is constructed, not while compiling.** They run
+  while compiling since c034a2c, so that a type could use an imported name. Today:
+  decorators already run at construction; a type is construction code, but construction
+  evaluates it, and a member of what an import gave is a lookup on an `Instance`, which
+  fails (`Instance has no member named Int32`), so a type that names one would be left as
+  HIR the loader resolves, as `TypeOf` is (an HIR change); `of` is the one slot evaluated
+  while compiling, and all 23 std files with `def … of` take their meta-type from an
+  import in the same module. Waits on how a module gets meta-types from above it.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
