@@ -123,20 +123,27 @@ them to its own types when it lowers them, so the runtime is one platform among 
   (`of`) use the context around them: a project's module file is that context for its
   other files, which already works (a meta-type imported in `src/.zs` reaches
   `def B of Truth()` in another file), so std's 23 `def … of` files move their meta-type
-  imports to their module files. An import's source is compile-time, as `of` is: it is
-  evaluated when the `Import` node is loaded, in the context around it. There is no
+  imports to their module files. An import's source is evaluated when the `Import` node is
+  loaded, in the context around it. There is no
   import from a source known only at run time; a generated function can still import from
   its generator's argument (`fun outer(src) { return fun() { import { print } from src;
   … } as Function; }`), because the generator builds the `Import` node with that value.
-  The `Import` node adds the operators' mappings to the loader's scope as it is loaded.
-  A module function's body is loaded with the module, outside the building code's load,
-  so it gets its operators as it gets a document variable: the reifier turns a reference
-  to a variable of the building code into `Encode(...)`, read when the building code runs
-  and placed in the body (checked: `let greeting = "built"; fun show() { print(greeting);
-  } greeting = "changed"; show();` prints `built`). So an operator's marker is a node
-  that behaves as such a variable does while it is loaded (not a `let`): the `Import`
-  node's load maps it in the scope, and the body gets the group.
-  The group is placed as HIR, as an import's value already is.
+  Operators (proposed): for each operator the meta-compiler sees, the building code
+  declares an operator variable holding an HIR instance, `let op_+ = Operator("+")`,
+  which starts as the upper scope's group (which the meta-compiler gives), or an empty
+  group whose load fails ("`+` has no overloads"). Loading an `Import` node loads its
+  operators, maps a group extending the upper one in the loader's scope (by reference:
+  names are already resolved), and generates, for each operator that has a variable,
+  code that sets the variable to the group with them (`op_+ |= …`), each operator encoded
+  by the encoder (another module's as an HIR node; more if the encoder is extended). No
+  ambiguity is handled there. A body's `a + b` is `Call(op_+, …)`; the reifier reads
+  `op_+` when the building code runs and places its value in the body, as it does a
+  document variable's (checked: `let greeting = "built"; fun show() { print(greeting); }
+  greeting = "changed"; show();` prints `built`). Open: building code that calls an
+  operator itself (`String?` in a type) takes it from the loader's mapping, not the
+  variable; how the `Import` node finds the variables of operators used after it; how a
+  same-module `@operator((+))` definition joins `op_+`, which a body defined before it
+  must also see (forward references).
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
