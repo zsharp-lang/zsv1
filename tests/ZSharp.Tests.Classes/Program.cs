@@ -4817,6 +4817,31 @@ Try("a module has no type object, so it has no type", () =>
 Try("std:modules installs what compiles its modules", () =>
     Run("""import { Module } from "std:modules";""") is null);
 
+Try("a module's function marked as an operator is one of the functions its syntax stands for, once the module is loaded", () =>
+    ResetKept() && Run("""
+        import { operator as operator333 } from "core:zsharp";
+        def Money333 {
+            let cents: Int32;
+            new(this, cents: Int32) { this.cents = cents; }
+        }
+        module Prices333 {
+            @operator333((+)) fun add(a: Money333, b: Money333): Money333 { return Money333(a.cents + b.cents); }
+        }
+        Keep((Money333(150) + Money333(275)).cents);
+        """) is { } e ? Fail(e) : Probe.Kept is [425] && ResetKept());
+
+Try("a document's function marked as an operator is one of the functions its syntax stands for, and a parenthesized expression is still one", () =>
+    ResetKept() && Run("""
+        import { operator as operator334 } from "core:zsharp";
+        def Weight334 {
+            let grams: Int32;
+            new(this, grams: Int32) { this.grams = grams; }
+        }
+        @operator334((-)) fun less(a: Weight334, b: Weight334): Weight334 { return Weight334(a.grams - b.grams); }
+        Keep((Weight334(500) - Weight334(120)).grams);
+        Keep((-3) + 4);
+        """) is null && Probe.Kept is [380, 1] && ResetKept());
+
 Try("a Z# module's globals are initialized in their order, and its functions use them", () =>
     ResetKept() && Run("""
         module Shop253 {

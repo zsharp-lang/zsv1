@@ -31,6 +31,23 @@ namespace ZSharp.Lang
             group.Items.Add(function);
         }
 
+        /// <summary>
+        /// Understands what a definition says it is of the language, which what holds the
+        /// definition asks as it holds it, a document or a module: one that says it is one
+        /// of the functions a piece of syntax stands for, as <c>@operator((+))</c> says, is
+        /// added to them, once.
+        /// </summary>
+        public void Understand(HIR.Instance definition)
+        {
+            if (definition is not HIR.Annotated annotated)
+                return;
+
+            foreach (var annotation in annotated.Annotations.OfType<OperatorAnnotation>())
+                if (annotation.Operator is SyntaxFunctions functions
+                    && !(Functions.TryGetValue(functions.Syntax, out var group) && group.Items.Contains(definition)))
+                    Add(functions.Syntax, definition);
+        }
+
         /// <param name="isUnderlyingType">
         /// Whether code that evaluates to a type is the given definition type.
         /// </param>
@@ -57,6 +74,7 @@ namespace ZSharp.Lang
 
             mapped.Statements.Register<AST.ExpressionStatement>(Compile);
             mapped.Statements.Register<AST.DefinitionStatement>(Compile);
+            mapped.Expressions.Register<AST.OperatorExpression>(Compile);
             mapped.Statements.Register<AST.DecoratedStatement>(Compile);
             mapped.Statements.Register<AST.BlockStatement>(Compile);
             mapped.Statements.Register<AST.IfStatement>(Compile);
@@ -103,6 +121,13 @@ namespace ZSharp.Lang
                     : Result<HIRExpression>.Error($"{literal.Value} isn't a number."),
                 _ => Result<HIRExpression>.Error($"{literal.Type} literals are not supported yet.")
             };
+
+        /// <summary>
+        /// An operator literal, as <c>(+)</c>, is the functions its syntax stands for, as a
+        /// value that names them by the syntax.
+        /// </summary>
+        private static IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.OperatorExpression literal)
+            => ZSharp.Compiler.Current.HIRReifier.EncodeValue(new SyntaxFunctions(literal.Operator));
 
         private IResult<HIRExpression, Error> Compile(ASTCompiler compiler, AST.CallExpression call)
         {

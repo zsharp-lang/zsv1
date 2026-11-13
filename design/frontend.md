@@ -431,7 +431,9 @@ a custom type gets into the language to be used as a meta-type.
 - An operator is a definition that is one: `@operator(Operator.Index)`, or
   `@operator((/))` with an operator literal, says of a definition that it is the
   operator, as an `OperatorAnnotation` among its annotations: what holds the definition
-  understands it, as a Z# class finds its index operator among its methods' annotations.
+  understands it, as a Z# class finds its index operator among its methods' annotations,
+  and a document or a module adds a function that is one of the functions a piece of
+  syntax stands for to them (see **Operators** in `code.md`).
   HIR has no notion of an operator. A decorator takes and gives the definition, so
   decorators compose. `M[T]` is `CG.Index`, which a CO handles if it
   defines `ICTGetIndex`, or else the typed dispatcher by the type of the value: a Z# class

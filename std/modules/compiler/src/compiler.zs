@@ -155,6 +155,10 @@ import { Global, Module } from "std:modules";
     }
 
     @public @explicitThis fun add(this, member: Definition) {
+        // The module holds its members, so it understands what each says it is of the
+        // language, as an operator, which a library's members say once it is imported.
+        if (member is let instance: Instance) language.Understand(instance);
+
         if (member is let named: NamedDefinition) {
             if (this.members.ContainsKey(named.Name) == false) this.members[named.Name] = List[Definition]();
             this.members[named.Name].Add(member);

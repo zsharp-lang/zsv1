@@ -49,6 +49,15 @@ minus before an operand binds tighter than `*` and looser than `**`, so `-2 ** 2
 A C# method marked `[Operator("+")]` is an overload of what `+` stands for, and
 `ILLoader.Operators` finds them in a type. For now the CLI adds those of `core:runtime`
 and `core:zsharp` to one table for the whole language. Scoped tables can come later.
+
+A definition written in Z# is one of them when it says so, as `@operator((+))` does of a
+function. `(+)` is an operator literal, which the parser reads where an operator stands
+alone in parentheses: an operator that starts an expression, as in `(-x)`, isn't one. It
+is a `SyntaxFunctions`, a value that names the functions by their syntax, so the
+`OperatorAnnotation` the decorator adds is encoded with the definition as the syntax.
+What holds the definition understands the annotation, through
+`Language.Understand`: a document as it defines it, and `std:modules` as a module holds
+it, so a built library's operators are added once it is imported.
 `core:runtime` gives the operators C# predefines: `+ - * / < > <= >= == !=` on `Int32`,
 `UInt32`, `Int64`, `UInt64`, `Single` and `Double`, `+` on `String` and between a `String`
 and any value, and `or == !=` on `Boolean`. Smaller integers have none of their own and
