@@ -40,17 +40,28 @@ them to its own types when it lowers them, so the runtime is one platform among 
     float).
   - [ ] Casting a type of numbers to what describes it, `I32 as Instance`: its CO already
     uses `Cast(value)` for a cast to it.
-- [ ] **The platform says what implements a declared function.** `premap` is a table in
-  `std:functions/compiler`, set before anything is lowered and read for every target, so
-  it means nothing without a platform. A declared function lowers to its handle, and the
-  target says what the handle is, through a capability, as it says what its numbers are;
-  `std:zsharp/clr` implements it for the CLR's platforms. The prelude's `reflect` and
-  `@binder`'s built functions move to it too, and `premap` goes, by a transition (the
-  seed binds it).
+- [ ] **Premapping is the platform's.** Every function lowers to LIR, a declared one to
+  a function with no body, which LIR doesn't judge: the platform does. A platform premaps
+  an LIR definition onto something of its own (the runtime: a method or an emitter;
+  Cecil: its own), so it doesn't realize it as code; an empty one it hasn't premapped is
+  its error. `to` is each platform's own type, so it is each platform's API, not a shared
+  capability. `std:functions/compiler`'s `premap` table and the `FunctionHandle` of a
+  declared function go (by a transition: the seed binds `premap`), and `@binder`'s built
+  functions are the runtime's premaps.
+- [ ] **`reflect` is an ordinary function**, which calls where the encoder put its data
+  (`std:encoding`'s `describe`); the prelude no longer premaps it.
+- [ ] **The CLR's types have no operators of their own** where a std type is what they
+  are: `Int32` goes to `I32`, whose `+` the platform premaps, so nothing is ambiguous.
+  `core:runtime`'s `[Operator]` methods are no longer the language's (needs a transition
+  over two generations); `String`'s stay until `std:string`.
 - [ ] **An import loads what it imports.** `import "lib";`, which binds no names, gives
   the module's node and nothing loads it, so its module's CO, which makes its operators
   the language's, is never made. Importing is using it, names or not. Then
   `std:zsharp/clr` no longer loads the libraries it implements.
+- [?] **The default string's encoding.** Fixed width, so indexing is O(1) (decided).
+  UTF-32 holds every character, but the CLR's `String` (UTF-16) then isn't what it is, so
+  passing one to the CLR transcodes; UCS-2 is what the CLR's `String` is, but holds only
+  the BMP.
 - [ ] **`x as A as B`** parses as `x as (A as B)`; left, `(x as A) as B`, as C# chains it,
   is proposed. Easy to turn back.
 - [ ] **Overloads match exactly first.** A candidate every argument goes to without an
