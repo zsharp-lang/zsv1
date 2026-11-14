@@ -103,8 +103,10 @@ namespace ZSharp.Compiler
 
             // An import is loaded by evaluating its source, which must give an instance;
             // nothing of it is known until then, so a name it binds can't be used while
-            // compiling.
-            instances.Instances.Register<HIR.Code.Import>(import =>
+            // compiling. It is kept once loaded, as an Identity, not a Definition — an
+            // import is not a named slot a container holds — so loading its ImportedMembers
+            // more than once doesn't run it again.
+            instances.Identities.Register<HIR.Code.Import>(import =>
                 evaluate(import.From).When(out var value).Error(out var error)
                     ? Result.Error(error)
                     : value is HIR.Instance imported
@@ -114,8 +116,8 @@ namespace ZSharp.Compiler
 
             // An imported member is read off its import once that is loaded, so a chained
             // import's source, which is itself an import's member, resolves the same way.
-            instances.Instances.Register<HIR.Code.ImportedMember>(member =>
-                loader.LoadInstance(member.Import).Error(out var error, out var imported)
+            instances.Identities.Register<HIR.Code.ImportedMember>(member =>
+                loader.LoadIdentity(member.Import).Error(out var error, out var imported)
                     ? Result.Error(error)
                     : cg.Member(imported, member.Name)
             );
