@@ -142,16 +142,29 @@ them to its own types when it lowers them, so the runtime is one platform among 
   so a type is itself a value, which is why names work in types); an operator isn't a
   value by default (`foo(x, y)`: `x, y` are variables, `foo` is a fixed reference, unless
   it is deliberately made a variable, as we now do for operators) and so isn't usable in
-  types. A name already resolved, in building-code order, when a body or a type refers to
-  it is also `Encode(Get(the resolved node))` — already covered, no new mechanism. A name
-  not yet resolved there (used before its import's building-code statement has run, since
-  modules allow forward references) needs a module-level way to say what it refers to,
-  resolved once the whole building code (or module) has loaded, which premaps the
-  reference to the import's result. `Define` has the same forward-reference need today
-  (a body calling a later definition) and uses `Reference` for it, so whatever replaces
-  `Reference` for imports replaces it there too. Open: the shape of that module-level
-  forward-reference record; whether it is the same `Import`/`ImportedName` idea, now used
-  only for the forward case, or one mechanism for every name reference.
+  types.
+
+  Correction: a document has no forward reference (`DocumentCompiler.Compile` flushes a
+  statement's `Defined` right before that statement, not deferred across statements;
+  `Define`'s `Reference` only sequences a definition's own build before the expression
+  that uses it in the same statement, e.g. a decorator). Forward reference is a container
+  (meta-compiler) feature, and `ContainerCompiler.Walk` already has the shape wanted: one
+  pass declares every definition's variable and binds its name before any pass fills a
+  body, so a body can refer to a name defined later in the same container. It doesn't use
+  `Reference`.
+
+  Generalized (proposed): one variable *per name* (not per definition), holding one
+  `OverloadGroup`/`OverloadedDefinitionGroup` instance. Every definition, import, and
+  `@operator((+))` that shares a name adds itself to that same instance — mutation, as
+  above — instead of `Language.Bind`'s `Merge`, which builds an ad-hoc merged value per
+  bind today and isn't fully understood (needs investigating, and likely goes away). A
+  name used where a single kind is needed (`Local.Type = Foo`) takes an explicit cast,
+  `Foo as Type`, which is a call that runs while the building code runs, filtering the
+  group to the one item of that kind (erroring on zero or more than one). A name used as
+  a call stays a group all the way to the module: `HIR.Code.OverloadGroup` already loads
+  to `overloading.Group([...])`, a CO that resolves overloads for calls — unchanged. One
+  mechanism for definitions overloading each other, imports contributing to a name, and
+  operators, and it lets a function and a type share one name, overloaded together.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
