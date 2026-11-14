@@ -121,21 +121,30 @@ them to its own types when it lowers them, so the runtime is one platform among 
   Object.Assembly;` both resolve now, and a full bootstrap completes against std's
   original source (no `core:runtime` moved to a project file, only the 19 `of`-related
   moves, which are unrelated and stay).
-- [ ] **Still open on the same branch:**
-  - Generalize `Language.Bind`'s `Merge` into one variable per name, holding one
-    `HIR.Code.OverloadGroup` that every definition, import and operator sharing the name
-    extends in place, as already agreed; overloading has nothing import-specific about
-    it — an `ImportedMember` is Overloadable the same way any other kind of definition is
-    (`design/code.md`), so nothing new is needed for it to merge with a same-name
-    definition.
-  - A name used where one kind is needed (`Int32 as Type`) needs a cast on a group whose
-    contents are a building-code value, not known while compiling: a new CO (not an
-    addition to `Overloading.Static`'s shared `OverloadGroup`) implementing `IRTCastTo`,
-    reached through `Dispatcher.Cast`'s `RuntimeDescriptors.Find`, as settled before.
-  - **Deferred on purpose:** importing a module today causes its `@operator`-annotated
-    definitions to register through `language.Understand`; nothing in `Import`/
-    `ImportedMember` does that. The user's call: leave this for a later phase rather than
-    widen this change to cover it now.
+- [x] **Overloading: done, on `lang/overload-groups` (stacked on `lang/imports`).**
+  - `MappedBinder`'s `Merge`/`Joined` now extends an existing `HIR.Code.OverloadGroup`'s
+    `Items` in place instead of building a new group each time, so every reference to a
+    name sees every contributor regardless of when each was bound. `ImportedMember` is
+    `HIR.Overloadable`, so an import and a same-name definition merge instead of
+    conflicting — checked both ways (reverting the marker reproduces "X is already
+    defined here").
+  - Operators needed no change: `Language.Add`'s table already mutated its group in
+    place (`Functions[syntax]`'s `OverloadGroup` is created once and extended, never
+    replaced), so a `+` compiled before a later `@operator((+))` registration already saw
+    it. What looked like "the overloading plan" applying to operators was really this,
+    already there before any of this work.
+  - The planned new `IRTCastTo` CO turned out unnecessary, checked directly: with
+    `Import`/`ImportedMember` in place, a group's contents are always known by load time
+    (nothing is a building-code-run-time value any more), so `Overloading.Static`'s
+    existing `OverloadGroup.Cast` (`ICTCastTo`) already filters a group to the one
+    candidate of the requested kind. Verified with two imports sharing a name, one
+    type-kind and one not, cast both orders (order-independent, so it is genuinely
+    filtering, not taking the first); a group with no valid candidate still errors
+    correctly. That part of the plan predated `Import`/`ImportedMember` and the problem
+    it was for no longer exists — nothing built.
+  - **Deferred on purpose, unchanged:** importing a module doesn't feed its
+    `@operator`-annotated definitions into `Language.Functions`; nothing in `Import`/
+    `ImportedMember` does that. Left for a later phase, per the user's call.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
