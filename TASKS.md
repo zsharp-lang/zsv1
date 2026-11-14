@@ -104,67 +104,60 @@ them to its own types when it lowers them, so the runtime is one platform among 
 
 ## Language and toolchain
 
-- [?] **Imports run as their definition is constructed, not while compiling.** They run
-  while compiling since c034a2c, so that a type could use an imported name. Direction
-  (proposed): compiling a module generates its building code (HIR, loaded, then run), as
-  a function body is. A type stays code in it: `let x: String?` builds
-  `Global("x", String?)`, so loading that code calls `(?)` on `String`. An import does two
-  things: (1) its details, while the code that holds it is loaded: an HIR `Import` node
-  (an HIR change) that the loader resolves, giving the import's names their types and
-  mapping the operators it brings, for the code after it; (2) its references, when that
-  code runs: a plain call of `import`, which gives the live objects. No record stays on
-  the definition: a body is reified in the building code, so what it uses of an import
-  (an operator's group, a name) is unquoted building code, resolved where the `Import`
-  node is in scope. The operator table holds markers, not groups: `a + b` calls the marker
-  for `+`, and the loader's scope maps each marker to an overload
-  group, an outer one plus what its imports give. Module code is ordered: a
-  definition comes after the imports it uses. A group with the same entity twice (the
-  prelude's `String` and std:string's) is the overload object's concern. Compile-time slots
-  (`of`) use the context around them: a project's module file is that context for its
-  other files, which already works (a meta-type imported in `src/.zs` reaches
-  `def B of Truth()` in another file), so std's 23 `def … of` files move their meta-type
-  imports to their module files. An import's source is evaluated when the `Import` node is
-  loaded, in the context around it. There is no
-  import from a source known only at run time; a generated function can still import from
-  its generator's argument (`fun outer(src) { return fun() { import { print } from src;
-  … } as Function; }`), because the generator builds the `Import` node with that value.
-  HIR nodes (proposed, revised): no `Reference`, so no reassignment and no "set later".
-  An operator (and perhaps overloads in general) is a variable in the building code
-  holding one `OverloadGroup` instance, starting as the upper scope's group; an `Import`
-  and a same-module `@operator((+))` both *extend* that instance (add to its items) rather
-  than replace the variable's value, so every reader of the variable, built before or
-  after, ends up seeing the same object once all of it has mutated. A body's use of an
-  operator is reified as `Encode(Get(variable))`: since the variable holds an `HIR.Instance`,
-  encoding it is a reference by identity (the existing `values.Register<HIR.Instance>`
-  path), not a copy, so it carries on mutating until it is loaded, and a module's
-  building code fully runs (so the group is complete) before anything loads its bodies.
-  Imported names differ: a name is an ordinary value, as a type is (`A | B` is `(|)(A, B)`,
-  so a type is itself a value, which is why names work in types); an operator isn't a
-  value by default (`foo(x, y)`: `x, y` are variables, `foo` is a fixed reference, unless
-  it is deliberately made a variable, as we now do for operators) and so isn't usable in
-  types.
-
-  Correction: a document has no forward reference (`DocumentCompiler.Compile` flushes a
-  statement's `Defined` right before that statement, not deferred across statements;
-  `Define`'s `Reference` only sequences a definition's own build before the expression
-  that uses it in the same statement, e.g. a decorator). Forward reference is a container
-  (meta-compiler) feature, and `ContainerCompiler.Walk` already has the shape wanted: one
-  pass declares every definition's variable and binds its name before any pass fills a
-  body, so a body can refer to a name defined later in the same container. It doesn't use
-  `Reference`.
-
-  Generalized (proposed): one variable *per name* (not per definition), holding one
-  `OverloadGroup`/`OverloadedDefinitionGroup` instance. Every definition, import, and
-  `@operator((+))` that shares a name adds itself to that same instance — mutation, as
-  above — instead of `Language.Bind`'s `Merge`, which builds an ad-hoc merged value per
-  bind today and isn't fully understood (needs investigating, and likely goes away). A
-  name used where a single kind is needed (`Local.Type = Foo`) takes an explicit cast,
-  `Foo as Type`, which is a call that runs while the building code runs, filtering the
-  group to the one item of that kind (erroring on zero or more than one). A name used as
-  a call stays a group all the way to the module: `HIR.Code.OverloadGroup` already loads
-  to `overloading.Group([...])`, a CO that resolves overloads for calls — unchanged. One
-  mechanism for definitions overloading each other, imports contributing to a name, and
-  operators, and it lets a function and a type share one name, overloaded together.
+- [ ] **Imports run as their definition is constructed, settled; plan below.** Confirmed
+  against `design/documents.md`, `design/definitions.md`, `design/imports.md` and
+  `design/code.md`, and against the existing `ContainerCompiler`, `Binder`/`MappedBinder`
+  and `Overloading`/`OverloadGroup` code:
+  - A module's build code already walks its body (statements and definitions'
+    construction, in order), then fills every definition's contents, then decorates and
+    registers each — all documented in `design/documents.md`, already implemented in
+    `ContainerCompiler.Walk`. Fill can forward-reference, since every name is bound by
+    then; a walk statement (including an import) can only use names from before it.
+    `of` stays as it is: it is decided *during* the walk, to choose what compiles the
+    rest of the definition, so it can't wait for fill, and a same-module compile-time
+    value — a meta-type or an import run only at construction — isn't there yet when it
+    runs (`design/documents.md`'s existing restriction). Std's `def … of` keeps taking
+    its meta-type from the module file, as it already can.
+  - What changes: an import with a constant source is today bound immediately, while it
+    compiles (the `CompileTime.Is` path, from c034a2c), so `of`, decorators and types
+    could use it; this is no longer needed outside `of`, since fill already lets any
+    later definition's types and bodies use a name bound earlier in the walk. Drop that
+    path for everything but `of`'s own resolution: every import becomes a `Code.Local`,
+    declared and bound where it stands, as a dynamic-source import already is.
+  - Overloading one name generalizes `Language.Bind`'s `Merge` (today ad hoc, e.g.
+    merging methods into a group; not fully understood) into one variable per name,
+    holding one `HIR.Code.OverloadGroup` instance that every definition, import and
+    `@operator((+))` sharing the name *extends* — adds to its items — rather than
+    replaces. Decorators (`@operator`) run after every definition's fill, so a body
+    built in fill that reads the group still sees later additions: encoding an
+    `HIR.Instance` is already `Get(instance)`, a reference by identity
+    (`values.Register<HIR.Instance>`), and a module's whole build code finishes before
+    anything loads its bodies. This is the same general idea `OverloadGroup`
+    (`ZSharp.Compiler.Overloading.Static`) already implements for calls, indexing and
+    casts, chosen through `Overloading.Apply`/`IsMoreSpecific` — one mechanism, not
+    three.
+  - A name used as a call stays a group into the module: `HIR.Code.OverloadGroup`
+    already loads to `overloading.Group([...])`, which already implements
+    `ICTCallable` — unchanged.
+  - A name used where one kind is needed (`Global("x", Int32)`, i.e. `Int32 as Type`)
+    needs a cast. `as` is already `Cast`, loaded through `CG.Cast`; today's
+    `OverloadGroup` only answers `ICTCastTo` (resolved while the compiler translates,
+    which needs the group's contents known then). Here the group is a plain variable of
+    the building code, so its contents are known only once the building code runs: this
+    needs `IRTCastTo` instead (as `Package.DotNet.Class`/`DefinedClass` already
+    implement, for a cast resolved as generated code runs), added to the group's static
+    type so `Dispatcher.Cast`'s `RuntimeDescriptors.Find` reaches it; its `Cast` emits a
+    runtime call that filters the group's candidates to the one of the requested kind
+    (erroring on zero or more than one), the `IRTCastTo` counterpart of
+    `OverloadGroup.Cast`'s existing `Apply(candidates, c => CG.Cast(c, targetType))`.
+  - Plan: (1) give the per-name variable a static type that resolves to the
+    `OverloadGroup` CO's kind, so casts on it dispatch there; (2) add `IRTCastTo` to it,
+    filtering by `IsAssignableTo`/`CG.Cast` per candidate, through `Overloading.Apply`;
+    (3) replace `Language.Bind`'s merge-into-a-new-value rule with bind-once,
+    extend-in-place, for definitions, imports and operators alike; (4) drop
+    `CompileTime.Is` for imports outside `of`, so every import is a `Code.Local` in the
+    walk/body, bound where it stands; (5) once this works, fold the settled parts into
+    `design/documents.md`, `design/imports.md` and `design/code.md`, and retire this item.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
