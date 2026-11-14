@@ -128,20 +128,23 @@ them to its own types when it lowers them, so the runtime is one platform among 
   import from a source known only at run time; a generated function can still import from
   its generator's argument (`fun outer(src) { return fun() { import { print } from src;
   … } as Function; }`), because the generator builds the `Import` node with that value.
-  Late binding (proposed): building code resolves operators itself while it is loaded;
-  reified code (bodies) can't, so what it knows only by name (an overload group, an
-  operator, maybe more) is reified as a slot of a late-binding context, by name. An
-  `Import` node fills the context's slots while it is loaded, generating code that sets
-  each one to its group extended with what it imported, each encoded by the encoder (another
-  module's as an HIR node; more if the encoder is extended); no ambiguity is handled there.
-  An unfilled slot fails when it is loaded. A same-module `@operator((+))` sets the slot
-  too, the same way; such operators can't serve module-level expressions, as types.
-  Possible slot: `HIR.Code.Reference`, which exists for "set later", fails when loaded
-  unset ("A reference was used before it was set."), and is placed as itself in reified
-  code, so a body built before a later definition still sees it. Open: how the context
-  reaches the `Import` node's load (an input of the node, as its source is?); how imports
-  are extended now that an import has two halves (today: `import` overloads by source,
-  the importers' prefixes, the describers of assemblies).
+  HIR nodes (proposed): `Import : Statement { from: Expression; importedNames:
+  List[ImportedName] }` and `ImportedName : Instance { name: String }`. Z# puts a `Call`
+  of `import` in `from`; code refers to the `ImportedName`s, bound by the normal rules (a
+  name already in scope makes an overload group, resolved while loading). Loading an
+  `Import` evaluates `from` and premaps each `ImportedName` to what it names there, so a
+  reference to it loads as that. Each `ImportedName` is a node of its own, so the mapping
+  is by identity and needs no loader scopes. Reifying an `Import` reifies `from` and
+  generates code that builds the `ImportedName`s and holds each in a variable; a reified
+  reference to one refers to that variable, so code a generator builds refers to the
+  nodes it built (`fun outer(src) { return fun() { import { print } from src; … } as
+  Function; }`). Open: a module function's body refers to the `ImportedName`s, so the
+  module's own code needs the `Import`, not only the building code; how operators, which
+  an import doesn't list, become `ImportedName`s; the loader loading a container's
+  `Import`s before its members' bodies.
+- [ ] **Remove `HIR.Code.Reference`.** It needs a running process to be set, so HIR that
+  holds one isn't structure. Today: a document's imports (replaced by `Import`), a
+  document's definitions (`Define.Result`), and .NET overloads (`DotNetMetaTypes`).
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
