@@ -75,8 +75,10 @@ namespace ZSharp.Importer.ILLoader
             loader.Definitions.Register<Package.DotNet.Struct>(LoadType);
             loader.Definitions.Register<Package.DotNet.Interface>(LoadType);
 
-            // A module is an instance, loaded to one CO, which LoadModule keeps.
-            loader.Instances.Register<Package.DotNet.Module>(LoadModule);
+            // A module is an Identity, not a Definition, loaded to one CO, which the
+            // loader's own cache now keeps; LoadModule's own moduleInfos is a different
+            // thing, the runtime module a node describes, not its CO.
+            loader.Identities.Register<Package.DotNet.Module>(LoadModule);
 
             loader.Instances.Register<ExposedObject>(LoadExposed);
             loader.Instances.Register<Package.DotNet.Operator>(node => Result.Ok(new Objects.ClrOperator(this, node.Name)));
