@@ -134,14 +134,22 @@ them to its own types when it lowers them, so the runtime is one platform among 
   name already in scope makes an overload group, resolved while loading). Loading an
   `Import` evaluates `from` and premaps each `ImportedName` to what it names there, so a
   reference to it loads as that. Each `ImportedName` is a node of its own, so the mapping
-  is by identity and needs no loader scopes. Reifying an `Import` reifies `from` and
-  generates code that builds the `ImportedName`s and holds each in a variable; a reified
-  reference to one refers to that variable, so code a generator builds refers to the
-  nodes it built (`fun outer(src) { return fun() { import { print } from src; … } as
-  Function; }`). Open: a module function's body refers to the `ImportedName`s, so the
-  module's own code needs the `Import`, not only the building code; how operators, which
-  an import doesn't list, become `ImportedName`s; the loader loading a container's
-  `Import`s before its members' bodies.
+  is by identity and needs no loader scopes. An `Import` is in the building code, so it
+  is loaded when that code is, not when the module is imported; the built module holds
+  none. A body the building code builds gets the current value of an imported name,
+  encoded, as it gets a document variable's (the reifier's `Encode`). Only reifying an
+  `Import` itself (in code a generator builds) makes its `ImportedName`s variables that
+  the references refer to (`fun outer(src) { return fun() { import { print } from src;
+  … } as Function; }`). Operators: the meta-compiler makes one `Operator` node per
+  operator it sees in a module, which all its uses refer to; operators are imported
+  implicitly, as `ImportedOperator`s wrapping it (an imported member, as an
+  `ImportedName` is), and loading an `Import` maps each `Operator` to its group extended
+  with what the import offers. Open: where the imported members are listed (the module
+  doesn't exist yet when its building code is loaded, so perhaps the `Import`'s own list,
+  `importedMembers`); where an `Operator` starts (the upper scope's group); how a
+  same-module `@operator((+))` definition joins what bodies get, now that there's no
+  variable to set; encoding an imported function's value as its HIR node (today the
+  encoder knows types, literals and HIR, and places anything else as a live object).
 - [ ] **Remove `HIR.Code.Reference`.** It needs a running process to be set, so HIR that
   holds one isn't structure. Today: a document's imports (replaced by `Import`), a
   document's definitions (`Define.Result`), and .NET overloads (`DotNetMetaTypes`).
