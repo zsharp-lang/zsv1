@@ -22,7 +22,6 @@
 // another platform reimplements them by giving that name its own.
 
 import { String, Object, Boolean, List } from "core:runtime";
-import { Class as Node } from "pkg:clr/hir";
 import { public, explicitThis } from "pkg:clr/hir";
 import { importers } from "core:zsharp";
 import { entrypoint } from "std:framework";

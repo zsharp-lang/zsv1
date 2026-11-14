@@ -8,7 +8,6 @@
 
 import { Int32, Boolean } from "core:runtime";
 import { Structure, Function, Type } from "pkg:zsharp/lir";
-import { Interface as DotNet_Interface } from "pkg:clr/hir";
 
 // Polymorphism: a structure's values are objects, which calls on them reach through
 // what each object is.

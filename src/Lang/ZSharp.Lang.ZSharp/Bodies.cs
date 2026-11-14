@@ -212,29 +212,18 @@ namespace ZSharp.Lang
         }
 
         /// <summary>
-        /// Compiles an import. One whose call is compile-time, as with a constant source,
-        /// runs now, and the names it brings in are bound to what it gave, so they are known
-        /// while compiling. Any other runs as the code is constructed: it compiles to a local
-        /// that holds what it imports, which the names are bound to, and declaring the local
-        /// runs the import. Gives that local, or <see langword="null"/> if the import ran now.
+        /// Compiles an import. It runs as the code it is in is constructed, as any other
+        /// statement there does: it compiles to a local that holds what it imports, which
+        /// the names are bound to, and declaring the local runs the import. A name it
+        /// brings in is known once this statement has run, as fill lets a later
+        /// definition's types and bodies use it, same as any other name bound earlier in
+        /// the walk; it isn't known while compiling, which is why <c>of</c> can't use one
+        /// imported in the same module (see <c>design/documents.md</c>).
         /// </summary>
         public IResult<Code.Local?, Error> Imported(ASTCompiler compiler, AST.ImportStatement import)
         {
             if (language.Importing(compiler, import).When(out var importing).Error(out var error))
                 return Result<Code.Local?>.Error(error);
-
-            if (language.CompileTime.Is(importing!))
-            {
-                if (evaluate(importing!).When(out var value).Error(out error))
-                    return Result<Code.Local?>.Error(error);
-
-                if (value is not HIR.Instance imported)
-                    return Result<Code.Local?>.Error($"An import must give an instance, but gave {value?.GetType().Name ?? "null"}.");
-
-                return language.BindImported(compiler, import, imported) is { } conflict
-                    ? Result<Code.Local?>.Error(conflict)
-                    : Result<Code.Local?>.Ok(null);
-            }
 
             var holder = new Code.Local("import", HIR.Infer.Value) { Init = importing };
 

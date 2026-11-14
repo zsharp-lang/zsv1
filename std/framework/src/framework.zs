@@ -9,7 +9,7 @@
 // module calls, built or compiled from its sources, and building it doesn't.
 
 import { String, Object, Boolean, Int32, List, Func } from "core:runtime";
-import { Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { Module as DotNet_Module } from "pkg:clr/hir";
 import { public, explicitThis } from "pkg:clr/hir";
 import { Instance, Definition, Annotated, Type } from "pkg:zsharp/hir";
 import { Code, Block, Get, Call, Cast, Index, NamedMember, Argument, Expression, ExpressionStatement } from "pkg:zsharp/hir/code";

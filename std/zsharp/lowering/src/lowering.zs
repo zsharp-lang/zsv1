@@ -7,7 +7,6 @@
 // COs, and the nodes stay structure.
 
 import { Object, Boolean, Int32, List } from "core:runtime";
-import { Interface as DotNet_Interface, Class as DotNet_Class } from "pkg:clr/hir";
 import { static, public } from "pkg:clr/hir";
 import { Module as LIRModule, Definition as LIRDefinition, Statement as LIRStatement, Initialized, Metadata, KeptAnnotation } from "pkg:zsharp/lir";
 import { Annotated, Kept } from "pkg:zsharp/hir";
