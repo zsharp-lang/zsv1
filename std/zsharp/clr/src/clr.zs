@@ -5,7 +5,7 @@
 // them.
 
 import { Polymorphism, PlatformInterfaces, Numbers, Truths } from "std:zsharp/capabilities";
-import { Implementation, implement } from "std:traits";
+import { implement } from "std:traits";
 import { entrypoint } from "std:framework";
 import { explicitThis } from "pkg:clr/hir";
 import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest } from "pkg:clr/lir";

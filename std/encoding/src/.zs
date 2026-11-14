@@ -2,6 +2,7 @@
 // reflection and binary streams, and the CLR platforms' half of reflection, which the
 // toolchain's attributes assembly has.
 import { compile, emit } from "core:project";
+import { Class as DotNet_Class } from "pkg:clr/hir";
 import { build } from "std:framework";
 import { Object, Type } from "core:runtime";
 import { Path } from Object.Assembly;

@@ -20,7 +20,7 @@
 //   - Anything else is written by its fields, with what is shared written once.
 
 import { Object, String, Boolean, Int32, Int64, Byte, Type, List, Dictionary, ilLoader } from "core:runtime";
-import { Class as DotNet_Class, explicitThis } from "pkg:clr/hir";
+import { explicitThis } from "pkg:clr/hir";
 import { Assembly } from Object.Assembly;
 import { public } from "pkg:clr/hir";
 import { Instance, Annotated, Kept, Encoded } from "pkg:zsharp/hir";

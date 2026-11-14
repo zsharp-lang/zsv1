@@ -212,35 +212,30 @@ namespace ZSharp.Lang
         }
 
         /// <summary>
-        /// Compiles an import. One whose call is compile-time, as with a constant source,
-        /// runs now, and the names it brings in are bound to what it gave, so they are known
-        /// while compiling. Any other runs as the code is constructed: it compiles to a local
-        /// that holds what it imports, which the names are bound to, and declaring the local
-        /// runs the import. Gives that local, or <see langword="null"/> if the import ran now.
+        /// Compiles an import. It gives an <c>Import</c> node holding its source as code,
+        /// and binds the names it brings in to an <c>ImportedMember</c> of it, one each.
+        /// Nothing of either runs here: an <c>Import</c> is loaded by evaluating its
+        /// source, and an <c>ImportedMember</c> by loading its import and reading its name
+        /// off the result, so a name it binds is only known once loaded, not while
+        /// compiling, which is why <c>of</c> can't use one imported in the same module
+        /// (see <c>design/documents.md</c>). Loading happens after the whole module's
+        /// construction code has compiled, so a name used before its import, anywhere in
+        /// the walk, is fine. There is never a local to declare any more, so the result is
+        /// always <see langword="null"/>; the signature stays as it is because the seed
+        /// (std libraries compiled against it) calls this directly and already handles a
+        /// null result as "nothing to declare" — the shape the compile-time-source case
+        /// already had.
         /// </summary>
         public IResult<Code.Local?, Error> Imported(ASTCompiler compiler, AST.ImportStatement import)
         {
             if (language.Importing(compiler, import).When(out var importing).Error(out var error))
                 return Result<Code.Local?>.Error(error);
 
-            if (language.CompileTime.Is(importing!))
-            {
-                if (evaluate(importing!).When(out var value).Error(out error))
-                    return Result<Code.Local?>.Error(error);
+            var node = new Code.Import { From = importing! };
 
-                if (value is not HIR.Instance imported)
-                    return Result<Code.Local?>.Error($"An import must give an instance, but gave {value?.GetType().Name ?? "null"}.");
-
-                return language.BindImported(compiler, import, imported) is { } conflict
-                    ? Result<Code.Local?>.Error(conflict)
-                    : Result<Code.Local?>.Ok(null);
-            }
-
-            var holder = new Code.Local("import", HIR.Infer.Value) { Init = importing };
-
-            return language.BindImported(compiler, import, () => new Code.Get(holder)) is { } invalid
+            return language.BindImported(compiler, import, node) is { } invalid
                 ? Result<Code.Local?>.Error(invalid)
-                : Result<Code.Local?>.Ok(holder);
+                : Result<Code.Local?>.Ok(null);
         }
 
         private IResult<Code.Expression, Error> Local(

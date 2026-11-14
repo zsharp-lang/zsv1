@@ -12,7 +12,7 @@
 // compiles one, as `module` is `def` of Module.
 
 import { String, Object, Boolean, Int32, List, Dictionary } from "core:runtime";
-import { Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { Module as DotNet_Module } from "pkg:clr/hir";
 import { static, public, explicitThis } from "pkg:clr/hir";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "pkg:zsharp/hir";
 import { Call } from "pkg:zsharp/hir/code";

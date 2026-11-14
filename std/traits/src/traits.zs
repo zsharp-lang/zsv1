@@ -12,7 +12,7 @@
 // implementation up by the type a value has as the code runs.
 
 import { String, Object, Boolean, Int32, List, Type as ClrType, ilLoader } from "core:runtime";
-import { Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { Module as DotNet_Module } from "pkg:clr/hir";
 import { static, public, explicitThis } from "pkg:clr/hir";
 import { Instance, Definition, Type } from "pkg:zsharp/hir";
 import { Local, Get, Block, Declare, ExpressionStatement, Set, StringLiteral, Cast, Expression } from "pkg:zsharp/hir/code";

@@ -10,7 +10,7 @@ import { Class as DotNet_Class } from "pkg:clr/hir";
 import { Instance, Type as HIRType } from "pkg:zsharp/hir";
 import { Get, GetValue, TypeOf } from "pkg:zsharp/hir/code";
 import { Operator } from "pkg:zsharp/lang/hir";
-import { class, Class } from "std:oop";
+import { class } from "std:oop";
 import { operator } from "core:zsharp";
 
 def Type of Class {

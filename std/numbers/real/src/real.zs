@@ -8,7 +8,6 @@
 
 import { Boolean } from "core:runtime";
 import { operator } from "core:zsharp";
-import { FloatingPoint } from "std:numbers";
 
 // ---- The types
 

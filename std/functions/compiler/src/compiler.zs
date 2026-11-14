@@ -7,7 +7,7 @@
 // compiles one.
 
 import { String, Object, Boolean, Int32, List, Dictionary } from "core:runtime";
-import { Class as DotNet_Class, Module as DotNet_Module } from "pkg:clr/hir";
+import { Module as DotNet_Module } from "pkg:clr/hir";
 import { public, explicitThis } from "pkg:clr/hir";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "pkg:zsharp/hir";
 import { Code, Block, Local, Expression, ExpressionStatement, Set, StringLiteral, Get } from "pkg:zsharp/hir/code";

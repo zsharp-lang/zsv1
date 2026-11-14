@@ -588,5 +588,23 @@ namespace ZSharp.Lang
 
             return null;
         }
+
+        /// <summary>
+        /// Binds the names of an import to an <c>ImportedMember</c> of it, one for each.
+        /// Each is only known once it, and so its import, is loaded: nothing here runs the
+        /// import or checks its names, since there is nothing yet to check.
+        /// </summary>
+        public Error? BindImported(ASTCompiler compiler, AST.ImportStatement import, HIR.Code.Import node)
+        {
+            foreach (var name in import.ImportedNames ?? [])
+                if (Bind(
+                    compiler,
+                    name.Alias ?? name.Name,
+                    new HIR.Code.Get(new HIR.Code.ImportedMember { Import = node, Name = name.Name })
+                ) is { } conflict)
+                    return conflict;
+
+            return null;
+        }
     }
 }

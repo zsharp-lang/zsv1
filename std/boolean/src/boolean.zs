@@ -5,7 +5,6 @@
 // Boolean, which Bool is cast to, until Z#'s types and the platform's convert.
 
 import { operator } from "core:zsharp";
-import { Truth } from "std:boolean/truth";
 
 // ---- The type
 

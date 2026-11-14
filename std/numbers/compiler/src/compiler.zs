@@ -12,7 +12,7 @@
 //   platform's cast of what represents it. Nothing converts implicitly yet.
 
 import { String, Object, Boolean, Int32, Dictionary } from "core:runtime";
-import { Class as DotNet_Class, public } from "pkg:clr/hir";
+import { public } from "pkg:clr/hir";
 import { Instance, Type } from "pkg:zsharp/hir";
 import { Block, Local, StringLiteral, IntegerLiteral, BooleanLiteral } from "pkg:zsharp/hir/code";
 import { Definition as DefinitionSyntax, TypeDefinition as TypeSyntax } from "pkg:zsharp/lang/ast";
