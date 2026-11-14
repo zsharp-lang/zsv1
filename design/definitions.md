@@ -11,6 +11,14 @@ underlying type is code generation: the object is structure only and can't be us
 as a type. Python builds a class anew on each call and C# gives it one identity. Z#
 wants both.
 
+`HIR.Identity` is that: loaded once and kept, so loading it again gives the same CO.
+`Definition : Identity`, since a definition is one kind, but not everything with
+identity is a named slot a container holds — a module is an instance and not a
+definition another one holds, and so is an `Import`, yet both are loaded once and
+kept, the same way a definition is. The loader's cache for each has the same shape,
+through separate entrypoints: `LoadDefinition` for what already calls it by that
+name, `LoadIdentity` alongside it for everything else.
+
 Casting an existing type to its underlying type is reflection, which is an ordinary
 cast. Code generation can construct entire modules, and they aren't usable until
 they are explicitly loaded through the HIR -> MIR -> LIR -> platform chain to be
@@ -291,9 +299,12 @@ built, capturing or not: a local function that reads one isn't capturing it.
 
 ## Compile-time evaluation
 
-Some code runs while compiling: a document's statements, an `of`, a module's meta-types,
-a compile-time import source, and later anything marked `@ct`. All of it goes through one
-operation: the code is loaded into the runtime as a method and run.
+Some code runs while compiling: a document's statements, which include its own imports,
+an `of`, a module's meta-types, and later anything marked `@ct`. All of it goes through
+one operation: the code is loaded into the runtime as a method and run. A module's or a
+body's own import is different: nothing of it runs while compiling, since it compiles to
+an `Import` node and an `ImportedMember` of it for each name, resolved only once loaded,
+as **Imports and reflection** describes.
 
 An expression is compile-time if it refers to no `HIR.Variable`: nothing whose value only
 exists while code that runs later is running. That is the boundary the reifier already
@@ -305,8 +316,8 @@ needs from its surroundings is put into its LIR as it is made. A document local 
 and writes its document's frame, which its CO refers to as a constant: the frame is an
 object of the runtime, and the array of values behind it is read each time the code
 runs, since it is replaced when the document gains locals. So any code loaded to run
-now can use document locals, wherever it comes from: a document statement, an `of`, a
-compile-time import source. Document level is meant to work with the runtime, not as
+now can use document locals, wherever it comes from: a document statement, an import
+among them, or an `of`. Document level is meant to work with the runtime, not as
 platform-agnostic structure, so tying it to the process is fine. A method compiled for
 keeps never refers to the frame, because code that is built gets a document local's
 value encoded instead.
@@ -319,7 +330,8 @@ Source mapping is optional, so it is metadata: a CO attaches where its code came
 the LIR it makes, and the runtime turns it into debugging information. HIR
 has no source positions yet; to keep HIR pure, they would live beside it, keyed by node.
 
-Construction code itself only builds HIR and runs imports, so it can be compiled to a
-binary, as for precompiled libraries. Encoding a value needs only the mapper's rules,
+Construction code itself only builds HIR — an import compiles to an `Import` node, not
+a call it runs — so it can be compiled to a binary, as for precompiled libraries.
+Encoding a value needs only the mapper's rules,
 not the compiler. Exposed objects are the exception, but they are runtime nodes that
 only exist in the process that made them, and nothing precompiled contains them.
