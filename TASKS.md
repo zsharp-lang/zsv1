@@ -40,31 +40,132 @@ them to its own types when it lowers them, so the runtime is one platform among 
     float).
   - [ ] Casting a type of numbers to what describes it, `I32 as Instance`: its CO already
     uses `Cast(value)` for a cast to it.
-- [ ] **A platform binds a declared function per target.** `premap` binds it for every
-  target; `std:zsharp/clr`'s premaps hold on both CLR platforms, but a platform that isn't
-  the CLR would need its own binding.
-- [ ] **Importing a library holds its module.** `import "lib";` and `importers.Import`
-  give the module's node without loading it, so `std:modules` doesn't hold it, and its
-  operators aren't the language's until something loads it, as importing a name from it
-  does. `std:zsharp/clr` loads the libraries it implements.
-- [?] **`x as A as B`** parses as `x as (A as B)`. Waits on whether `as` is to chain left.
+- [ ] **Premapping is the platform's.** Every function lowers to LIR, a declared one to
+  a function with no body, which LIR doesn't judge: the platform does. A platform premaps
+  an LIR definition onto something of its own (the runtime: a method or an emitter;
+  Cecil: its own), so it doesn't realize it as code; an empty one it hasn't premapped is
+  its error. `to` is each platform's own type, so it is each platform's API, not a shared
+  capability. `std:functions/compiler`'s `premap` table and the `FunctionHandle` of a
+  declared function go (by a transition: the seed binds `premap`), and `@binder`'s built
+  functions are the runtime's premaps.
+- [ ] **Embedding data is a platform capability.** Asked to embed some data, a platform
+  gives a node that reads it back once its output runs. The encoder's blob is one use,
+  composed with its decoder; an asset is another. Cecil's `embed`, which knows the
+  reflection blob's attribute, becomes it. Reflection itself doesn't change, but the
+  prelude premaps `reflect` with `std:functions`' `premap`, which goes.
+- [ ] **The CLR's types have no operators of their own** where a std type is what they
+  are: `Int32` goes to `I32`, whose `+` the platform premaps, so nothing is ambiguous.
+  `core:runtime`'s `[Operator]` methods are no longer the language's. The IL loader,
+  which translates the CLR to Z#, premaps the CLR's operators. Note: the change spans two
+  generations of the seed; `String`'s stay until `std:string`.
+- [ ] **An import loads what it imports.** `import "lib";`, which binds no names, gives
+  the module's node and nothing loads it, so its module's CO, which makes its operators
+  the language's, is never made. Importing is using it, names or not. Then
+  `std:zsharp/clr` no longer loads the libraries it implements.
+- [ ] **The default string's encoding** is fixed width, so indexing is O(1), and can
+  change without changing an API: the prelude's `String` is typed `Type[String[Unicode]]`,
+  so code sees only what a string of the set has, never the encoding. `Type[T]`, a type
+  known only to be a `T`, needs handling in std, not in core.
+- [ ] **`x as A as B`** parses as `x as (A as B)`; left, `(x as A) as B`, as C# chains it,
+  is proposed. Easy to turn back.
+- [ ] **Overloads match exactly first.** A candidate every argument goes to without an
+  implicit conversion is chosen over one that needs one; then the most specific, as now.
+- [ ] **Z#'s types and the platform's convert implicitly, both ways** (decided). A type
+  goes to what represents it and back. Code uses std's types; the platform's are the
+  runtime's or Cecil's own, so an operator on one of each is ambiguous, and a cast says
+  which.
 - [ ] **Literals into Z#'s types.** An integer or decimal literal goes to any of the types
-  that holds its value.
-- [ ] **`std:boolean`.** `Bool`, its operators, and conditions taking it.
-- [ ] **`Void`.** The type of no value, its own type.
-- [?] **The literals' default types.** The prelude sets what a literal is where nothing
-  asks for a type (`I32`, `F64`, `String`). Waits on how Z#'s types and the CLR's convert:
-  if each goes to the other implicitly, an operator on one of each is ambiguous between
-  the two types' overloads, which std's own code, written with the CLR's types, would hit.
-- [?] **`std:string`.** `Text[X]`, of an `Encoding` (concrete) or a `CharSet` (any
+  that holds its value, and where nothing asks for a type, it is what the prelude sets
+  (`I32`, `F64`). Libraries built without the prelude keep the CLR's.
+- [x] **`std:boolean`** (#40). `Bool`, of the `Truth` meta-type, with `==` and `!=`,
+  which the CLR runs as its `Boolean`; casts to and from it.
+  - [x] A Z# type the platform realizes as one of its own says so (`IRepresented`), so
+    it boxes where an `Object` is expected and isn't compared as a reference (a bug of
+    #39: `print(5 as I32)` crashed).
+  - [x] Conditions taking `Bool`: neither MIR nor LIR types a condition, so `if (b)`
+    with `b: Bool` already works.
+  - [ ] Comparisons giving `Bool` (std's are declared to give `Boolean`).
+  - [ ] `not`, `and` and `or` on `Bool`: `not` and `and` aren't operators of the language
+    yet, and `(or)` isn't an operator literal, as `or` is a word.
+- [ ] **`std:void`: `Void`**, its own library. A function that returns `Void` returns
+  nothing: it has no value, so a `let` can't hold its call. Today a function with no
+  return type has `null` for one, and Z#'s functions, the CLR's methods, the check that a
+  body returns what it says, and LIR's signatures each special-case it: each asks the type
+  instead. A function with no return type written returns `Void`.
+- [ ] **`std:unit`: `Unit`**, its own library: a type with one value.
+- [ ] **`std:never`: `Never`**, its own library: a type with no value, which goes to any
+  type, the type of what doesn't return.
+- [ ] **`std:string`.** `Text[X]`, of an `Encoding` (concrete) or a `CharSet` (any
   encoding of it), `Char[CharSet]`, casts between encodings, and `String` the alias the
-  prelude sets. Waits on what a string's element is (a character of the set, with the
-  encoding's units apart, is proposed).
-- [?] **`std:collections`.** Conceptual list and dictionary types. Waits on generic Z#
-  classes or interfaces, which don't exist yet.
+  prelude sets. Its element is a character of the set, `Char[CharSet]` (decided); the
+  encoding's units are apart.
+- [?] **`std:collections`.** Conceptual list and dictionary types, related to strings but
+  apart from them. Waits on generic Z# classes or interfaces, which don't exist yet.
 
 ## Language and toolchain
 
+- [ ] **Imports run as their definition is constructed, settled; plan below.** Confirmed
+  against `design/documents.md`, `design/definitions.md`, `design/imports.md` and
+  `design/code.md`, and against the existing `ContainerCompiler`, `Binder`/`MappedBinder`
+  and `Overloading`/`OverloadGroup` code:
+  - A module's build code already walks its body (statements and definitions'
+    construction, in order), then fills every definition's contents, then decorates and
+    registers each — all documented in `design/documents.md`, already implemented in
+    `ContainerCompiler.Walk`. Fill can forward-reference, since every name is bound by
+    then; a walk statement (including an import) can only use names from before it.
+    `of` stays as it is: it is decided *during* the walk, to choose what compiles the
+    rest of the definition, so it can't wait for fill, and a same-module compile-time
+    value — a meta-type or an import run only at construction — isn't there yet when it
+    runs (`design/documents.md`'s existing restriction). Std's `def … of` keeps taking
+    its meta-type from the module file, as it already can.
+  - What changes: an import with a constant source is today bound immediately, while it
+    compiles (the `CompileTime.Is` path, from c034a2c), so `of`, decorators and types
+    could use it; this is no longer needed outside `of`, since fill already lets any
+    later definition's types and bodies use a name bound earlier in the walk. Drop that
+    path for everything but `of`'s own resolution: every import becomes a `Code.Local`,
+    declared and bound where it stands, as a dynamic-source import already is.
+  - Overloading one name generalizes `Language.Bind`'s `Merge` (today ad hoc, e.g.
+    merging methods into a group; not fully understood) into one variable per name,
+    holding one `HIR.Code.OverloadGroup` instance that every definition, import and
+    `@operator((+))` sharing the name *extends* — adds to its items — rather than
+    replaces. Decorators (`@operator`) run after every definition's fill, so a body
+    built in fill that reads the group still sees later additions: encoding an
+    `HIR.Instance` is already `Get(instance)`, a reference by identity
+    (`values.Register<HIR.Instance>`), and a module's whole build code finishes before
+    anything loads its bodies. This is the same general idea `OverloadGroup`
+    (`ZSharp.Compiler.Overloading.Static`) already implements for calls, indexing and
+    casts, chosen through `Overloading.Apply`/`IsMoreSpecific` — one mechanism, not
+    three.
+  - A name used as a call stays a group into the module: `HIR.Code.OverloadGroup`
+    already loads to `overloading.Group([...])`, which already implements
+    `ICTCallable` — unchanged.
+  - A name used where one kind is needed (`Global("x", Int32)`, i.e. `Int32 as Type`)
+    needs a cast. `as` is already `Cast`, loaded through `CG.Cast`; a cast resolved while
+    the compiler translates needs the group's contents known then, but the group here is
+    a plain variable of the building code, known only once the building code runs: this
+    needs `IRTCastTo` (as `Package.DotNet.Class`/`DefinedClass` already implement, for a
+    cast resolved as generated code runs), reached through `Dispatcher.Cast`'s
+    `RuntimeDescriptors.Find`. **Layers stay separate**, as always, so this is HIR giving
+    the local an HIR type (`describe(typeof(HIR.Code.OverloadGroup))`, the way
+    `describe(typeof(HIR.Variable))` already types a building-code local; HIR never
+    names a CO), which only the loader later turns into a CO, exactly as loading
+    `HIR.Code.OverloadGroup` already does. That CO is a **new type**, not an addition to
+    `Overloading.Static`'s `OverloadGroup` — that one is shared by other uses an
+    `IRTCastTo` added there could unsettle, and a new CO is the normal way to give a kind
+    of value new CG behaviour, rather than widening an existing one. The new CO's
+    `IRTCastTo.Cast` filters the group's candidates to the one of the requested kind,
+    erroring on zero or more than one — the `IRTCastTo` counterpart of today's
+    `OverloadGroup.Cast`'s `Apply(candidates, c => CG.Cast(c, targetType))`, and it can
+    still go through `Overloading.Apply`/`Group` itself for that.
+  - Plan: (1) a new CO, loaded for `HIR.Code.OverloadGroup` in this use, implementing
+    `IRTCastTo` (and whatever else this use needs); the local's HIR type names only the
+    HIR shape, never that CO; (2) replace `Language.Bind`'s merge-into-a-new-value rule
+    with bind-once, extend-in-place, for definitions, imports and operators alike; (3)
+    drop `CompileTime.Is` for imports outside `of`, so every import is a `Code.Local` in
+    the walk/body, bound where it stands; (4) once this works, fold the settled parts
+    into `design/documents.md`, `design/imports.md` and `design/code.md`, and retire
+    this item. Layering is a rule to hold to while doing this, not an audit of the rest
+    of the codebase.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.

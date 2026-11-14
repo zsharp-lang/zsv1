@@ -16,6 +16,7 @@ package manager's.
 | [`std:oop`](standard.md#stdoop) | Classes and interfaces: `Class`, `Interface`, `static`, `class`. |
 | [`std:types`](standard.md#stdtypes) | `Type[T]`, the type of a definition's value. |
 | [`std:numbers`](standard.md#stdnumbers) | Z#'s own integers and floating-point numbers, apart from the CLR's. |
+| [`std:boolean`](standard.md#stdboolean) | `Bool`, Z#'s own truth values. |
 | [`std:reflection`](standard.md#stdreflection) | `reflect`, the node a built definition was built from. |
 | [`core:runtime`](core.md#coreruntime) | .NET's common types, as `String`, `Int32`, `List` and `Func`. |
 | [`core:zsharp`](core.md#corezsharp) | The toolchain's own: `arguments`, `export`, `operator`, `ct`. |

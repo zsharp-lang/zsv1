@@ -338,9 +338,11 @@ namespace ZSharp.Importer.ILLoader.Objects
                 && value is not Method
                 && value.Is<ICompileIRReference<LIR.ICallable>>(out _)
                 ? Result.Ok(new FunctionDelegate(loader, this, IL, value))
-                : IsRoot && OfAnotherTypeSystem(value)
-                    ? Result.Ok(new Upcast(value, this))
-                    : Result.Error(new UnsupportedError($"{IL.Name} has no conversion from that value."));
+                : IsRoot && Represented(value) is { } representation
+                    ? ZSharp.Compiler.Current.CG.ImplicitCast(new Upcast(value, representation), this)
+                    : IsRoot && OfAnotherTypeSystem(value)
+                        ? Result.Ok(new Upcast(value, this))
+                        : Result.Error(new UnsupportedError($"{IL.Name} has no conversion from that value."));
 
         /// <summary>
         /// Whether this is the root of the CLR's type system, <c>Object</c>, which every value
@@ -355,6 +357,16 @@ namespace ZSharp.Importer.ILLoader.Objects
         /// </summary>
         private static bool OfAnotherTypeSystem(CompilerObject value)
             => ZSharp.Compiler.Current.TS.TypeOf(value).Ok(out var type) && type is not IILType;
+
+        /// <summary>
+        /// What represents a value's type on the platform, if its type is of another type
+        /// system that the platform realizes as one of its own, as Z#'s numbers are: the
+        /// value goes to <c>Object</c> as a value of that type does.
+        /// </summary>
+        internal static CompilerObject? Represented(CompilerObject value)
+            => ZSharp.Compiler.Current.TS.TypeOf(value).Ok(out var type) && type.Is<IRepresented>(out var represented)
+                ? represented.Representation
+                : null;
 
         /// <summary>
         /// A value of a value type becomes an object by boxing it, when it goes to a type
