@@ -145,6 +145,23 @@ them to its own types when it lowers them, so the runtime is one platform among 
   - **Deferred on purpose, unchanged:** importing a module doesn't feed its
     `@operator`-annotated definitions into `Language.Functions`; nothing in `Import`/
     `ImportedMember` does that. Left for a later phase, per the user's call.
+- [x] **`HIR.Identity`, separate from `Definition`** (same branch, after review). `Import`
+  and `ImportedMember` were marked `HIR.Definition` only to borrow its loader cache;
+  `Definition` means something specific (a named slot a container holds), which neither
+  is. Added `HIR.Identity` (`Definition : Identity`) and a parallel `LoadIdentity`
+  entrypoint with its own cache and its own map (`Identities`), leaving `LoadDefinition`
+  itself untouched — name, signature, cache — since already-built std libraries call it
+  directly. `MappedLoader.LoadInstance`'s fallback also tries `LoadIdentity` for an
+  Identity that isn't a Definition, so this is reached however the node is referred to,
+  not only through its own registered rule (a real gap my first attempt left: an
+  `OverloadGroup` loading a candidate loads it directly, not through `Get`). `Import`/
+  `ImportedMember` moved from `Definition` to `Identity`, and so did `Package.DotNet.Module`
+  — it already documented itself as "an instance and not a definition another one
+  holds," correctly, but was registered on the uncached `Instances` map, so loading the
+  same module node twice built two different COs. Verified directly, with a counter, both
+  times: an import's source evaluated once despite three names used four ways (the
+  `Import` case); `LoadModule` called 11 times without the `Module` fix and exactly once
+  with it, for two imports sharing one source. Bootstrap completes.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
