@@ -140,24 +140,32 @@ them to its own types when it lowers them, so the runtime is one platform among 
     already loads to `overloading.Group([...])`, which already implements
     `ICTCallable` — unchanged.
   - A name used where one kind is needed (`Global("x", Int32)`, i.e. `Int32 as Type`)
-    needs a cast. `as` is already `Cast`, loaded through `CG.Cast`; today's
-    `OverloadGroup` only answers `ICTCastTo` (resolved while the compiler translates,
-    which needs the group's contents known then). Here the group is a plain variable of
-    the building code, so its contents are known only once the building code runs: this
-    needs `IRTCastTo` instead (as `Package.DotNet.Class`/`DefinedClass` already
-    implement, for a cast resolved as generated code runs), added to the group's static
-    type so `Dispatcher.Cast`'s `RuntimeDescriptors.Find` reaches it; its `Cast` emits a
-    runtime call that filters the group's candidates to the one of the requested kind
-    (erroring on zero or more than one), the `IRTCastTo` counterpart of
-    `OverloadGroup.Cast`'s existing `Apply(candidates, c => CG.Cast(c, targetType))`.
-  - Plan: (1) give the per-name variable a static type that resolves to the
-    `OverloadGroup` CO's kind, so casts on it dispatch there; (2) add `IRTCastTo` to it,
-    filtering by `IsAssignableTo`/`CG.Cast` per candidate, through `Overloading.Apply`;
-    (3) replace `Language.Bind`'s merge-into-a-new-value rule with bind-once,
-    extend-in-place, for definitions, imports and operators alike; (4) drop
-    `CompileTime.Is` for imports outside `of`, so every import is a `Code.Local` in the
-    walk/body, bound where it stands; (5) once this works, fold the settled parts into
-    `design/documents.md`, `design/imports.md` and `design/code.md`, and retire this item.
+    needs a cast. `as` is already `Cast`, loaded through `CG.Cast`; a cast resolved while
+    the compiler translates needs the group's contents known then, but the group here is
+    a plain variable of the building code, known only once the building code runs: this
+    needs `IRTCastTo` (as `Package.DotNet.Class`/`DefinedClass` already implement, for a
+    cast resolved as generated code runs), reached through `Dispatcher.Cast`'s
+    `RuntimeDescriptors.Find`. **Layers stay separate**, as always, so this is HIR giving
+    the local an HIR type (`describe(typeof(HIR.Code.OverloadGroup))`, the way
+    `describe(typeof(HIR.Variable))` already types a building-code local; HIR never
+    names a CO), which only the loader later turns into a CO, exactly as loading
+    `HIR.Code.OverloadGroup` already does. That CO is a **new type**, not an addition to
+    `Overloading.Static`'s `OverloadGroup` — that one is shared by other uses an
+    `IRTCastTo` added there could unsettle, and a new CO is the normal way to give a kind
+    of value new CG behaviour, rather than widening an existing one. The new CO's
+    `IRTCastTo.Cast` filters the group's candidates to the one of the requested kind,
+    erroring on zero or more than one — the `IRTCastTo` counterpart of today's
+    `OverloadGroup.Cast`'s `Apply(candidates, c => CG.Cast(c, targetType))`, and it can
+    still go through `Overloading.Apply`/`Group` itself for that.
+  - Plan: (1) a new CO, loaded for `HIR.Code.OverloadGroup` in this use, implementing
+    `IRTCastTo` (and whatever else this use needs); the local's HIR type names only the
+    HIR shape, never that CO; (2) replace `Language.Bind`'s merge-into-a-new-value rule
+    with bind-once, extend-in-place, for definitions, imports and operators alike; (3)
+    drop `CompileTime.Is` for imports outside `of`, so every import is a `Code.Local` in
+    the walk/body, bound where it stands; (4) once this works, fold the settled parts
+    into `design/documents.md`, `design/imports.md` and `design/code.md`, and retire
+    this item. Layering is a rule to hold to while doing this, not an audit of the rest
+    of the codebase.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
