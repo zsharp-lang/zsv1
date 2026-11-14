@@ -169,6 +169,25 @@ them to its own types when it lowers them, so the runtime is one platform among 
 - [ ] Function values: partial application, Bound/Invocation.
 - [ ] The remaining patterns: `not`, sequence, `{}`, `case`.
 - [ ] Compile-time access checks (need design).
+- [ ] **Source mapping through custom metadata, the whole chain: AST -> HIR -> MIR ->
+  LIR -> platform.** `design/definitions.md` already says source mapping is metadata,
+  and that HIR has no source positions on it, to keep HIR pure — "they would live
+  beside it, keyed by node," not a mark on the node, unlike `Annotated.Annotations`
+  (an on-node list, used today for reflection, e.g. `@entrypoint`). AST already has
+  positions: `Token.Span`, `Position(line, column)`, which `*Tokens` objects (e.g.
+  `FunctionTokens`) hold per AST node — nothing carries this into HIR today, and HIR
+  nodes have no reference back to the AST node that produced them. LIR already has a
+  generic, platform-written capability that fits the far end of this: `Metadata` /
+  `KeptAnnotation`. Needs design: the metadata type(s) representing a position (or a
+  span, a file); whether building it reuses `Annotated`'s mechanism or needs its own,
+  since a side table keyed by node is a different shape than a list on one; how AST ->
+  HIR compiling populates that side table from `Token.Span` without putting anything on
+  the HIR node; how a CO carries its HIR node's position through MIR, to attach it to
+  the LIR it makes as `KeptAnnotation`; how a platform (Cecil) writes it (.NET sequence
+  points, most likely) — "the runtime turns it into debugging information," per
+  `design/definitions.md`. The metadata types: a package, `pkg:zsharp/sourcemap`
+  suggested (one word, like `hir`/`mir`/`lir`, and the term `design/definitions.md`
+  already uses) — open to a better name.
 - [ ] Deferred: resolvers, the IL importer split, metaclass binding, namespace imports.
 
 ## Done
