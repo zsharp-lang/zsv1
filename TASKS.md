@@ -104,95 +104,38 @@ them to its own types when it lowers them, so the runtime is one platform among 
 
 ## Language and toolchain
 
-- [!] **Blocked (found implementing the below, on `lang/overload-groups`): a module-level
-  import can't be used as a type at all.** First found as a chained import source
-  (`import { Object } from "core:runtime"; import { X } from Object.Assembly;`, both at
-  module level, in `std/encoding`, `std/zsharp/clr`, `packages/clr/platform`,
-  `packages/package-manager`, `packages/cecil`; fixed by moving the whole `core:runtime`
-  import of each to its project's module file, where it was already eager — the user's
-  call: module imports relying on each other doesn't make sense, since at construction
-  neither has a value, and these never were "the module's own runtime imports" to begin
-  with, only the toolchain's own construction-time aid). But the same error
-  ("Instance has no member named Object") also happens with **no chaining**: `fun f(x:
-  Object): Object;` and `let x: Object = null;`, a plain function signature and a local's
-  type, both module-level, both just naming the import, nothing else. The std migrations
-  that looked like they proved types work deferred (`of Truth()`, `of
-  FixedBitWidthInteger(...)`) never actually tested this: in every one of those files, the
-  moved name was used *only* by `of`, which the move made eager anyway — nothing in them
-  exercised a deferred import used as an ordinary parameter, return, field or local type.
-  Types are construction code, built directly (`Bodies.Parameter`'s `Construct(kind,
-  StringLiteral(name), type)`, a `Local.Type` assignment, or similar), never reified, so
-  a `Code.Local` inferred as the generic `HIR.Instance` fails there the same way it fails
-  `cg.Member` — this isn't limited to member access on an import's source; it's any
-  construction-code use of a deferred import as a type, which is most of what `core:runtime`
-  types are for throughout std. Dropping `CompileTime.Is` outside `of`, as scoped, isn't
-  viable on its own at this scale without either moving far more imports to their project
-  files than planned, or a mechanism that lets a type position resolve a deferred import
-  (close to the `Import`/`ImportedName` idea raised earlier, premapped when the building
-  code loads, rather than treated as an ordinary building-code value). Stopped to report
-  before going further.
-- [ ] **Imports run as their definition is constructed, settled; plan below.** Confirmed
-  against `design/documents.md`, `design/definitions.md`, `design/imports.md` and
-  `design/code.md`, and against the existing `ContainerCompiler`, `Binder`/`MappedBinder`
-  and `Overloading`/`OverloadGroup` code:
-  - A module's build code already walks its body (statements and definitions'
-    construction, in order), then fills every definition's contents, then decorates and
-    registers each — all documented in `design/documents.md`, already implemented in
-    `ContainerCompiler.Walk`. Fill can forward-reference, since every name is bound by
-    then; a walk statement (including an import) can only use names from before it.
-    `of` stays as it is: it is decided *during* the walk, to choose what compiles the
-    rest of the definition, so it can't wait for fill, and a same-module compile-time
-    value — a meta-type or an import run only at construction — isn't there yet when it
-    runs (`design/documents.md`'s existing restriction). Std's `def … of` keeps taking
-    its meta-type from the module file, as it already can.
-  - What changes: an import with a constant source is today bound immediately, while it
-    compiles (the `CompileTime.Is` path, from c034a2c), so `of`, decorators and types
-    could use it; this is no longer needed outside `of`, since fill already lets any
-    later definition's types and bodies use a name bound earlier in the walk. Drop that
-    path for everything but `of`'s own resolution: every import becomes a `Code.Local`,
-    declared and bound where it stands, as a dynamic-source import already is.
-  - Overloading one name generalizes `Language.Bind`'s `Merge` (today ad hoc, e.g.
-    merging methods into a group; not fully understood) into one variable per name,
-    holding one `HIR.Code.OverloadGroup` instance that every definition, import and
-    `@operator((+))` sharing the name *extends* — adds to its items — rather than
-    replaces. Decorators (`@operator`) run after every definition's fill, so a body
-    built in fill that reads the group still sees later additions: encoding an
-    `HIR.Instance` is already `Get(instance)`, a reference by identity
-    (`values.Register<HIR.Instance>`), and a module's whole build code finishes before
-    anything loads its bodies. This is the same general idea `OverloadGroup`
-    (`ZSharp.Compiler.Overloading.Static`) already implements for calls, indexing and
-    casts, chosen through `Overloading.Apply`/`IsMoreSpecific` — one mechanism, not
-    three.
-  - A name used as a call stays a group into the module: `HIR.Code.OverloadGroup`
-    already loads to `overloading.Group([...])`, which already implements
-    `ICTCallable` — unchanged.
-  - A name used where one kind is needed (`Global("x", Int32)`, i.e. `Int32 as Type`)
-    needs a cast. `as` is already `Cast`, loaded through `CG.Cast`; a cast resolved while
-    the compiler translates needs the group's contents known then, but the group here is
-    a plain variable of the building code, known only once the building code runs: this
-    needs `IRTCastTo` (as `Package.DotNet.Class`/`DefinedClass` already implement, for a
-    cast resolved as generated code runs), reached through `Dispatcher.Cast`'s
-    `RuntimeDescriptors.Find`. **Layers stay separate**, as always, so this is HIR giving
-    the local an HIR type (`describe(typeof(HIR.Code.OverloadGroup))`, the way
-    `describe(typeof(HIR.Variable))` already types a building-code local; HIR never
-    names a CO), which only the loader later turns into a CO, exactly as loading
-    `HIR.Code.OverloadGroup` already does. That CO is a **new type**, not an addition to
-    `Overloading.Static`'s `OverloadGroup` — that one is shared by other uses an
-    `IRTCastTo` added there could unsettle, and a new CO is the normal way to give a kind
-    of value new CG behaviour, rather than widening an existing one. The new CO's
-    `IRTCastTo.Cast` filters the group's candidates to the one of the requested kind,
-    erroring on zero or more than one — the `IRTCastTo` counterpart of today's
-    `OverloadGroup.Cast`'s `Apply(candidates, c => CG.Cast(c, targetType))`, and it can
-    still go through `Overloading.Apply`/`Group` itself for that.
-  - Plan: (1) a new CO, loaded for `HIR.Code.OverloadGroup` in this use, implementing
-    `IRTCastTo` (and whatever else this use needs); the local's HIR type names only the
-    HIR shape, never that CO; (2) replace `Language.Bind`'s merge-into-a-new-value rule
-    with bind-once, extend-in-place, for definitions, imports and operators alike; (3)
-    drop `CompileTime.Is` for imports outside `of`, so every import is a `Code.Local` in
-    the walk/body, bound where it stands; (4) once this works, fold the settled parts
-    into `design/documents.md`, `design/imports.md` and `design/code.md`, and retire
-    this item. Layering is a rule to hold to while doing this, not an audit of the rest
-    of the codebase.
+- [x] **Imports have their own HIR nodes, `Import` and `ImportedMember`** (on
+  `lang/overload-groups`). An import compiles to an `Import` (its source, as code) and,
+  for each name it brings in, an `ImportedMember` of it, bound to that name — no
+  `Code.Local`. Loading an `Import` evaluates its source (reusing the existing HIR
+  runner, the same machinery compile-time evaluation already goes through) and expects
+  an `HIR.Instance` back; loading an `ImportedMember` loads its `Import` and calls
+  `CG.Member` on the result. Both are `HIR.Definition`, so the loader's existing
+  per-node cache keeps an import from running twice. `Bodies.Imported` keeps its old
+  signature (`IResult<Code.Local?, Error>`, always `null` now) since already-built std
+  libraries call it directly — only its insides changed, an additive transition the seed
+  survives. This is what the `Code.Local` it replaced couldn't be: specific enough for
+  `CG.Member` to resolve a member on it, whether that member is a parameter's type, a
+  field's type, or another import's source. Verified: a plain `fun f(x: Object): Object;`
+  and a chained `import { Object } from "core:runtime"; import { Path } from
+  Object.Assembly;` both resolve now, and a full bootstrap completes against std's
+  original source (no `core:runtime` moved to a project file, only the 19 `of`-related
+  moves, which are unrelated and stay).
+- [ ] **Still open on the same branch:**
+  - Generalize `Language.Bind`'s `Merge` into one variable per name, holding one
+    `HIR.Code.OverloadGroup` that every definition, import and operator sharing the name
+    extends in place, as already agreed; overloading has nothing import-specific about
+    it — an `ImportedMember` is Overloadable the same way any other kind of definition is
+    (`design/code.md`), so nothing new is needed for it to merge with a same-name
+    definition.
+  - A name used where one kind is needed (`Int32 as Type`) needs a cast on a group whose
+    contents are a building-code value, not known while compiling: a new CO (not an
+    addition to `Overloading.Static`'s shared `OverloadGroup`) implementing `IRTCastTo`,
+    reached through `Dispatcher.Cast`'s `RuntimeDescriptors.Find`, as settled before.
+  - **Deferred on purpose:** importing a module today causes its `@operator`-annotated
+    definitions to register through `language.Understand`; nothing in `Import`/
+    `ImportedMember` does that. The user's call: leave this for a later phase rather than
+    widen this change to cover it now.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
