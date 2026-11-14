@@ -142,11 +142,28 @@ namespace ZSharp.Lang.DotNet
                 _ => false,
             };
 
+        /// <summary>
+        /// What a name stands for once a new definition joins what it already stood for,
+        /// each counted once. If it is already a group, the new items are added to its own
+        /// list, in place: that is the same group every earlier reference to the name
+        /// holds, so each of them sees what joins it too, however much earlier it was
+        /// bound. Only turning a name that stood for one thing into a group, the first
+        /// time it is shared, gives back a different expression to bind.
+        /// </summary>
         private static Code.Expression Joined(Code.Expression existing, List<HIR.Instance> before, List<HIR.Instance> after)
         {
             var added = after.Where(item => !before.Any(known => ReferenceEquals(known, item))).ToList();
 
-            return added.Count == 0 ? existing : new Code.Get(Group([.. before, .. added]));
+            if (added.Count == 0)
+                return existing;
+
+            if (existing is Code.Get { Instance: Code.OverloadGroup })
+            {
+                before.AddRange(added);
+                return existing;
+            }
+
+            return new Code.Get(Group([.. before, .. added]));
         }
 
         private static Code.OverloadGroup Group(List<HIR.Instance> items)

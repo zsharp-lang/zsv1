@@ -8,6 +8,7 @@ namespace ZSharp.HIR.Code
     public sealed class ImportedMember
         : Instance
         , HIR.Definition
+        , HIR.Overloadable
     {
         public required Import Import { get; set; }
 
