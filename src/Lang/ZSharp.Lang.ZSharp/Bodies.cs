@@ -212,24 +212,30 @@ namespace ZSharp.Lang
         }
 
         /// <summary>
-        /// Compiles an import. It runs as the code it is in is constructed, as any other
-        /// statement there does: it compiles to a local that holds what it imports, which
-        /// the names are bound to, and declaring the local runs the import. A name it
-        /// brings in is known once this statement has run, as fill lets a later
-        /// definition's types and bodies use it, same as any other name bound earlier in
-        /// the walk; it isn't known while compiling, which is why <c>of</c> can't use one
-        /// imported in the same module (see <c>design/documents.md</c>).
+        /// Compiles an import. It gives an <c>Import</c> node holding its source as code,
+        /// and binds the names it brings in to an <c>ImportedMember</c> of it, one each.
+        /// Nothing of either runs here: an <c>Import</c> is loaded by evaluating its
+        /// source, and an <c>ImportedMember</c> by loading its import and reading its name
+        /// off the result, so a name it binds is only known once loaded, not while
+        /// compiling, which is why <c>of</c> can't use one imported in the same module
+        /// (see <c>design/documents.md</c>). Loading happens after the whole module's
+        /// construction code has compiled, so a name used before its import, anywhere in
+        /// the walk, is fine. There is never a local to declare any more, so the result is
+        /// always <see langword="null"/>; the signature stays as it is because the seed
+        /// (std libraries compiled against it) calls this directly and already handles a
+        /// null result as "nothing to declare" — the shape the compile-time-source case
+        /// already had.
         /// </summary>
         public IResult<Code.Local?, Error> Imported(ASTCompiler compiler, AST.ImportStatement import)
         {
             if (language.Importing(compiler, import).When(out var importing).Error(out var error))
                 return Result<Code.Local?>.Error(error);
 
-            var holder = new Code.Local("import", HIR.Infer.Value) { Init = importing };
+            var node = new Code.Import { From = importing! };
 
-            return language.BindImported(compiler, import, () => new Code.Get(holder)) is { } invalid
+            return language.BindImported(compiler, import, node) is { } invalid
                 ? Result<Code.Local?>.Error(invalid)
-                : Result<Code.Local?>.Ok(holder);
+                : Result<Code.Local?>.Ok(null);
         }
 
         private IResult<Code.Expression, Error> Local(

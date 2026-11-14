@@ -82,7 +82,16 @@ namespace ZSharp.Compiler
             return captured;
         }
 
-        public static void Register(MappedCodeLoader mapped, MappedLoader instances, HIRCodeLoader code, HIRLoader loader, CG cg, Matching matching, Overloading overloading)
+        public static void Register(
+            MappedCodeLoader mapped,
+            MappedLoader instances,
+            HIRCodeLoader code,
+            HIRLoader loader,
+            CG cg,
+            Matching matching,
+            Overloading overloading,
+            Func<HIR.Code.Expression, IResult<object?, Error>> evaluate
+        )
         {
             var expressions = mapped.Expressions;
 
@@ -90,6 +99,25 @@ namespace ZSharp.Compiler
                 reference.Value is null
                     ? Result.Error("A reference was used before it was set.")
                     : loader.LoadInstance(reference.Value)
+            );
+
+            // An import is loaded by evaluating its source, which must give an instance;
+            // nothing of it is known until then, so a name it binds can't be used while
+            // compiling.
+            instances.Instances.Register<HIR.Code.Import>(import =>
+                evaluate(import.From).When(out var value).Error(out var error)
+                    ? Result.Error(error)
+                    : value is HIR.Instance imported
+                        ? loader.LoadInstance(imported)
+                        : Result.Error(new ErrorMessage($"An import must give an instance, but gave {value?.GetType().Name ?? "null"}."))
+            );
+
+            // An imported member is read off its import once that is loaded, so a chained
+            // import's source, which is itself an import's member, resolves the same way.
+            instances.Instances.Register<HIR.Code.ImportedMember>(member =>
+                loader.LoadInstance(member.Import).Error(out var error, out var imported)
+                    ? Result.Error(error)
+                    : cg.Member(imported, member.Name)
             );
 
             instances.Instances.Register<HIR.Code.OverloadGroup>(group =>
