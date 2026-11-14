@@ -128,37 +128,30 @@ them to its own types when it lowers them, so the runtime is one platform among 
   import from a source known only at run time; a generated function can still import from
   its generator's argument (`fun outer(src) { return fun() { import { print } from src;
   … } as Function; }`), because the generator builds the `Import` node with that value.
-  HIR nodes (proposed): `Import : Statement { from: Expression; importedNames:
-  List[ImportedName] }` and `ImportedName : Instance { name: String }`. Z# puts a `Call`
-  of `import` in `from`; code refers to the `ImportedName`s, bound by the normal rules (a
-  name already in scope makes an overload group, resolved while loading). Loading an
-  `Import` evaluates `from` and premaps each `ImportedName` to what it names there, so a
-  reference to it loads as that. Each `ImportedName` is a node of its own, so the mapping
-  is by identity and needs no loader scopes. An `Import` is in the building code, so it
-  is loaded when that code is, not when the module is imported; the built module holds
-  none. A body the building code builds gets the current value of an imported name,
-  encoded, as it gets a document variable's (the reifier's `Encode`). Only reifying an
-  `Import` itself (in code a generator builds) makes its `ImportedName`s variables that
-  the references refer to (`fun outer(src) { return fun() { import { print } from src;
-  … } as Function; }`). Operators (and perhaps overload groups in general): the building
-  code has a variable per operator its bodies use, starting as the upper scope's group;
-  a body's use of the operator is reified as a read of the variable, so the body gets its
-  value when the body is built. An `Import` lists the variables it may extend (beside its
-  `ImportedName`s), and loading it generates code that extends each with what the import
-  offers; a same-module `@operator((+))` extends it the same way. Bodies are set after
-  the definitions (module code is produced out of order), so each gets every
-  contribution. So imported operators can't be used in module-level expressions such as
-  types (by design: an import belongs to the module's code, types are its structure);
-  those take operators from the context around the module (a document runs statement by
-  statement, so its imports are known to what follows, as a module file's are). This
-  replaces the language's global operator table and the `Operator` node. Open: whether
-  imported names in types follow the same rule; how `@operator((+))` gets the variable
-  to extend (HIR has no by-reference argument once `Reference` is gone); encoding an
-  imported function's value as its HIR node (today the encoder knows types, literals and
-  HIR, and places anything else as a live object).
-- [ ] **Remove `HIR.Code.Reference`.** It needs a running process to be set, so HIR that
-  holds one isn't structure. Today: a document's imports (replaced by `Import`), a
-  document's definitions (`Define.Result`), and .NET overloads (`DotNetMetaTypes`).
+  HIR nodes (proposed, revised): no `Reference`, so no reassignment and no "set later".
+  An operator (and perhaps overloads in general) is a variable in the building code
+  holding one `OverloadGroup` instance, starting as the upper scope's group; an `Import`
+  and a same-module `@operator((+))` both *extend* that instance (add to its items) rather
+  than replace the variable's value, so every reader of the variable, built before or
+  after, ends up seeing the same object once all of it has mutated. A body's use of an
+  operator is reified as `Encode(Get(variable))`: since the variable holds an `HIR.Instance`,
+  encoding it is a reference by identity (the existing `values.Register<HIR.Instance>`
+  path), not a copy, so it carries on mutating until it is loaded, and a module's
+  building code fully runs (so the group is complete) before anything loads its bodies.
+  Imported names differ: a name is an ordinary value, as a type is (`A | B` is `(|)(A, B)`,
+  so a type is itself a value, which is why names work in types); an operator isn't a
+  value by default (`foo(x, y)`: `x, y` are variables, `foo` is a fixed reference, unless
+  it is deliberately made a variable, as we now do for operators) and so isn't usable in
+  types. A name already resolved, in building-code order, when a body or a type refers to
+  it is also `Encode(Get(the resolved node))` — already covered, no new mechanism. A name
+  not yet resolved there (used before its import's building-code statement has run, since
+  modules allow forward references) needs a module-level way to say what it refers to,
+  resolved once the whole building code (or module) has loaded, which premaps the
+  reference to the import's result. `Define` has the same forward-reference need today
+  (a body calling a later definition) and uses `Reference` for it, so whatever replaces
+  `Reference` for imports replaces it there too. Open: the shape of that module-level
+  forward-reference record; whether it is the same `Import`/`ImportedName` idea, now used
+  only for the forward case, or one mechanism for every name reference.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
