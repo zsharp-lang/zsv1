@@ -104,21 +104,33 @@ them to its own types when it lowers them, so the runtime is one platform among 
 
 ## Language and toolchain
 
-- [!] **Blocked (found implementing the below, on `lang/overload-groups`): a chained
-  module-level import fails at load time.** `import { Object } from "core:runtime";
-  import { X } from Object.Assembly;`, both at module level — used in `std/encoding`,
-  `std/zsharp/clr`, `packages/clr/platform`, `packages/package-manager`,
-  `packages/cecil` — fails ("Instance has no member named Object/Assembly/…") once an
-  import is a `Code.Local` for every source, not just a dynamic one. The local's type is
-  `HIR.Infer.Value`, inferred from `import`'s declared return type, `HIR.Instance` — the
-  generic marker, with no members of its own. `cg.Member`'s dispatch (CT, and the RT
-  fallback through `RuntimeDescriptors`) needs a more specific static type than that to
-  generate the access, and doesn't get one until the building code actually runs. Before
-  this change, a constant-sourced import's name was `NamedMember(Get(concreteInstance),
-  name)` on an actual instance, specific enough; a `Code.Local` loses that. Needs a
-  design answer: a better static type for an import's result, or a way for `cg.Member`
-  (`as`'s `IRTCastTo` is the same shape) to resolve against the building-code value once
-  it exists, not only against a declared static type.
+- [!] **Blocked (found implementing the below, on `lang/overload-groups`): a module-level
+  import can't be used as a type at all.** First found as a chained import source
+  (`import { Object } from "core:runtime"; import { X } from Object.Assembly;`, both at
+  module level, in `std/encoding`, `std/zsharp/clr`, `packages/clr/platform`,
+  `packages/package-manager`, `packages/cecil`; fixed by moving the whole `core:runtime`
+  import of each to its project's module file, where it was already eager — the user's
+  call: module imports relying on each other doesn't make sense, since at construction
+  neither has a value, and these never were "the module's own runtime imports" to begin
+  with, only the toolchain's own construction-time aid). But the same error
+  ("Instance has no member named Object") also happens with **no chaining**: `fun f(x:
+  Object): Object;` and `let x: Object = null;`, a plain function signature and a local's
+  type, both module-level, both just naming the import, nothing else. The std migrations
+  that looked like they proved types work deferred (`of Truth()`, `of
+  FixedBitWidthInteger(...)`) never actually tested this: in every one of those files, the
+  moved name was used *only* by `of`, which the move made eager anyway — nothing in them
+  exercised a deferred import used as an ordinary parameter, return, field or local type.
+  Types are construction code, built directly (`Bodies.Parameter`'s `Construct(kind,
+  StringLiteral(name), type)`, a `Local.Type` assignment, or similar), never reified, so
+  a `Code.Local` inferred as the generic `HIR.Instance` fails there the same way it fails
+  `cg.Member` — this isn't limited to member access on an import's source; it's any
+  construction-code use of a deferred import as a type, which is most of what `core:runtime`
+  types are for throughout std. Dropping `CompileTime.Is` outside `of`, as scoped, isn't
+  viable on its own at this scale without either moving far more imports to their project
+  files than planned, or a mechanism that lets a type position resolve a deferred import
+  (close to the `Import`/`ImportedName` idea raised earlier, premapped when the building
+  code loads, rather than treated as an ordinary building-code value). Stopped to report
+  before going further.
 - [ ] **Imports run as their definition is constructed, settled; plan below.** Confirmed
   against `design/documents.md`, `design/definitions.md`, `design/imports.md` and
   `design/code.md`, and against the existing `ContainerCompiler`, `Binder`/`MappedBinder`
