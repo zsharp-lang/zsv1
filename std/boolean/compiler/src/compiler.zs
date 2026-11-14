@@ -7,7 +7,7 @@
 // - A platform says what represents it in its own types, by `represent`: a cast between
 //   them changes nothing. Nothing converts implicitly yet.
 
-
+import { String, Object, Boolean } from "core:runtime";
 import { public } from "pkg:clr/hir";
 import { Instance, Type } from "pkg:zsharp/hir";
 import { Block, Local, StringLiteral } from "pkg:zsharp/hir/code";

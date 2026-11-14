@@ -11,7 +11,7 @@
 // compiler needs of them. Importing it makes `module` a Z# module wherever nothing else
 // compiles one, as `module` is `def` of Module.
 
-
+import { String, Object, Boolean, Int32, List, Dictionary } from "core:runtime";
 import { Module as DotNet_Module } from "pkg:clr/hir";
 import { static, public, explicitThis } from "pkg:clr/hir";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated } from "pkg:zsharp/hir";
@@ -36,7 +36,7 @@ import { Bodies, ContainerCompiler } from "pkg:zsharp/lang/hir";
 import { Holder, Held, Initializing, keep } from "std:zsharp/lowering";
 import { metaTypes, bodies, language, ct } from "core:zsharp";
 import { entrypoint, definitionLoader, instanceLoader, metaType, binder } from "std:framework";
-
+import { ilLoader } from "core:runtime";
 import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader, overloading } from "core:compiler";
 import { Global, Module } from "std:modules";
 

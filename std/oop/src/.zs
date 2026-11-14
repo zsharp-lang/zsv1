@@ -3,7 +3,8 @@
 import { compile, emit } from "core:project";
 import { Class as Node } from "pkg:clr/hir";
 import { build } from "std:framework";
-import { Object, Type, String, Boolean, List } from "core:runtime";
+import { Object, Type } from "core:runtime";
+
 import { MethodInfo, FieldInfo, BindingFlags } from Object.Assembly;
 
 emit(build(compile("oop")));

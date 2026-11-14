@@ -2,7 +2,8 @@
 // reflection, which binding a built class needs.
 import { compile, emit } from "core:project";
 import { build } from "std:framework";
-import { Object, Type, String, Boolean, Int32, List, Dictionary, HashSet, ilLoader, Type as ClrType } from "core:runtime";
+import { Object, Type } from "core:runtime";
+
 import { MethodInfo, FieldInfo, BindingFlags } from Object.Assembly;
 
 emit(build(compile("compiler")));

@@ -1,6 +1,7 @@
 // pkg:clr/platform — what a build of a .NET assembly needs, on the CLR. It was
 // std:dotnet: it is the CLR platform's, not the standard library's.
 
+import { Object, String, Type, List } from "core:runtime";
 import { Path, File } from Object.Assembly;
 import {  } from "core:zsharp";
 

@@ -2,7 +2,7 @@
 // the toolchain's modules don't.
 import { compile, emit } from "core:project";
 import { build } from "std:framework";
-import { Object, Type, List, String } from "core:runtime";
+import { Object, Type } from "core:runtime";
 
 import { Convert } from Object.Assembly;
 

@@ -11,6 +11,8 @@ import { explicitThis } from "pkg:clr/hir";
 import { ClrPlatform, Polymorphic, MethodOf, CastDown, TypeTest } from "pkg:clr/lir";
 import { public } from "pkg:clr/hir";
 import { Structure, Function, Type as LIRType } from "pkg:zsharp/lir";
+import { Object, String, Int32, Boolean, List, Type as ClrType, ilLoader, predefined } from "core:runtime";
+import { SByte, Int16, Int64, Byte, UInt16, UInt32, UInt64, Single, Double } from "core:runtime";
 import { Half } from Object.Assembly;
 import { Instance } from "pkg:zsharp/hir";
 import { importers, language } from "core:zsharp";

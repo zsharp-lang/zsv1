@@ -8,7 +8,7 @@
 // they declare, in their order, then calls its explicit entry points: what importing the
 // module calls, built or compiled from its sources, and building it doesn't.
 
-
+import { String, Object, Boolean, Int32, List, Func } from "core:runtime";
 import { Module as DotNet_Module } from "pkg:clr/hir";
 import { public, explicitThis } from "pkg:clr/hir";
 import { Instance, Definition, Annotated, Type } from "pkg:zsharp/hir";

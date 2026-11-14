@@ -6,7 +6,7 @@
 // operators, and the signed ones negation, of operands of the type, and the comparisons.
 // A comparison gives the CLR's Boolean until Z# has its own.
 
-
+import { Boolean } from "core:runtime";
 import { operator } from "core:zsharp";
 
 // ---- The types

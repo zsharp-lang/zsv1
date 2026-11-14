@@ -6,7 +6,7 @@
 // compiler needs of them. Importing it makes `fun` a Z# function wherever nothing else
 // compiles one.
 
-
+import { String, Object, Boolean, Int32, List, Dictionary } from "core:runtime";
 import { Module as DotNet_Module } from "pkg:clr/hir";
 import { public, explicitThis } from "pkg:clr/hir";
 import { Instance, Definition, Variable, Type, Named as NamedDefinition, Annotated, Overloadable } from "pkg:zsharp/hir";
@@ -27,7 +27,7 @@ import { CodeLoaders } from "core:zsharp/h2m";
 import { Holder, Held, keep } from "std:zsharp/lowering";
 import { metaTypes, bodies } from "core:zsharp";
 import { entrypoint, definitionLoader, instanceLoader, metaType, binder } from "std:framework";
-
+import { ilLoader } from "core:runtime";
 import { cg, ir, ts, hirLoader, hirCodeLoader, mappedLoader, matching } from "core:compiler";
 import { Function, Positional, Named } from "std:functions";
 
