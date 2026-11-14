@@ -1,5 +1,6 @@
 // std:boolean/truth, as a project: its module, built.
 import { compile, emit } from "core:project";
+import { String } from "core:runtime";
 import { Class as Node } from "pkg:clr/hir";
 import { build } from "std:framework";
 emit(build(compile("truth")));

@@ -6,7 +6,7 @@
 // definition. A platform that exists, as the CLR runtime, is given a capability by a
 // trait.
 
-import { Int32, Boolean } from "core:runtime";
+
 import { Structure, Function, Type } from "pkg:zsharp/lir";
 
 // Polymorphism: a structure's values are objects, which calls on them reach through

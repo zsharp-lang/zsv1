@@ -1,5 +1,6 @@
 // std:modules, as a project: its module, built.
 import { compile, emit } from "core:project";
+import { String, Object, List } from "core:runtime";
 import { Class as Node } from "pkg:clr/hir";
 import { build } from "std:framework";
 

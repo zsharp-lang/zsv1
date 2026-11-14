@@ -4,7 +4,7 @@
 import { compile, emit } from "core:project";
 import { Class as DotNet_Class } from "pkg:clr/hir";
 import { build } from "std:framework";
-import { Object, Type } from "core:runtime";
+import { Object, Type, List, String, Boolean, Int32, Int64, Byte, Dictionary, ilLoader } from "core:runtime";
 import { Path } from Object.Assembly;
 
 import {

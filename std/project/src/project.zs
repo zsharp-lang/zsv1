@@ -12,7 +12,6 @@
 //
 // What to do with what was emitted is the build script's.
 
-import { Object, String, List } from "core:runtime";
 import { Directory, File, Path } from Object.Assembly;
 import { Instance } from "pkg:zsharp/hir";
 import { core, importers } from "core:zsharp";

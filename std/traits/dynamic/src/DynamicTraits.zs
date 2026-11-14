@@ -4,7 +4,6 @@
 // still matched by what its type implements.
 
 import { Traits, Lookup } from "std:traits";
-import { String } from "core:runtime";
 import { Module as DotNet_Module } from "pkg:clr/hir";
 import { Error, Result, IResult } from "pkg:zsharp/core";
 import { CompilerObject } from "pkg:zsharp/mir";
