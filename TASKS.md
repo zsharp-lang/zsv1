@@ -110,8 +110,9 @@ them to its own types when it lowers them, so the runtime is one platform among 
   `Code.Local`. Loading an `Import` evaluates its source (reusing the existing HIR
   runner, the same machinery compile-time evaluation already goes through) and expects
   an `HIR.Instance` back; loading an `ImportedMember` loads its `Import` and calls
-  `CG.Member` on the result. Both are `HIR.Definition`, so the loader's existing
-  per-node cache keeps an import from running twice. `Bodies.Imported` keeps its old
+  `CG.Member` on the result. Both are `HIR.Identity` (see below — not `Definition`,
+  caught on review), so the loader's own cache keeps an import from running twice.
+  `Bodies.Imported` keeps its old
   signature (`IResult<Code.Local?, Error>`, always `null` now) since already-built std
   libraries call it directly — only its insides changed, an additive transition the seed
   survives. This is what the `Code.Local` it replaced couldn't be: specific enough for
@@ -161,7 +162,8 @@ them to its own types when it lowers them, so the runtime is one platform among 
   same module node twice built two different COs. Verified directly, with a counter, both
   times: an import's source evaluated once despite three names used four ways (the
   `Import` case); `LoadModule` called 11 times without the `Module` fix and exactly once
-  with it, for two imports sharing one source. Bootstrap completes.
+  with it, for two imports sharing one source. Bootstrap completes. Folded into
+  `design/imports.md`, `design/code.md` and `design/definitions.md`.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
