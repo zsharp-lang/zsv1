@@ -104,6 +104,21 @@ them to its own types when it lowers them, so the runtime is one platform among 
 
 ## Language and toolchain
 
+- [!] **Blocked (found implementing the below, on `lang/overload-groups`): a chained
+  module-level import fails at load time.** `import { Object } from "core:runtime";
+  import { X } from Object.Assembly;`, both at module level — used in `std/encoding`,
+  `std/zsharp/clr`, `packages/clr/platform`, `packages/package-manager`,
+  `packages/cecil` — fails ("Instance has no member named Object/Assembly/…") once an
+  import is a `Code.Local` for every source, not just a dynamic one. The local's type is
+  `HIR.Infer.Value`, inferred from `import`'s declared return type, `HIR.Instance` — the
+  generic marker, with no members of its own. `cg.Member`'s dispatch (CT, and the RT
+  fallback through `RuntimeDescriptors`) needs a more specific static type than that to
+  generate the access, and doesn't get one until the building code actually runs. Before
+  this change, a constant-sourced import's name was `NamedMember(Get(concreteInstance),
+  name)` on an actual instance, specific enough; a `Code.Local` loses that. Needs a
+  design answer: a better static type for an import's result, or a way for `cg.Member`
+  (`as`'s `IRTCastTo` is the same shape) to resolve against the building-code value once
+  it exists, not only against a declared static type.
 - [ ] **Imports run as their definition is constructed, settled; plan below.** Confirmed
   against `design/documents.md`, `design/definitions.md`, `design/imports.md` and
   `design/code.md`, and against the existing `ContainerCompiler`, `Binder`/`MappedBinder`
