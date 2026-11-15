@@ -25,13 +25,13 @@ If it does, Z# is ready. If the terminal says it has no `zs`, open a new one: a 
 sees what the installer added to your PATH only once it starts.
 
 :::note
-If you installed with `--no-path`, `zs` isn't on your PATH. Run it by its folder instead,
+If you installed with `--no-path`, the `zs` command isn't on your PATH. Run it by its folder instead,
 as `<folder>/bin/zs hello.zs`.
 :::
 
 ## What happened
 
-Before the script's first line, `zs` imported the [prelude](../advanced/prelude.md),
+Before the script's first line, the `zs` command imported the [prelude](../advanced/prelude.md),
 which sets up the standard definitions every script relies on. Then the script ran, one
 statement at a time:
 

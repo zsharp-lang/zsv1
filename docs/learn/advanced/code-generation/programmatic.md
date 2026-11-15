@@ -1,8 +1,12 @@
 # Programmatic code generation
 
-A definition's node is an object like any other, so code can build one by hand, or change
-one that a cast built. Declarative and programmatic generation mix freely: the usual way
-is to cast what can be written, keep it in a variable, and add what depends on data.
+A cast builds what you can write down. Some of what a generator builds depends on data
+instead: a statement per item of a list, a field per column. For that, code builds the
+nodes itself. A definition's node is an object like any other, so code can build one by
+hand, or add to one that a cast built.
+
+The two mix freely: the usual way is to cast what can be written, keep it in a variable,
+and add what depends on data.
 
 ## The nodes
 

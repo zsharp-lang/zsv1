@@ -1,5 +1,9 @@
 # Compiler objects
 
+The previous page's `NumberObject` only had a type and a way to lower. A CO for a real
+definition does more: it can be called, have members, convert, be assigned. This page
+goes through how a CO says which of those it does.
+
 A CO is what the compiler works with. It is opaque: the one thing every CO is, is a
 `CompilerObject`, and everything else it can do, it does by implementing a capability, an
 interface of the operation it takes part in.

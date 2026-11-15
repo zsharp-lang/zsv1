@@ -1,6 +1,6 @@
 # The runtime
 
-The runtime is the platform `zs` runs code on: the running .NET process. It realizes LIR
+The runtime is the platform the `zs` command runs code on: the running .NET process. It realizes LIR
 with Reflection.Emit, as a dynamic assembly, as code is compiled, so a script's statements
 run as soon as they are lowered.
 

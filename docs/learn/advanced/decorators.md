@@ -1,7 +1,10 @@
 # Decorators and compile time
 
-Code that builds a definition runs as the definition is compiled, so Z# code can take
-part in compiling: it can change what is built, and run while it is.
+A definition often needs something done to it that has nothing to do with what it
+computes: registering it somewhere, checking it, recording what it is for. Written by
+hand, that code lives apart from the definition and drifts away from it. Since a
+definition is built by code as it is compiled, Z# lets other code take part right there:
+it can look at what is built, change it, or run while it is.
 
 ## Decorators
 

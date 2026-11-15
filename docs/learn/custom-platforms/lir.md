@@ -1,9 +1,13 @@
 # LIR
 
-LIR is the low-level language a platform reads: what was lowered, resolved and closed, so
-a platform can handle all of it. It is minimal on purpose. Higher-level concepts, as
-classes, generics with constraints or named parameters, stay in HIR, and are lowered to
-LIR's few concepts by their COs.
+A platform has to read whatever lowering gives it. If that were Z#'s classes and
+functions, every platform would need to know all of them, and every new kind of
+definition. Instead, lowering gives LIR: a small language of what runs, which every
+definition lowers to, so a platform reads only that.
+
+Core LIR is resolved and closed, so a platform can handle all of it. It is minimal on
+purpose: higher-level concepts, as classes, generics with constraints or named parameters,
+stay in HIR, and are lowered to LIR's few concepts by their COs.
 
 ## Definitions
 

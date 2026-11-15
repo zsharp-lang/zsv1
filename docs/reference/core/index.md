@@ -3,7 +3,7 @@
 The core libraries, `core:`, are the toolchain's own, in C#: what Z# reaches of .NET, of
 the toolchain and of the compiler. What `core:` holds is what the running toolchain puts
 there, as [the `core:` namespace](../../learn/advanced/core-namespace.md) says; these are
-what `zs` puts. The core *languages*, HIR, MIR and LIR, are on the pages after this one.
+what the `zs` command puts. The core *languages*, HIR, MIR and LIR, are on the pages after this one.
 
 ## core:runtime
 

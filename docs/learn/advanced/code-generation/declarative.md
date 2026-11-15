@@ -1,9 +1,15 @@
 # Declarative code generation
 
-Every definition is built by code. Written as a statement, a definition is built and
-loaded where it is, and its name is bound to what it defines. Cast to its meta-type, it is
-built and not loaded: the cast gives the definition's node, its HIR, as a value. That is
-code generation written as declarations.
+Sometimes the definitions a program needs aren't known when it is written: a class per
+table of a database, a function per message of a protocol, a module per configuration.
+Writing them by hand means writing the same thing many times, and keeping it in step.
+Code generation is having the program build them instead.
+
+In Z#, that starts from something you've already seen: every definition is built by code.
+Written as a statement, a definition is built, loaded and named where it is. Cast to its
+meta-type, it is built and not loaded: the cast gives the definition's node, its HIR, as
+a value your code can keep, change and use. That is code generation written as
+declarations.
 
 ## Casting a definition
 

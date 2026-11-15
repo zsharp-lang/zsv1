@@ -1,14 +1,18 @@
 # Dialects
 
-LIR can be extended, as every language of Z# can, and an extension that only some
-platforms read is a dialect. The CLR has one, `pkg:clr/lir`: handles of .NET's types and
-methods, `ClrCode` of IL a function holds as it is, references by address, class
-definitions, and the metadata `Polymorphic`, `MethodOf`, `CastDown` and `TypeTest`. A
-`ClrPlatform`, as the runtime and the Cecil platform are, realizes it.
+Some code only makes sense on one platform: a call of a .NET method, a class .NET must see
+as its own. Lowering it to core LIR would be pretending it runs anywhere. It lowers to LIR
+of that platform's own instead.
+
+LIR can be extended, as every layer of Z# can, and an extension that only some platforms
+read is a dialect. The CLR has one, `pkg:clr/lir`: handles of .NET's types and methods,
+`ClrCode` of IL a function holds as it is, references by address, class definitions, and
+the metadata `Polymorphic`, `MethodOf`, `CastDown` and `TypeTest`. A `ClrPlatform`, as the
+runtime and the Cecil platform are, realizes it.
 
 ## What may refer to what
 
-The same rule holds within LIR as between languages, which never refer to each other:
+The same rule holds within LIR as between layers, which never refer to each other:
 
 - **Core LIR refers only to core LIR.** Every platform can realize it.
 - **A dialect's LIR refers to its own dialect, or to core LIR.** Only the dialect's

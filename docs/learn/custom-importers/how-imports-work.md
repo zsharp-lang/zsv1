@@ -1,10 +1,13 @@
 # How imports work
 
-An importer is a frontend: it takes a source and gives HIR, a description of what it
-imports, whatever that was before. A .NET assembly, a document of Z#, a package: each is
-imported by something that gives HIR, and anything else can be imported by giving an
-importer for it. This page goes through what an import is, so the pages after it can say
-where an importer plugs in.
+Everything a script uses, it imports: a library, a document, a .NET assembly. Each of
+those is a different kind of thing, but an import treats them alike, because what an
+import gives is always a description of what it imported, as HIR. That is what lets you
+import kinds of things Z# knows nothing about: give an importer for them, and they are as
+importable as an assembly.
+
+An importer is a frontend: it takes a source and gives HIR. This page goes through what an
+import is, so the pages after it can say where an importer plugs in.
 
 ## An import is a call
 

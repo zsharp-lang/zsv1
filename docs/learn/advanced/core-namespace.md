@@ -1,9 +1,12 @@
 # The core: namespace
 
-`core:` is where code reaches the toolchain that runs it. The standard library is
-the same wherever it runs; `core:` is not: what it holds is what the running toolchain
-put there, so a script run by `zs` and a project's module file run by the project
-compiler see different libraries under it.
+The standard library is the same wherever it runs. But some of what code needs isn't a
+definition a library could carry: the compiler compiling it, the platform it runs on, the
+arguments it was given. Those are live objects of the toolchain that runs the code, and
+`core:` is where code reaches them.
+
+So what `core:` holds depends on the toolchain running: a script run by the `zs` command
+and a project's module file run by the project compiler see different libraries under it.
 
 ## What it is for
 

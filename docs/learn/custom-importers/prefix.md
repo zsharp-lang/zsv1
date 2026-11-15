@@ -1,7 +1,11 @@
 # Custom prefix importers
 
-A string source with a prefix, as `std:io` or `pkg:lsp`, is routed by `core:zsharp`'s
-`importers` to what is registered for the prefix, which is given the rest of the string.
+Some libraries aren't files: they live in a store, behind a URL, or are made on demand.
+A prefix gives such a source a kind of its own, as `std:` and `pkg:` do, so the rest of
+the string is whatever that kind needs.
+
+A string source with a prefix is routed by `core:zsharp`'s `importers` to what is
+registered for the prefix, which is given the rest of the string.
 `importers.Register(prefix, importer)` adds a prefix.
 
 ## A prefix of greetings

@@ -16,7 +16,7 @@ package manager's.
 
 | Library | What it gives |
 |---|---|
-| [`std:prelude`](std/libraries/prelude.md) | The standard definitions, installed: what `zs` imports into every script. |
+| [`std:prelude`](std/libraries/prelude.md) | The standard definitions, installed: what the `zs` command imports into every script. |
 | [`std:io`](std/libraries/io.md) | `print`. |
 | [`std:oop`](std/libraries/oop.md) | Classes and interfaces: `Class`, `Interface`, `static`, `class`. |
 | [`std:types`](std/libraries/types.md) | `Type[T]`, the type of a definition's value. |

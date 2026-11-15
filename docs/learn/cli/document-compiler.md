@@ -32,7 +32,7 @@ two documents that import each other are an error.
 
 ## The script and the documents it imports
 
-The script `zs` runs is the first document. A document it imports is run when the import
+The script the `zs` command runs is the first document. A document it imports is run when the import
 is, with its own scope: it has only what it imports itself, and the prelude isn't imported
 for it. A project's module file is a document too, which the project compiler runs, with
 `core:project`.

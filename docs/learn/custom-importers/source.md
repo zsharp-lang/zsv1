@@ -1,5 +1,9 @@
 # Custom source importers
 
+A string names what to import. Sometimes what you have isn't a name but the thing itself:
+an assembly already loaded, a schema already read, a connection already open. Turning it
+back into a string to import it would lose it.
+
 An import's source is an expression, and the import is a call of the language's `import`
 function with it. So an import from a source that isn't a string is another overload of
 `import`: a function marked as one of the functions the syntax `import` stands for.

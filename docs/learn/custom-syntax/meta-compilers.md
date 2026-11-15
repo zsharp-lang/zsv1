@@ -1,8 +1,10 @@
 # Meta-compilers
 
-A meta-compiler is what builds a [meta-type](meta-types.md)'s node from what was
-written. It is the part of a kind of definition that the frontend calls: given the AST of
-a `def`, a `fun` or a `module` of its meta-type, it gives the code that builds the node.
+A meta-type says what a kind of definition is. Something still has to turn what was
+written, a `def`, a `fun` or a `module`, into that kind's node: that is its meta-compiler,
+the part of a kind of definition the frontend calls. Given the AST of a definition of its
+meta-type, it gives the code that builds the node.
+
 This page's samples are from `std:functions`, whose sources ship in every install, in
 `std/functions`.
 

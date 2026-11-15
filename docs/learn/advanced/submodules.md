@@ -1,22 +1,12 @@
 # Submodules
 
-A project can hold more than one module. A folder in it with a module file of its own is
-a submodule: its sources are a module of their own, and its module file says what
-building it gives.
+A [project](../basics/projects.md) compiles its sources as one module. That is right
+until one project holds things that shouldn't share their names, or that are built
+differently: an application and the build-time utilities it uses, or a library and its
+tests. Submodules let one project hold several modules.
 
-```text
-src/
-  .zs                emit(compile("Shop"));
-  items.zs
-  prices.zs
-  text/labels.zs
-  greetings/
-    .zs              emit(compile());
-    hello.zs
-```
-
-Here `src` is the project's root submodule, and `greetings` is a submodule of it.
-`text` has no module file, so `labels.zs` is a source of `Shop`, as `items.zs` is.
+A folder in a project with a module file of its own is a submodule: its sources are a
+module of their own, and its module file says what building it gives.
 
 ## What each one sees
 

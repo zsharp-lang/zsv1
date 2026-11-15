@@ -1,9 +1,14 @@
 # Custom file suffix importers
 
+A project may come with files that aren't code but that its code wants: a schema, a
+configuration, a set of messages. Importing them as data means reading and parsing them
+by hand wherever they are used. An importer for their extension makes them imports like
+any other.
+
 A source with no prefix is a file, and a file is imported by what is registered for its
-extension in `core:zsharp`'s `files`. `.zs` and `.dll` are registered that way. A library
-registers another with `files.Register(extension, importer)`, where the importer is given
-the file's full path and gives what importing it gives, or why it can't.
+extension in `core:zsharp`'s `files`, as `.zs` and `.dll` are. A library registers another
+with `files.Register(extension, importer)`: the importer is given the file's full path,
+and gives what importing it gives, or why it can't.
 
 ## An importer of text files
 

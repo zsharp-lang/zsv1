@@ -5,7 +5,7 @@ A library is imported as `std:name`; one with a part, as `std:project/core`.
 
 | Library | What it is |
 |---|---|
-| [`std:prelude`](libraries/prelude.md) | What `zs` imports before a script: the standard definitions, installed. |
+| [`std:prelude`](libraries/prelude.md) | What the `zs` command imports before a script: the standard definitions, installed. |
 | [`std:io`](libraries/io.md) | `print`. |
 | [`std:oop`](libraries/oop.md) | Z#'s classes and interfaces. |
 | [`std:types`](libraries/types.md) | `Type[T]`, the type of a definition's value. |

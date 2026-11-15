@@ -1,8 +1,9 @@
 # Common REIs
 
-The compiler's operations are grouped in REIs, sets of replaceable entrypoints. A CO takes
-part in them through its capabilities, and code that works with COs calls them. These are
-the ones a CO most often meets, each reached from Z# through `core:compiler`.
+A CO says what it does through its capabilities. What asks it is the compiler's
+operations, which code that works with COs calls in turn: a call, a member, a cast, a
+lowering. They are grouped in REIs, sets of replaceable entrypoints, each reached from Z#
+through `core:compiler`. These are the ones a CO most often meets.
 
 ## CG: code generation
 

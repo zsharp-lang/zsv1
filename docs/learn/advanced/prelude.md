@@ -1,7 +1,7 @@
 # The prelude
 
 Almost everything Z# has is defined in its standard library, not by the toolchain: even
-what `fun` and `def` mean. The prelude, `std:prelude`, is what installs it. `zs` imports
+what `fun` and `def` mean. The prelude, `std:prelude`, is what installs it. The `zs` command imports
 it before a script's first statement, as if `import "std:prelude";` were written there:
 
 ```zs
@@ -55,7 +55,7 @@ import "std:prelude";
 
 ## Changing it
 
-The prelude is a document, `std/prelude.zs`, in the toolchain's folder. Only `zs` imports
+The prelude is a document, `std/prelude.zs`, in the toolchain's folder. Only the `zs` command imports
 it, and only for the script it runs: a document a script imports, or a project's module
 file, imports what it needs itself.
 

@@ -1,9 +1,11 @@
 # Source maps
 
-Where code was written is carried from the parser to the platform, so a platform can write
-debugging information: a stack trace that names a `.zs` file and its line, a debugger that
-steps through Z#. None of the languages knows about it. It is an annotation of what holds
-code, in a library of its own, `pkg:zsharp/sourcemap`.
+A stack trace that names a generated method, or a debugger that steps through IL, isn't
+much help to someone who wrote Z#. A platform that writes debugging information needs to
+know where each piece of code was written, all the way from the parser.
+
+That is carried as source maps. None of the layers knows about them: they are an
+annotation of what holds code, in a library of its own, `pkg:zsharp/sourcemap`.
 
 ## The chain
 

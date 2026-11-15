@@ -1,9 +1,12 @@
 # The CLI pipeline
 
-`zs` is the guides before this page put together: a frontend, the core's dispatchers and
-loaders, importers and a platform, set up once, in C#, before a script runs. Everything
-it sets up is what the script then reaches through `core:`. This page goes through what
-`zs` sets up, in the order it does.
+Every script so far ran with the `zs` command, which set everything up before the
+script's first line. The guides before this page each described one part that can be
+replaced: a frontend, dispatchers, loaders, importers, a platform. The Z# CLI is those
+parts put together, once, in C#, before a script runs, and what it sets up is what the
+script then reaches through `core:`.
+
+This page goes through what the CLI sets up, in the order it does.
 
 ## The compiler
 
@@ -28,7 +31,7 @@ are compiled with `ir` for the runtime, and the runtime executes the LIR.
 ## Libraries
 
 - **`std:`** has `std:io`, which is C#, and falls back to the standard library's folder,
-  `std` above where `zs` is: a library there is its build, `std/name/build/name.dll`, or
+  `std` above where the `zs` command is: a library there is its build, `std/name/build/name.dll`, or
   else its document.
 - **`core:`** has `core:compiler`, `core:runtime`, `core:diagnostics` and `core:zsharp`,
   and the compiler's layers, `core:zsharp/h2m`, `core:zsharp/mir/...`, `core:zsharp/m2l`
@@ -54,7 +57,7 @@ own.
 
 ## Then the script
 
-`zs` runs the script as a document, with `import "std:prelude";` before its first
+The `zs` command runs the script as a document, with `import "std:prelude";` before its first
 statement unless it is given `--no-prelude`, and what follows the script on the command
 line as `core:zsharp`'s `arguments`. From there the script decides the rest: what to
 import, what to compile and where it goes.

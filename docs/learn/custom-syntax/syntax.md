@@ -1,11 +1,15 @@
 # Custom syntax
 
+Everything so far was written in Z#'s syntax. But a library may want syntax of its own,
+for what it makes common: a query, a state machine, a grammar. Before changing what can
+be written, it helps to know what reads it.
+
 The Z# frontend is two parts: a **parser**, which reads text into an AST, and an **AST
-compiler**, which builds HIR from the AST. Both are extensible, and neither is fixed by
-the core: to everything after it, only the HIR the frontend gives counts.
+compiler**, which builds HIR from the AST. Both are extensible, and neither is the core's:
+to everything after the frontend, only the HIR it gives counts.
 
 This part of the guide is about that frontend: the syntax it reads and the definitions it
-builds. The rest of the toolchain doesn't know it exists.
+builds.
 
 ## The parser
 

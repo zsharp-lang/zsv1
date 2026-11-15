@@ -1,9 +1,15 @@
 # How REIs work
 
-An REI, a replaceable entrypoints interface, is a set of operations whose signatures are
-fixed and whose behavior is whatever is installed. `cg`, `ts`, `ir`, the HIR loader,
-matching and overloading are all REIs. Each entrypoint is a delegate, a property that can
-be set, and setting one changes how that operation is done everywhere.
+Some behavior belongs to no single object: a conversion every value of one kind has, or a
+relation between two types neither knows about. A CO can't provide it, since it isn't the
+CO's. What provides it is a dispatcher: code that changes how an operation is done, for
+every object.
+
+The operations a dispatcher changes are the compiler's REIs, replaceable entrypoints
+interfaces. An REI is a set of operations whose signatures are fixed and whose behavior is
+whatever is installed: `cg`, `ts`, `ir`, the HIR loader, matching and overloading are all
+REIs. Each entrypoint is a delegate, a property that can be set, and setting one changes
+how that operation is done everywhere.
 
 ## What an REI specifies
 

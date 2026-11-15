@@ -1,11 +1,13 @@
 # Capabilities
 
-Core LIR is what every platform can realize. A platform that can do more, as one with
-objects and virtual calls, says so with a capability: an interface it implements. A CO
-lowering for a target asks for a capability by matching the target against it, and
-lowers to the richest form the target has, or to a plainer one made of core LIR.
+A class lowers to core LIR as a record of fields with a table of functions, which any
+platform can run. But a platform with objects and virtual calls of its own, as .NET, can
+do better: realize the class as one of its classes. For that, the class's CO has to know
+the platform can, without knowing which platform it is.
 
-So a CO never asks what platform it lowers for, only what it can do.
+That is a capability: an interface a platform implements to say what it can do. A CO
+lowering for a target asks for a capability by matching the target against it, and lowers
+to the richest form the target has, or to a plainer one of core LIR.
 
 ## The standard capabilities
 

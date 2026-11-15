@@ -1,5 +1,10 @@
 # Platforms
 
+The runtime runs code as it is compiled, and the Cecil platform writes it as a .NET
+assembly. Code meant for elsewhere, a browser, a microcontroller, another language's
+runtime, needs a platform of its own. In Z#, writing one doesn't mean changing the
+compiler: a platform is just what reads the low-level code lowering gives.
+
 To Z#, a platform is nothing in particular. Lowering takes a target, an object, and gives
 LIR for it; something then makes that LIR run, or writes it somewhere. That something is a
 platform, and Z# asks nothing of it but that it read LIR. So a platform is a library like

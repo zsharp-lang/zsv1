@@ -1,8 +1,11 @@
 # Reflection
 
-Reflection gives the node a definition was built from, as code runs: its HIR, the same
-structure the compiler worked with. It is opt-in: what a library carries for it, it
-carries only if it was built to.
+A program sometimes needs to know what it is made of as it runs: the fields of a class,
+to save its objects; the functions of a module, to expose them; the definitions of a
+library, to document them. Reflection gives that: the node a definition was built from,
+its HIR, the same structure the compiler worked with and code generation builds.
+
+It is opt-in: a library carries what reflection reads only if it was built to.
 
 ## Building a library that can be reflected on
 

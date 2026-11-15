@@ -1,6 +1,6 @@
 # Documents
 
-Every file of Z# is a document, and the script `zs` runs is one too. Another document is
+Every file of Z# is a document, and the script the `zs` command runs is one too. Another document is
 imported by its path, relative to the one importing it, which is how a script is split
 across files.
 

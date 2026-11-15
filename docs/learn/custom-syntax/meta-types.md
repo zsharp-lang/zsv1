@@ -1,6 +1,12 @@
 # Meta-types
 
-A meta-type is a kind of definition. A class, a function and a module are each a
+Classes, functions and modules cover most programs. Some domains have definitions of their
+own, though: an entity of a database, a message of a protocol, a state of a machine. In
+most languages, those are classes with attributes on them, and whatever reads them decodes
+the attributes. In Z#, they can be definitions of their own kind, as first-class as a
+class.
+
+A kind of definition is a meta-type. A class, a function and a module are each a
 definition of a meta-type, and the meta-type is the type of the node that describes it:
 `std:oop`'s `Class`, `std:functions`' `Function`, `std:modules`' `Module`. None of them is
 built into the compiler. Each is defined by a library, and a library of yours can define
