@@ -1,12 +1,26 @@
 # Forking the toolchain
 
-A fork is a toolchain made from another one: it starts with what the other has, and what
-it changes, it changes for itself alone. It is how a part of the code is compiled its own
-way, as a class's body compiles a `let` as a field, without the rest of the code seeing
-any of it.
+A build script and the project it builds run on the same toolchain: the same compiler, the
+same operators, the same kinds of definitions. Most of the time that is what you want,
+since the project's code means what the script's code means. But it mixes things in a few
+ways:
 
-This page says what can be forked today, what a fork shares with the toolchain it came
-from, and where the toolchain forks itself.
+- **The same syntax means different things in different places.** A `let` in a script is
+  a local of the script, in a module a global, in a class a field, and in a function a
+  local of the function. Whatever compiles a module's body can't compile `let` the way the
+  script around it does.
+- **What a project installs, the build script gets.** A project's code can add operators,
+  kinds of definitions and dispatchers as it is compiled. They are installed for the
+  toolchain, so the build script, and every project it compiles after, has them too.
+- **A part of the code may need its own rules**, as a sandbox for code you don't trust, or
+  a project compiled with a frontend of its own.
+
+What these ask for is a toolchain that starts as the one running, and that one part of the
+code can change without the rest seeing it. That is a fork: a toolchain made from another,
+which changes what it changes for itself alone.
+
+This page says what forks today, what a fork still shares with the toolchain it came from,
+and where the toolchain forks itself.
 
 ## What a fork is today
 
@@ -82,7 +96,8 @@ Each place a definition compiles its contents its own way is a fork:
 
 ## What can't be forked yet
 
-Everything in the table above is shared, so a build can't yet compile part of its code
-with other operators, other meta-types or other dispatchers without changing them for all
-of it. An extension installed while one module is compiled is installed for everything
-compiled after it.
+So a fork solves the first problem above, the same syntax meaning different things in
+different places, and not the other two. Everything in the table is shared, so a build
+can't yet compile part of its code with other operators, other meta-types or other
+dispatchers without changing them for all of it, and an extension installed while one
+module is compiled is installed for everything compiled after it.
