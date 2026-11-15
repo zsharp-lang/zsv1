@@ -116,8 +116,10 @@ To be designed. Settled so far:
 - `Parameter` and `Local` are both `Variable`s, read and written the same way.
   A `Block` declares its locals, in both LIR and `HIR.Code`.
 - LIR is not a form of HIR, although they share a shape. HIR is unresolved and
-  open to extension. LIR is resolved and closed, so a target can handle all of
-  it. It is the contract between frontends on one side and targets on the other.
+  open to extension. LIR is resolved, and its core is closed, so a target can handle
+  all of core LIR. It is the contract between frontends on one side and targets on
+  the other. A dialect extends LIR for its platforms, as [layering](layering.md)
+  records.
 - It is mainly a minimal common language for targets to use. Higher-level
   concepts belong in HIR, not in LIR.
 - It is target agnostic. Example targets are the web (HTML, CSS, JS and

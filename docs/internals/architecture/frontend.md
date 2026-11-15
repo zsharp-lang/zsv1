@@ -125,24 +125,8 @@ a custom type gets into the language to be used as a meta-type.
   module's generic types are found by their name without their arity, all arities as
   overloads. What is live is under `core:`: `core:zsharp` gives `metaTypes` and
   `bodies`, and `core:compiler` gives `mappedLoader` and `mappedCodeLoader`.
-- A CO lowers for the target it is given, and passes it on to what it lowers, so a
-  Z# function lowers its code for the target its call is compiled for.
-- Lowering is to be by capability: a CO asks the target what it can do and lowers to
-  the richest form the target has, or to a shallow one built of LIR's core. The CLR has
-  polymorphism, so a Z# class can be a class there, and a target without it gets
-  records, tables of functions and `CallIndirect`. A capability is standard, not a
-  platform's: its LIR nodes and what they mean are part of the standard, in
-  `pkg:zsharp/lir`, and each platform implements those it can. So an LIR structure is a
-  record of fields, and how it is laid out is the target's.
-- The minimal target is a platform that writes LIR modules as they are, written in pure
-  Z#, which shows how Z# defines a platform. It comes after classes.
-- A capability is an interface, and a CO checks for it by matching the target against
-  it. It doesn't produce LIR: it marks the LIR the CO builds with metadata of its own, as
-  a platform with polymorphism marks a structure polymorphic, so what it adds is opaque
-  and the CO still builds the definition. The CLR's own entities lower without
-  capabilities, by matching the runtime directly. A capability is given to a platform
-  that exists, as the CLR runtime, by a trait: an implementation of the capability for
-  the platform's type, which the trait dispatchers make the platform match.
+- Lowering, capabilities and platforms are not the frontend's: [layering](layering.md)
+  records them.
 - Finding the meta-compiler of a meta-type is an operation, `MetaTypes.Find`: what is
   registered for the meta-type is one way to find it, and whatever replaces it may find
   one some other way and ask what it replaced, as by what a meta-type is an instance of,
@@ -167,16 +151,6 @@ a custom type gets into the language to be used as a meta-type.
   calls what looks the implementation up by the value's runtime type, so an `Object`
   holding a value of an implementing type matches the trait. It applies to traits that
   have an implementation when the code is compiled. The prelude installs both.
-- `std:zsharp/capabilities` has the first capability, `Polymorphism`, an interface
-  written in Z#: a structure's values are objects of a class, or of anything that
-  implements an interface, a class implements an interface, and a function is a method of
-  one. `std:zsharp/clr` gives it to the CLR runtime by a trait, whose implementation marks
-  the LIR with the runtime's own metadata, `Polymorphic` and `MethodOf`. The runtime
-  realizes the polymorphic structures of a module as one batch of CLR classes and
-  interfaces, with the functions marked as theirs as their methods: a call of one is a
-  method call, a new value of one is a new object, and its fields are reached through the
-  object. A CO lowering for the runtime, which it sees as an `Object`, matches it against
-  `Polymorphism` through the dynamic trait dispatchers. The prelude installs both.
 - `std:oop` is Z#'s class, in Z#. Its nodes are `Class`, `Field`, `Method`,
   `Constructor` and `Receiver`, the object a method or constructor runs on, and a
   method's parameters are `std:functions`' own. The class meta-compiler compiles its body

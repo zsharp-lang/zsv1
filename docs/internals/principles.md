@@ -3,6 +3,15 @@
 These are the ideas Z# is built on. The record of each decision, and why it was made, is
 the toolchain's design document, [the architecture](architecture/index.md).
 
+## Languages that never mix
+
+Z# is a chain of languages, HIR, MIR and LIR at its core, with a frontend's before it and
+a platform's after it. A language never refers to another: only a transformation goes
+between two, and it only translates. Z# itself defines only the transformations between
+its core languages, so a frontend, a platform, or a new kind of definition is an
+extension, which the core doesn't know about. [Layering](architecture/layering.md)
+records the rules each part keeps.
+
 ## A language whose definitions are its own
 
 Most languages fix their kinds of definitions: a class, a function and a module are what

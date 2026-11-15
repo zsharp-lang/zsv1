@@ -9,6 +9,7 @@ It is split into pages, read in this order:
 
 - [Principles and implementation](principles.md)
 - [The three cores](cores.md)
+- [Layering](layering.md)
 - [REI: Replacable Entrypoints Interface](rei.md)
 - [CLR target](clr.md)
 - [Composition and execution](composition.md)

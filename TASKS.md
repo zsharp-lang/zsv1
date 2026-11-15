@@ -448,14 +448,17 @@ packages, the core languages, the Z# language as a specification, the runtime) a
 Internals (principles, the bootstrap, and `docs/internals/architecture/`).
 
 - [x] The Starlight site, the new structure, and the existing pages moved into it.
-- [ ] Every page marked "To be written".
-- [ ] The existing pages, rewritten for where they are now: the home page's contents
-  list, the libraries split into a page each, and `reference/std/index.md` against the
-  libraries' READMEs.
-- [ ] `docs/internals/architecture/`, rewritten so the layering is stated: the layers as languages that never
-  refer to each other, the transformations between them and which of them are the core's,
-  LIR dialects and pure capabilities, what a CO may rely on, opt-in everywhere, and
-  preservability as a concept for implementors.
+- [x] Every page marked "To be written", but one:
+  - [ ] **Forking the toolchain** (`learn/advanced/build-scripts/toolchain-fork.md`): what
+    forking the toolchain means for a build script isn't settled.
+- [x] The existing pages, rewritten for where they are now, and each standard library a
+  page of its own.
+- [x] The layering stated, in `docs/internals/architecture/layering.md`: the layers as
+  languages, the transformations and which are the core's, LIR dialects and pure
+  capabilities, what a CO may rely on, opt-in everywhere, and preservability as a concept.
+  The capability rules moved there from `frontend.md`.
+- [ ] The rest of the architecture record, gone through against the layering, as each
+  part is rewritten in Z#.
 
 ## Done
 
