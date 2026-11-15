@@ -477,6 +477,12 @@ Internals (principles, the bootstrap, and `docs/internals/architecture/`).
   - [ ] Installation: a guide, once the installer is what it is to be.
   - [ ] The standard types as built-in names: the prelude imports them, and the docs use
     them, not .NET's (`Int32`, `String`), which the prelude page then explains.
+  - [ ] **Integrate the standard types properly**, which the item above needs first. `I8`
+    to `U64`, `F16` to `F64` and `Bool` exist, but literals are .NET's (`42` is an
+    `Int32`), nothing converts implicitly (`let x: I32 = 5;` and `twice(5)` for an `I32`
+    parameter both fail), comparisons give .NET's `Boolean` and a condition takes only
+    that, and there is no standard `String`, character, array, collection or function
+    type. So every use is a cast, `5 as I32`, and back for .NET's calls.
   - [ ] `Void`, a standard type, and a function that returns nothing inferring it.
   - [ ] Whether a method's `this` is implicit or explicit by default; Classes says what is
     decided.
