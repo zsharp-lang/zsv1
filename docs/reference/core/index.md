@@ -1,7 +1,9 @@
 # The core libraries
 
-The core libraries are the toolchain's own, in C#: what Z# reaches of .NET, of the
-toolchain and of the compiler.
+The core libraries, `core:`, are the toolchain's own, in C#: what Z# reaches of .NET, of
+the toolchain and of the compiler. What `core:` holds is what the running toolchain puts
+there, as [the `core:` namespace](../../learn/advanced/core-namespace.md) says; these are
+what `zs` puts. The core *languages*, HIR, MIR and LIR, are on the pages after this one.
 
 ## core:runtime
 
@@ -74,19 +76,5 @@ library that extends Z# is written against:
 
 ## The toolchain's packages
 
-Definitions with no state of their own, under `pkg:`. The toolchain gives them, so they
-are there before the package manager is:
-
-| Package | What it is |
-|---|---|
-| `pkg:zsharp/core` | What every layer shares, as `Error` and `Result`. |
-| `pkg:zsharp/hir`, `pkg:zsharp/hir/code` | HIR, and its code. |
-| `pkg:zsharp/mir` | MIR: the compiler objects. |
-| `pkg:zsharp/lir` | LIR. |
-| `pkg:zsharp/lang/hir`, `/ast`, `/parser`, `/syntax`, `/tokenizer` | The language: its HIR, its AST, and what reads source. |
-| `pkg:clr/hir` | The CLR's HIR: `Class`, `Module`, `Interface` and the rest; their decorators, as `public`, `static`, `virtual`, `override` and `explicitThis`, which makes a method's first parameter its object; and `Ref` and `Out`, the types of parameters passed by reference. |
-| `pkg:clr/lir` | The CLR's LIR, as `ClrPlatform`. |
-| `pkg:clr/platform` | What a build of a .NET assembly needs, as `bundle`. |
-
-A name of the CLR's HIR that is also one of Z#'s is renamed on import, as
-`import { Class as DotNet_Class } from "pkg:clr/hir";`.
+The toolchain's packages, under `pkg:`, are definitions with no state of their own:
+[the Z# packages](../packages/zsharp.md) and [the CLR packages](../packages/clr.md).
