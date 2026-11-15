@@ -315,7 +315,7 @@ fun lowerCode(body: Code, function: LIRFunction, returned: CompilerObject, param
 fun lowerDefined(body: Code, function: LIRFunction, returned: CompilerObject, target: Object): Error {
     let outer = CodeLoaders.Returns;
     CodeLoaders.Returns = returned;
-    let loaded = hirCodeLoader.LoadStatement(body.Block);
+    let loaded = CodeLoaders.Load(body, function);
     CodeLoaders.Returns = outer;
     if (loaded.IsError) return loaded.UnwrapError();
 

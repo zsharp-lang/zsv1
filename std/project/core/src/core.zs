@@ -60,6 +60,7 @@ fun run(submodule: Submodule) {
 
 fun parse(path: String): List[StatementSyntax] {
     let parser = Parser(Tokenizer.Tokenize(TextStream(File.ReadAllText(path))));
+    parser.Source = Path.GetFullPath(path);
     return Grammar.Parse(parser).Statements;
 }
 

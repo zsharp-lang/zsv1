@@ -25,6 +25,7 @@ namespace ZSharp.Toolchain
                 ("zsharp/lang/parser", typeof(Parser.Parser).Module),
                 ("zsharp/lang/syntax", typeof(Syntax.Grammar).Module),
                 ("zsharp/lang/tokenizer", typeof(Tokenizer.Tokenizer).Module),
+                ("zsharp/sourcemap", typeof(SourceMapping.SourceMap).Module),
                 ("clr/hir", typeof(Package.DotNet.Class).Module),
                 ("clr/lir", typeof(LIR.CLR.ClrType).Module),
             ];

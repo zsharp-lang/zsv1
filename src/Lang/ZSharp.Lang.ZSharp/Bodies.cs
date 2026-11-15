@@ -117,18 +117,28 @@ namespace ZSharp.Lang
             if (body is null)
                 return new ErrorMessage("A body is required here.");
 
-            if (BuiltBy(compiler, block, () => compiler.CompileStatement(body)).When(out var statement).Error(out var error))
+            // The body is code from the start: it is compiled where what is said of where its
+            // statements were written is said of it, and reified with that, so what is built
+            // says so of its own.
+            // It is in what builds the code, so it offers what that context does too.
+            var code = new Code.Code();
+            var maps = SourceMapping.CodeMaps.In(code);
+
+            if (BuiltBy(compiler, block, () => compiler.Contexts.Within(
+                CapabilityContext.Of(compiler.Contexts.Current, maps),
+                () => compiler.CompileStatement(body)
+            )).When(out var statement).Error(out var error))
                 return error;
 
-            var code = statement as Code.Block ?? new Code.Block(statement!);
+            code.Block.Statements.Add(statement as Code.Block ?? new Code.Block(statement!));
 
-            if (ZSharp.Compiler.Current.HIRReifier.ReifyStatement(code).When(out var reified).Error(out error))
+            if (ZSharp.Compiler.Current.HIRReifier.ReifyCode(code).When(out var reified).Error(out error))
                 return error;
 
             block.Statements.Add(new Code.ExpressionStatement(new Code.Set
             {
                 Target = Member(owner, "Body"),
-                Value = Node("CodeOf", reified!)
+                Value = reified!
             }));
 
             return null;

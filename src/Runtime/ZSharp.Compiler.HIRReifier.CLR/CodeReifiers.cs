@@ -77,7 +77,57 @@ namespace ZSharp.Compiler
 
             // Anything else is placed as an object that already exists.
             values.Register<object>(value => Ok(new Code.Get(il.Expose(value))));
+
+            reifier.ReifyCode = Reify;
+
+            // A statement of code that says where its statements were written is put in what
+            // the code that is built says of its own, as it is built. The map is code, not an
+            // object of this process, so the building code needs nothing but itself, and can
+            // be written to a binary too.
+            var reifyStatement = reifier.ReifyStatement;
+            reifier.ReifyStatement = statement =>
+                reifyStatement(statement).When(out var built).Error(out var error)
+                    ? Fail(error)
+                    : codes.TryPeek(out var code) && code.Maps?[statement] is { } map
+                        ? Ok(Call("Mapped", new Code.Get(code.Built), built!, Call("Map",
+                            new Code.StringLiteral(map.Document),
+                            new Code.IntegerLiteral(map.StartLine),
+                            new Code.IntegerLiteral(map.StartColumn),
+                            new Code.IntegerLiteral(map.EndLine),
+                            new Code.IntegerLiteral(map.EndColumn))))
+                        : Ok(built!);
         }
+
+        /// <summary>
+        /// The code being reified, by what it says of where its statements were written,
+        /// and the variable of the building code that holds the code it builds.
+        /// </summary>
+        private readonly Stack<(SourceMapping.CodeMaps? Maps, Code.Local Built)> codes = [];
+
+        /// <summary>
+        /// Code is made before its statements, in a variable of the building code, so what
+        /// is said of a statement can be said as the statement is built.
+        /// </summary>
+        private Reified Reify(Code.Code code)
+            => WithVariables(() =>
+            {
+                var built = new Code.Local("code", il.Load(typeof(Code.Code))) { Init = Call("Body") };
+                variables.Peek().Add(new Code.Declare(built));
+
+                codes.Push((SourceMapping.CodeMaps.Of(code), built));
+
+                try
+                {
+                    if (Statements(code.Block.Statements).When(out var statements).Error(out var error))
+                        return Fail(error);
+
+                    return Ok(Chain(new Code.Get(built), statements!));
+                }
+                finally
+                {
+                    codes.Pop();
+                }
+            });
 
         /// <summary>
         /// A local of the code being reified gets a variable of its own in the code that

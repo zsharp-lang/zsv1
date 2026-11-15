@@ -56,8 +56,9 @@
     file has `core:project`.
   - `pkg:` is a package: definitions with no state of their own. The toolchain's are
     its own, `pkg:zsharp/core`, `pkg:zsharp/hir`, `pkg:zsharp/hir/code`,
-    `pkg:zsharp/mir`, `pkg:zsharp/lir`, and the language's `pkg:zsharp/lang/hir`,
-    `/ast`, `/parser`, `/syntax` and `/tokenizer`; and the CLR's, `pkg:clr/hir`,
+    `pkg:zsharp/mir`, `pkg:zsharp/lir`, `pkg:zsharp/sourcemap`, and the language's
+    `pkg:zsharp/lang/hir`, `/ast`, `/parser`, `/syntax` and `/tokenizer`; and the CLR's,
+    `pkg:clr/hir`,
     `pkg:clr/lir` and `pkg:clr/platform`. The toolchain registers `pkg:` with its own,
     so the standard library can import them before the package manager is installed,
     and the package manager, once it is, imports what they don't have.

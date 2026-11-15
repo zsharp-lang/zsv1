@@ -25,7 +25,11 @@ namespace ZSharp.Parser
         public T Parse<T>() where T : Node
         {
             if (contextParsers.TryGetValue(typeof(T), out var parser))
-                return ((Parser<T>)parser).Parse(this);
+            {
+                var start = Start;
+
+                return Located(((Parser<T>)parser).Parse(this), start);
+            }
 
             throw new ParseError();
         }

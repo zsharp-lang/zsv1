@@ -4,9 +4,10 @@ namespace ZSharp.Compiler.Objects
 {
     /// <summary>
     /// A local. A definition is loaded once, so every use shares one LIR local. Declaring
-    /// it is where it takes its initial value.
+    /// it is where it takes its initial value. Its name, if it has one, is its LIR local's,
+    /// as a debugger shows it.
     /// </summary>
-    internal sealed class Local(CompilerObject type, CompilerObject? init)
+    internal sealed class Local(CompilerObject type, CompilerObject? init, string? name = null)
         : CompilerObject
         , ICompileIRExpression
         , ICTSet
@@ -25,7 +26,7 @@ namespace ZSharp.Compiler.Objects
             if (Scope.IR.CompileType(type, target).When(out var compiled).Error(out var error))
                 return Result<LIR.Local>.Error(error);
 
-            return Result<LIR.Local>.Ok(local = new(compiled!));
+            return Result<LIR.Local>.Ok(local = new(compiled!) { Name = name });
         }
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)

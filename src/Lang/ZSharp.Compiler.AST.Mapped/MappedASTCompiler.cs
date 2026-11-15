@@ -1,3 +1,5 @@
+using ZSharp.SourceMapping;
+
 namespace ZSharp.Compiler
 {
     /// <summary>
@@ -34,6 +36,10 @@ namespace ZSharp.Compiler
             return result;
         }
 
+        /// <summary>
+        /// The code that fills a definition is where the definition was written, but for what
+        /// says where it was written itself, as a member compiled inside it does.
+        /// </summary>
         private IResult<CompiledDefinition, Error> CompileDefinition(ASTCompiler current, AST.Definition definition)
         {
             var result = @base.Definition(current, definition);
@@ -41,7 +47,28 @@ namespace ZSharp.Compiler
             if (result.IsUnsupported())
                 result = Definitions.Compile(current, definition);
 
-            return result;
+            if (!result.Ok(out var compiled) || Map(definition) is not { } map)
+                return result;
+
+            var fill = compiled.Fill;
+
+            return Result<CompiledDefinition>.Ok(compiled with
+            {
+                Fill = () =>
+                {
+                    var filled = fill();
+
+                    if (filled.Ok(out var block))
+                    {
+                        Mark(current, block, map);
+
+                        foreach (var statement in block.Statements)
+                            Mark(current, statement, map);
+                    }
+
+                    return filled;
+                }
+            });
         }
 
         private IResult<HIR.Code.Statement, Error> CompileStatement(ASTCompiler current, AST.Statement statement)
@@ -51,7 +78,31 @@ namespace ZSharp.Compiler
             if (result.IsUnsupported())
                 result = Statements.Compile(current, statement);
 
+            if (result.Ok(out var compiled) && Map(statement) is { } map)
+                Mark(current, compiled, map);
+
             return result;
         }
+
+        /// <summary>
+        /// A statement is where it was written in the maps of the code it is compiled for,
+        /// which what holds that code offers as it compiles it. Code nothing holds, as a
+        /// document's statement, which runs as it is compiled, is mapped nowhere.
+        /// </summary>
+        private static void Mark(ASTCompiler current, HIR.Code.Statement statement, SourceMap map)
+        {
+            if (current.Contexts.Has<CodeMaps>(out var maps))
+                maps[statement] ??= map;
+        }
+
+        /// <summary>
+        /// Where a node was written, as what is compiled from it carries it. What the
+        /// innermost compile gives keeps its own: a statement one compile gives back for
+        /// another is where it was first compiled from.
+        /// </summary>
+        private static SourceMap? Map(AST.Node node)
+            => node.Location is { Path: { } path, Span: var span }
+                ? new(path, span.Start.Line, span.Start.Column, span.End.Line, span.End.Column)
+                : null;
     }
 }

@@ -50,7 +50,8 @@ new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(Scope.TS).Apply();
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
-CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG, Scope.Matching, Scope.Overloading);
+CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG, Scope.Matching, Scope.Overloading,
+    expression => Core.ZSharp.ModuleScope.Evaluator(expression));
 il.Install(mapped, mappedCode);
 
 // A kind of parameter defined outside the toolchain: it is injected, so a call gives it
@@ -5795,6 +5796,98 @@ Try("a Z# object goes where Object is expected, as every value does on the CLR, 
         import { run as run312 } from "{{written}}";
         Keep(run312());
         """) is null && Kept() is "Box, Int32";
+});
+
+// ---- Source mapping: where code was written, from the parser to what a platform writes
+
+Try("what is parsed says where it was written, each node its own span", () =>
+{
+    var parser = new Parser(Tokenizer.Tokenize(new(new StringReader("let a = 1;\nprint(a + 2);\n")))) { Source = "mapped.zs" };
+    var syntax = ZSharp.Syntax.Grammar.Install(parser);
+    syntax.Document.ParseStatement(parser);
+
+    return syntax.Document.ParseStatement(parser) is ZSharp.AST.ExpressionStatement
+    {
+        Location: { Path: "mapped.zs", Span: { Start: { Line: 2, Column: 1 }, End: { Line: 2, Column: 14 } } },
+        Expression: ZSharp.AST.CallExpression
+        {
+            Location.Span: { Start.Column: 1, End.Column: 13 },
+            Arguments: [{ Value.Location.Span: { Start.Column: 7, End.Column: 12 } }]
+        }
+    };
+});
+
+Try("a statement is where it was written in the maps of the code it is compiled for, and nowhere outside one", () =>
+{
+    ZSharp.AST.Statement Parse()
+    {
+        var parser = new Parser(Tokenizer.Tokenize(new(new StringReader("\n  1 + 2;\n")))) { Source = "compiled.zs" };
+        return ZSharp.Syntax.Grammar.Install(parser).Document.ParseStatement(parser);
+    }
+
+    var code = new C.Code();
+    var maps = ZSharp.SourceMapping.CodeMaps.In(code);
+    var fork = compiler.Fork();
+    var inside = fork.Contexts.Within(CapabilityContext.Of(fork.Contexts.Current, maps), () => fork.CompileStatement(Parse())).Unwrap();
+    var outside = compiler.CompileStatement(Parse()).Unwrap();
+
+    return maps[inside] is { Document: "compiled.zs", StartLine: 2, StartColumn: 3, EndLine: 2, EndColumn: 9 }
+        && maps[outside] is null;
+});
+
+Try("code that is built says where its statements were written, of its own nodes, by itself", () =>
+{
+    var returned = new C.Return { Value = new C.IntegerLiteral(42) };
+    var code = new C.Code();
+    code.Block.Statements.Add(new C.Block(returned));
+    ZSharp.SourceMapping.SourceMaps.Set(code, returned, new("mapped.zs", 3, 5, 3, 15));
+
+    var reified = Scope.HIRReifier.ReifyCode(code).Unwrap();
+    var built = (C.Code)runner.EvaluateExpression(reified).Unwrap()!;
+
+    return built.Block.Statements is [C.Block { Statements: [C.Return rebuilt] }]
+        && !ReferenceEquals(rebuilt, returned)
+        && ZSharp.SourceMapping.SourceMaps.Of(built, rebuilt) is { Document: "mapped.zs", StartLine: 3, StartColumn: 5 }
+        && ZSharp.SourceMapping.SourceMaps.Of(code, rebuilt) is null;
+});
+
+Try("an assembly the Cecil platform writes says where each statement was written, as a stack trace through it shows", () =>
+{
+    var root = Directory.CreateTempSubdirectory("zsharp-mapped-").FullName;
+    var source = Path.Combine(root, "src");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, ".zs"), """
+        import { compile, emit } from "core:project";
+        emit(compile("Mapped335"));
+        """);
+    var faulty = Path.Combine(source, "faulty.zs");
+    File.WriteAllText(faulty, "import { String, Int32 } from \"core:runtime\";\n\nfun parse(text: String): Int32 {\n    let doubled = text + text;\n    return Int32.Parse(doubled);\n}\n");
+    var written = Path.Combine(root, "Mapped335.dll").Replace('\\', '/');
+
+    if (Run($$"""
+        import { discover as discover335, Compiler as Compiler335 } from "std:project";
+        import { Module as Module335 } from "std:modules";
+        import { lower as lower335 } from "std:modules/compiler";
+        import { Cecil as Cecil335 } from "pkg:cecil";
+        let mapped335 = Compiler335(discover335("{{source.Replace('\\', '/')}}")).compile()[0] as Module335;
+        let target335 = Cecil335("Mapped335", null);
+        target335.add(lower335(mapped335, target335));
+        target335.write("{{written}}");
+        import { parse as parse335 } from "{{written}}";
+        """) is { } failed)
+        return Fail(failed);
+
+    var parse = AppDomain.CurrentDomain.GetAssemblies().Last(assembly => assembly.GetName().Name == "Mapped335").GetType("Mapped335")!.GetMethod("parse")!;
+
+    try
+    {
+        parse.Invoke(null, ["oops"]);
+        return false;
+    }
+    catch (System.Reflection.TargetInvocationException thrown)
+    {
+        return thrown.InnerException is FormatException { StackTrace: { } trace } && trace.Contains($"{Path.GetFullPath(faulty)}:line 5");
+    }
 });
 
 System.Reflection.MethodInfo Kept2Method(string type, string method)

@@ -169,39 +169,42 @@ them to its own types when it lowers them, so the runtime is one platform among 
 - [ ] Function values: partial application, Bound/Invocation.
 - [ ] The remaining patterns: `not`, sequence, `{}`, `case`.
 - [ ] Compile-time access checks (need design).
-- [ ] **Source mapping through custom metadata, the whole chain: AST -> HIR -> MIR ->
-  LIR -> platform.** `design/definitions.md` already says source mapping is metadata,
-  and that HIR has no source positions on it, to keep HIR pure — "they would live
-  beside it, keyed by node," not a mark on the node, unlike `Annotated.Annotations`
-  (an on-node list, used today for reflection, e.g. `@entrypoint`). AST already has
-  positions: `Token.Span`, `Position(line, column)`, which `*Tokens` objects (e.g.
-  `FunctionTokens`) hold per AST node — nothing carries this into HIR today, and HIR
-  nodes have no reference back to the AST node that produced them. LIR already has a
-  generic, platform-written capability that fits the far end of this: `Metadata` /
-  `KeptAnnotation`.
-
-  The general shape (settled): `get sourceMap(identity: Identity): SourceMap` and
-  `set sourceMap(identity: Identity, map: SourceMap)`, overloaded for a statement and
-  an expression too, so the same two names work for anything the chain needs to mark —
-  an `Identity` (where a side table, keyed by reference, is the natural fit, the same
-  way the loader's own caches already work), a statement or an expression (where an
-  attached annotation may fit better, since these can be more numerous and are
-  reified/duplicated across builds the way a definition isn't). Callers use one pair of
-  names regardless; which storage answers them is chosen per kind, not part of the
-  shape itself — the same "a name means what resolves it" pattern as `@operator` or
-  `premap`, not something new.
-
-  Still open: whether a statement or an expression needs its own capability to carry an
-  attached annotation (today `Annotated` is only on definitions — Z# functions,
-  globals, modules, classes, CLR classes, methods, constructors — not on plain code),
-  or whether "attached" here means something else for them; the metadata type(s)
-  themselves (a position, a span, a file — `pkg:zsharp/sourcemap`, settled on, name and
-  all); how AST -> HIR compiling populates whichever storage `sourceMap`'s `Identity`
-  overload resolves to, from `Token.Span`, without putting anything on the HIR node;
-  how a CO carries its HIR node's position through MIR to attach it to the LIR it makes
-  as `KeptAnnotation`; how a platform (Cecil) writes it (.NET sequence points, most
-  likely) — "the runtime turns it into debugging information," per
-  `design/definitions.md`.
+- [~] **Source mapping through custom metadata, the whole chain: AST -> HIR -> MIR ->
+  LIR -> platform.** HIR knows nothing of a source: where code was written is an
+  annotation of what holds the code (`Code` is `Annotated` now), so an extension can map
+  any source its own way. `pkg:zsharp/sourcemap` (`src/Packages/ZSharp.SourceMapping`) is
+  definitions only: `SourceMap`, `CodeMaps` (a `Code`'s annotation) and `FunctionMaps`
+  (an LIR definition's metadata), with `sourceMap(holder, statement)` /
+  `sourceMap(holder, statement, map)`. The parser records each AST node's `Location`; `Bodies`
+  makes a body's `Code` first and compiles the body with its table as a capability of the
+  context, which the AST compiler puts each statement in, so no mapper holds anything, and
+  a definition's fill takes the definition's; the body is reified through the reifier's
+  new `ReifyCode`, whose building code makes the `Code` first and puts each statement in
+  its table as constants, so built code needs nothing live;
+  `CodeLoaders.Load(code, into)`, which the IL loader, `std:functions` and `std:oop` lower
+  bodies with, puts each lowered statement in its function's table; the Cecil platform
+  writes sequence points, source checksums and named locals into an embedded portable PDB.
+  A stack trace through a Cecil-built assembly shows the `.zs` file and line. Statements
+  only, for now. Folded into `design/definitions.md` (**Source mapping**) and
+  `design/cecil.md`.
+  - [ ] A definition's location: an encoded annotation of the definition, a single
+    location, set by the code that builds it. A language server's go-to-definition wants
+    it; a PDB has nowhere for it.
+  - [ ] Expressions, and finer points: a loop's condition and a statement's parts have no
+    points of their own.
+  - [ ] The runtime platform writes no debugging information: a module Reflection.Emit
+    makes in the running process can't have any.
+  - [ ] A document's language isn't in the PDB: Mono.Cecil writes only languages it knows.
+  - [ ] Crossing this change from an older seed takes about eleven generations, over the
+    bootstrap's eight: libraries no others need are built by the seed's `std:functions`
+    and `std:oop` compilers before the new ones are, and nothing in what each library
+    needs says it is compiled by them. Running the bootstrap again finishes it.
+- [ ] **Nine import tests of `ZSharp.Tests.Classes` fail**, and have since the import
+  redesign: the project didn't compile (`CodeLoaders.Register` gained `evaluate`), so
+  they never ran. Some may test what the redesign changed on purpose (a module's or
+  body's import is checked when loaded, not while compiling), others are real failures
+  (`NullReferenceException`, "None of the 4 overloads applies"). The same nine fail on
+  `lang/overload-groups`.
 - [ ] Deferred: resolvers, the IL importer split, metaclass binding, namespace imports.
 
 ## Language server

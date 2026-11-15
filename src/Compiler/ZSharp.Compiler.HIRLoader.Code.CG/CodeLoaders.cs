@@ -59,7 +59,7 @@ namespace ZSharp.Compiler
         /// it belongs to declares its capture rather than the local itself.
         /// </summary>
         private static CompilerObject Local(HIR.Code.Local local, CompilerObject type, CompilerObject? init)
-            => shared.TryGetValue(local, out _) ? new Objects.CellLocal(type, init) : new Objects.Local(type, init);
+            => shared.TryGetValue(local, out _) ? new Objects.CellLocal(type, init, local.Name) : new Objects.Local(type, init, local.Name);
 
         /// <summary>
         /// The locals whose code declares their capture, as it does once a function captures
@@ -80,6 +80,32 @@ namespace ZSharp.Compiler
                 captured = inner.Captured;
 
             return captured;
+        }
+
+        /// <summary>
+        /// The code being lowered, by what it says of where its statements were written, and
+        /// what it lowers into.
+        /// </summary>
+        private static readonly Stack<(SourceMapping.CodeMaps? Maps, LIR.Definition Into)> lowering = new();
+
+        /// <summary>
+        /// Loads a function's code, as what lowers the function into the LIR definition
+        /// given: what the code says of where its statements were written, the definition
+        /// says of what they lower to. One function's code can load another's, which says
+        /// its own.
+        /// </summary>
+        public static IResult Load(HIR.Code.Code code, LIR.Definition into)
+        {
+            lowering.Push((SourceMapping.CodeMaps.Of(code), into));
+
+            try
+            {
+                return ZSharp.Compiler.Current.HIRCodeLoader.LoadStatement(code.Block);
+            }
+            finally
+            {
+                lowering.Pop();
+            }
         }
 
         public static void Register(
@@ -407,6 +433,18 @@ namespace ZSharp.Compiler
                     ? Result.Ok(new Objects.Return(converted))
                     : Result.Error("A return value doesn't match what is returned.");
             });
+
+            // A statement the code being lowered says where it was written of loads to one
+            // that says the same of what it lowers to, in what the code lowers into.
+            var loadStatement = code.LoadStatement;
+            code.LoadStatement = statement =>
+            {
+                var loaded = loadStatement(statement);
+
+                return loaded.IsOk && lowering.TryPeek(out var lowered) && lowered.Maps?[statement] is { } map
+                    ? Result.Ok(new Objects.Mapped(loaded.Unwrap(), map, lowered.Into))
+                    : loaded;
+            };
 
             static IResult Unquoted()
                 => Result.Error("Unquoted code can only be inside code that is reified.");
