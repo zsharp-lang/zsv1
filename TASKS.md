@@ -110,8 +110,9 @@ them to its own types when it lowers them, so the runtime is one platform among 
   `Code.Local`. Loading an `Import` evaluates its source (reusing the existing HIR
   runner, the same machinery compile-time evaluation already goes through) and expects
   an `HIR.Instance` back; loading an `ImportedMember` loads its `Import` and calls
-  `CG.Member` on the result. Both are `HIR.Definition`, so the loader's existing
-  per-node cache keeps an import from running twice. `Bodies.Imported` keeps its old
+  `CG.Member` on the result. Both are `HIR.Identity` (see below — not `Definition`,
+  caught on review), so the loader's own cache keeps an import from running twice.
+  `Bodies.Imported` keeps its old
   signature (`IResult<Code.Local?, Error>`, always `null` now) since already-built std
   libraries call it directly — only its insides changed, an additive transition the seed
   survives. This is what the `Code.Local` it replaced couldn't be: specific enough for
@@ -121,27 +122,102 @@ them to its own types when it lowers them, so the runtime is one platform among 
   Object.Assembly;` both resolve now, and a full bootstrap completes against std's
   original source (no `core:runtime` moved to a project file, only the 19 `of`-related
   moves, which are unrelated and stay).
-- [ ] **Still open on the same branch:**
-  - Generalize `Language.Bind`'s `Merge` into one variable per name, holding one
-    `HIR.Code.OverloadGroup` that every definition, import and operator sharing the name
-    extends in place, as already agreed; overloading has nothing import-specific about
-    it — an `ImportedMember` is Overloadable the same way any other kind of definition is
-    (`design/code.md`), so nothing new is needed for it to merge with a same-name
-    definition.
-  - A name used where one kind is needed (`Int32 as Type`) needs a cast on a group whose
-    contents are a building-code value, not known while compiling: a new CO (not an
-    addition to `Overloading.Static`'s shared `OverloadGroup`) implementing `IRTCastTo`,
-    reached through `Dispatcher.Cast`'s `RuntimeDescriptors.Find`, as settled before.
-  - **Deferred on purpose:** importing a module today causes its `@operator`-annotated
-    definitions to register through `language.Understand`; nothing in `Import`/
-    `ImportedMember` does that. The user's call: leave this for a later phase rather than
-    widen this change to cover it now.
+- [x] **Overloading: done, on `lang/overload-groups` (stacked on `lang/imports`).**
+  - `MappedBinder`'s `Merge`/`Joined` now extends an existing `HIR.Code.OverloadGroup`'s
+    `Items` in place instead of building a new group each time, so every reference to a
+    name sees every contributor regardless of when each was bound. `ImportedMember` is
+    `HIR.Overloadable`, so an import and a same-name definition merge instead of
+    conflicting — checked both ways (reverting the marker reproduces "X is already
+    defined here").
+  - Operators needed no change: `Language.Add`'s table already mutated its group in
+    place (`Functions[syntax]`'s `OverloadGroup` is created once and extended, never
+    replaced), so a `+` compiled before a later `@operator((+))` registration already saw
+    it. What looked like "the overloading plan" applying to operators was really this,
+    already there before any of this work.
+  - The planned new `IRTCastTo` CO turned out unnecessary, checked directly: with
+    `Import`/`ImportedMember` in place, a group's contents are always known by load time
+    (nothing is a building-code-run-time value any more), so `Overloading.Static`'s
+    existing `OverloadGroup.Cast` (`ICTCastTo`) already filters a group to the one
+    candidate of the requested kind. Verified with two imports sharing a name, one
+    type-kind and one not, cast both orders (order-independent, so it is genuinely
+    filtering, not taking the first); a group with no valid candidate still errors
+    correctly. That part of the plan predated `Import`/`ImportedMember` and the problem
+    it was for no longer exists — nothing built.
+  - **Deferred on purpose, unchanged:** importing a module doesn't feed its
+    `@operator`-annotated definitions into `Language.Functions`; nothing in `Import`/
+    `ImportedMember` does that. Left for a later phase, per the user's call.
+- [x] **`HIR.Identity`, separate from `Definition`** (same branch, after review). `Import`
+  and `ImportedMember` were marked `HIR.Definition` only to borrow its loader cache;
+  `Definition` means something specific (a named slot a container holds), which neither
+  is. Added `HIR.Identity` (`Definition : Identity`) and a parallel `LoadIdentity`
+  entrypoint with its own cache and its own map (`Identities`), leaving `LoadDefinition`
+  itself untouched — name, signature, cache — since already-built std libraries call it
+  directly. `MappedLoader.LoadInstance`'s fallback also tries `LoadIdentity` for an
+  Identity that isn't a Definition, so this is reached however the node is referred to,
+  not only through its own registered rule (a real gap my first attempt left: an
+  `OverloadGroup` loading a candidate loads it directly, not through `Get`). `Import`/
+  `ImportedMember` moved from `Definition` to `Identity`, and so did `Package.DotNet.Module`
+  — it already documented itself as "an instance and not a definition another one
+  holds," correctly, but was registered on the uncached `Instances` map, so loading the
+  same module node twice built two different COs. Verified directly, with a counter, both
+  times: an import's source evaluated once despite three names used four ways (the
+  `Import` case); `LoadModule` called 11 times without the `Module` fix and exactly once
+  with it, for two imports sharing one source. Bootstrap completes. Folded into
+  `design/imports.md`, `design/code.md` and `design/definitions.md`.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
 - [ ] The remaining patterns: `not`, sequence, `{}`, `case`.
 - [ ] Compile-time access checks (need design).
+- [ ] **Source mapping through custom metadata, the whole chain: AST -> HIR -> MIR ->
+  LIR -> platform.** `design/definitions.md` already says source mapping is metadata,
+  and that HIR has no source positions on it, to keep HIR pure — "they would live
+  beside it, keyed by node," not a mark on the node, unlike `Annotated.Annotations`
+  (an on-node list, used today for reflection, e.g. `@entrypoint`). AST already has
+  positions: `Token.Span`, `Position(line, column)`, which `*Tokens` objects (e.g.
+  `FunctionTokens`) hold per AST node — nothing carries this into HIR today, and HIR
+  nodes have no reference back to the AST node that produced them. LIR already has a
+  generic, platform-written capability that fits the far end of this: `Metadata` /
+  `KeptAnnotation`.
+
+  The general shape (settled): `get sourceMap(identity: Identity): SourceMap` and
+  `set sourceMap(identity: Identity, map: SourceMap)`, overloaded for a statement and
+  an expression too, so the same two names work for anything the chain needs to mark —
+  an `Identity` (where a side table, keyed by reference, is the natural fit, the same
+  way the loader's own caches already work), a statement or an expression (where an
+  attached annotation may fit better, since these can be more numerous and are
+  reified/duplicated across builds the way a definition isn't). Callers use one pair of
+  names regardless; which storage answers them is chosen per kind, not part of the
+  shape itself — the same "a name means what resolves it" pattern as `@operator` or
+  `premap`, not something new.
+
+  Still open: whether a statement or an expression needs its own capability to carry an
+  attached annotation (today `Annotated` is only on definitions — Z# functions,
+  globals, modules, classes, CLR classes, methods, constructors — not on plain code),
+  or whether "attached" here means something else for them; the metadata type(s)
+  themselves (a position, a span, a file — `pkg:zsharp/sourcemap`, settled on, name and
+  all); how AST -> HIR compiling populates whichever storage `sourceMap`'s `Identity`
+  overload resolves to, from `Token.Span`, without putting anything on the HIR node;
+  how a CO carries its HIR node's position through MIR to attach it to the LIR it makes
+  as `KeptAnnotation`; how a platform (Cecil) writes it (.NET sequence points, most
+  likely) — "the runtime turns it into debugging information," per
+  `design/definitions.md`.
 - [ ] Deferred: resolvers, the IL importer split, metaclass binding, namespace imports.
+
+## Language server
+
+A real-world use of Z#: LSP support for VS Code, written in Z# as far as it goes. Three
+packages: `pkg:lsp` (the protocol as types), `pkg:fastlsp` (a framework in the spirit of
+FastAPI) and `pkg:zsharp/lsp` (the server for Z#). It starts small: no execution of user
+code, source mapping is its own task.
+
+- [x] **`pkg:lsp`** (`packages/lsp`). Structures, enumerations and the table of methods,
+  generated from the specification's model by `generate.zs`.
+  - [ ] Real unions, and optionals, in place of `Object` and `null`, once Z# has them.
+  - [ ] The base protocol, JSON-RPC's messages and errors, which the model doesn't have.
+- [ ] **`pkg:fastlsp`**: decorators that collect endpoints as the build runs, the
+  dispatcher as platform-agnostic HIR, build script utilities.
+- [ ] **`pkg:zsharp/lsp`**: the small server, then a sanitized runtime for the rest.
 
 ## Done
 

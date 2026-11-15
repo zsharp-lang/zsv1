@@ -9,10 +9,20 @@ namespace ZSharp.Compiler
         private readonly HIRLoader loader = loader;
         private readonly Dictionary<HIR.Definition, CompilerObject> definitions
             = new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<HIR.Identity, CompilerObject> identities
+            = new(ReferenceEqualityComparer.Instance);
 
         private HIRLoader @base = null!;
 
         public LoaderMap<HIR.Definition> Definitions { get; } = new();
+
+        /// <summary>
+        /// Loaders for something kept by identity that isn't a definition, such as an
+        /// import. A definition is one too, but keeps its own cache and its own map,
+        /// <see cref="Definitions"/>, since what already calls <c>LoadDefinition</c> by
+        /// name must keep working.
+        /// </summary>
+        public LoaderMap<HIR.Identity> Identities { get; } = new();
 
         public LoaderMap<HIR.Instance> Instances { get; } = new();
 
@@ -23,6 +33,7 @@ namespace ZSharp.Compiler
             @base = loader.Clone();
 
             loader.LoadDefinition = LoadDefinition;
+            loader.LoadIdentity = LoadIdentity;
             loader.LoadInstance = LoadInstance;
             loader.LoadType = LoadType;
         }
@@ -43,9 +54,32 @@ namespace ZSharp.Compiler
             return result;
         }
 
+        public IResult LoadIdentity(HIR.Identity identity)
+        {
+            if (identities.TryGetValue(identity, out var cached))
+                return Result.Ok(cached);
+
+            var result = @base.LoadIdentity(identity);
+
+            if (result.IsUnsupported())
+                result = Identities.Load(identity);
+
+            if (result.Ok(out var loaded))
+                identities[identity] = loaded;
+
+            return result;
+        }
+
         public IResult LoadInstance(HIR.Instance instance)
         {
             var result = @base.LoadInstance(instance);
+
+            // An Identity that isn't a Definition, such as an Import's member, has no
+            // place of its own among the ordinary instance loaders below: whatever loads
+            // it is reached, and kept, through LoadIdentity, wherever it is referred to
+            // from, not only by its own Get.
+            if (result.IsUnsupported() && instance is HIR.Identity identity and not HIR.Definition)
+                result = LoadIdentity(identity);
 
             if (result.IsUnsupported())
                 result = Instances.Load(instance);

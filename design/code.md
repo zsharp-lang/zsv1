@@ -93,6 +93,14 @@ conflicts nothing merges, which is an error by default. A name bound again to wh
 already stands for, as importing it again does, isn't a conflict. The language registers a rule
 that a `let` bound over another `let` overrides it, which is how `let` reuses a name.
 
+A merge that forms a group extends that group's own items in place rather than binding
+the name to a new group each time: the name still refers to the same expression, whose
+`OverloadGroup` instance now has one more item. This is what makes it not matter which
+order things that share a name are bound in — a reference compiled before a later one
+joins still sees it, since it holds the group by reference, not a copy of what it held
+at the time. Only turning a name that stood for one thing into a group, the first time
+it is shared, gives back a different expression to bind.
+
 A definition compiles roughly to a block that declares the local holding its HIR, as
 the meta-type builds it, with the inner construction in a nested block. That local is
 never overridden. Inside a container, the locals of its definitions live in the same
@@ -138,6 +146,11 @@ a document or anywhere else names are bound, and a call chooses by its arguments
 definition being built is known by its kind, what describes its node's type, as a
 document's reference to one is too. A module keeps each definition of a name, and its
 member of that name is their group.
+
+An `ImportedMember` is `Overloadable` too, directly, not through a node's type the way a
+definition is: overloading has nothing import-specific about it, so an import and a
+same-name definition merge into one group the same way two definitions do, with no
+extra machinery for either side.
 
 Name-based overloading on the AST side is similar, since it also collapses multiple
 values into one object. Member access defers to the CO. A free name uses the same CO,

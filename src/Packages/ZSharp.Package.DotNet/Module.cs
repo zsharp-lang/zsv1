@@ -2,10 +2,12 @@ namespace Package.DotNet
 {
     /// <summary>
     /// A module: the root of what it holds, defined in a document, so it is an instance
-    /// and not a definition another one holds.
+    /// and not a definition another one holds. It is an Identity, kept once loaded, the
+    /// same as a definition's is.
     /// </summary>
     public sealed class Module(string name)
         : ZSharp.HIR.Instance
+        , ZSharp.HIR.Identity
         , ZSharp.HIR.Named
         , Accessible
     {

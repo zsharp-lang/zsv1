@@ -7,40 +7,44 @@
   them in a static constructor. With no meta-compiler that compiles it, an import is
   an error. `Language.BindImported` binds the imported names to whatever holds the
   value, for meta-compilers that want it.
-- The current meta-compilers run an import as the definition it is in is
-  constructed. A body runs it in the code that builds the body: a local of that code
-  holds what it imported, declared in the building block, and nothing of the import
-  is left in the body. A name used in the body is reified like any value of the
-  building code, so the body gets the imported value encoded. A module declares the
-  local in its own construction code. The document runs the import as its statement
-  runs.
-- So `fun bar(src: String) { return fun() { import { a } from src; print(a); } as
-  Function; }` works: the inner function is constructed when `bar` runs, so `src` is
-  a value there. The same import directly in `bar`'s body is an error, since while
-  `bar` is constructed `src` is its parameter, not a string. Each construction runs
-  the import again.
-- An import whose source is compile-time, as `Compile-time evaluation` defines it, is
-  run while compiling, and its names are bound to what it gave. They are then known
-  everywhere: to a meta-type, a decorator, another import's source, and the types of a
-  definition. Its arguments are compile-time too, which makes them real parameters of
-  the import: fine-grained imports through arguments. Running the source at compile
-  time moves its side effects there, as with `of`.
-- An import whose source refers to a variable, as in `import { a } from src` where
-  `src` is a parameter, can only run as the definition it is in is constructed.
 - A document runs as it is compiled, so its imports always run while compiling, and
-  their names are bound to what they gave. At
-  compile time its names are only an `Instance`, so only code that is built, such as a
-  body, can use them. Using one in a type needs a lookup on HIR structure while
-  constructing, which isn't there yet.
+  their names are bound directly to what they gave: a document's own `let`, decorator,
+  `of` or later import can use them, since they are already real values by then.
+- A module's or a body's import is different: nothing of it runs while compiling. It
+  compiles to two HIR nodes, `Import` and, for each name it brings in, an
+  `ImportedMember` of it — not a local of the building code. Loading an `Import`
+  evaluates its source (through the HIR runner, the same machinery any compile-time
+  evaluation goes through) and expects an `HIR.Instance` back; loading an
+  `ImportedMember` loads its `Import` and reads its name off the result, through `CG`.
+  Both are kept once loaded (an `HIR.Identity`, not a `Definition`: an import is not a
+  named slot a container holds), so an import shared by several names, or referred to
+  from several places, is still only run once. A name an import brings in is bound to
+  `Get` of its `ImportedMember`, usable anywhere a name bound earlier in the same walk
+  is: a type, a field, a body, or another import's source — since nothing is loaded
+  until the whole module's construction code has compiled, forward references across
+  it work the same way they do for any other name. `of` stays the one exception: it is
+  decided *while* the AST compiles, before any HIR graph exists to load, so it can't
+  use a same-module import; it still needs one from the context around the module. A
+  project's module file is that context for its own sources, since it runs the project
+  compiler's `compile()` in its own scope, as **Frameworks and projects** describes.
+- So `fun bar(src: String) { return fun() { import { a } from src; print(a); } as
+  Function; }` works: the inner function, and its `Import` node, are built by code that
+  is reified when `bar` runs, so by the time that `Import` node exists, its source is
+  already the concrete value `src` held for that run, not a reference to the parameter.
+  The same import directly in `bar`'s own body is an error, since nothing has reified
+  `bar`'s own construction, so there is no value for `src` to evaluate to. Each
+  construction runs the import again.
+- An import's arguments are evaluated the same way as its source, as part of the same
+  `Import` node, which makes them real parameters of the import: fine-grained imports
+  through arguments.
 - An import is a call of the function `import` stands for in `Language.Functions`,
   with the source, then the import's own arguments:
   `import(args..., kwargs...) { names } from source` calls `import(source, args...,
-  kwargs...)`. Whatever runs the import runs that call, so a body puts it in its
-  building code and the document evaluates it as its statement. `core:zsharp`'s
-  `import(String)` is the first overload, and adding overloads lets an import take
-  sources other than a string, or arguments. Keyword arguments are named arguments of
-  that call. An import has no alias of its own: only the names it brings in can be
-  renamed, as in `{ a as b }`.
+  kwargs...)`. That call is what an `Import` node's source is, or what a document
+  evaluates as its statement. `core:zsharp`'s `import(String)` is the first overload,
+  and adding overloads lets an import take sources other than a string, or arguments.
+  Keyword arguments are named arguments of that call. An import has no alias of its
+  own: only the names it brings in can be renamed, as in `{ a as b }`.
 - Importers route by prefix through the string importer. The prefixes say what a
   library is:
   - `core:` is live and stateful, bound to the toolchain that is running. Under
@@ -91,13 +95,13 @@
   cross into MIR through the HIR -> MIR REI.
 - Libraries are supplied by a `pkg:` importer written purely in Z#, the package manager,
   as **Packages** describes.
-- An import that runs while compiling reaches each of its names' members as it runs,
-  since that is what importing them means: whatever comes with a member comes then, as
-  a class's extension methods do, and a name the imported value has no member for is an
-  error of the import, not of its first use. The names are still bound to the member
-  as code, `value.name`, so what they stand for is reached again where they are used. An
-  import that runs only as a definition is constructed has nothing to reach yet, so its
-  names are checked when they are used.
+- A document's import reaches each of its names' members as it runs, since that is
+  what importing them means while compiling: whatever comes with a member comes then,
+  as a class's extension methods do, and a name the imported value has no member for
+  is an error of the import, not of its first use. A module's or a body's import has
+  nothing to reach until its `Import` node is loaded, so its `ImportedMember`s are
+  checked then, not while compiling: an unknown name is an error at that point, the
+  same as any other HIR that only means something once loaded.
 
 ## Reflection
 

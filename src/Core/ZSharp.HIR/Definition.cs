@@ -1,6 +1,6 @@
 namespace ZSharp.HIR
 {
-    public interface Definition
+    public interface Definition : Identity
     {
     }
 }
