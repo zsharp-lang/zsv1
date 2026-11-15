@@ -414,6 +414,19 @@ Toolchain:
   isn't known to it.
 - [ ] **Start-up** of a server is about 5 seconds (see above).
 
+### Forking
+
+- [ ] **Only the AST compiler forks.** `compiler.Fork()` copies its three endpoints and
+  shares its `Contexts`; everything else is one per toolchain: the language's operator
+  table (`Language.Functions`, which `@operator` definitions add to for all later code),
+  the mapped AST compiler's maps (registering reaches every fork, earlier ones included),
+  `metaTypes`, the compiler's REIs and loaders (`ZSharp.Compiler.Current`), the importers
+  and `core:`. So an extension installed while one module compiles is installed for all
+  that follows, and a build can't compile part of its code with other operators,
+  meta-types or dispatchers. `docs/internals/architecture/composition.md` says no scoping is needed,
+  which forking the rest of the toolchain would change. Written up in
+  `docs/learn/advanced/build-scripts/toolchain-fork.md`.
+
 ## Rewriting Z# in Z#
 
 The language's own C# is to be rewritten in Z#, which is the goal of the redesign (see
@@ -448,9 +461,7 @@ packages, the core languages, the Z# language as a specification, the runtime) a
 Internals (principles, the bootstrap, and `docs/internals/architecture/`).
 
 - [x] The Starlight site, the new structure, and the existing pages moved into it.
-- [x] Every page marked "To be written", but one:
-  - [ ] **Forking the toolchain** (`learn/advanced/build-scripts/toolchain-fork.md`): what
-    forking the toolchain means for a build script isn't settled.
+- [x] Every page marked "To be written".
 - [x] The existing pages, rewritten for where they are now, and each standard library a
   page of its own.
 - [x] The layering stated, in `docs/internals/architecture/layering.md`: the layers as
