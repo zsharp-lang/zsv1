@@ -175,11 +175,12 @@ them to its own types when it lowers them, so the runtime is one platform among 
   any source its own way. `pkg:zsharp/sourcemap` (`src/Packages/ZSharp.SourceMapping`) is
   definitions only: `SourceMap`, `CodeMaps` (a `Code`'s annotation) and `FunctionMaps`
   (an LIR definition's metadata), with `sourceMap(holder, statement)` /
-  `sourceMap(holder, statement, map)`. The parser records each AST node's `Location`; the
-  AST compiler keeps its statements' maps in `ASTCompiler.Maps` (shared by forks), and a
-  definition's fill takes the definition's; `Bodies` reifies a body as a `Code` through
-  the reifier's new `ReifyCode`, whose building code makes the `Code` first and puts each
-  statement in its table as constants, so built code needs nothing live;
+  `sourceMap(holder, statement, map)`. The parser records each AST node's `Location`; `Bodies`
+  makes a body's `Code` first and compiles the body with its table as a capability of the
+  context, which the AST compiler puts each statement in, so no mapper holds anything, and
+  a definition's fill takes the definition's; the body is reified through the reifier's
+  new `ReifyCode`, whose building code makes the `Code` first and puts each statement in
+  its table as constants, so built code needs nothing live;
   `CodeLoaders.Load(code, into)`, which the IL loader, `std:functions` and `std:oop` lower
   bodies with, puts each lowered statement in its function's table; the Cecil platform
   writes sequence points, source checksums and named locals into an embedded portable PDB.

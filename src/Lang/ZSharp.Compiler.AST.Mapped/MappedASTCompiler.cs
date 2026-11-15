@@ -84,14 +84,21 @@ namespace ZSharp.Compiler
             return result;
         }
 
+        /// <summary>
+        /// A statement is where it was written in the maps of the code it is compiled for,
+        /// which what holds that code offers as it compiles it. Code nothing holds, as a
+        /// document's statement, which runs as it is compiled, is mapped nowhere.
+        /// </summary>
         private static void Mark(ASTCompiler current, HIR.Code.Statement statement, SourceMap map)
-            => current.Maps[statement] ??= map;
+        {
+            if (current.Contexts.Has<CodeMaps>(out var maps))
+                maps[statement] ??= map;
+        }
 
         /// <summary>
-        /// Where a node was written, as what is compiled from it carries it, in the maps of
-        /// the compiler it is compiled in. What the innermost compile gives keeps its own:
-        /// a statement one compile gives back for another is where it was first compiled
-        /// from.
+        /// Where a node was written, as what is compiled from it carries it. What the
+        /// innermost compile gives keeps its own: a statement one compile gives back for
+        /// another is where it was first compiled from.
         /// </summary>
         private static SourceMap? Map(AST.Node node)
             => node.Location is { Path: { } path, Span: var span }

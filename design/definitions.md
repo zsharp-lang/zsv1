@@ -349,15 +349,18 @@ written by itself, needing nothing that runs. Only statements are mapped so far.
 - **The parser** records where each node it gives was written, and the path of what it
   parses: an AST node has its `Location`, as AST is the source's own structure. Nodes of
   several files put together, as a module's sources are, each keep their own.
-- **AST -> HIR.** The AST compiler keeps where each statement it compiles was written, in
-  its `Maps`, which its forks share, as its contexts are: what it compiles isn't in any
-  code yet. What the innermost compile gives keeps its own, and the code that fills a
-  definition is where the definition was written, but for what says where it was
-  written itself.
-- **Reification.** A body is reified as a `Code`, with the compiler's maps: the reifier's
-  `ReifyCode` gives code that makes the `Code` first, in a variable of the building code,
-  and puts each statement it builds in that code's table, as constants. So the built
-  code says where its statements were written, of its own nodes.
+- **AST -> HIR.** What holds code makes it before compiling it, and compiles it where its
+  table is a capability of the context, as a body does with its `Code`: the AST compiler
+  puts each statement it compiles in the table the context offers. So a map is in the
+  table of the code it belongs to from the start, and nothing else holds it. What the
+  innermost compile gives keeps its own, and the code that fills a definition is where
+  the definition was written, but for what says where it was written itself. Code that
+  nothing holds, as a document's statements, which run as they are compiled, is mapped
+  nowhere.
+- **Reification.** A body is reified as its `Code`: the reifier's `ReifyCode` gives code
+  that makes a new `Code` first, in a variable of the building code, and puts each
+  statement it builds in that code's table, as constants. So the built code says where
+  its statements were written, of its own nodes.
 - **HIR -> MIR -> LIR.** Whatever lowers a function's code loads it with
   `CodeLoaders.Load(code, into)`, which says what it lowers into: a statement the code
   says where it was written of loads to one that lowers as it does, and puts what it

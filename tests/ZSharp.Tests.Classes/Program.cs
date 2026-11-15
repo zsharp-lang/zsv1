@@ -5817,13 +5817,22 @@ Try("what is parsed says where it was written, each node its own span", () =>
     };
 });
 
-Try("the AST compiler keeps where each statement it compiles was written, its forks too", () =>
+Try("a statement is where it was written in the maps of the code it is compiled for, and nowhere outside one", () =>
 {
-    var parser = new Parser(Tokenizer.Tokenize(new(new StringReader("\n  1 + 2;\n")))) { Source = "compiled.zs" };
-    var statement = ZSharp.Syntax.Grammar.Install(parser).Document.ParseStatement(parser);
+    ZSharp.AST.Statement Parse()
+    {
+        var parser = new Parser(Tokenizer.Tokenize(new(new StringReader("\n  1 + 2;\n")))) { Source = "compiled.zs" };
+        return ZSharp.Syntax.Grammar.Install(parser).Document.ParseStatement(parser);
+    }
 
-    return compiler.Fork().CompileStatement(statement).Unwrap() is C.ExpressionStatement compiled
-        && compiler.Maps[compiled] is { Document: "compiled.zs", StartLine: 2, StartColumn: 3, EndLine: 2, EndColumn: 9 };
+    var code = new C.Code();
+    var maps = ZSharp.SourceMapping.CodeMaps.In(code);
+    var fork = compiler.Fork();
+    var inside = fork.Contexts.Within(CapabilityContext.Of(fork.Contexts.Current, maps), () => fork.CompileStatement(Parse())).Unwrap();
+    var outside = compiler.CompileStatement(Parse()).Unwrap();
+
+    return maps[inside] is { Document: "compiled.zs", StartLine: 2, StartColumn: 3, EndLine: 2, EndColumn: 9 }
+        && maps[outside] is null;
 });
 
 Try("code that is built says where its statements were written, of its own nodes, by itself", () =>
