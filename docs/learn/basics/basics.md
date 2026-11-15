@@ -1,4 +1,7 @@
-# Basics
+# Statements, variables and values
+
+What every Z# program is made of: statements, which run in order, the names they import,
+variables, values and the operators between them.
 
 ## Documents and statements
 
