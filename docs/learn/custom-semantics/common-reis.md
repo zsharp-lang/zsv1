@@ -1,3 +1,65 @@
 # Common REIs
 
-To be written. The REIs a CO most often takes part in: CG, TS, matching and overloading, and IR for lowering.
+The compiler's operations are grouped in REIs, sets of replaceable entrypoints. A CO takes
+part in them through its capabilities, and code that works with COs calls them. These are
+the ones a CO most often meets, each reached from Z# through `core:compiler`.
+
+## CG: code generation
+
+`cg` is what code does with objects:
+
+| Operation | What it does |
+|---|---|
+| `cg.Call(callee, arguments)` | calls an object |
+| `cg.Get(object)`, `cg.Set(object, value)` | reads and assigns it |
+| `cg.Member(object, name)`, and setting one | reaches a member |
+| `cg.Index(object, arguments)`, and setting one | indexes it |
+| `cg.Cast(object, type)`, `cg.ImplicitCast(object, type)` | converts it to a type, explicitly or implicitly |
+| `cg.Declare(definition)` | declares what code defines |
+
+Each gives the object it made, which is the code of what it did, or an error.
+
+## TS: types
+
+`ts` is what types are:
+
+- `ts.TypeOf(object)` gives an object's type.
+- `ts.IsAssignableTo(target, source)` says whether a value of `source` goes where
+  `target` is expected. The source can say where it goes, `IAssignableTo`, and the target
+  what it takes, `IAssignableFrom`.
+
+TS names no types: what `Int32` or a class is, is the CO of whoever defines it.
+
+## Matching and overloading
+
+- `matching.Bind(parameter, arguments)` gives the value a parameter takes from a call's
+  arguments, and `matching.Match(value, pattern)` the condition of `value is pattern`.
+- `overloading.Group(candidates)` makes one object of several candidates, as the
+  functions of one name, and choosing between them is `Apply`, which tries an operation
+  on each and keeps the most specific that applies.
+
+## IR: lowering
+
+`ir` is MIR to LIR. Each entrypoint takes a target, the platform being lowered for, and
+asks a different question:
+
+| Entrypoint | Asks |
+|---|---|
+| `ir.CompileExpression(object, target)`, `ir.CompileStatement` | what code this is, where it is used |
+| `ir.CompileType(object, target)` | what goes in a type slot: a class can define a structure and have a reference to it as its type |
+| `ir.CompileDefinition(object, owner, target)` | to place this in an owner, as a function in a module |
+| `ir.CompileReference(object, target)` | what code uses to refer to this, which may be something it doesn't define, as a handle |
+
+## Loading
+
+`hirLoader` is HIR to MIR: `LoadDefinition`, `LoadInstance`, `LoadType` and
+`LoadIdentity`, one for each concept, and `hirCodeLoader` loads code. `mappedLoader`
+is how a loader is registered for a kind of node, by its type, as
+`mappedLoader.Instances.Register[Number](load)` did in [From HIR to LIR](hir-to-lir.md).
+
+## Replacing how an operation is done
+
+All of these are REIs: an operation's signature is fixed, and how it is done is whatever
+is installed. The trait dispatchers of `std:traits` replace `CG.ImplicitCast` and
+`CG.Cast`, so a value goes to a trait its type implements, without any CO knowing about
+traits. That is the subject of [custom dispatchers](../custom-dispatchers/reis.md).
