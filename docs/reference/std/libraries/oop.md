@@ -1,5 +1,17 @@
 # std:oop
 
+Z#'s classes and interfaces, which [Classes](../../../learn/basics/classes.md) and
+[Interfaces](../../../learn/basics/interfaces.md) describe.
+
+| Name | What it is |
+|---|---|
+| `Class` | A class's node, which `def` defines unless it says another meta-type. |
+| `Interface` | An interface's node, which `def Name of Interface` defines. |
+| `static` | Marks a member as the class's own, not its objects'. |
+| `class` | Marks a member as the class's type object's: a class field or a class method. |
+
+## How it is built
+
 Z#'s own classes and interfaces, defined in Z#.
 
 - **Classes.** A Z# class has no inheritance. It has fields, methods, properties and named

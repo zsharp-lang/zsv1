@@ -8,7 +8,7 @@ zs [--no-prelude] [--trace-reification] [--dump-definitions] <script.zs> [argume
 standard error. What follows the script is the script's own, as `core:zsharp`'s
 `arguments`.
 
-The script imports the [prelude](../../reference/std/index.md#stdprelude) before its first
+The script imports the [prelude](../../reference/std/libraries/prelude.md) before its first
 statement, as if `import "std:prelude";` were written there. `--no-prelude` runs it
 without, so it has only what it imports itself, as the bootstrap needs. Only `zs` does
 this: a document a script imports, or a project's module file, imports what it needs.

@@ -16,13 +16,13 @@ package manager's.
 
 | Library | What it gives |
 |---|---|
-| [`std:prelude`](std/index.md#stdprelude) | The standard definitions, installed: what `zs` imports into every script. |
-| [`std:io`](std/index.md#stdio) | `print`. |
-| [`std:oop`](std/index.md#stdoop) | Classes and interfaces: `Class`, `Interface`, `static`, `class`. |
-| [`std:types`](std/index.md#stdtypes) | `Type[T]`, the type of a definition's value. |
-| [`std:numbers`](std/index.md#stdnumbers) | Z#'s own integers and floating-point numbers, apart from the CLR's. |
-| [`std:boolean`](std/index.md#stdboolean) | `Bool`, Z#'s own truth values. |
-| [`std:reflection`](std/index.md#stdreflection) | `reflect`, the node a built definition was built from. |
+| [`std:prelude`](std/libraries/prelude.md) | The standard definitions, installed: what `zs` imports into every script. |
+| [`std:io`](std/libraries/io.md) | `print`. |
+| [`std:oop`](std/libraries/oop.md) | Classes and interfaces: `Class`, `Interface`, `static`, `class`. |
+| [`std:types`](std/libraries/types.md) | `Type[T]`, the type of a definition's value. |
+| [`std:numbers`](std/libraries/numbers.md) | Z#'s own integers and floating-point numbers, apart from the CLR's. |
+| [`std:boolean`](std/libraries/boolean.md) | `Bool`, Z#'s own truth values. |
+| [`std:reflection`](std/libraries/reflection.md) | `reflect`, the node a built definition was built from. |
 | [`core:runtime`](core/index.md#coreruntime) | .NET's common types, as `String`, `Int32`, `List` and `Func`. |
 | [`core:zsharp`](core/index.md#corezsharp) | The toolchain's own: `arguments`, `export`, `operator`, `ct`. |
 | `pkg:name` | A package: [the toolchain's](packages/zsharp.md), or else through [the package manager](packages/package-manager.md). |
@@ -32,8 +32,8 @@ package manager's.
 | Library | What it gives |
 |---|---|
 | [`std:project`](packages/project-compiler.md) | Projects: `discover` and `Compiler`. Its module files get `core:project`. |
-| [`std:modules/compiler`](std/index.md#stdmodules) | `lower`, which lowers a module for a platform. |
-| [`std:encoding`](std/index.md#stdencoding) | What a built module carries, so it can be reflected on and imported. |
+| [`std:modules/compiler`](std/libraries/modules.md) | `lower`, which lowers a module for a platform. |
+| [`std:encoding`](std/libraries/encoding.md) | What a built module carries, so it can be reflected on and imported. |
 | [`pkg:clr/platform`](packages/clr.md#pkgclrplatform) | `bundle`, for what a built assembly needs. |
 | [`pkg:cecil`](packages/cecil.md) | The Cecil platform, which writes .NET assemblies. |
 
@@ -41,8 +41,8 @@ package manager's.
 
 | Library | What it gives |
 |---|---|
-| [`std:framework`](std/index.md#stdframework) | What a library declares it is: `@entrypoint`, `@metaType`, loaders and binders. |
-| [`std:traits`](std/index.md#stdtraits) | Traits, and their implementations for types. |
+| [`std:framework`](std/libraries/framework.md) | What a library declares it is: `@entrypoint`, `@metaType`, loaders and binders. |
+| [`std:traits`](std/libraries/traits.md) | Traits, and their implementations for types. |
 | [`std:oop`, `std:functions`, `std:modules`](packages/zsharp.md#the-standard-definitions-compilers) | The standard definitions' structure, and with `/compiler`, what compiles them. |
 | [`pkg:zsharp/...`](packages/zsharp.md), [`pkg:clr/...`](packages/clr.md) | The toolchain's definitions: HIR, MIR, LIR, the language's AST and parser, and the CLR's HIR and LIR. |
 | [`core:zsharp/...`](core/index.md#the-compilers-layers) | The compiler's layers: `h2m`, `mir/cg`, `mir/ts`, `m2l`, and the language's compiler. |

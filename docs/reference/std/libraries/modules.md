@@ -1,5 +1,16 @@
 # std:modules
 
+`Module` and `Global`, a module's node and its globals', which the section below
+describes with its compiler. `std:modules/compiler` compiles them:
+
+| Name | What it does |
+|---|---|
+| `lower(module, target)` | Lowers a module for a platform, as the Cecil platform. |
+| `failures(module)` | What lowering it left out, and why. |
+| `enter(module)` | Imports a module compiled from its sources, calling its entry point. |
+
+## How it is built
+
 Z#'s own modules, defined in Z#. A module is structure: its globals and its definitions.
 `module Name { ... }` defines one, and so does `def Name of Module { ... }`.
 

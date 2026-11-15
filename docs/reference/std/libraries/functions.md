@@ -1,5 +1,12 @@
 # std:functions
 
+`Function`, `Positional` and `Named`: a function's node and its parameters'. The section below describes them with their compiler.
+`std:functions/compiler` compiles them, and has `premap(declared, to)`, which makes a
+function declared with no code call another, as the prelude makes `reflect` call
+`std:encoding`'s `describe`.
+
+## How it is built
+
 Z#'s own functions, defined in Z#. A Z# function is a function of its own, not a method of
 anything: `fun` defines one wherever nothing else compiles it.
 
