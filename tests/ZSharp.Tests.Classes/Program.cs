@@ -5817,14 +5817,29 @@ Try("what is parsed says where it was written, each node its own span", () =>
     };
 });
 
-Try("what the AST compiler compiles keeps where it was written, beside it", () =>
+Try("the AST compiler keeps where each statement it compiles was written, its forks too", () =>
 {
     var parser = new Parser(Tokenizer.Tokenize(new(new StringReader("\n  1 + 2;\n")))) { Source = "compiled.zs" };
     var statement = ZSharp.Syntax.Grammar.Install(parser).Document.ParseStatement(parser);
 
-    return compiler.CompileStatement(statement).Unwrap() is C.ExpressionStatement compiled
-        && ZSharp.SourceMapping.SourceMaps.Of(compiled) is { Document: "compiled.zs", StartLine: 2, StartColumn: 3, EndLine: 2, EndColumn: 9 }
-        && ZSharp.SourceMapping.SourceMaps.Of(compiled.Expression) is { StartColumn: 3, EndColumn: 8 };
+    return compiler.Fork().CompileStatement(statement).Unwrap() is C.ExpressionStatement compiled
+        && compiler.Maps[compiled] is { Document: "compiled.zs", StartLine: 2, StartColumn: 3, EndLine: 2, EndColumn: 9 };
+});
+
+Try("code that is built says where its statements were written, of its own nodes, by itself", () =>
+{
+    var returned = new C.Return { Value = new C.IntegerLiteral(42) };
+    var code = new C.Code();
+    code.Block.Statements.Add(new C.Block(returned));
+    ZSharp.SourceMapping.SourceMaps.Set(code, returned, new("mapped.zs", 3, 5, 3, 15));
+
+    var reified = Scope.HIRReifier.ReifyCode(code).Unwrap();
+    var built = (C.Code)runner.EvaluateExpression(reified).Unwrap()!;
+
+    return built.Block.Statements is [C.Block { Statements: [C.Return rebuilt] }]
+        && !ReferenceEquals(rebuilt, returned)
+        && ZSharp.SourceMapping.SourceMaps.Of(built, rebuilt) is { Document: "mapped.zs", StartLine: 3, StartColumn: 5 }
+        && ZSharp.SourceMapping.SourceMaps.Of(code, rebuilt) is null;
 });
 
 Try("an assembly the Cecil platform writes says where each statement was written, as a stack trace through it shows", () =>

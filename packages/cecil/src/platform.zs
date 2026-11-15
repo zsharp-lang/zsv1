@@ -511,10 +511,32 @@
             }
             index = index + 1;
         }
+
+        // Its locals are in one scope, the whole method, by the names its code gave them.
+        if (body.maps.Count > 0) {
+            let scope = ScopeDebugInformation(instructions[0], null);
+            let locals = List[LIRLocal](body.locals.Keys);
+            index = 0;
+            while (index < locals.Count) {
+                if (locals[index].Name != null) scope.Variables.Add(VariableDebugInformation(body.locals[locals[index]], locals[index].Name));
+                index = index + 1;
+            }
+            body.method.DebugInformation.Scope = scope;
+        }
     }
 
+    // A source document has the checksum of what it holds, so what reads it can tell it
+    // is the source that was built. Its language isn't written: Mono.Cecil writes only the
+    // languages it knows.
     @public @explicitThis fun document(this, path: String): SourceDocument {
-        if (this.documents.ContainsKey(path) == false) this.documents[path] = SourceDocument(path);
+        if (this.documents.ContainsKey(path) == false) {
+            let document = SourceDocument(path);
+            if (File.Exists(path)) {
+                document.HashAlgorithm = DocumentHashAlgorithm.SHA256;
+                document.Hash = SHA256.HashData(File.ReadAllBytes(path));
+            }
+            this.documents[path] = document;
+        }
         return this.documents[path];
     }
 
@@ -1119,7 +1141,7 @@
     // A block is where its statements are, so only what it holds says where it was
     // written.
     @public @explicitThis fun statement(this, body: Body, statement: LIRStatement) {
-        let map = sourceMap(statement);
+        let map = sourceMap(body.function, statement);
         if (map != null) {
             let isBlock = statement is LIRBlock;
             if (isBlock == false) {

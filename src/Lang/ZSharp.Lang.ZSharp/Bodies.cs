@@ -120,15 +120,19 @@ namespace ZSharp.Lang
             if (BuiltBy(compiler, block, () => compiler.CompileStatement(body)).When(out var statement).Error(out var error))
                 return error;
 
-            var code = statement as Code.Block ?? new Code.Block(statement!);
+            // The body is reified as code, with where the compiler says its statements were
+            // written, so what is built says so of its own.
+            var code = new Code.Code();
+            code.Block.Statements.Add(statement as Code.Block ?? new Code.Block(statement!));
+            code.Annotations.Add(compiler.Maps);
 
-            if (ZSharp.Compiler.Current.HIRReifier.ReifyStatement(code).When(out var reified).Error(out error))
+            if (ZSharp.Compiler.Current.HIRReifier.ReifyCode(code).When(out var reified).Error(out error))
                 return error;
 
             block.Statements.Add(new Code.ExpressionStatement(new Code.Set
             {
                 Target = Member(owner, "Body"),
-                Value = Node("CodeOf", reified!)
+                Value = reified!
             }));
 
             return null;

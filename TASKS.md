@@ -170,31 +170,34 @@ them to its own types when it lowers them, so the runtime is one platform among 
 - [ ] The remaining patterns: `not`, sequence, `{}`, `case`.
 - [ ] Compile-time access checks (need design).
 - [~] **Source mapping through custom metadata, the whole chain: AST -> HIR -> MIR ->
-  LIR -> platform.** `pkg:zsharp/sourcemap` (`src/Packages/ZSharp.SourceMapping`):
-  `SourceMap`, and `sourceMap(node)` / `sourceMap(node, map)` for an HIR `Identity`,
-  statement and expression and an LIR statement, each a side table for now (the shape
-  doesn't say; a kind can move to an attached annotation without its callers knowing).
-  Z# has no accessors with parameters outside a class, so the settled `get sourceMap` /
-  `set sourceMap` pair is one overloaded name. The parser records each AST node's
-  `Location` (path and span); the mapped AST compiler gives what it compiles the map;
-  the CLR reifier's building code sets a reified statement's map on what it builds
-  (`Nodes.Mapped`, generic so the statement keeps its static type for decorators); the
-  code loader loads a mapped statement to a CO that maps the LIR statement it lowers to;
-  the Cecil platform writes sequence points into an embedded portable PDB. A stack trace
-  through a Cecil-built assembly shows the `.zs` file and line; the standard library's
-  builds carry them too. Folded into `design/definitions.md` (**Source mapping**) and
+  LIR -> platform.** HIR knows nothing of a source: where code was written is an
+  annotation of what holds the code (`Code` is `Annotated` now), so an extension can map
+  any source its own way. `pkg:zsharp/sourcemap` (`src/Packages/ZSharp.SourceMapping`) is
+  definitions only: `SourceMap`, `CodeMaps` (a `Code`'s annotation) and `FunctionMaps`
+  (an LIR definition's metadata), with `sourceMap(holder, statement)` /
+  `sourceMap(holder, statement, map)`. The parser records each AST node's `Location`; the
+  AST compiler keeps its statements' maps in `ASTCompiler.Maps` (shared by forks), and a
+  definition's fill takes the definition's; `Bodies` reifies a body as a `Code` through
+  the reifier's new `ReifyCode`, whose building code makes the `Code` first and puts each
+  statement in its table as constants, so built code needs nothing live;
+  `CodeLoaders.Load(code, into)`, which the IL loader, `std:functions` and `std:oop` lower
+  bodies with, puts each lowered statement in its function's table; the Cecil platform
+  writes sequence points, source checksums and named locals into an embedded portable PDB.
+  A stack trace through a Cecil-built assembly shows the `.zs` file and line. Statements
+  only, for now. Folded into `design/definitions.md` (**Source mapping**) and
   `design/cecil.md`.
-  - [ ] A definition's map (`Identity`): the code that builds its node has to set it, as
-    reification does for a statement. A language server's go-to-definition wants it.
-  - [ ] An expression's map past HIR: reification and lowering carry only statements, as
-    nothing reads an expression's yet.
-  - [ ] Finer points: a loop's condition and a statement's parts have no points of their
-    own, and a shared expression node (a name's bound `Get`) maps to where it was first
-    used.
+  - [ ] A definition's location: an encoded annotation of the definition, a single
+    location, set by the code that builds it. A language server's go-to-definition wants
+    it; a PDB has nowhere for it.
+  - [ ] Expressions, and finer points: a loop's condition and a statement's parts have no
+    points of their own.
   - [ ] The runtime platform writes no debugging information: a module Reflection.Emit
     makes in the running process can't have any.
-  - [ ] A built library's PDB names its sources by their paths on the machine that built
-    it, as a release's would.
+  - [ ] A document's language isn't in the PDB: Mono.Cecil writes only languages it knows.
+  - [ ] Crossing this change from an older seed takes about eleven generations, over the
+    bootstrap's eight: libraries no others need are built by the seed's `std:functions`
+    and `std:oop` compilers before the new ones are, and nothing in what each library
+    needs says it is compiled by them. Running the bootstrap again finishes it.
 - [ ] **Nine import tests of `ZSharp.Tests.Classes` fail**, and have since the import
   redesign: the project didn't compile (`CodeLoaders.Register` gained `evaluate`), so
   they never ran. Some may test what the redesign changed on purpose (a module's or

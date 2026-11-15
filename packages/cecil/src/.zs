@@ -15,6 +15,7 @@ import { Path, Directory, File, Environment, Assembly, AppDomain } from Object.A
 import { static, public, explicitThis } from "pkg:clr/hir";
 
 import { BindingFlags, Convert, Enum, Version, AppContext, Byte, Module as ReflectedModule } from Object.Assembly;
+import { SHA256 } from Assembly.Load("System.Security.Cryptography");
 import { Assemblies } from Path.Combine(AppContext.BaseDirectory, "ZSharp.Importer.ILLoader.dll");
 // The attributes the IL loader reads, which an assembly it imports carries.
 import { EntryPointAttribute, ModuleScopeAttribute, MetadataAttribute, ReflectionBlobAttribute } from Path.Combine(AppContext.BaseDirectory, "ZSharp.Importer.ILLoader.Attributes.dll");
@@ -28,7 +29,8 @@ import {
     CallSite, OpCode, OpCodes, ILProcessor, Instruction, VariableDefinition, InterfaceImplementation, CustomAttribute,
     PropertyDefinition, PropertyAttributes, WriterParameters,
     CustomAttributeArgument, ICustomAttributeProvider, EmbeddedResource, ManifestResourceAttributes,
-    SequencePoint, Document as SourceDocument, EmbeddedPortablePdbWriterProvider
+    SequencePoint, Document as SourceDocument, DocumentHashAlgorithm, ScopeDebugInformation, VariableDebugInformation,
+    EmbeddedPortablePdbWriterProvider
 } from "pkg:Mono.Cecil@0.11.6";
 import { SourceMap, sourceMap } from "pkg:zsharp/sourcemap";
 

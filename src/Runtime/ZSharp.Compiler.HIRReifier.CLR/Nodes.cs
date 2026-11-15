@@ -177,15 +177,27 @@ namespace ZSharp.Compiler
         public static Code.Continue Continue(Code.Loop loop) => new(loop);
 
         /// <summary>
-        /// A statement that is built keeps where the statement it was reified from was
-        /// written. It gives the statement back as it was given, typed as it was, so what
-        /// takes it, as a decorator chosen by the type of what it is given, sees no
-        /// difference.
+        /// The code of a body, made before its statements.
         /// </summary>
-        public static T Mapped<T>(T statement, SourceMapping.SourceMap map)
+        public static Code.Code Body() => new();
+
+        public static Code.Code Add(Code.Code code, Code.Statement statement)
+        {
+            code.Block.Statements.Add(statement);
+
+            return code;
+        }
+
+        /// <summary>
+        /// A statement of code that is built is where the statement it was reified from was
+        /// written, as the code says of its own. It gives the statement back as it was
+        /// given, typed as it was, so what takes it, as a decorator chosen by the type of what
+        /// it is given, sees no difference.
+        /// </summary>
+        public static T Mapped<T>(Code.Code code, T statement, SourceMapping.SourceMap map)
             where T : Code.Statement
         {
-            SourceMapping.SourceMaps.Set(statement, map);
+            SourceMapping.CodeMaps.In(code)[statement] = map;
 
             return statement;
         }

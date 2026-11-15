@@ -4,11 +4,11 @@ using Scope = ZSharp.Compiler.Current;
 namespace ZSharp.Compiler.Objects
 {
     /// <summary>
-    /// A statement that says where it was written: it lowers as the statement it stands for
-    /// does, and gives what it lowers to its map. Anything else asked of it is the
-    /// statement's.
+    /// A statement whose code says where it was written: it lowers as the statement it
+    /// stands for does, and what it lowers into says the same of what it lowers to.
+    /// Anything else asked of it is the statement's.
     /// </summary>
-    internal sealed class Mapped(CompilerObject statement, SourceMapping.SourceMap map)
+    internal sealed class Mapped(CompilerObject statement, SourceMapping.SourceMap map, LIR.Definition into)
         : CompilerObject
         , ICompileIRStatement
     {
@@ -21,8 +21,8 @@ namespace ZSharp.Compiler.Objects
         {
             var result = Scope.IR.CompileStatement(statement, target);
 
-            if (result.Ok(out var compiled) && SourceMapping.SourceMaps.Of(compiled) is null)
-                SourceMapping.SourceMaps.Set(compiled, map);
+            if (result.Ok(out var compiled))
+                SourceMapping.FunctionMaps.In(into)[compiled] ??= map;
 
             return result;
         }

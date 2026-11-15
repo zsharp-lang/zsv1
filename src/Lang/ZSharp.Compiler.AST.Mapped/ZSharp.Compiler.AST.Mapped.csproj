@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZSharp.Compiler.AST\ZSharp.Compiler.AST.csproj" />
-    <ProjectReference Include="..\..\Packages\ZSharp.SourceMapping\ZSharp.SourceMapping.csproj" />
   </ItemGroup>
 
 </Project>

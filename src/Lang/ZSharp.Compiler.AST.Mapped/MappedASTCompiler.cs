@@ -33,12 +33,13 @@ namespace ZSharp.Compiler
             if (result.IsUnsupported())
                 result = Expressions.Compile(current, expression);
 
-            if (result.Ok(out var compiled) && Map(expression) is { } map && SourceMaps.Of(compiled) is null)
-                SourceMaps.Set(compiled, map);
-
             return result;
         }
 
+        /// <summary>
+        /// The code that fills a definition is where the definition was written, but for what
+        /// says where it was written itself, as a member compiled inside it does.
+        /// </summary>
         private IResult<CompiledDefinition, Error> CompileDefinition(ASTCompiler current, AST.Definition definition)
         {
             var result = @base.Definition(current, definition);
@@ -46,7 +47,28 @@ namespace ZSharp.Compiler
             if (result.IsUnsupported())
                 result = Definitions.Compile(current, definition);
 
-            return result;
+            if (!result.Ok(out var compiled) || Map(definition) is not { } map)
+                return result;
+
+            var fill = compiled.Fill;
+
+            return Result<CompiledDefinition>.Ok(compiled with
+            {
+                Fill = () =>
+                {
+                    var filled = fill();
+
+                    if (filled.Ok(out var block))
+                    {
+                        Mark(current, block, map);
+
+                        foreach (var statement in block.Statements)
+                            Mark(current, statement, map);
+                    }
+
+                    return filled;
+                }
+            });
         }
 
         private IResult<HIR.Code.Statement, Error> CompileStatement(ASTCompiler current, AST.Statement statement)
@@ -56,17 +78,20 @@ namespace ZSharp.Compiler
             if (result.IsUnsupported())
                 result = Statements.Compile(current, statement);
 
-            if (result.Ok(out var compiled) && Map(statement) is { } map && SourceMaps.Of(compiled) is null)
-                SourceMaps.Set(compiled, map);
+            if (result.Ok(out var compiled) && Map(statement) is { } map)
+                Mark(current, compiled, map);
 
             return result;
         }
 
+        private static void Mark(ASTCompiler current, HIR.Code.Statement statement, SourceMap map)
+            => current.Maps[statement] ??= map;
+
         /// <summary>
-        /// Where a node was written, as what is compiled from it carries it. What the
-        /// innermost compile gives keeps its own: a node one compile gives back for
-        /// another, as a name gives the same expression wherever it is used, is where it
-        /// was first compiled from.
+        /// Where a node was written, as what is compiled from it carries it, in the maps of
+        /// the compiler it is compiled in. What the innermost compile gives keeps its own:
+        /// a statement one compile gives back for another is where it was first compiled
+        /// from.
         /// </summary>
         private static SourceMap? Map(AST.Node node)
             => node.Location is { Path: { } path, Span: var span }

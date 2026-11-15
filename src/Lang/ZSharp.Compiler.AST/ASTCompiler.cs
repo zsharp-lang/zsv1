@@ -35,6 +35,13 @@ namespace ZSharp.Compiler
         /// </summary>
         public Contexts Contexts { get; private init; } = new();
 
+        /// <summary>
+        /// Where what the compiler and its forks compile was written, as far as they say. It
+        /// is the compiler's, not the code's: what holds the code it compiled, as a body,
+        /// takes what it needs of it.
+        /// </summary>
+        public SourceMapping.CodeMaps Maps { get; init; } = new();
+
         public IResult<HIR.Code.Expression, Error> CompileExpression(AST.Expression expression)
             => Expression(this, expression);
 

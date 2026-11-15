@@ -36,10 +36,12 @@ into the running platform, and gives it LIR:
 - **It writes itself.** `packages/cecil/build.zs` builds it into
   `packages/cecil/build/cecil.dll`, with the platform `pkg:cecil` gives: the project,
   compiled, the first time, and the assembly after.
-- **Where its code was written.** A statement whose LIR has a source map starts a
+- **Where its code was written.** A statement its function's source maps have starts a
   sequence point at its first instruction, and the assembly carries its portable PDB in
-  itself, so nothing goes beside it and a stack trace through it shows each source's file
-  and line. A path is the source's on the machine that built it.
+  itself, with each source's SHA-256 checksum and each method's locals by name, so
+  nothing goes beside it and a stack trace through it shows each source's file and line.
+  A path is the source's on the machine that built it. A document's language isn't
+  written: Mono.Cecil writes only the languages it knows.
 - **Builds are deterministic.** A module's identity is of its content and an assembly
   has no time of its own, so the same LIR is written as the same bytes, and a platform
   that builds itself builds what it was.

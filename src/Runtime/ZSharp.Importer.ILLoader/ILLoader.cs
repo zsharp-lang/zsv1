@@ -890,7 +890,7 @@ namespace ZSharp.Importer.ILLoader
 
             try
             {
-                if (ZSharp.Compiler.Current.HIRCodeLoader.LoadStatement(body.Block).When(out var loaded).Error(out var error))
+                if (CodeLoaders.Load(body, function).When(out var loaded).Error(out var error))
                     return error;
 
                 if (ZSharp.Compiler.Current.IR.CompileStatement(loaded!, target).When(out var statement).Error(out error))

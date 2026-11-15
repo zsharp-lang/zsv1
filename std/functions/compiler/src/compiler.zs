@@ -232,7 +232,7 @@ let premapped: Dictionary[Function, Instance] = Dictionary[Function, Instance]()
         let defined = this.defineParameters();
         let outer = CodeLoaders.Returns;
         CodeLoaders.Returns = returned;
-        let loaded = hirCodeLoader.LoadStatement(this.node.Body.Block);
+        let loaded = CodeLoaders.Load(this.node.Body, function);
         CodeLoaders.Returns = outer;
 
         let statement: IResult[LIRStatement, Error] = null;

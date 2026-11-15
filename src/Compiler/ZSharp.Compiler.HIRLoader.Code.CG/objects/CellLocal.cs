@@ -6,7 +6,7 @@ namespace ZSharp.Compiler.Objects
     /// A local that a function captures. It lives in a cell, so the function and the code
     /// it belongs to share it. Declaring it makes the cell, with its initial value.
     /// </summary>
-    internal sealed class CellLocal(CompilerObject type, CompilerObject? init)
+    internal sealed class CellLocal(CompilerObject type, CompilerObject? init, string? name = null)
         : CompilerObject
         , ICompileIRExpression
         , ICompileIRReference<LIR.Expression>
@@ -29,7 +29,7 @@ namespace ZSharp.Compiler.Objects
 
             value = compiled;
 
-            return Result<LIR.Local>.Ok(cell = new(new LIR.Reference(compiled!)));
+            return Result<LIR.Local>.Ok(cell = new(new LIR.Reference(compiled!)) { Name = name });
         }
 
         public IResult<LIR.Expression, Error> CompileIRExpression(object? target)
