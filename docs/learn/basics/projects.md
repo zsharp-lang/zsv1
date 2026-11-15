@@ -40,9 +40,10 @@ emit(compile("Greetings"));
 names the module after the folder.
 
 The sources of a project are one module: each uses the others' definitions with no
-imports between them, and each imports what it uses from elsewhere. A folder in `src`
-with no module file of its own has more sources of the same module, so a project can be
-arranged in folders freely.
+imports between them. They are compiled in the module file's scope, so what the module
+file imports, every source has, and a source can import more of its own. A folder in
+`src` with no module file of its own has more sources of the same module, so a project
+can be arranged in folders freely.
 
 ## Using it as a package
 
