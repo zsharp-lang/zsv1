@@ -1,4 +1,4 @@
-# The zs command
+# Arguments
 
 ```text
 zs [--no-prelude] [--trace-reification] [--dump-definitions] <script.zs> [arguments...]
