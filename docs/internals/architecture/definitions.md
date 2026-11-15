@@ -265,7 +265,7 @@ variable too, since its value exists only while the capturee runs, so a cast def
 that uses one encodes the delegate bound to that run's cells, as an exposed object.
 Calling it calls the local function, which still sees the variable by reference:
 
-```zs
+```zs fragment
 def Cap17 {
     @static fun make(): DotNet_Class {
         let x = "before";

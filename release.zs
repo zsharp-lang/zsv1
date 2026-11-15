@@ -197,7 +197,6 @@ module Release {
         folders.Add("std");
         folders.Add("packages");
         folders.Add("examples");
-        folders.Add("design");
         folders.Add("docs");
         let index = 0;
         while (index < folders.Count) {

@@ -1,6 +1,6 @@
 # Tasks
 
-What is to be added, in the order it is being done. `design/` records what is decided;
+What is to be added, in the order it is being done. `docs/internals/architecture/` records what is decided;
 this records what is left. Each item says what it is, and an item that waits on a
 decision says which.
 
@@ -163,7 +163,7 @@ them to its own types when it lowers them, so the runtime is one platform among 
   times: an import's source evaluated once despite three names used four ways (the
   `Import` case); `LoadModule` called 11 times without the `Module` fix and exactly once
   with it, for two imports sharing one source. Bootstrap completes. Folded into
-  `design/imports.md`, `design/code.md` and `design/definitions.md`.
+  `docs/internals/architecture/imports.md`, `docs/internals/architecture/code.md` and `docs/internals/architecture/definitions.md`.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
@@ -185,8 +185,8 @@ them to its own types when it lowers them, so the runtime is one platform among 
   bodies with, puts each lowered statement in its function's table; the Cecil platform
   writes sequence points, source checksums and named locals into an embedded portable PDB.
   A stack trace through a Cecil-built assembly shows the `.zs` file and line. Statements
-  only, for now. Folded into `design/definitions.md` (**Source mapping**) and
-  `design/cecil.md`.
+  only, for now. Folded into `docs/internals/architecture/definitions.md` (**Source mapping**) and
+  `docs/internals/architecture/cecil.md`.
   - [ ] A definition's location: an encoded annotation of the definition, a single
     location, set by the code that builds it. A language server's go-to-definition wants
     it; a PDB has nowhere for it.
@@ -288,7 +288,7 @@ code, source mapping is its own task.
       an imported function is still a constant when a body is written, so the split
       didn't change it; a function of the module itself is the same. `reflect(decodeString)`
       does build, but calling it from the assembly fails with "A function handle is not
-      mapped": the Cecil platform doesn't map `reflect` (design/imports.md: an assembly
+      mapped": the Cecil platform doesn't map `reflect` (docs/internals/architecture/imports.md: an assembly
       "calls `DescribeType` of the loader that runs it"). Until then `pkg:fastlsp` and
       `pkg:zsharp/lsp` compile from source, with a start-up of about 2.4 seconds. Commit
       nothing built.
@@ -365,8 +365,8 @@ Toolchain:
   fails with "A value only the running process has, a Function, can't be written in an
   assembly", and building code that generates calls to a library, as `pkg:fastlsp`'s
   `build`, can't be built. Checked: **this is not a Cecil bug.** A live value can't be
-  written, as `design/cecil.md` says, and the cast gives the node as a known value of the
-  process (`FunctionObject.Cast`), which `design/imports.md` lists as not yet ("a
+  written, as `docs/internals/architecture/cecil.md` says, and the cast gives the node as a known value of the
+  process (`FunctionObject.Cast`), which `docs/internals/architecture/imports.md` lists as not yet ("a
   description of a Z# definition in code a platform writes"). It needs a by-id reference
   for a node that carries a `ReflectionId`, lowered as a call that gives the node, in the
   language and not in a platform.
@@ -417,7 +417,7 @@ Toolchain:
 ## Rewriting Z# in Z#
 
 The language's own C# is to be rewritten in Z#, which is the goal of the redesign (see
-`design/principles.md`). It is not tidied in C# first: it is gone through when it is
+`docs/internals/architecture/principles.md`). It is not tidied in C# first: it is gone through when it is
 rewritten.
 
 - [ ] **Audit every part for layering and coupling, one by one, as each is rewritten.**
@@ -445,14 +445,14 @@ The docs are being rewritten on a Starlight site (`docs-site`), in a new structu
 (getting started, basics, advanced, then custom syntax, importers, semantics, dispatchers
 and platforms, and the CLI as what combines them), Reference (standard libraries and
 packages, the core languages, the Z# language as a specification, the runtime) and
-Internals (principles, the bootstrap, and `design/`).
+Internals (principles, the bootstrap, and `docs/internals/architecture/`).
 
 - [x] The Starlight site, the new structure, and the existing pages moved into it.
 - [ ] Every page marked "To be written".
 - [ ] The existing pages, rewritten for where they are now: the home page's contents
   list, the libraries split into a page each, and `reference/std/index.md` against the
   libraries' READMEs.
-- [ ] `design/`, rewritten so the layering is stated: the layers as languages that never
+- [ ] `docs/internals/architecture/`, rewritten so the layering is stated: the layers as languages that never
   refer to each other, the transformations between them and which of them are the core's,
   LIR dialects and pure capabilities, what a CO may rely on, opt-in everywhere, and
   preservability as a concept for implementors.

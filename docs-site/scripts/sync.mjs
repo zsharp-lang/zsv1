@@ -5,11 +5,9 @@
 // - its title, from its first heading, as Starlight's frontmatter;
 // - its code blocks as the site shows them: `zs fragment`, which the tests don't run, is
 //   Z# like any other, and `output`, what the script before it prints, is titled as one;
-// - its links, from files to the pages the site has of them.
-//
-// Pages that live with what they describe are served too, each as it is: the design
-// document, in ../design, under the internals, and each standard library's README, in
-// ../std, under the standard libraries.
+// - its links, from files to the pages the site has of them;
+// - its place in a folder the sidebar lists by itself: the order its folder's index
+//   links the folder's pages in.
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,15 +32,13 @@ const served = new Map();
 for (const path of files(join(root, 'docs'), (name) => name.endsWith('.md')))
 	served.set(path, posix(relative(join(root, 'docs'), path)));
 
-// The design document, in the order its README lists its pages.
-const design = join(root, 'design');
-const order = [...readFileSync(join(design, 'README.md'), 'utf8').matchAll(/\]\(([\w-]+\.md)\)/g)].map((match) => match[1]);
-for (const path of files(design, (name) => name.endsWith('.md')))
-	served.set(path, 'internals/architecture/' + (path.endsWith('README.md') ? 'index.md' : posix(relative(design, path))));
-
-const libraries = join(root, 'std');
-for (const path of files(libraries, (name) => name === 'README.md'))
-	served.set(path, 'reference/std/libraries/' + posix(relative(libraries, dirname(path))) + '.md');
+// Each page's place among its folder's pages, as its folder's index links them.
+const order = new Map();
+for (const path of served.keys()) {
+	if (!path.endsWith('index.md')) continue;
+	const listed = [...readFileSync(path, 'utf8').matchAll(/\]\(([\w-]+\.md)\)/g)].map((match) => match[1]);
+	listed.forEach((name, position) => order.set(join(dirname(path), name), position + 1));
+}
 
 // Where the site serves a page: its path, lowercased as Starlight's slugs are, with an
 // index being its folder.
@@ -80,8 +76,7 @@ function page(source, target) {
 	});
 
 	const front = ['---', `title: ${JSON.stringify(title)}`];
-	const position = order.indexOf(posix(relative(design, source)));
-	if (source.startsWith(design) && position >= 0) front.push('sidebar:', `  order: ${position + 1}`);
+	if (order.has(source)) front.push('sidebar:', `  order: ${order.get(source)}`);
 	if (target === 'index.md') {
 		const tagline = text.match(/^([^\n#][^]*?)\n\n/);
 		front.push(

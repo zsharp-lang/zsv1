@@ -228,7 +228,7 @@ namespace ZSharp.Lang
         /// source, and an <c>ImportedMember</c> by loading its import and reading its name
         /// off the result, so a name it binds is only known once loaded, not while
         /// compiling, which is why <c>of</c> can't use one imported in the same module
-        /// (see <c>design/documents.md</c>). Loading happens after the whole module's
+        /// (see <c>docs/internals/architecture/documents.md</c>). Loading happens after the whole module's
         /// construction code has compiled, so a name used before its import, anywhere in
         /// the walk, is fine. There is never a local to declare any more, so the result is
         /// always <see langword="null"/>; the signature stays as it is because the seed

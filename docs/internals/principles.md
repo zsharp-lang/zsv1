@@ -1,7 +1,7 @@
 # Principles
 
 These are the ideas Z# is built on. The record of each decision, and why it was made, is
-the toolchain's design document, [`design/`](../../design/README.md).
+the toolchain's design document, [the architecture](architecture/index.md).
 
 ## A language whose definitions are its own
 

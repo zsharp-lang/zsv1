@@ -232,7 +232,7 @@ match arguments fails at the call. The kinds so far:
 
 Each takes its default value when it gets no argument. Z# writes the first two:
 
-```zs
+```zs fragment
 fun f(a, b, c, {d, e, f})
 ```
 
