@@ -17,10 +17,15 @@ alone. What isn't written is decided by where it is:
 import { Int32 } from "core:runtime";
 import { Class, public } from "pkg:clr/hir";
 
-@public def Counter of Class {
+@public
+def Counter of Class {
     let count: Int32;                                   // private
-    @public new() { count = 0; }
-    @public fun next(): Int32 { count = count + 1; return count; }
+
+    @public
+    new() { count = 0; }
+
+    @public
+    fun next(): Int32 { count = count + 1; return count; }
 }
 ```
 
@@ -32,8 +37,10 @@ its first parameter, `this`, for code that needs it as a value:
 ```zs fragment
 import { Class, public, explicitThis } from "pkg:clr/hir";
 
-@public def Node of Class {
-    @public @explicitThis fun register(this, registry: Registry) { registry.add(this); }
+@public
+def Node of Class {
+    @public @explicitThis
+    fun register(this, registry: Registry) { registry.add(this); }
 }
 ```
 
@@ -44,10 +51,16 @@ import { print } from "std:io";
 import { Int32 } from "core:runtime";
 import { Class, public } from "pkg:clr/hir";
 
-@public def Counter of Class {
-    @public let count: Int32;
-    @public new() { count = 0; }
-    @public new from(start: Int32) { count = start; }
+@public
+def Counter of Class {
+    @public
+    let count: Int32;
+
+    @public
+    new() { count = 0; }
+
+    @public
+    new from(start: Int32) { count = start; }
 }
 
 print(Counter.from(41).count);

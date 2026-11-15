@@ -17,6 +17,7 @@ import { Int32 } from "core:runtime";
 
 def Money {
     let cents: Int32;
+
     new(this, cents: Int32) { this.cents = cents; }
 }
 

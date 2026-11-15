@@ -9,11 +9,16 @@ import { Interface, class } from "std:oop";
 import { Type } from "std:types";
 import { String } from "core:runtime";
 
-def Named of Interface { @class fun title(): String; }
+def Named of Interface {
+    @class
+    fun title(): String;
+}
 
 def Book : Named {
     new() { }
-    @class fun title(): String { return "a book"; }
+
+    @class
+    fun title(): String { return "a book"; }
 }
 
 fun describe(kind: Type[Named]): String { return kind.title(); }

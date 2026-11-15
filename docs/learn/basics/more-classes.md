@@ -16,6 +16,7 @@ def Counter {
     let count: Int32 = 0;
 
     new() { }
+
     new from(this, start: Int32) { this.count = start; }
 
     fun next(): Int32 {
@@ -46,13 +47,18 @@ import { static, class } from "std:oop";
 import { String, Int32 } from "core:runtime";
 
 def Ticket {
-    @static let issued: Int32 = 0;
+    @static
+    let issued: Int32 = 0;
+
     let number: Int32;
 
     new(this) { issued = issued + 1; this.number = issued; }
 
-    @static fun count(): Int32 { return issued; }
-    @class fun kind(): String { return "ticket"; }
+    @static
+    fun count(): Int32 { return issued; }
+
+    @class
+    fun kind(): String { return "ticket"; }
 }
 
 Ticket();
@@ -78,24 +84,40 @@ import { Type } from "std:types";
 import { String, Int32 } from "core:runtime";
 
 def Shape of Interface {
-    @class fun unit(): Shape;
-    @class fun kind(): String;
+    @class
+    fun unit(): Shape;
+
+    @class
+    fun kind(): String;
+
     fun area(): Int32;
 }
 
 def Square : Shape {
     let side: Int32;
+
     new(this, side: Int32) { this.side = side; }
-    @class fun unit(): Shape { return Square(1); }
-    @class fun kind(): String { return "square"; }
+
+    @class
+    fun unit(): Shape { return Square(1); }
+
+    @class
+    fun kind(): String { return "square"; }
+
     fun area(): Int32 { return side * side; }
 }
 
 def Circle : Shape {
     let radius: Int32;
+
     new(this, radius: Int32) { this.radius = radius; }
-    @class fun unit(): Shape { return Circle(1); }
-    @class fun kind(): String { return "circle"; }
+
+    @class
+    fun unit(): Shape { return Circle(1); }
+
+    @class
+    fun kind(): String { return "circle"; }
+
     fun area(): Int32 { return 3 * radius * radius; }
 }
 
@@ -124,7 +146,9 @@ def Square {
     new(this, side: Int32) { this.side = side; }
 
     get Side(): Int32 { return side; }
+
     set Side(value: Int32) { side = value; }
+
     get Area(): Int32 { return side * side; }
 }
 
@@ -147,7 +171,9 @@ import { String, Int32 } from "core:runtime";
 
 def Printer {
     new() { }
+
     fun show(value: Int32): String { return "number " + value; }
+
     fun show(value: String): String { return "text " + value; }
 }
 
@@ -172,7 +198,9 @@ import { Int32, Func } from "core:runtime";
 
 def Adder {
     let by: Int32;
+
     new(this, by: Int32) { this.by = by; }
+
     fun add(value: Int32): Int32 { return value + by; }
 }
 
@@ -198,10 +226,14 @@ import { Int32 } from "core:runtime";
 
 def Scale {
     let factor: Int32;
+
     new(this, factor: Int32) { this.factor = factor; }
 
-    @class @operator(Operator.Index) fun(factor: Int32): Scale { return Scale(factor); }
-    @operator(Operator.Index) fun(value: Int32): Int32 { return value * factor; }
+    @class @operator(Operator.Index)
+    fun(factor: Int32): Scale { return Scale(factor); }
+
+    @operator(Operator.Index)
+    fun(value: Int32): Int32 { return value * factor; }
 }
 
 let triple = Scale[3];

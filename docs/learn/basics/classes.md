@@ -84,7 +84,9 @@ import { String } from "core:runtime";
 
 def Ticket {
     new() { }
-    @class fun kind(): String { return "ticket"; }
+
+    @class
+    fun kind(): String { return "ticket"; }
 }
 
 let kind: Type[Ticket] = Ticket;

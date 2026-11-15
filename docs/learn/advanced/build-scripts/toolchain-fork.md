@@ -34,21 +34,30 @@ everything else to what you kept. This is how `std:modules` compiles a module's 
 where a `let` is a global and an import runs as the module is built:
 
 ```zs fragment
-@public def Members of DotNet_Class {
-    @public let fork: ASTCompiler;
-    @public let expressions: CompileASTExpression;
-    @public let statements: CompileASTStatement;
+@public
+def Members of DotNet_Class {
+    @public
+    let fork: ASTCompiler;
 
-    @public @explicitThis new(this, self: Local, compiler: ASTCompiler) {
+    @public
+    let expressions: CompileASTExpression;
+
+    @public
+    let statements: CompileASTStatement;
+
+    @public @explicitThis
+    new(this, self: Local, compiler: ASTCompiler) {
         this.fork = compiler.Fork();
         this.expressions = this.fork.Expression;
         this.statements = this.fork.Statement;
     }
 
-    @public @explicitThis fun expression(this, compiler: ASTCompiler, node: ExpressionSyntax): IResult[Expression, Error] {
+    @public @explicitThis
+    fun expression(this, compiler: ASTCompiler, node: ExpressionSyntax): IResult[Expression, Error] {
         if (node is let local: LetSyntax) return this.global(compiler, local);
         return this.expressions(compiler, node);
     }
+
     ...
 }
 ```

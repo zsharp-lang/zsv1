@@ -17,21 +17,28 @@ import { String, Int32 } from "core:runtime";
 
 def Shape of Interface {
     fun area(): Int32;
+
     fun name(): String;
 }
 
 def Square : Shape {
     let side: Int32;
+
     new(this, side: Int32) { this.side = side; }
+
     fun area(): Int32 { return side * side; }
+
     fun name(): String { return "square"; }
 }
 
 def Rectangle : Shape {
     let width: Int32;
     let height: Int32;
+
     new(this, width: Int32, height: Int32) { this.width = width; this.height = height; }
+
     fun area(): Int32 { return width * height; }
+
     fun name(): String { return "rectangle"; }
 }
 
@@ -65,12 +72,15 @@ def Pet of Interface { fun sound(): String; }
 
 def Dog : Pet {
     new() { }
+
     fun sound(): String { return "woof"; }
+
     fun fetch(): String { return "fetching"; }
 }
 
 def Cat : Pet {
     new() { }
+
     fun sound(): String { return "meow"; }
 }
 
@@ -99,7 +109,9 @@ import { IDisposable, Int32 } from "core:runtime";
 
 def Resource : IDisposable {
     let closed: Int32 = 0;
+
     new() { }
+
     fun Dispose() { closed = closed + 1; }
 }
 

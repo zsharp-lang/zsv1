@@ -16,7 +16,9 @@ import { Int32 } from "core:runtime";
 @export
 def Square {
     let side: Int32;
+
     new(this, side: Int32) { this.side = side; }
+
     fun area(): Int32 { return side * side; }
 }
 ```

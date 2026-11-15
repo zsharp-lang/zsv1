@@ -17,16 +17,27 @@ import { Instance, Definition, Named } from "pkg:zsharp/hir";
 import { Class as DotNet_Class, public, explicitThis } from "pkg:clr/hir";
 import { String, List } from "core:runtime";
 
-@public def Column of DotNet_Class : Instance, Definition, Named {
-    @public let name: String;
-    @public let Type: String;
-    @public @explicitThis get Name(this): String { return this.name; }
+@public
+def Column of DotNet_Class : Instance, Definition, Named {
+    @public
+    let name: String;
+
+    @public
+    let Type: String;
+
+    @public @explicitThis
+    get Name(this): String { return this.name; }
+
     ...
 }
 
-@public def Table of DotNet_Class : Instance, Definition, Named {
-    @public let name: String;
-    @public let Columns: List[Column];
+@public
+def Table of DotNet_Class : Instance, Definition, Named {
+    @public
+    let name: String;
+
+    @public
+    let Columns: List[Column];
     ...
 }
 ```

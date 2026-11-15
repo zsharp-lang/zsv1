@@ -124,6 +124,7 @@ import { print } from "std:io";
 import { String, Int32 } from "core:runtime";
 
 fun describe(value: Int32): String { return "the number " + value; }
+
 fun describe(value: String): String { return "the text '" + value + "'"; }
 
 print(describe(7));

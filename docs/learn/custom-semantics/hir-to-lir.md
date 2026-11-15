@@ -28,19 +28,29 @@ import { Class as DotNet_Class, public, explicitThis } from "pkg:clr/hir";
 import { Object, Int32 } from "core:runtime";
 
 // The node: a number, as structure.
-@public def Number of DotNet_Class : Instance {
-    @public let Value: Int32;
-    @public @explicitThis new(this, value: Int32) { this.Value = value; }
+@public
+def Number of DotNet_Class : Instance {
+    @public
+    let Value: Int32;
+
+    @public @explicitThis
+    new(this, value: Int32) { this.Value = value; }
 }
 
 // The CO: what using a number does.
-@public def NumberObject of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
-    @public let node: Number;
-    @public @explicitThis new(this, node: Number) { this.node = node; }
+@public
+def NumberObject of DotNet_Class : CompilerObject, ICompileIRExpression, ITyped {
+    @public
+    let node: Number;
 
-    @public @explicitThis get Type(this): CompilerObject { return hirLoader.LoadType(Int32 as HIRType).Unwrap(); }
+    @public @explicitThis
+    new(this, node: Number) { this.node = node; }
 
-    @public @explicitThis fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+    @public @explicitThis
+    get Type(this): CompilerObject { return hirLoader.LoadType(Int32 as HIRType).Unwrap(); }
+
+    @public @explicitThis
+    fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
         let type = ir.CompileType(this.Type, target);
         if (type.IsError) return Result[LIRExpression].Error(type.UnwrapError());
         return Result[LIRExpression].Ok(Constant(type.Unwrap(), this.node.Value));

@@ -49,13 +49,17 @@ both. `std:zsharp/clr` gives every CLR platform the standard capabilities that w
 
 ```zs fragment
 def ClrPolymorphism of Implementation[Polymorphism, ClrPlatform] {
-    @public let value: ClrPlatform;
+    @public
+    let value: ClrPlatform;
 
-    @public @explicitThis new(this, value: ClrPlatform) { this.value = value; }
+    @public @explicitThis
+    new(this, value: ClrPlatform) { this.value = value; }
 
-    @public @explicitThis fun objects(this, structure: Structure) {
+    @public @explicitThis
+    fun objects(this, structure: Structure) {
         structure.Metadata.Add(Polymorphic());
     }
+
     ...
 }
 ```

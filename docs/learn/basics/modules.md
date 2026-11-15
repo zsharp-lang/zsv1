@@ -20,7 +20,9 @@ module Shop {
 
     def Item {
         let price: Int32;
+
         new(this, price: Int32) { this.price = price; }
+
         fun total(): Int32 { return price + price * tax / 100; }
     }
 

@@ -267,12 +267,18 @@ Calling it calls the local function, which still sees the variable by reference:
 
 ```zs fragment
 def Cap17 {
-    @static fun make(): DotNet_Class {
+    @static
+    fun make(): DotNet_Class {
         let x = "before";
+
         fun read(): String { return x; }
+
         let made = def Made17 {
-            @static fun direct(): String { return x; }      // "before"
-            @static fun through(): String { return read(); } // "after"
+            @static
+            fun direct(): String { return x; }      // "before"
+
+            @static
+            fun through(): String { return read(); } // "after"
         } as DotNet_Class;
         x = "after";
         return made;
