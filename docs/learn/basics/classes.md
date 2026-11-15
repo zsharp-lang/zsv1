@@ -1,14 +1,12 @@
 # Classes
 
-`def` defines a class: its fields, constructors and methods. A Z# class has no
-inheritance. What it shares with other classes, it shares by implementing
-[interfaces](interfaces.md).
+A function gives a name to code. A class gives a name to data and the code that goes with
+it: an account and what can be done to it, a point and how it moves. `def` defines one.
 
 ## Fields, constructors and methods
 
-A field is a `let` in the class. A constructor is `new`, whose first parameter is `this`,
-the object it makes. A method is a `fun`, which reaches the class's members by their
-names:
+A class holds its **fields**, which are `let`s in it, is made by its **constructors**,
+which are `new`, and has **methods**, which are `fun`s:
 
 ```zs
 import { print } from "std:io";
@@ -37,11 +35,17 @@ Ada has 42
 42
 ```
 
-A field's default value is code, which runs for each object it makes. A field written
-with a value and no type has its value's type.
+- Calling the class, `Account("Ada")`, runs its constructor and gives the new object.
+- A constructor's first parameter, `this`, is the object it is making.
+- A method reaches the object's fields by their names, as `deposit` does with `balance`.
+- A field's default value, as `balance`'s `0`, is given to each object as it is made.
+  A field written with a value and no type has its value's type.
 
-A method names its object `this` if its first parameter is `this`, as a constructor
-does, which it needs only where a parameter hides a member's name:
+## The object a method runs on
+
+A method can name its object too, by taking `this` as its first parameter, as a
+constructor does. It needs to only where something else has a field's name, as a
+parameter here does:
 
 ```zs
 import { print } from "std:io";
@@ -64,166 +68,39 @@ print("" + point.x + ", " + point.y);
 11, 2
 ```
 
-## Named constructors
+In `moved`, `x` is the parameter, so the field is `this.x`; `y` is still the field.
 
-A constructor with a name is a member of the class. The unnamed one is what calling the
-class runs:
+## Classes are values
 
-```zs
-import { print } from "std:io";
-import { Int32 } from "core:runtime";
-
-def Counter {
-    let count: Int32 = 0;
-
-    new() { }
-    new from(this, start: Int32) { this.count = start; }
-
-    fun next(): Int32 {
-        count = count + 1;
-        return count;
-    }
-}
-
-print(Counter().next());
-print(Counter.from(41).next());
-```
-
-```output
-1
-42
-```
-
-## Static and class members
-
-A member marked `@static` is the class's own, not its objects': a static field is one
-variable, and a static method is a function with no object. A member marked `@class`
-belongs to the class's type object: a class is a value too, the one object of its
-metaclass, and its class methods run on it.
-
-```zs
-import { print } from "std:io";
-import { static, class } from "std:oop";
-import { String, Int32 } from "core:runtime";
-
-def Ticket {
-    @static let issued: Int32 = 0;
-    let number: Int32;
-
-    new(this) { issued = issued + 1; this.number = issued; }
-
-    @static fun count(): Int32 { return issued; }
-    @class fun kind(): String { return "ticket"; }
-}
-
-Ticket();
-Ticket();
-let third = Ticket();
-print("" + third.number + " of " + Ticket.count() + ", a " + Ticket.kind());
-```
-
-```output
-3 of 3, a ticket
-```
-
-## Properties
-
-A property is its accessors: `get Name` reads it, and `set Name` writes it.
-
-```zs
-import { print } from "std:io";
-import { Int32 } from "core:runtime";
-
-def Square {
-    let side: Int32;
-
-    new(this, side: Int32) { this.side = side; }
-
-    get Side(): Int32 { return side; }
-    set Side(value: Int32) { side = value; }
-    get Area(): Int32 { return side * side; }
-}
-
-let square = Square(3);
-square.Side = 5;
-print(square.Area);
-```
-
-```output
-25
-```
-
-## Overloaded methods
-
-Methods of one name are overloads, as functions are:
-
-```zs
-import { print } from "std:io";
-import { String, Int32 } from "core:runtime";
-
-def Printer {
-    new() { }
-    fun show(value: Int32): String { return "number " + value; }
-    fun show(value: String): String { return "text " + value; }
-}
-
-let printer = Printer();
-print(printer.show(1));
-print(printer.show("one"));
-```
-
-```output
-number 1
-text one
-```
-
-## Methods as values
-
-A method reached through an object is a delegate bound to the object, where a .NET
-delegate is expected:
-
-```zs
-import { print } from "std:io";
-import { Int32, Func } from "core:runtime";
-
-def Adder {
-    let by: Int32;
-    new(this, by: Int32) { this.by = by; }
-    fun add(value: Int32): Int32 { return value + by; }
-}
-
-let addTen: Func[Int32, Int32] = Adder(10).add;
-print(addTen(32));
-```
-
-```output
-42
-```
-
-## Indexing
-
-A method marked as the index operator is what indexing an object calls. Marked `@class`
-too, it is what indexing the class calls:
+A class is a value too, and you've been using it as one: `Account("Ada")` calls it. The
+value a class's name stands for is its **type object**, which can be kept in a variable
+and passed around like any value:
 
 ```zs
 import { print } from "std:io";
 import { class } from "std:oop";
-import { operator } from "core:zsharp";
-import { Operator } from "pkg:zsharp/lang/hir";
-import { Int32 } from "core:runtime";
+import { Type } from "std:types";
+import { String } from "core:runtime";
 
-def Scale {
-    let factor: Int32;
-    new(this, factor: Int32) { this.factor = factor; }
-
-    @class @operator(Operator.Index) fun(factor: Int32): Scale { return Scale(factor); }
-    @operator(Operator.Index) fun(value: Int32): Int32 { return value * factor; }
+def Ticket {
+    new() { }
+    @class fun kind(): String { return "ticket"; }
 }
 
-let triple = Scale[3];
-print(triple[14]);
+let kind: Type[Ticket] = Ticket;
+print(kind.kind());
 ```
 
 ```output
-42
+ticket
 ```
+
+`Type[Ticket]`, from `std:types`, is the type of `Ticket`'s type object. A member marked
+`@class` is the type object's, so `kind()` runs on the class, not on a ticket.
+
+## No inheritance
+
+A Z# class has no base class. What classes have in common, they share by implementing
+[interfaces](interfaces.md), which is the next page. [More on classes](more-classes.md)
+goes through the rest of what a class can have: named constructors, static and class
+members, properties, overloads, methods as values and indexing.

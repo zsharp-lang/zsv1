@@ -1,9 +1,11 @@
 # Functions
 
+A function names a piece of code, so it can be used again with different values.
+
 ## Defining one
 
-`fun` defines a function: its parameters, each with a type, the type it gives, if it gives
-anything, and its code.
+`fun` defines a function: its name, its parameters, each with a type, the type it gives
+back, if it gives anything, and its code:
 
 ```zs
 import { print } from "std:io";
@@ -25,13 +27,32 @@ announce(5);
 5! is 120
 ```
 
-A function that gives a value returns one on every path. One that gives nothing has no
-type after its parameters.
+`factorial` gives an `Int32`, so it returns one on every path. `announce` gives nothing,
+so it has no type after its parameters.
 
-## Named parameters and default values
+## Named parameters
 
-Parameters in braces are named: a call gives them by name, in any order, and a default
-value fills one a call leaves out.
+A call usually gives its arguments in order. Parameters written in braces are named
+instead: a call gives each by its name, in any order, which reads better where a function
+takes several values of one type, or options:
+
+```zs
+import { print } from "std:io";
+import { String } from "core:runtime";
+
+fun send(to: String, {subject: String, body: String}): String {
+    return "to " + to + ": " + subject + " / " + body;
+}
+
+print(send("Ada", body: "See you at noon.", subject: "Lunch"));
+```
+
+```output
+to Ada: Lunch / See you at noon.
+```
+
+A named parameter is given like any other, unless it has a default value: then a call can
+leave it out.
 
 ```zs
 import { print } from "std:io";
@@ -52,8 +73,8 @@ Hello, Grace.
 Hi, Linus?
 ```
 
-A parameter can have a name for callers and another for its code, written
-`name as alias`:
+A parameter can have one name for callers and another for its own code, written
+`name as alias`, so an API reads well from outside while its code stays short:
 
 ```zs
 import { print } from "std:io";
@@ -72,57 +93,30 @@ print(label());
 
 ## Overloads
 
-Functions of one name are overloads of it, and a call calls the one its arguments fit:
+Functions of one name are overloads. A call chooses the one its arguments fit:
 
 ```zs
 import { print } from "std:io";
 import { String, Int32 } from "core:runtime";
 
 fun describe(value: Int32): String { return "the number " + value; }
-fun describe(value: String): String { return "the text " + value; }
+fun describe(value: String): String { return "the text '" + value + "'"; }
 
-print(describe(42));
-print(describe("forty-two"));
+print(describe(7));
+print(describe("seven"));
 ```
 
 ```output
-the number 42
-the text forty-two
+the number 7
+the text 'seven'
 ```
 
-A call none of them fits is an error, which says why each one doesn't.
-
-## Operators
-
-A function marked `@operator`, from `core:zsharp`, with an operator in parentheses, is one
-of the functions the operator stands for, so the operator calls it where its operands fit:
-
-```zs
-import { print } from "std:io";
-import { operator } from "core:zsharp";
-import { Int32 } from "core:runtime";
-
-def Money {
-    let cents: Int32;
-    new(this, cents: Int32) { this.cents = cents; }
-}
-
-@operator((+))
-fun add(a: Money, b: Money): Money { return Money(a.cents + b.cents); }
-
-print((Money(150) + Money(275)).cents);
-```
-
-```output
-425
-```
-
-A library's operators are the language's once it's imported.
+If more than one fits and none is more specific than the others, the call is an error.
 
 ## Functions as values
 
-A function of a [module](modules.md) goes where a .NET delegate is expected, as a
-delegate of it:
+A function can be passed around as a value: a function of a [module](modules.md) goes
+where a .NET delegate of its signature is expected.
 
 ```zs
 import { print } from "std:io";
@@ -140,6 +134,8 @@ print(operation(7));
 49
 ```
 
-A function defined in a document, outside any module, can't be a delegate yet, as
-[what isn't there yet](not-yet.md) says. A method of an object is a delegate too, bound to
-its object, as [classes](classes.md) shows.
+Z# has no function type of its own yet, so a function value is a .NET delegate, as
+`Func`, and a function defined directly in a script, outside any module, can't be one yet.
+
+Functions can also give operators a meaning for your own types: [operators](operators.md)
+shows how, once there are [classes](classes.md) to use them with.

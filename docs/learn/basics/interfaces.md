@@ -1,8 +1,14 @@
 # Interfaces
 
-An interface declares methods, with no code, which a value of any class that implements
-it has. `def Name of Interface` defines one, and a class lists what it implements after a
-colon.
+A Z# class has no base class to share code through. Say a script deals with shapes: a
+square and a rectangle are different classes, but code that describes a shape only needs
+its area and its name. An interface says exactly that: which methods a value has, with no
+code, so any class that has them can be used where the interface is expected.
+
+## Declaring and implementing one
+
+`def Name of Interface` declares one, with `Interface` from `std:oop`, and a class lists
+the interfaces it implements after a colon:
 
 ```zs
 import { print } from "std:io";
@@ -40,19 +46,20 @@ a square of area 9
 a rectangle of area 10
 ```
 
-A class must have every method of each interface it implements, with the same name and
-types, or it is an error when the class is used.
+`describe` knows nothing of squares or rectangles, only of `Shape`. A class that
+implements an interface has to have each of its methods, with the same name and types, or
+it is an error where the class is used.
 
-## Casts and type tests
+## Getting the class back
 
-A value of an interface can be cast down to a class that implements it with `as`, and
-tested for one with `is`. `is let name: Type` also names the value as that type, where the
-test is true:
+Sometimes code that has a `Shape` needs to know which shape it is. `as` casts a value down
+to a class that implements the interface, and `is` tests whether it is one. `is let name:
+Type` tests and, where it's true, names the value as that type:
 
 ```zs
 import { print } from "std:io";
 import { Interface } from "std:oop";
-import { String, Int32 } from "core:runtime";
+import { String } from "core:runtime";
 
 def Pet of Interface { fun sound(): String; }
 
@@ -81,55 +88,10 @@ fetching
 meow
 ```
 
-## Class methods of an interface
-
-An interface can declare class methods, which the class of each value of it has. The type
-of any class that implements `Shape` is `Type[Shape]`, from `std:types`, so a class used
-as a value goes where one is expected:
-
-```zs
-import { print } from "std:io";
-import { Interface, class } from "std:oop";
-import { Type } from "std:types";
-import { String, Int32 } from "core:runtime";
-
-def Shape of Interface {
-    @class fun unit(): Shape;
-    @class fun kind(): String;
-    fun area(): Int32;
-}
-
-def Square : Shape {
-    let side: Int32;
-    new(this, side: Int32) { this.side = side; }
-    @class fun unit(): Shape { return Square(1); }
-    @class fun kind(): String { return "square"; }
-    fun area(): Int32 { return side * side; }
-}
-
-def Circle : Shape {
-    let radius: Int32;
-    new(this, radius: Int32) { this.radius = radius; }
-    @class fun unit(): Shape { return Circle(1); }
-    @class fun kind(): String { return "circle"; }
-    fun area(): Int32 { return 3 * radius * radius; }
-}
-
-fun describe(kind: Type[Shape]): String { return "a unit " + kind.kind() + " has area " + kind.unit().area(); }
-
-print(describe(Square));
-print(describe(Circle));
-```
-
-```output
-a unit square has area 1
-a unit circle has area 3
-```
-
 ## .NET's interfaces
 
-A class can implement a .NET interface too, as `IDisposable`, and its objects go where one
-is expected:
+Since Z# runs on .NET, a class can implement a .NET interface too, as `IDisposable`, and
+its objects go wherever .NET expects one:
 
 ```zs
 import { print } from "std:io";
@@ -150,3 +112,7 @@ print("closed " + resource.closed + " time");
 ```output
 closed 1 time
 ```
+
+An interface can also say what a class itself has, not only its objects: [more on
+classes](more-classes.md#class-methods-through-an-interface) shows class methods through
+an interface.

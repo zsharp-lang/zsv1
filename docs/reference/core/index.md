@@ -18,7 +18,7 @@ what `zs` puts. The core *languages*, HIR, MIR and LIR, are on the pages after t
 
 It also has the running platform, `runtime`, and its IL loader, `ilLoader`.
 
-The rest of .NET is imported from its assemblies, as [Using .NET](../../learn/basics/dotnet.md)
+The rest of .NET is imported from its assemblies, as [Using .NET](../../learn/basics/dotnet/index.md)
 shows: `Path`, `File`, `Directory` and `Environment` are in `Object`'s, as in
 `import { Path } from Object.Assembly;`. What defines CLR classes in Z# is the CLR's HIR,
 in [`pkg:clr/hir`](#the-toolchains-packages).

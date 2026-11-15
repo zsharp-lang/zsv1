@@ -1,7 +1,7 @@
 # CLR packages
 
 The CLR's own extensions of Z#'s languages, and what its platforms share. [Using
-.NET](../../learn/basics/dotnet.md) shows the CLR's HIR in use.
+.NET](../../learn/basics/dotnet/index.md) shows the CLR's HIR in use.
 
 ## pkg:clr/hir
 

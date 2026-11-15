@@ -1,10 +1,7 @@
 # Hello world
 
-A first script, to check that Z# is installed and runs.
-
-## Writing it
-
-A script is a file of statements, which `zs` runs in order. Save this as `hello.zs`:
+To check that Z# is installed and that your terminal can reach it, save this as
+`hello.zs`:
 
 ```zs
 import { print } from "std:io";
@@ -12,9 +9,7 @@ import { print } from "std:io";
 print("Hello, World!");
 ```
 
-## Running it
-
-From the folder `hello.zs` is in:
+and run it, from the folder it is in, with the `zs` command:
 
 ```text
 zs hello.zs
@@ -26,17 +21,23 @@ It prints:
 Hello, World!
 ```
 
-If it does, Z# is installed. If the terminal says it has no `zs`, open a new one, since
-a terminal sees what the installer put on your PATH only once it starts. With
-`--no-path`, run `zs` by its folder, as `<folder>/bin/zs hello.zs`.
+If it does, Z# is ready. If the terminal says it has no `zs`, open a new one: a terminal
+sees what the installer added to your PATH only once it starts.
+
+:::note
+If you installed with `--no-path`, `zs` isn't on your PATH. Run it by its folder instead,
+as `<folder>/bin/zs hello.zs`.
+:::
 
 ## What happened
 
-- `import { print } from "std:io";` brought `print` in from `std:io`, a library of Z#'s
-  standard library. A script has only the names it imports.
+Before the script's first line, `zs` imported the [prelude](../advanced/prelude.md),
+which sets up the standard definitions every script relies on. Then the script ran, one
+statement at a time:
+
+- `import { print } from "std:io";` brought in `print`, from `std:io`, a library of Z#'s
+  standard library.
 - `print("Hello, World!");` called it.
-- Before the first statement, `zs` imported the [prelude](../advanced/prelude.md), which
-  installs Z#'s standard definitions: what `fun`, `def` and `module` mean.
 
 ## What's next
 

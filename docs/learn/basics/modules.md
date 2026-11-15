@@ -1,10 +1,13 @@
-# Modules and documents
+# Modules
 
-## Modules
+As a script grows, its definitions start to belong together: the prices and items of a
+shop, the parts of a parser. A module groups them under one name, so they reach each
+other by name and the rest of the script reaches them through the module.
 
-A module holds definitions: its globals, which are its `let`s, its functions and its
-classes. A global is initialized in its order, as the module is built, and what is in a
-module reaches the module's other members by their names.
+## Defining one
+
+`module` defines one. It holds definitions: its globals, which are its `let`s, its
+functions and its classes:
 
 ```zs
 import { print } from "std:io";
@@ -39,34 +42,18 @@ total 220
 total 120, sold 2
 ```
 
-A module holds no module. A library is a module too, which a project compiles from its
-files.
+Inside the module, each member reaches the others by name: `sell` uses `sold`, and
+`Item`'s `total` uses `tax`. Outside it, they are the module's members, as
+`Shop.sell` and `Shop.Item`.
 
-## Documents
+A global is initialized in its order, as the module is built, so `label` sees the `tax`
+before it. A module holds no module.
 
-A document is a file of Z#, which another one imports by its path, relative to itself. It
-gives what it marks with `@export`, from `core:zsharp`:
+## Modules and libraries
 
-```zs fragment
-// shapes.zs
-import { export } from "core:zsharp";
-import { Int32 } from "core:runtime";
+A library is a module too: the standard library's are, and so is what a
+[project](projects.md) builds. A module's functions are also what a function value is made
+of, as [functions](functions.md#functions-as-values) shows.
 
-@export
-def Square {
-    let side: Int32;
-    new(this, side: Int32) { this.side = side; }
-    fun area(): Int32 { return side * side; }
-}
-```
-
-```zs fragment
-// main.zs
-import { print } from "std:io";
-import { Square } from "shapes.zs";
-
-print(Square(4).area());
-```
-
-`@export("Name")` exports a definition under another name. A document runs once, however
-often it is imported, and two documents that import each other are an error.
+Splitting a script into several files is a matter of [documents](documents.md), which is
+the next page.

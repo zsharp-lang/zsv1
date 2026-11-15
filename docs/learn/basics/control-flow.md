@@ -1,5 +1,8 @@
 # Control flow
 
+So far, a script runs every statement once, top to bottom. Control flow lets it choose
+which statements run, and repeat them.
+
 ## If
 
 `if` runs a statement when its condition is true, and the statement after `else`
@@ -118,3 +121,6 @@ print(sign(-5) + sign(0) + sign(9));
 ```output
 0
 ```
+
+With choices and loops in hand, the next step is naming a piece of code to use again:
+[functions](functions.md).

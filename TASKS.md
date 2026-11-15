@@ -470,6 +470,21 @@ Internals (principles, the bootstrap, and `docs/internals/architecture/`).
   The capability rules moved there from `frontend.md`.
 - [ ] The rest of the architecture record, gone through against the layering, as each
   part is rewritten in Z#.
+- [ ] **Learn reads as a guide.** Each page builds on the ones before it and presents the
+  problem before the solution, where the use case isn't plain. Feedback of 2026-11-16 up to
+  code generation is applied; the pages after it get the same pass.
+- Future fixes from that feedback, which need code or decisions first:
+  - [ ] Installation: a guide, once the installer is what it is to be.
+  - [ ] The standard types as built-in names: the prelude imports them, and the docs use
+    them, not .NET's (`Int32`, `String`), which the prelude page then explains.
+  - [ ] `Void`, a standard type, and a function that returns nothing inferring it.
+  - [ ] Whether a method's `this` is implicit or explicit by default; Classes says what is
+    decided.
+  - [ ] Generics as standard, not .NET's.
+  - [ ] A function type of Z#'s own: a function as a value is a .NET delegate today, so
+    Functions as values speaks of delegates.
+  - [ ] The project compiler as a package, `pkg:`, not `std:project` (with the other
+    build-time libraries).
 
 ## Done
 
