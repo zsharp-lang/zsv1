@@ -32,8 +32,15 @@
   is reified when `bar` runs, so by the time that `Import` node exists, its source is
   already the concrete value `src` held for that run, not a reference to the parameter.
   The same import directly in `bar`'s own body is an error, since nothing has reified
-  `bar`'s own construction, so there is no value for `src` to evaluate to. Each
-  construction runs the import again.
+  `bar`'s own construction, so there is no value for `src` to evaluate to: an import's
+  source is evaluated on its own, as the import is loaded, not as part of the code it is
+  in, so a variable of that code means nothing to it. Each construction runs the import
+  again: reifying code builds its `Import` nodes with it, each from its source as the
+  building code holds it, and its `ImportedMember`s of them, once for each build, so
+  every use of a name in one build shares one import.
+- Loading an `Import` can run code while what it is in is still being lowered, as an
+  import a body loads does: a document it imports defines its definitions then, and
+  each of them is lowered whole before it is used, apart from the lowering under way.
 - An import's arguments are evaluated the same way as its source, as part of the same
   `Import` node, which makes them real parameters of the import: fine-grained imports
   through arguments.
@@ -101,8 +108,11 @@
   as a class's extension methods do, and a name the imported value has no member for
   is an error of the import, not of its first use. A module's or a body's import has
   nothing to reach until its `Import` node is loaded, so its `ImportedMember`s are
-  checked then, not while compiling: an unknown name is an error at that point, the
-  same as any other HIR that only means something once loaded.
+  checked then, not while compiling: an unknown name is an error of the import at that
+  point, the same as any other HIR that only means something once loaded, and a name
+  nothing uses is never checked. So a module's import of a class brings nothing that
+  comes with its members, as its extension methods, until something in the module uses
+  the name: a module can't import a class only for its extension methods yet.
 
 ## Reflection
 

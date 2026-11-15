@@ -47,6 +47,38 @@ namespace ZSharp.Compiler
         }
 
         /// <summary>
+        /// Loads what isn't part of the code being loaded, with nothing that code's function
+        /// defined, nothing it returns, and no code it is lowered for.
+        /// </summary>
+        private static T Outside<T>(Func<T> load)
+        {
+            var defined = new Dictionary<HIR.Instance, CompilerObject>(scope, ReferenceEqualityComparer.Instance);
+            var returns = Returns;
+            var lowered = lowering.ToArray();
+
+            scope.Clear();
+            Returns = null;
+            lowering.Clear();
+
+            try
+            {
+                return load();
+            }
+            finally
+            {
+                scope.Clear();
+                foreach (var (instance, value) in defined)
+                    scope[instance] = value;
+
+                Returns = returns;
+
+                lowering.Clear();
+                foreach (var each in lowered.Reverse())
+                    lowering.Push(each);
+            }
+        }
+
+        /// <summary>
         /// What an instance is to the code being loaded, as its function defined it.
         /// </summary>
         public static IResult Defined(HIR.Instance instance)
@@ -131,21 +163,27 @@ namespace ZSharp.Compiler
             // nothing of it is known until then, so a name it binds can't be used while
             // compiling. It is kept once loaded, as an Identity, not a Definition — an
             // import is not a named slot a container holds — so loading its ImportedMembers
-            // more than once doesn't run it again.
+            // more than once doesn't run it again. Its source isn't the code it is in, which
+            // may be being loaded as it is: it is evaluated on its own, so a variable of that
+            // code, which has no value yet, means nothing to it.
             instances.Identities.Register<HIR.Code.Import>(import =>
-                evaluate(import.From).When(out var value).Error(out var error)
-                    ? Result.Error(error)
+                Outside(() => evaluate(import.From)).When(out var value).Error(out var error)
+                    ? Result.Error(new ErrorMessage($"An import's source is evaluated on its own, as the import is loaded: {error}"))
                     : value is HIR.Instance imported
                         ? loader.LoadInstance(imported)
                         : Result.Error(new ErrorMessage($"An import must give an instance, but gave {value?.GetType().Name ?? "null"}."))
             );
 
             // An imported member is read off its import once that is loaded, so a chained
-            // import's source, which is itself an import's member, resolves the same way.
+            // import's source, which is itself an import's member, resolves the same way. A
+            // name the import's source has no member for is a failure of the import, as it
+            // is of a document's, not something else to try.
             instances.Identities.Register<HIR.Code.ImportedMember>(member =>
                 loader.LoadIdentity(member.Import).Error(out var error, out var imported)
                     ? Result.Error(error)
-                    : cg.Member(imported, member.Name)
+                    : cg.Member(imported, member.Name).Error(out error, out var found)
+                        ? Result.Error(new ErrorMessage($"The import of {member.Name} failed: {error}"))
+                        : Result.Ok(found)
             );
 
             instances.Instances.Register<HIR.Code.OverloadGroup>(group =>

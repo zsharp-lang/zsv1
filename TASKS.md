@@ -199,12 +199,25 @@ them to its own types when it lowers them, so the runtime is one platform among 
     bootstrap's eight: libraries no others need are built by the seed's `std:functions`
     and `std:oop` compilers before the new ones are, and nothing in what each library
     needs says it is compiled by them. Running the bootstrap again finishes it.
-- [ ] **Nine import tests of `ZSharp.Tests.Classes` fail**, and have since the import
-  redesign: the project didn't compile (`CodeLoaders.Register` gained `evaluate`), so
-  they never ran. Some may test what the redesign changed on purpose (a module's or
-  body's import is checked when loaded, not while compiling), others are real failures
-  (`NullReferenceException`, "None of the 4 overloads applies"). The same nine fail on
-  `lang/overload-groups`.
+- [x] **Nine import tests of `ZSharp.Tests.Classes` failed** since the import redesign,
+  hidden because the project didn't compile. Three bugs, and three tests of the old
+  design:
+  - The reifier placed an `ImportedMember` as a constant, so every build shared one
+    `Import` whose source still named the outer function's parameter: it builds them now,
+    once per build, from the source as the building code holds it.
+  - A body's import loads as the body is lowered; a document it imports then defined its
+    definitions inside that lowering, which loaded them into the runtime with no code
+    yet (`ldnull; throw`, so a `NullReferenceException`): `ILLoader.Define` lowers apart
+    from a lowering under way now.
+  - A name an import's source has no member for was "unsupported", so the loader tried
+    others and said "No loader is registered for ImportedMember": it is "The import of X
+    failed" now. And an import's source is evaluated on its own, outside the code it is
+    in, so one that uses a variable of that code fails clearly.
+  - Tests of the old design: extension methods through a module import (now a document
+    import), an unknown name a module never uses (now one it uses), and the error text.
+- [ ] A module can't import a class only for its extension methods: its import brings
+  nothing until a name of it is loaded, and nothing names the class. C#'s `using static`
+  is what it would be; a module's imports would need to be reached as the module loads.
 - [ ] Deferred: resolvers, the IL importer split, metaclass binding, namespace imports.
 
 ## Language server
