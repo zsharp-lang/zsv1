@@ -30,6 +30,30 @@ announce(5);
 `factorial` gives an `Int32`, so it returns one on every path. `announce` gives nothing,
 so it has no type after its parameters.
 
+## Returning
+
+`return` leaves a function, with a value if the function gives one. It can come anywhere
+in the function's code, so a function can leave as soon as it knows its answer:
+
+```zs
+import { print } from "std:io";
+import { Int32 } from "core:runtime";
+
+fun sign(value: Int32): Int32 {
+    if (value < 0) return -1;
+    if (value == 0) return 0;
+    return 1;
+}
+
+print(sign(-5) + sign(0) + sign(9));
+```
+
+```output
+0
+```
+
+A function that gives nothing can use `return;` to leave early.
+
 ## Named parameters
 
 A call usually gives its arguments in order. Parameters written in braces are named

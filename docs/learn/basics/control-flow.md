@@ -101,26 +101,5 @@ print("the first square over 30 is of " + found);
 the first square over 30 is of 6
 ```
 
-## Return
-
-`return` leaves a function, with a value if the function gives one:
-
-```zs
-import { print } from "std:io";
-import { Int32 } from "core:runtime";
-
-fun sign(value: Int32): Int32 {
-    if (value < 0) return -1;
-    if (value == 0) return 0;
-    return 1;
-}
-
-print(sign(-5) + sign(0) + sign(9));
-```
-
-```output
-0
-```
-
 With choices and loops in hand, the next step is naming a piece of code to use again:
 [functions](functions.md).
