@@ -16,6 +16,7 @@
     <ProjectReference Include="..\..\Library\ZSharp.Library.Standard.IO\ZSharp.Library.Standard.IO.csproj" />
     <ProjectReference Include="..\..\Diagnostics\ZSharp.Diagnostics.HIR\ZSharp.Diagnostics.HIR.csproj" />
     <ProjectReference Include="..\..\Library\ZSharp.Library.Core.ZSharp\ZSharp.Library.Core.ZSharp.csproj" />
+    <ProjectReference Include="..\..\Packages\ZSharp.SourceMapping\ZSharp.SourceMapping.csproj" />
   </ItemGroup>
 
 </Project>

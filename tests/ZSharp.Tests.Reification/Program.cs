@@ -43,7 +43,8 @@ new ZSharp.Compiler.TSDispatchers.Static.Dispatcher(Scope.TS).Apply();
 new ZSharp.Compiler.IRDispatchers.Static.Dispatcher(Scope.IR).Apply();
 new ZSharp.Compiler.OverloadingDispatchers.Static.Dispatcher(Scope.Overloading).Apply();
 
-CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG, Scope.Matching, Scope.Overloading);
+CodeLoaders.Register(mappedCode, mapped, Scope.HIRCodeLoader, Scope.HIRLoader, Scope.CG, Scope.Matching, Scope.Overloading,
+    _ => Result<object?>.Error(new ErrorMessage("Nothing is evaluated while compiling here.")));
 il.Install(mapped, mappedCode);
 
 var reifier = new MappedReifier(Scope.HIRReifier);

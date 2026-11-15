@@ -77,6 +77,23 @@ namespace ZSharp.Compiler
 
             // Anything else is placed as an object that already exists.
             values.Register<object>(value => Ok(new Code.Get(il.Expose(value))));
+
+            // The code that builds a statement gives what it builds the statement's map, so
+            // what is built says where it was written as what was reified does. The map is
+            // code, not an object of this process, so the building code can be written to a
+            // binary too.
+            var reifyStatement = reifier.ReifyStatement;
+            reifier.ReifyStatement = statement =>
+                reifyStatement(statement).When(out var built).Error(out var error)
+                    ? Fail(error)
+                    : SourceMapping.SourceMaps.Of(statement) is { } map
+                        ? Ok(Call("Mapped", built!, Call("Map",
+                            new Code.StringLiteral(map.Document),
+                            new Code.IntegerLiteral(map.StartLine),
+                            new Code.IntegerLiteral(map.StartColumn),
+                            new Code.IntegerLiteral(map.EndLine),
+                            new Code.IntegerLiteral(map.EndColumn))))
+                        : Ok(built!);
         }
 
         /// <summary>

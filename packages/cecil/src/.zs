@@ -27,8 +27,10 @@ import {
     ArrayType, ByReferenceType, PointerType, RequiredModifierType, OptionalModifierType,
     CallSite, OpCode, OpCodes, ILProcessor, Instruction, VariableDefinition, InterfaceImplementation, CustomAttribute,
     PropertyDefinition, PropertyAttributes, WriterParameters,
-    CustomAttributeArgument, ICustomAttributeProvider, EmbeddedResource, ManifestResourceAttributes
+    CustomAttributeArgument, ICustomAttributeProvider, EmbeddedResource, ManifestResourceAttributes,
+    SequencePoint, Document as SourceDocument, EmbeddedPortablePdbWriterProvider
 } from "pkg:Mono.Cecil@0.11.6";
+import { SourceMap, sourceMap } from "pkg:zsharp/sourcemap";
 
 import {
     Module as LIRModule, Function as LIRFunction, Global as LIRGlobal, Structure as LIRStructure, Field as LIRField,

@@ -13,6 +13,10 @@
     @public let locals: Dictionary[LIRLocal, VariableDefinition];
     @public let starts: Dictionary[LIRLoop, Instruction];
     @public let ends: Dictionary[Breakable, Instruction];
+    // Where each statement that says where it was written was, and the index of the first
+    // instruction written for it, in the order the statements start.
+    @public let maps: List[SourceMap];
+    @public let mapped: List[Int32];
 
     @public @explicitThis new(this, method: MethodDefinition, function: LIRFunction) {
         this.method = method;
@@ -21,6 +25,8 @@
         this.locals = Dictionary[LIRLocal, VariableDefinition]();
         this.starts = Dictionary[LIRLoop, Instruction]();
         this.ends = Dictionary[Breakable, Instruction]();
+        this.maps = List[SourceMap]();
+        this.mapped = List[Int32]();
         method.Body.InitLocals = true;
     }
 
@@ -81,6 +87,8 @@
     @public let definedConstructors: Dictionary[ClassConstructor, MethodDefinition];
     @public let definedParameters: Dictionary[ClassGenericParameter, GenericParameter];
     @public let prologues: Dictionary[LIRFunction, MethodReference];
+    // The source documents sequence points are in, by their paths.
+    @public let documents: Dictionary[String, SourceDocument];
 
     // An assembly for a version of .NET, as `net8.0`, or, given null, for the .NET that
     // runs it.
@@ -109,6 +117,7 @@
         this.definedConstructors = Dictionary[ClassConstructor, MethodDefinition]();
         this.definedParameters = Dictionary[ClassGenericParameter, GenericParameter]();
         this.prologues = Dictionary[LIRFunction, MethodReference]();
+        this.documents = Dictionary[String, SourceDocument]();
 
         this.opcodes = Dictionary[Int16, OpCode]();
         let fields = OpCodes.GetFields(BindingFlags.Public | BindingFlags.Static);
@@ -157,12 +166,16 @@
     }
 
     // The assembly is written the same each time it is built from the same LIR: its
-    // module's identity is of its content, and it has no time of its own.
+    // module's identity is of its content, and it has no time of its own. Its debugging
+    // information, where its code was written, is in it, as an embedded portable PDB, so
+    // nothing else has to go with it.
     @public @explicitThis fun write(this, path: String) {
         this.flush();
         let parameters = WriterParameters();
         parameters.DeterministicMvid = true;
         parameters.Timestamp = Convert.ToUInt32(0);
+        parameters.WriteSymbols = true;
+        parameters.SymbolWriterProvider = EmbeddedPortablePdbWriterProvider();
         this.assembly.Write(path, parameters);
     }
 
@@ -470,6 +483,39 @@
             body.il.Emit(OpCodes.Ldnull);
             body.il.Emit(OpCodes.Throw);
         }
+
+        this.sequencePoints(body);
+    }
+
+    // Each statement that says where it was written starts a sequence point at its first
+    // instruction, which a debugger, and a stack trace, read the source position of.
+    // Statements start in the order of their first instructions, so one inside another
+    // that starts at the same instruction is the later one, and is the point there.
+    @public @explicitThis fun sequencePoints(this, body: Body) {
+        let instructions = body.method.Body.Instructions;
+        let index = 0;
+        while (index < body.maps.Count) {
+            let start = body.mapped[index];
+            let shared = false;
+            if (index + 1 < body.maps.Count) shared = body.mapped[index + 1] == start;
+            if (shared == false) {
+                if (start < instructions.Count) {
+                    let map = body.maps[index];
+                    let point = SequencePoint(instructions[start], this.document(map.Document));
+                    point.StartLine = map.StartLine;
+                    point.StartColumn = map.StartColumn;
+                    point.EndLine = map.EndLine;
+                    point.EndColumn = map.EndColumn;
+                    body.method.DebugInformation.SequencePoints.Add(point);
+                }
+            }
+            index = index + 1;
+        }
+    }
+
+    @public @explicitThis fun document(this, path: String): SourceDocument {
+        if (this.documents.ContainsKey(path) == false) this.documents[path] = SourceDocument(path);
+        return this.documents[path];
     }
 
     // ---- Types
@@ -1070,7 +1116,21 @@
 
     // ---- Statements
 
+    // A block is where its statements are, so only what it holds says where it was
+    // written.
     @public @explicitThis fun statement(this, body: Body, statement: LIRStatement) {
+        let map = sourceMap(statement);
+        if (map != null) {
+            let isBlock = statement is LIRBlock;
+            if (isBlock == false) {
+                body.maps.Add(map);
+                body.mapped.Add(body.method.Body.Instructions.Count);
+            }
+        }
+        this.emitStatement(body, statement);
+    }
+
+    @public @explicitThis fun emitStatement(this, body: Body, statement: LIRStatement) {
         if (statement is let block: LIRBlock) {
             let index = 0;
             while (index < block.Locals.Count) {

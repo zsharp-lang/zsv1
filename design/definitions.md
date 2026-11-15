@@ -326,9 +326,43 @@ A binding that code needs to work can't be LIR metadata: metadata is optional, a
 target must still produce working code if it ignores it. So what is needed goes in as
 a constant, and metadata is for what is optional.
 
-Source mapping is optional, so it is metadata: a CO attaches where its code came from to
-the LIR it makes, and the runtime turns it into debugging information. HIR
-has no source positions yet; to keep HIR pure, they would live beside it, keyed by node.
+Source mapping is optional, so it is metadata: where a node was written goes with it from
+the parser to what a platform writes, and a platform that ignores it still works. HIR
+holds none of it: a node's map is beside it, keyed by the node, as **Source mapping**
+below describes.
+
+### Source mapping
+
+`pkg:zsharp/sourcemap` has `SourceMap`, a span of a document by line and column, and
+`sourceMap(node)` and `sourceMap(node, map)`, which give and set a node's map, overloaded
+for each kind of node the chain carries: an HIR `Identity`, statement and expression, and
+an LIR statement. How a kind keeps its maps is its own, behind the same two names; each is
+a table beside its nodes for now, which holds a map as long as its node lives. That is
+the nodes' state, not the package's: a map lives and goes with its node, as a field of it
+would, so the package is still definitions with no state of their own.
+
+- **The parser** records where each node it gives was written, and the path of what it
+  parses: an AST node has its `Location`, as AST is the source's own structure. Nodes of
+  several files put together, as a module's sources are, each keep their own.
+- **AST -> HIR.** The AST compiler gives each statement and expression it compiles the
+  map of the node it compiled it from, unless it has one: a node one compile gives back
+  for another, as a name gives the same expression wherever it is used, keeps where it was
+  first compiled from.
+- **Reification.** Code that is built is new nodes, made as the building code runs, so
+  the code that builds a statement gives what it builds the statement's map, as code, not
+  as an object of the process that built it: the building code can be written to a binary
+  too, and nested reification carries it as it carries any call.
+- **HIR -> MIR -> LIR.** A statement that has a map loads to one that lowers as it does
+  and gives the LIR statement it lowers to the same map. Anything else asked of it is the
+  statement's.
+- **The platform.** The Cecil platform writes a sequence point at the first instruction
+  of each statement that has a map, into a portable PDB embedded in the assembly, so a
+  debugger and a stack trace through it show the source. The runtime platform writes
+  nothing of it: a module Reflection.Emit makes in the running process has no debugging
+  information.
+- **Not yet:** a definition's map, which needs the code that builds its node to set it,
+  as reification does for a statement; an expression's past HIR, which nothing reads yet;
+  and a loop's or a condition's own points, as a statement's point is all of it.
 
 Construction code itself only builds HIR — an import compiles to an `Import` node, not
 a call it runs — so it can be compiled to a binary, as for precompiled libraries.

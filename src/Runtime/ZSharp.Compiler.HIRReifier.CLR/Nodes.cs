@@ -175,5 +175,22 @@ namespace ZSharp.Compiler
         public static Code.Break Break(Code.Loop loop, Code.Expression value) => new(loop) { Value = value };
 
         public static Code.Continue Continue(Code.Loop loop) => new(loop);
+
+        /// <summary>
+        /// A statement that is built keeps where the statement it was reified from was
+        /// written. It gives the statement back as it was given, typed as it was, so what
+        /// takes it, as a decorator chosen by the type of what it is given, sees no
+        /// difference.
+        /// </summary>
+        public static T Mapped<T>(T statement, SourceMapping.SourceMap map)
+            where T : Code.Statement
+        {
+            SourceMapping.SourceMaps.Set(statement, map);
+
+            return statement;
+        }
+
+        public static SourceMapping.SourceMap Map(string document, int startLine, int startColumn, int endLine, int endColumn)
+            => new(document, startLine, startColumn, endLine, endColumn);
     }
 }

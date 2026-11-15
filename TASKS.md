@@ -169,39 +169,38 @@ them to its own types when it lowers them, so the runtime is one platform among 
 - [ ] Function values: partial application, Bound/Invocation.
 - [ ] The remaining patterns: `not`, sequence, `{}`, `case`.
 - [ ] Compile-time access checks (need design).
-- [ ] **Source mapping through custom metadata, the whole chain: AST -> HIR -> MIR ->
-  LIR -> platform.** `design/definitions.md` already says source mapping is metadata,
-  and that HIR has no source positions on it, to keep HIR pure — "they would live
-  beside it, keyed by node," not a mark on the node, unlike `Annotated.Annotations`
-  (an on-node list, used today for reflection, e.g. `@entrypoint`). AST already has
-  positions: `Token.Span`, `Position(line, column)`, which `*Tokens` objects (e.g.
-  `FunctionTokens`) hold per AST node — nothing carries this into HIR today, and HIR
-  nodes have no reference back to the AST node that produced them. LIR already has a
-  generic, platform-written capability that fits the far end of this: `Metadata` /
-  `KeptAnnotation`.
-
-  The general shape (settled): `get sourceMap(identity: Identity): SourceMap` and
-  `set sourceMap(identity: Identity, map: SourceMap)`, overloaded for a statement and
-  an expression too, so the same two names work for anything the chain needs to mark —
-  an `Identity` (where a side table, keyed by reference, is the natural fit, the same
-  way the loader's own caches already work), a statement or an expression (where an
-  attached annotation may fit better, since these can be more numerous and are
-  reified/duplicated across builds the way a definition isn't). Callers use one pair of
-  names regardless; which storage answers them is chosen per kind, not part of the
-  shape itself — the same "a name means what resolves it" pattern as `@operator` or
-  `premap`, not something new.
-
-  Still open: whether a statement or an expression needs its own capability to carry an
-  attached annotation (today `Annotated` is only on definitions — Z# functions,
-  globals, modules, classes, CLR classes, methods, constructors — not on plain code),
-  or whether "attached" here means something else for them; the metadata type(s)
-  themselves (a position, a span, a file — `pkg:zsharp/sourcemap`, settled on, name and
-  all); how AST -> HIR compiling populates whichever storage `sourceMap`'s `Identity`
-  overload resolves to, from `Token.Span`, without putting anything on the HIR node;
-  how a CO carries its HIR node's position through MIR to attach it to the LIR it makes
-  as `KeptAnnotation`; how a platform (Cecil) writes it (.NET sequence points, most
-  likely) — "the runtime turns it into debugging information," per
-  `design/definitions.md`.
+- [~] **Source mapping through custom metadata, the whole chain: AST -> HIR -> MIR ->
+  LIR -> platform.** `pkg:zsharp/sourcemap` (`src/Packages/ZSharp.SourceMapping`):
+  `SourceMap`, and `sourceMap(node)` / `sourceMap(node, map)` for an HIR `Identity`,
+  statement and expression and an LIR statement, each a side table for now (the shape
+  doesn't say; a kind can move to an attached annotation without its callers knowing).
+  Z# has no accessors with parameters outside a class, so the settled `get sourceMap` /
+  `set sourceMap` pair is one overloaded name. The parser records each AST node's
+  `Location` (path and span); the mapped AST compiler gives what it compiles the map;
+  the CLR reifier's building code sets a reified statement's map on what it builds
+  (`Nodes.Mapped`, generic so the statement keeps its static type for decorators); the
+  code loader loads a mapped statement to a CO that maps the LIR statement it lowers to;
+  the Cecil platform writes sequence points into an embedded portable PDB. A stack trace
+  through a Cecil-built assembly shows the `.zs` file and line; the standard library's
+  builds carry them too. Folded into `design/definitions.md` (**Source mapping**) and
+  `design/cecil.md`.
+  - [ ] A definition's map (`Identity`): the code that builds its node has to set it, as
+    reification does for a statement. A language server's go-to-definition wants it.
+  - [ ] An expression's map past HIR: reification and lowering carry only statements, as
+    nothing reads an expression's yet.
+  - [ ] Finer points: a loop's condition and a statement's parts have no points of their
+    own, and a shared expression node (a name's bound `Get`) maps to where it was first
+    used.
+  - [ ] The runtime platform writes no debugging information: a module Reflection.Emit
+    makes in the running process can't have any.
+  - [ ] A built library's PDB names its sources by their paths on the machine that built
+    it, as a release's would.
+- [ ] **Nine import tests of `ZSharp.Tests.Classes` fail**, and have since the import
+  redesign: the project didn't compile (`CodeLoaders.Register` gained `evaluate`), so
+  they never ran. Some may test what the redesign changed on purpose (a module's or
+  body's import is checked when loaded, not while compiling), others are real failures
+  (`NullReferenceException`, "None of the 4 overloads applies"). The same nine fail on
+  `lang/overload-groups`.
 - [ ] Deferred: resolvers, the IL importer split, metaclass binding, namespace imports.
 
 ## Language server

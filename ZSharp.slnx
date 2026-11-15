@@ -70,6 +70,7 @@
   <Folder Name="/src/Packages/">
     <Project Path="src/Packages/ZSharp.Package.DotNet/ZSharp.Package.DotNet.csproj" />
     <Project Path="src/Packages/ZSharp.Package.ZSharp/ZSharp.Package.ZSharp.csproj" />
+    <Project Path="src/Packages/ZSharp.SourceMapping/ZSharp.SourceMapping.csproj" />
   </Folder>
   <Folder Name="/src/Runtime/">
     <Project Path="src/Runtime/ZSharp.Importer.ILLoader.Attributes/ZSharp.Importer.ILLoader.Attributes.csproj" />

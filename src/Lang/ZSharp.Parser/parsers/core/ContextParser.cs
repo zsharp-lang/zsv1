@@ -18,10 +18,12 @@ namespace ZSharp.Parser
 
         public TContent ParseContextItem(Parser parser)
         {
+            var start = parser.Start;
+
             if (parser.Is(Text.TokenType.Identifier, out var identifier) || parser.Is(Text.TokenType.Operator, out identifier))
                 if (keywordParsers.TryGetValue(identifier.Value, out var keywordParser))
-                    return keywordParser.Parse(parser);
-            return ParseDefaultContextItem(parser);
+                    return parser.Located(keywordParser.Parse(parser), start);
+            return parser.Located(ParseDefaultContextItem(parser), start);
         }
 
         protected abstract TContent ParseDefaultContextItem(Parser parser);

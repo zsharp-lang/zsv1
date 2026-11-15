@@ -408,6 +408,18 @@ namespace ZSharp.Compiler
                     : Result.Error("A return value doesn't match what is returned.");
             });
 
+            // A statement that says where it was written loads to one that gives the LIR it
+            // lowers to the same map.
+            var loadStatement = code.LoadStatement;
+            code.LoadStatement = statement =>
+            {
+                var loaded = loadStatement(statement);
+
+                return loaded.IsOk && SourceMapping.SourceMaps.Of(statement) is { } map
+                    ? Result.Ok(new Objects.Mapped(loaded.Unwrap(), map))
+                    : loaded;
+            };
+
             static IResult Unquoted()
                 => Result.Error("Unquoted code can only be inside code that is reified.");
 

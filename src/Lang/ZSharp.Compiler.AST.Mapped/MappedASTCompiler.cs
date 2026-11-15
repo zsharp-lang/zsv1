@@ -1,3 +1,5 @@
+using ZSharp.SourceMapping;
+
 namespace ZSharp.Compiler
 {
     /// <summary>
@@ -31,6 +33,9 @@ namespace ZSharp.Compiler
             if (result.IsUnsupported())
                 result = Expressions.Compile(current, expression);
 
+            if (result.Ok(out var compiled) && Map(expression) is { } map && SourceMaps.Of(compiled) is null)
+                SourceMaps.Set(compiled, map);
+
             return result;
         }
 
@@ -51,7 +56,21 @@ namespace ZSharp.Compiler
             if (result.IsUnsupported())
                 result = Statements.Compile(current, statement);
 
+            if (result.Ok(out var compiled) && Map(statement) is { } map && SourceMaps.Of(compiled) is null)
+                SourceMaps.Set(compiled, map);
+
             return result;
         }
+
+        /// <summary>
+        /// Where a node was written, as what is compiled from it carries it. What the
+        /// innermost compile gives keeps its own: a node one compile gives back for
+        /// another, as a name gives the same expression wherever it is used, is where it
+        /// was first compiled from.
+        /// </summary>
+        private static SourceMap? Map(AST.Node node)
+            => node.Location is { Path: { } path, Span: var span }
+                ? new(path, span.Start.Line, span.Start.Column, span.End.Line, span.End.Column)
+                : null;
     }
 }

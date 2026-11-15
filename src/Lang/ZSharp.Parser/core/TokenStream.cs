@@ -68,6 +68,11 @@ namespace ZSharp.Parser
 
         public bool SkipWhitespaces { get; set; } = true;
 
+        /// <summary>
+        /// The last token given, which is where what was just parsed ends.
+        /// </summary>
+        public Token? Last { get; private set; }
+
         public TokenStream(IEnumerable<Token> tokens)
         {
             this.tokens = tokens.GetEnumerator();
@@ -94,10 +99,11 @@ namespace ZSharp.Parser
                 result = cache.Dequeue();
                 CurrentLookAhead?.cache.Enqueue(result);
 
-                return result;
+                return (Last = result).Value;
             }
             else result = tokens.Current;
 
+            Last = result;
             CurrentLookAhead?.cache.Enqueue(result);
 
             if (SkipWhitespaces)

@@ -95,7 +95,7 @@ namespace ZSharp.Lang
 
                 using var stream = File.OpenText(path);
 
-                var parser = new Parser.Parser(Tokenizer.Tokenizer.Tokenize(new(stream)));
+                var parser = new Parser.Parser(Tokenizer.Tokenizer.Tokenize(new(stream))) { Source = path };
                 var syntax = ZSharp.Syntax.Grammar.Install(parser);
 
                 while (parser.HasTokens && !parser.Is(Text.TokenType.EOF))
