@@ -1,10 +1,10 @@
 # Hello world
 
-A first script, which checks that Z# is installed and runs.
+A first script, to check that Z# is installed and runs.
 
-## A first script
+## Writing it
 
-A script is a file of statements, which `zs` runs in order:
+A script is a file of statements, which `zs` runs in order. Save this as `hello.zs`:
 
 ```zs
 import { print } from "std:io";
@@ -12,63 +12,33 @@ import { print } from "std:io";
 print("Hello, World!");
 ```
 
-```output
-Hello, World!
-```
+## Running it
 
-Save it as `hello.zs`, and run it:
+From the folder `hello.zs` is in:
 
 ```text
 zs hello.zs
 ```
 
-## The prelude
-
-Almost everything Z# has is defined in its standard library, not by the toolchain: even
-what `fun` and `def` mean. A script gets the standard definitions from the prelude, which
-`zs` imports before the script's first statement:
-
-```zs
-import { print } from "std:io";
-import { Int32 } from "core:runtime";
-
-fun twice(value: Int32): Int32 { return value * 2; }
-
-print("twice 21 is " + twice(21));
-```
+It prints:
 
 ```output
-twice 21 is 42
+Hello, World!
 ```
 
-Run with `zs --no-prelude`, a script has only what it imports itself, and
-`import "std:prelude";` gives it the standard definitions again. The samples in these
-pages are run with the prelude.
+If it does, Z# is installed. If the terminal says it has no `zs`, open a new one, since
+a terminal sees what the installer put on your PATH only once it starts. With
+`--no-path`, run `zs` by its folder, as `<folder>/bin/zs hello.zs`.
 
-`core:runtime` has .NET's own types, as `Int32` and `String`, which Z# uses for its values.
-[Using .NET](../basics/dotnet.md) says more.
+## What happened
 
-## Arguments
-
-What follows a script on the command line is the script's own:
-
-```text
-zs greet.zs Ada Grace
-```
-
-```zs fragment
-import { print } from "std:io";
-import { arguments } from "core:zsharp";
-
-let index = 0;
-while (index < arguments.Count) {
-    print("Hello, " + arguments[index] + "!");
-    index = index + 1;
-}
-```
+- `import { print } from "std:io";` brought `print` in from `std:io`, a library of Z#'s
+  standard library. A script has only the names it imports.
+- `print("Hello, World!");` called it.
+- Before the first statement, `zs` imported the [prelude](../advanced/prelude.md), which
+  installs Z#'s standard definitions: what `fun`, `def` and `module` mean.
 
 ## What's next
 
-The [language](../basics/basics.md) pages go through Z# from the start. The
-[`examples`](../../../examples) folder of an install has more scripts, and a project that
-builds a .NET assembly.
+[The basics](../basics/basics.md) go through the language from the start. The `examples`
+folder of an install has more scripts, and a project that builds a .NET assembly.

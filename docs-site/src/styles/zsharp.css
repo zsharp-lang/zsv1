@@ -20,6 +20,37 @@
 	--sl-color-accent-high: #2a1873;
 }
 
+/* The home page's features: a grid of cards. */
+.zs-features {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+	gap: 1rem;
+	margin-top: 1.5rem;
+}
+
+.zs-features > div {
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.75rem;
+	padding: 1.25rem 1.25rem 0.5rem;
+	background: var(--sl-color-black);
+	margin: 0;
+}
+
+.zs-features > div:hover {
+	border-color: var(--sl-color-accent);
+}
+
+.zs-features h3 {
+	margin: 0 0 0.5rem;
+	font-size: var(--sl-text-lg);
+	color: var(--sl-color-white);
+}
+
+.zs-features p {
+	margin: 0 0 0.75rem;
+	color: var(--sl-color-gray-2);
+}
+
 /* The home page's title, in the accent, larger. */
 .hero h1 {
 	background: linear-gradient(120deg, var(--sl-color-accent-high), var(--sl-color-accent));
