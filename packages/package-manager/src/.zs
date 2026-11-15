@@ -5,7 +5,7 @@
 // What its sources use is imported here, once.
 
 import { compile, emit } from "core:project";
-import { Object, String, Boolean, Int32, Type, List, Func, ilLoader } from "core:runtime";
+import { Object, String, Boolean, Int32, Type, List, Func, ilLoader, importBuilt } from "core:runtime";
 import { Path, Directory, File, Environment, Assembly } from Object.Assembly;
 
 import { AppContext, Version, AssemblyName, AssemblyLoadContext } from Object.Assembly;

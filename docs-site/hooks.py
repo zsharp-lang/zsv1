@@ -10,6 +10,7 @@ README, in ../std, as its page under the libraries. The documentation's links to
 to those pages.
 """
 
+import logging
 import re
 from pathlib import Path
 
@@ -45,3 +46,12 @@ def on_page_markdown(markdown, page, config, files):
         markdown = DESIGN.sub(lambda match: "](" + up + "architecture/" + match.group(1) + ")", markdown)
         markdown = LIBRARY.sub(lambda match: "](" + up + "library/std/" + match.group(1) + ".md)", markdown)
     return markdown
+
+
+def on_nav(nav, config, files):
+    """Warn about a page the navigation doesn't list, as one added to the docs may not be."""
+    listed = {page.file.src_uri for page in nav.pages}
+    for file in files.documentation_pages():
+        if file.src_uri not in listed:
+            logging.getLogger("mkdocs.hooks").warning("not in nav: %s", file.src_uri)
+    return nav

@@ -6,7 +6,7 @@
 // running .NET can't find, as one a package's assembly refers to, it asks the package
 // manager for.
 
-import { Object, String, Type, ilLoader } from "core:runtime";
+import { Object, String, Type, Dictionary, ilLoader } from "core:runtime";
 import { Path, File, Directory, Assembly } from Object.Assembly;
 import { Instance } from "pkg:zsharp/hir";
 import { Error, Result, IResult } from "pkg:zsharp/core";
@@ -36,13 +36,22 @@ module Bootstrap {
         return Compiler(discover(Path.Combine(toolchain(), "packages", "package-manager", "src"))).compile()[0];
     }
 
+    // A project is compiled once for each process: what imports it again gets the same
+    // module, so its definitions are the same ones however it is reached.
+    let compiled = Dictionary[String, IResult[Instance, Error]]();
+
     // A package that is a project is what compiling it emits first, imported as a built
     // one is: a module is entered.
+
     fun project(directory: String): IResult[Instance, Error] {
+        let key = Path.GetFullPath(directory);
+        if (compiled.ContainsKey(key)) return compiled[key];
         let emitted = Compiler(discover(directory)).compile();
         if (emitted.Count == 0) return Result[Instance].Error("The project " + directory + " emits nothing.");
         if (emitted[0] is let built: Module) enter(built);
-        return Result[Instance].Ok(emitted[0]);
+        let result = Result[Instance].Ok(emitted[0]);
+        compiled[key] = result;
+        return result;
     }
 }
 

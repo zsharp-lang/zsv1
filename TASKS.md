@@ -231,9 +231,208 @@ code, source mapping is its own task.
   generated from the specification's model by `generate.zs`.
   - [ ] Real unions, and optionals, in place of `Object` and `null`, once Z# has them.
   - [ ] The base protocol, JSON-RPC's messages and errors, which the model doesn't have.
-- [ ] **`pkg:fastlsp`**: decorators that collect endpoints as the build runs, the
-  dispatcher as platform-agnostic HIR, build script utilities.
-- [ ] **`pkg:zsharp/lsp`**: the small server, then a sanitized runtime for the rest.
+- [~] **`pkg:fastlsp`** (`packages/fastlsp`). JSON in Z#, the server and its lifecycle,
+  transports, `@request`/`@notification`, and `build`, which generates the readers,
+  writers and `register` as HIR. Runs `examples/lspserver` over stdio.
+  - [x] `publish(method, params)`: an endpoint sends a notification through the server
+    `register` was given; the server sends it after the response to the message.
+  - [ ] Typed notifications and server-to-client requests: `publish` takes JSON, so what the
+    server sends is written by hand. Readers and writers for a type no endpoint reaches.
+  - [ ] Union values that are Z# classes, and parameters of an endpoint beyond the first.
+  - [ ] Cancellation, progress, and a response to a request the server made.
+- [~] **`pkg:zsharp/lsp`** (`packages/zsharp/lsp`). The small server: it parses a document
+  tolerating its mistakes (`Recovery`, in `ZSharp.Syntax`), runs none of its code, and
+  answers diagnostics, the outline, definition (any declaration of the name in the
+  document) and hover (the declaration's first line). `serve.zs` is the program an editor
+  starts, over stdio; `test.zs` talks to it in memory. A VS Code extension is a separate
+  project that starts `zs packages/zsharp/lsp/serve.zs`.
+  - [ ] Scopes, so definition finds what a name refers to and not every declaration of it.
+  - [ ] References, rename, completion, semantic tokens, folding.
+  - [ ] Import sources: definition into the file or package, completion of `std:`/`pkg:`.
+  - [ ] Custom syntax: the parser is the language's own, so a document that extends it
+    needs its earlier statements run, which is the sanitized runtime.
+  - [ ] The sanitized runtime, and source mapping through the whole chain.
+  - [ ] Start-up is about 5 seconds, as the packages are compiled from source each time:
+    build `pkg:lsp`, `pkg:fastlsp` and `pkg:zsharp/lsp` with the Cecil platform.
+    `packages/lsp/build.zs` (which encodes the module and embeds the reflection blob, as
+    `bootstrap.zs` does) writes `pkg:lsp` in about 3 seconds. Nothing is built into
+    `build/` yet. `pkg:fastlsp`
+    and `pkg:zsharp/lsp` are untried.
+    - [x] The package manager imported a built project with `ilLoader.Load`, which skips
+      the describers, so the embedded metadata was never read and a Z# class was seen as
+      a plain CLR one (statics gone, "Type has no member named Error"). It uses
+      `importBuilt(path)` now, new in `core:runtime`: the assembly read from its bytes,
+      imported as importing its file is. `packages/package-manager/build/Packages.dll`
+      was built again with it, so an older toolchain can't load it.
+    - [x] **A field typed as another Z# class of a built assembly rejected its own objects**
+      (`range.start = Position()`): a built class's CO and the CLR type its field has were two
+      objects for one type, and neither was assignable to the other. A built class goes where
+      what it was built as goes, and what it was built as goes to it (`ClassObject`'s
+      `IsAssignableTo` and `IsAssignableFrom`, which ask `ts`).
+    - [x] **A built class's static values were lost** (`DocumentHighlightKind.Write` gave 0):
+      a static field of a built class was made again as a global of a module that is never
+      initialized. It is the static member the class was built as now (`builtStaticField`),
+      found by the class's name and its own, numbered after a `$` where a static is named
+      `Class`.
+    - [x] **A field of a generic instance of a built class rejected a new instance**
+      (`s.children = List[DocumentSymbol]()`): an instantiation over a Z# class wasn't the
+      closed CLR type a field has. `Instantiation` goes to a closed type of its definition
+      whose arguments are the same types.
+    - [ ] `pkg:lsp` and `pkg:fastlsp/runtime` build and work as assemblies
+      (`packages/lsp/build.zs`, `packages/fastlsp/runtime/build.zs`): the runtime is the
+      JSON, the server, the transports and the helpers that generated code calls, split
+      from the generator so that code imports it as any library. `pkg:fastlsp`, the
+      generator (`packages/fastlsp/build.zs`), doesn't build: "A value only the running
+      process has, a Function, can't be written in an assembly." Its `build` refers to the
+      runtime's functions as HIR, `ref(decodeString as Instance)`, and `x as Instance` of
+      an imported function is still a constant when a body is written, so the split
+      didn't change it; a function of the module itself is the same. `reflect(decodeString)`
+      does build, but calling it from the assembly fails with "A function handle is not
+      mapped": the Cecil platform doesn't map `reflect` (design/imports.md: an assembly
+      "calls `DescribeType` of the loader that runs it"). Until then `pkg:fastlsp` and
+      `pkg:zsharp/lsp` compile from source, with a start-up of about 2.4 seconds. Commit
+      nothing built.
+
+### Gaps found during LSP implementation
+
+What the language, the toolchain and the standard library lacked, found by building the
+packages above. Each says what happened and what was done instead.
+
+Language:
+
+- [ ] **No unions and no optionals.** The protocol is full of both. A union is an `Object`
+  with the union in a comment, `T | null` is `T`, and an optional value type is
+  `Nullable[T]`. (`pkg:lsp`.)
+- [ ] **`Object` can't be told from a Z# class.** `object is let x: Foo` fails with "A value
+  of Object can only be matched against a type" and `object as Foo` with "Object has no
+  conversion to that type", when `Foo` is a Z# class. So an annotation has to be a CLR
+  class (`of DotNet_Class`, as `std:framework`'s are, since the list of annotations holds
+  objects), and a union field's value is read through `Unsafe.As[T]`, which doesn't check.
+- [ ] **`Action[T]` fails.** `Action` with one type argument gives ".ctor can't be called
+  with these arguments" with two overloads; `Func[...]` and `Action` with more arguments
+  seem fine. Worked around with an interface (`Transport`) and `Func`s that return null.
+- [ ] **No generic functions in Z#, and a CLR generic method can't use its own type
+  parameter.** `def Codec of DotNet_Class { @static fun list[T](...) { List[T]() } }` throws
+  `NotSupportedException` from `TypeBuilderInstantiation.get_TypeHandle` in the runtime's
+  `Runtime.OnInstance`: `ContainsBuilder` doesn't see a method's type parameters. fastlsp
+  generates a loop in HIR for each list and map instead.
+- [ ] **A document's function is no delegate.** "Function X belongs to no module, so the
+  runtime can't point to it". Handlers have to be in a `module`, which the project's
+  sources are.
+- [ ] **A document has no forward references**, so mutually recursive functions need a
+  `module` around them, as `generate.zs` has (`module Generator`).
+- [ ] **A global's type is looked up where the global is.** `let current: Server = null` in
+  a source file that sorts before the one that defines `Server` fails with "Name 'Server'
+  is not defined", though a function in it could name `Server`. Sources are compiled in
+  the order of their names, so the file was renamed.
+- [ ] **No way to write a name that is a keyword.** The protocol has properties named `from`
+  and more: they get a trailing `_`, which fastlsp strips on the wire. And `module` as a
+  variable name gives "Expected token 'Semicolon' but got '.'" with no hint that it is a
+  keyword.
+- [ ] **`and`, `not`, `for` and `try`** (already in `docs/language/not-yet.md`). Nested `if`s
+  stand in for `and`; and, since Z# can't catch an exception, a parse error would end the
+  server: `Recovery` is C#, for that reason alone.
+- [ ] **Ambiguous overloads that C# resolves.** `text.Split("\n")` and `char == char` give
+  "N overloads apply, and none of them is more specific than the others" (the C#
+  overloads of `Split`, and the six of `Char` equality). Lines are split with `IndexOf`
+  and characters compared as `Convert.ToInt32(c)`.
+- [ ] **An array literal has no type of its own.** `let xs = ["a", "b"]` says the type of
+  `xs` can't be inferred; `let xs: String[] = [...]` works.
+- [ ] **`print(x)` ignores a Z# class's `toString`.** It prints the class's name.
+- [ ] **A method's `this` has to be asked for.** Using `this` in `fun toString()` gives
+  "Name 'this' is not defined"; `fun toString(this)` works. The message could say so.
+- [ ] **A C# `params IEnumerable<T>` constructor can't be called with no arguments.**
+  `Block()` of `HIR.Code` fails; `Code().Block` is a block that exists already.
+- [ ] **A string literal may span lines.** A literal whose closing quote is on a later line
+  was accepted with the line break in it, rather than being an error. Not investigated.
+
+Toolchain:
+
+- [x] **A `pkg:` project was compiled on every import**, so two importers got two
+  different classes of one name and an argument of one wasn't the parameter of the other
+  (`Object [Invocation] does not support implicit casting to [ClassObject]`). `std:packages`
+  compiles a project once for each process now.
+- [x] **A project built as an assembly was imported without its reflection blob**: the
+  package manager used `ilLoader.Load`, which skips the describers, so a Z# class was seen
+  as a plain CLR one and its statics were gone. `importBuilt(path)` of `core:runtime`
+  imports it as importing its file does, from its bytes.
+- [x] **A field typed as another Z# class of a built assembly rejected that class's objects.** See **Language server**.
+- [x] **A built class's static values were lost, and a field of a generic instance of a
+  built class rejected a new instance.** See **Language server**.
+- [ ] **A definition cast to `Instance` in building code can't be written in an assembly.**
+  `decodeString as Instance` (a function of the module, or an imported one: a four-line
+  probe shows both) is a constant of the running process's HIR node, so the Cecil platform
+  fails with "A value only the running process has, a Function, can't be written in an
+  assembly", and building code that generates calls to a library, as `pkg:fastlsp`'s
+  `build`, can't be built. Checked: **this is not a Cecil bug.** A live value can't be
+  written, as `design/cecil.md` says, and the cast gives the node as a known value of the
+  process (`FunctionObject.Cast`), which `design/imports.md` lists as not yet ("a
+  description of a Z# definition in code a platform writes"). It needs a by-id reference
+  for a node that carries a `ReflectionId`, lowered as a call that gives the node, in the
+  language and not in a platform.
+  - [~] **Cast a function in code, as `def` and `module` are** (`fun() { ... } as Function`):
+    the cast handler already builds a definition's node as code when it is cast, which is
+    what writes in an assembly; `fun` had no expression syntax, so it was loaded as a
+    definition instead. A `fun` is an expression now (`Grammar.cs`), and `let x = 1` in
+    a cast function no longer holds the process's `Infer` object (it is read from its
+    class). A cast function with an empty body, with an import, and with typed lets and
+    returns, builds as an assembly. Left: a call of a name an import brought in
+    (`import { print } from "std:io"; print("x")`) still reifies the name as a constant of
+    the group of definitions it names ("A value only the running process has, a
+    OverloadGroup"), not as the `ImportedMember` that `CodeReifiers` builds for a group
+    of them. Nothing of `pkg:fastlsp` uses the cast yet.
+  - [ ] What was reported of `reflect(decodeString)` was something else. `reflect` is
+    premapped onto `describe` by the prelude for any platform, and the Cecil platform
+    isn't what fails. A function can't be passed as `Object` ("Object has no conversion
+    from that value"), so the function that does it fails to lower, and **a build script
+    leaves it out of the assembly without a word**: only `bootstrap.zs` checks
+    `failures(module)`. Calling it then compiles a function with no code, a handle, which
+    the runtime can't map: "A function handle is not mapped". `reflect(X as Type)` of a
+    definition of the same module fails the same way ("A definition is only described by
+    its node"). The build scripts (`packages/*/build.zs`) should fail on `failures`, as
+    `bootstrap.zs` does.
+- [x] **A library's runtime and its generator were one package.** `pkg:fastlsp` is split
+  into the generator and `pkg:fastlsp/runtime`, which builds as an assembly.
+- [ ] **Imports from the running .NET's other assemblies** (`System.Text.Json`,
+  `System.Console`) need their file: `import { JsonDocument } from
+  Path.Combine(Path.GetDirectoryName(Object.Assembly.Location), "System.Text.Json.dll")`,
+  as `Object.Assembly` is `System.Private.CoreLib` alone. `RuntimeEnvironment` isn't found
+  that way either.
+- [ ] **Errors have no position.** "2 overloads apply...", ".ctor can't be called...",
+  "Name 'X' is not defined" and the like say nothing of where, and a syntax error in a
+  project's source names the project's module file, not the source. Finding each was a
+  bisection by deleting code; running the parser's `Recovery` over each file found the
+  syntax ones. (`source mapping` is its own task: this is what it would be used for.)
+- [x] **A parse error had no position but when a token was unexpected, and a token had no
+  text.** `UnexpectedTokenError` printed `ZSharp.Text.Token`. `Token.ToString()` gives its
+  value now.
+- [ ] **The AST has no span for a name.** A definition's `Name` is a string and its node's
+  span starts at its keyword, so a selection range is found by searching the first line.
+  `ImportedName` has no location at all.
+- [ ] **No error-tolerant parse in Z#.** `Recovery.Parse` is C#, skipping to the next `;` or
+  `}` after a statement that doesn't parse. A syntax that a document defines for itself
+  isn't known to it.
+- [ ] **Start-up** of a server is about 5 seconds (see above).
+
+## Rewriting Z# in Z#
+
+The language's own C# is to be rewritten in Z#, which is the goal of the redesign (see
+`design/principles.md`). It is not tidied in C# first: it is gone through when it is
+rewritten.
+
+- [ ] **Audit every part for layering and coupling, one by one, as each is rewritten.**
+  The rewrite is the review: nothing is fixed in C# in the meantime beyond what the work
+  at hand needs. What to look for, with the cases found so far:
+  - A library that knows a platform it shouldn't: `std:oop`'s compiler holds a built
+    class's entity as a CLR `ClrType` and reaches it through `ilLoader`
+    (`bindClass`, `builtType`), when what a class was built as is the platform's and the
+    importer's business, and `std:oop` should hold it as what it is, an entity it only
+    passes back. (A check that asked the loader whether a type object was a CLR type was
+    added and removed for this: assignability goes through `ts` now.)
+  - A layer that reaches into the one above it, or a core that names a library.
+  - A special case where a general mechanism would do, and an identity that holds only
+    by reference (the loader's `Class(type)` makes a type object each time it is asked).
+  - What a part knows that its dependency graph doesn't say.
 
 ## Done
 

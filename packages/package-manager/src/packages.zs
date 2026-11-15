@@ -110,7 +110,7 @@ fun inRoot(root: String, name: String): IResult[Instance, Error] {
         if (File.Exists(built)) {
             let folder = Path.GetDirectoryName(built);
             if (bundled.Contains(folder) == false) bundled.Add(folder);
-            return Result[Instance].Ok(ilLoader.Load(Assembly.Load(File.ReadAllBytes(built)).ManifestModule));
+            return Result[Instance].Ok(importBuilt(built));
         }
     }
 

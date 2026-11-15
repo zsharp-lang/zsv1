@@ -25,7 +25,7 @@ import { UnsupportedError } from "core:zsharp/mir/core";
 import { ICTCallable, ICTBound, ICTGetMember, ICTSet, ICTCastTo, ICTImplicitCastTo, ICTGetIndex, ICTGet } from "core:zsharp/mir/cg/direct";
 import { IRTGetMember, IRTCastTo, IRTGetIndex } from "core:zsharp/mir/cg/typed";
 import { ICompileIRExpression, ICompileIRType, ICompileIRStatement, ICompileIRDefinitionIn, ICompileIRReference } from "core:zsharp/m2l";
-import { ITyped, IAssignableTo } from "core:zsharp/mir/ts";
+import { ITyped, IAssignableTo, IAssignableFrom } from "core:zsharp/mir/ts";
 import { ASTCompiler, CompiledDefinition, CompileASTExpression, CompileASTDefinition, CompileASTStatement, Context } from "core:zsharp/lang";
 import {
     Function as LIRFunction, Parameter as LIRParameter, Local as LIRLocal, Signature, Call as LIRCall,
@@ -124,11 +124,15 @@ def StaticField : CompilerObject, ICompileIRExpression, ICTSet, ITyped {
     let owner: ClassObject;
     let node: Field;
     let globals: Dictionary[Object, LIRGlobal];
+    // The static member a built class's field was built as, which is what it is.
+    let built: CompilerObject;
 
     new(this, owner: ClassObject, node: Field) {
         this.owner = owner;
         this.node = node;
         this.globals = Dictionary[Object, LIRGlobal]();
+        this.built = null;
+        if (builtClasses.ContainsKey(owner.node)) this.built = builtStaticField(builtClasses[owner.node], owner.node.Name, node.Name);
     }
 
     fun get_Type(this): CompilerObject {
@@ -150,12 +154,16 @@ def StaticField : CompilerObject, ICompileIRExpression, ICTSet, ITyped {
     }
 
     fun CompileIRExpression(this, target: Object): IResult[LIRExpression, Error] {
+        if (this.built != null) return ir.CompileExpression(this.built, target);
+
         let global = this.global(target);
         if (global == null) return Result[LIRExpression].Error(this.owner.failure(target));
         return Result[LIRExpression].Ok(GetGlobal(global));
     }
 
     fun Set(this, value: CompilerObject): IResult[CompilerObject, Error] {
+        if (this.built != null) return cg.Set(this.built, value);
+
         let converted = cg.ImplicitCast(value, this.get_Type());
         if (converted.IsError) return converted;
 
@@ -1290,7 +1298,7 @@ def InterfaceObject : CompilerObject, Holder, ICompileIRType, ICTCastTo, ICTImpl
 // A Z# class. As a type, it is the object type its target lowers it to; calling it
 // runs its unnamed constructor, and its named constructors are its members. A value
 // of it has its fields and methods as members.
-def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo, ICTImplicitCastTo, ICTGetMember[String], IRTGetMember[String], ICTGetIndex, IRTGetIndex, ICTGet, IAssignableTo, ICompileIRExpression, ITyped, Held, ICompileIRDefinitionIn[LIRModule] {
+def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo, ICTImplicitCastTo, ICTGetMember[String], IRTGetMember[String], ICTGetIndex, IRTGetIndex, ICTGet, IAssignableTo, IAssignableFrom, ICompileIRExpression, ITyped, Held, ICompileIRDefinitionIn[LIRModule] {
     let node: Class;
     let meta: Metaclass;
     let holder: Holder;
@@ -1378,12 +1386,25 @@ def ClassObject : CompilerObject, Holder, ICompileIRType, ICTCallable, ICTCastTo
     fun IsAssignableTo(this, target: CompilerObject): Boolean {
         if (target == this) return true;
 
+        // A built class's objects are of what it was built as, so they go where that does:
+        // the platform's own type decides, as the importer made it one object for each use.
+        if (builtClasses.ContainsKey(this.node)) {
+            if (ts.IsAssignableTo(target, builtType(builtClasses[this.node]))) return true;
+        }
+
         let index = 0;
         while (index < this.node.Interfaces.Count) {
             if (ts.IsAssignableTo(target, this.base(index))) return true;
             index = index + 1;
         }
         return false;
+    }
+
+    // What a built class was built as goes to the class: the same type, named by the
+    // platform's own object, as a generic instance over either has it.
+    fun IsAssignableFrom(this, source: CompilerObject): Boolean {
+        if (builtClasses.ContainsKey(this.node) == false) return false;
+        return ts.IsAssignableTo(builtType(builtClasses[this.node]), source);
     }
 
     // A base of the class, as its CO: a Z# interface, or a type of a platform's own, as a
@@ -1806,6 +1827,36 @@ fun builtTypeObjectField(built: ClrType, name: String): FieldInfo {
 fun builtTypeObject(built: ClrType, name: String): CompilerObject {
     let field = builtTypeObjectField(built, name);
     return cg.Member(builtType(field.DeclaringType), field.Name).Unwrap();
+}
+
+// A static field of a built class is a global of the module it was built in, by its
+// class's name and its own, as the type object is. A name the module has twice, as a
+// static named `Class` beside the class's own type object, is numbered after a `$`; the
+// type object is the one of the class's metaclass type.
+fun builtStaticField(built: ClrType, className: String, name: String): CompilerObject {
+    let wanted = className + "." + name;
+    let types = built.Assembly.GetTypes();
+    let index = 0;
+    while (index < types.Length) {
+        let fields = types[index].GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        let each = 0;
+        while (each < fields.Length) {
+            let found = fields[each].Name;
+            if (found.Length >= wanted.Length) {
+                if (found.Substring(0, wanted.Length) == wanted) {
+                    let ours = found.Length == wanted.Length;
+                    if (ours == false) ours = found.Substring(wanted.Length, 1) == "$";
+                    if (ours) {
+                        if (fields[each].FieldType.FullName != className + ".Class") return cg.Member(builtType(types[index]), found).Unwrap();
+                    }
+                }
+            }
+            each = each + 1;
+        }
+        index = index + 1;
+    }
+    let missing: IResult[CompilerObject, Error] = Result[CompilerObject].Error("The static field " + wanted + " isn't in the assembly of its built class.");
+    return missing.Unwrap();
 }
 
 fun builtMetaclass(built: ClrType, name: String): CompilerObject {

@@ -86,6 +86,12 @@ namespace ZSharp.Syntax
                 LangParser.Keywords.Module,
                 zsharpParser.Module.Parse
             );
+            // A function is a definition as `def` and `module` are, so it can be one in an
+            // expression, cast to what it is: `fun() { ... } as Function`.
+            expressionParser.Nud(
+                LangParser.Keywords.Function,
+                zsharpParser.Function.Parse
+            );
 
             expressionParser.InfixR("=", 10);
             expressionParser.InfixL("<", 20);

@@ -15,6 +15,9 @@
             Span = span;
         }
 
+        public override string ToString()
+            => Value;
+
         public bool Is(TokenCategory category)
             => (int)(Type & TokenType.Mask) == (int)category;
 

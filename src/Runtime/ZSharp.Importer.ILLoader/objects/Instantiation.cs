@@ -120,7 +120,21 @@ namespace ZSharp.Importer.ILLoader.Objects
                     ZSharp.Compiler.Current.TS.IsAssignableTo(pair.First, pair.Second)
                     && ZSharp.Compiler.Current.TS.IsAssignableTo(pair.Second, pair.First));
 
-            return target.Is<IILType>(out var known) && known.GetILType() == typeof(object);
+            if (!target.Is<IILType>(out var known))
+                return false;
+
+            // The same definition over the types a closed CLR type has, as a field of one
+            // has it: the arguments are the same types, whichever of two objects names each.
+            var closed = known.GetILType();
+            if (closed.IsConstructedGenericType && closed.GetGenericTypeDefinition() == definition && closed.GenericTypeArguments.Length == arguments.Length)
+                return arguments.Zip(closed.GenericTypeArguments).All(pair =>
+                {
+                    var type = loader.Class(pair.Second);
+                    return ZSharp.Compiler.Current.TS.IsAssignableTo(pair.First, type)
+                        && ZSharp.Compiler.Current.TS.IsAssignableTo(type, pair.First);
+                });
+
+            return closed == typeof(object);
         }
 
         public IResult Call(Argument[] arguments)

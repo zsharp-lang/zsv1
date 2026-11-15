@@ -30,6 +30,14 @@ namespace Core.Runtime
             => Assemblies.Import(assembly);
 
         /// <summary>
+        /// What importing the assembly file at the path gives, as importing the file does,
+        /// but the assembly is read from its bytes, so building it again can write its file.
+        /// </summary>
+        [Alias("importBuilt")]
+        public static ZSharp.HIR.Instance ImportBuilt(string path)
+            => Assemblies.Import(Assemblies.Read(path));
+
+        /// <summary>
         /// The operator the CLR has for a piece of syntax and the types of its operands, as
         /// its method: one of these, as <c>Add</c> is of <c>+</c> for <c>Int32</c>, or else
         /// the one the first operand's type defines, as <c>Half</c>'s <c>op_Addition</c>.
