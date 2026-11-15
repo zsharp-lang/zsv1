@@ -138,19 +138,85 @@ namespace ZSharp.Compiler
         /// built is, is what it holds.
         /// </summary>
         private Reified Reify(Code.Get get)
-            => Ok(get.Instance switch
+        {
+            if (variables.Count == 0 && Imports(get.Instance))
+                return WithVariables(() => Reify(get));
+
+            // What an import brings in is built with the code, before anything uses it.
+            foreach (var member in Members(get.Instance))
+                if (Imported(member).When(out _).Error(out var error))
+                    return Fail(error);
+
+            return Ok(get.Instance switch
             {
                 Code.Local local when declared.TryGetValue(local, out var holder) => Call("Get", new Code.Get(holder)),
                 HIR.Variable => Call("Encode", get),
-                Code.OverloadGroup group when group.Items.Any(item => item is HIR.Variable) => Call("Get", Grouped(group)),
+                Code.ImportedMember member => Call("Get", new Code.Get(imported[member])),
+                Code.OverloadGroup group when group.Items.Any(item => item is HIR.Variable or Code.ImportedMember) => Call("Get", Grouped(group)),
                 _ => Call("Get", Constant(get.Instance))
             });
+        }
 
         private Code.Expression Grouped(Code.OverloadGroup group)
             => group.Items.Aggregate<HIR.Instance, Code.Expression>(
                 Call("Group"),
-                (built, item) => Call("With", built, item is HIR.Variable ? new Code.Get(item) : Constant(item))
+                (built, item) => Call("With", built, item switch
+                {
+                    HIR.Variable => new Code.Get(item),
+                    Code.ImportedMember member => new Code.Get(imported[member]),
+                    _ => Constant(item)
+                })
             );
+
+        private static IEnumerable<Code.ImportedMember> Members(HIR.Instance instance)
+            => instance switch
+            {
+                Code.ImportedMember member => [member],
+                Code.OverloadGroup group => group.Items.OfType<Code.ImportedMember>(),
+                _ => []
+            };
+
+        private static bool Imports(HIR.Instance instance) => Members(instance).Any();
+
+        /// <summary>
+        /// The variables of the building code that hold the imports and imported members it
+        /// builds, once for each build.
+        /// </summary>
+        private readonly Dictionary<HIR.Instance, Code.Local> imported = new(ReferenceEqualityComparer.Instance);
+
+        /// <summary>
+        /// An import is built with the code it is in, so each build has its own, from a
+        /// source that is what the building code holds when it runs: built in a function
+        /// given its source, an import is from the source given to that run. Its members
+        /// are built of it, so all of them, and every use of each, share it. They are
+        /// variables of the outermost code being built, which every use of them is in.
+        /// </summary>
+        private IResult<Code.Local, Error> Imported(Code.ImportedMember member)
+        {
+            if (imported.TryGetValue(member, out var known))
+                return Result<Code.Local>.Ok(known);
+
+            if (!imported.TryGetValue(member.Import, out var import))
+            {
+                if (Expression(member.Import.From).When(out var from).Error(out var error))
+                    return Result<Code.Local>.Error(error);
+
+                import = Outermost(new Code.Local("import", il.Load(typeof(Code.Import))) { Init = Call("Import", from!) });
+                imported[member.Import] = import;
+            }
+
+            return Result<Code.Local>.Ok(imported[member] = Outermost(new Code.Local(member.Name, il.Load(typeof(Code.ImportedMember)))
+            {
+                Init = Call("ImportedMember", new Code.Get(import), new Code.StringLiteral(member.Name))
+            }));
+        }
+
+        private Code.Local Outermost(Code.Local variable)
+        {
+            variables.Last().Add(new Code.Declare(variable));
+
+            return variable;
+        }
 
         private Reified Reify(Code.NamedMember member)
             => Expression(member.Target).When(out var target).Error(out var error)
@@ -305,6 +371,10 @@ namespace ZSharp.Compiler
             finally
             {
                 variables.Pop();
+
+                // What a build declared for its imports is that build's alone.
+                if (variables.Count == 0)
+                    imported.Clear();
             }
         }
 

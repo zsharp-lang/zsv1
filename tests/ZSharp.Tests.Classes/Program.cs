@@ -3074,17 +3074,25 @@ Try("extension methods of several classes are overloads", () =>
         && Probe.Kept is ["Int32", "String"];
 });
 
+// A document's import reaches its names' members as it runs, so a class it imports brings
+// its extension methods to the code after it.
 Try("importing a class brings its extension methods", () =>
     ResetKept() && Run("""
-        module M182 {
-            import { Enumerable } from "core:runtime";
-        }
+        import { Enumerable as Enumerable182 } from "core:runtime";
         Keep(Probe.Numbers().Count());
         Keep(Probe.Numbers().Sum());
         """) is null && Probe.Kept is [3, 6]);
 
-Try("an import of a name the module has no member for fails at the import", () =>
-    Run("""module M184 { import { Strin } from "core:runtime"; }""") is { } e && e.Contains("import of Strin failed"));
+// A module's import is checked as what it brings in is loaded: a name its source has no
+// member for fails where it is used, and one nothing uses fails nowhere.
+Try("an import of a name the module has no member for fails where the name is used", () =>
+    Run("""module M184 { import { Strin } from "core:runtime"; }""") is null
+    && Run("""
+        module M184b {
+            import { Strin } from "core:runtime";
+            @public def C184 { @public @static fun f(): Strin { return null; } }
+        }
+        """) is { } e && e.Contains("The import of Strin failed"));
 
 Try("generic extension methods infer from the value and a local function", () =>
     Run("""
@@ -4053,7 +4061,7 @@ Try("an import in a body can't use what the body is given", () =>
                 return Library92.hello();
             }
         }
-        """) is { } e && (e.Contains("Import") || e.Contains("no member named Library92"));
+        """) is { } e && e.Contains("An import's source is evaluated on its own");
 });
 
 Try("an import in a module runs as the module is constructed", () =>

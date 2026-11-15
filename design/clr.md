@@ -97,7 +97,10 @@ a Z# definition is, not a type of the running process:
   them.
 - A document runs in the runtime, so a definition a document defines is lowered for the
   runtime and loaded into it as it is defined, which is when what it accepts is checked.
-  Anything else is lowered for each platform as code using it is.
+  It is lowered whole then, code and all, even while another lowering for the runtime is
+  under way, as when a document runs because an import a body loads imports it: what it
+  reaches doesn't wait for that lowering's code. Anything else is lowered for each
+  platform as code using it is.
 - A local function's captures are the running process's cells, so a local function is
   lowered for the runtime only.
 

@@ -9,6 +9,10 @@ namespace ZSharp.Compiler
     {
         public static Code.Get Get(HIR.Instance instance) => new(instance);
 
+        public static Code.Import Import(Code.Expression from) => new() { From = from };
+
+        public static Code.ImportedMember ImportedMember(Code.Import import, string name) => new() { Import = import, Name = name };
+
         /// <summary>
         /// Encodes a value held by the code doing the building into the code it builds.
         /// </summary>

@@ -71,7 +71,7 @@ namespace ZSharp.Importer.ILLoader
         /// runs with. It gives why it can't be lowered, if it can't.
         /// </summary>
         public Error? Define(HIR.Instance node, object target)
-            => node switch
+            => Apart(target, () => node switch
             {
                 Package.DotNet.Class @class => Defined(@class).When(out var loaded).Error(out var error)
                     ? error
@@ -81,7 +81,34 @@ namespace ZSharp.Importer.ILLoader
                     ? error
                     : Lower((Objects.DefinedModule)loaded!, target).When(out _).Error(out error) ? error : null,
                 _ => null
-            };
+            });
+
+        /// <summary>
+        /// What is defined is used right after, as a document's definition is loaded into
+        /// the runtime as it is defined, so it is lowered whole, code and all, even when
+        /// what defines it runs while something else is lowered for the target, as code an
+        /// import runs does while a body that loads it is lowered. That lowering's code is
+        /// still its own, lowered after, as it would have been.
+        /// </summary>
+        private T Apart<T>(object? target, Func<T> define)
+        {
+            var key = target ?? NoTarget;
+            var lowering = draining.Remove(key);
+            pending.Remove(key, out var queued);
+
+            try
+            {
+                return define();
+            }
+            finally
+            {
+                if (lowering)
+                    draining.Add(key);
+
+                if (queued is not null)
+                    pending[key] = queued;
+            }
+        }
 
         /// <summary>
         /// What type parameters are given while members of a generic instance are typed,
