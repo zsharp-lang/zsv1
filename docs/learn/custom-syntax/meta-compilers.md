@@ -1,39 +1,12 @@
-# New kinds of definitions
+# Meta-compilers
 
-A kind of definition is a meta-type, defined by a library, as Z#'s own are: `std:oop`'s
-classes, `std:functions`' functions and `std:modules`' modules. These pages' samples are
-from `std:functions`, whose sources ship in every install, in `std/functions`.
+A meta-compiler is what builds a [meta-type](meta-types.md)'s node from what was
+written. It is the part of a kind of definition that the frontend calls: given the AST of
+a `def`, a `fun` or a `module` of its meta-type, it gives the code that builds the node.
+This page's samples are from `std:functions`, whose sources ship in every install, in
+`std/functions`.
 
-## The parts of a kind
-
-| Part | What it is | In std:functions |
-|---|---|---|
-| The node | The definition's structure, which reflection gives. | `Function`, and `Positional` and `Named` for its parameters |
-| The meta-compiler | Builds the node from what is written, as code that runs. | `compileFunction` |
-| The loader | Loads a node to its CO, checking it is valid. | `loadFunction` |
-| The CO | What the compiler works with: how it is called, and how it lowers. | `FunctionObject` |
-
-A library keeps its nodes in a structure library, `std:functions`, and the rest in its
-compiler, `std:functions/compiler`, which importing the structure installs.
-
-## The node
-
-A node is a class of the platform's, plain structure: fields, and what the toolchain's
-interfaces ask of it, as a name.
-
-```zs fragment
-def Function of Node : Instance, Definition, NamedDefinition, Annotated, Overloadable {
-    let name: String;
-    let Parameters: List[Definition];
-    let Locals: List[Local];
-    let ReturnType: Type;
-    let Body: Code;
-    let annotations: List[Object];
-    ...
-}
-```
-
-## The meta-compiler
+## Writing one
 
 A meta-compiler is given the AST of what is written, and gives code that builds the
 node: how to make it, and what fills it once every definition around it exists, so
@@ -64,6 +37,10 @@ type, and its code, which the language compiles in a scope where the parameters'
 mean the parameters.
 
 ## The loader and the CO
+
+The meta-compiler builds the node, and the loader and the CO give it meaning, which
+[custom semantics](../custom-semantics/compiler-objects.md) goes through. In short:
+
 
 A loader is given a node and gives its CO, or why the node isn't valid. It is where a
 kind checks what it accepts, since a node can be built as anything:
