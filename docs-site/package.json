@@ -1,0 +1,17 @@
+{
+  "name": "zsharp-docs-site",
+  "private": true,
+  "type": "module",
+  "description": "Serves Z#'s documentation, in ../docs, as a website.",
+  "scripts": {
+    "sync": "node scripts/sync.mjs",
+    "dev": "node scripts/sync.mjs && astro dev --host",
+    "build": "node scripts/sync.mjs && astro build",
+    "preview": "astro preview --host"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.43.1",
+    "astro": "7.4.12",
+    "sharp": "0.35.5"
+  }
+}

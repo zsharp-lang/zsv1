@@ -1,3 +1,9 @@
 # What building and serving the site leave.
+node_modules/
+dist/
+.astro/
+# The pages, which scripts/sync.mjs copies from ../docs, ../design and ../std.
+src/content/docs/
+# The MkDocs site this replaced.
 site/
 .venv/

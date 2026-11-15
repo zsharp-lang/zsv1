@@ -329,7 +329,7 @@ Language:
   and more: they get a trailing `_`, which fastlsp strips on the wire. And `module` as a
   variable name gives "Expected token 'Semicolon' but got '.'" with no hint that it is a
   keyword.
-- [ ] **`and`, `not`, `for` and `try`** (already in `docs/language/not-yet.md`). Nested `if`s
+- [ ] **`and`, `not`, `for` and `try`** (already in `docs/learn/basics/not-yet.md`). Nested `if`s
   stand in for `and`; and, since Z# can't catch an exception, a parse error would end the
   server: `Recovery` is C#, for that reason alone.
 - [ ] **Ambiguous overloads that C# resolves.** `text.Split("\n")` and `char == char` give
@@ -433,6 +433,29 @@ rewritten.
   - A special case where a general mechanism would do, and an identity that holds only
     by reference (the loader's `Class(type)` makes a type object each time it is asked).
   - What a part knows that its dependency graph doesn't say.
+- [ ] **The build-time halves of `std:` aren't standard libraries.** `std:oop/compiler`,
+  `std:functions/compiler` and `std:modules/compiler` hold COs and meta-compilers, what a
+  build uses, not what a running program does. They belong with the Z# packages (`pkg:`).
+  The docs list them as they are today, with a note (`reference/packages/zsharp.md`);
+  moving them is a seed transition, and the docs follow.
+
+## Documentation
+
+The docs are being rewritten on a Starlight site (`docs-site`), in a new structure: Learn
+(getting started, basics, advanced, then custom syntax, importers, semantics, dispatchers
+and platforms, and the CLI as what combines them), Reference (standard libraries and
+packages, the core languages, the Z# language as a specification, the runtime) and
+Internals (principles, the bootstrap, and `design/`).
+
+- [x] The Starlight site, the new structure, and the existing pages moved into it.
+- [ ] Every page marked "To be written".
+- [ ] The existing pages, rewritten for where they are now: the home page's contents
+  list, the libraries split into a page each, and `reference/std/index.md` against the
+  libraries' READMEs.
+- [ ] `design/`, rewritten so the layering is stated: the layers as languages that never
+  refer to each other, the transformations between them and which of them are the core's,
+  LIR dialects and pure capabilities, what a CO may rely on, opt-in everywhere, and
+  preservability as a concept for implementors.
 
 ## Done
 
