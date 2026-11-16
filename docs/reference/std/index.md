@@ -19,7 +19,7 @@ A library is imported as `std:name`; one with a part, as `std:project/core`.
 | [`std:encoding`](libraries/encoding.md) | What a built module carries, so it can be imported as what it was and reflected on. |
 | [`std:framework`](libraries/framework.md) | What a library declares it is: `@entrypoint`, `@metaType`, loaders and binders. |
 | [`std:traits`](libraries/traits.md) | Traits, and their implementations for types. |
-| [`std:fs`](libraries/fs.md) | Files and folders, as Z# types. |
+| [`std:fs`](libraries/fs.md) | A sketch, not yet a library: files and folders, as Z# types. |
 
 `std:oop`, `std:functions` and `std:modules` are their definitions' structure: their
 nodes, which a program that reflects needs alone. What compiles them is in

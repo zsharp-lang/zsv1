@@ -7,21 +7,8 @@ what the `zs` command puts. The core *languages*, HIR, MIR and LIR, are on the p
 
 ## core:runtime
 
-.NET's types Z# uses most, under the names .NET gives them:
-
-| Kind | Types |
-|---|---|
-| Values | `Object`, `String`, `Boolean`, `Char`, `Byte`, `SByte`, `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`, `UInt64`, `Single`, `Double` |
-| Types and generics | `Type`, `Nullable`, `IDisposable` |
-| Collections | `List`, `Dictionary`, `HashSet`, `IEnumerable`, `Enumerable` |
-| Delegates | `Func`, `Action` |
-
-It also has the running platform, `runtime`, and its IL loader, `ilLoader`.
-
-The rest of .NET is imported from its assemblies, as [Using .NET](../../learn/basics/dotnet/index.md)
-shows: `Path`, `File`, `Directory` and `Environment` are in `Object`'s, as in
-`import { Path } from Object.Assembly;`. What defines CLR classes in Z# is the CLR's HIR,
-in [`pkg:clr/hir`](#the-toolchains-packages).
+The runtime the code runs on, and the .NET types Z# uses most: [Runtime](../runtime.md)
+lists them.
 
 ## core:zsharp
 
