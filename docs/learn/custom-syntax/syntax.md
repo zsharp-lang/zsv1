@@ -58,16 +58,28 @@ Syntax is installed as the parsers of its parts, as the statement above showed:
 Code that reads Z# sources of its own parses them with a parser that has `Grammar`
 installed, as the project compiler does for a project's sources:
 
-```zs fragment
+```zs
+import { print } from "std:io";
 import { Object } from "core:runtime";
 import { File } from Object.Assembly;
 import { Parser } from "pkg:zsharp/lang/parser";
 import { Tokenizer, TextStream } from "pkg:zsharp/lang/tokenizer";
 import { Grammar } from "pkg:zsharp/lang/syntax";
 
+File.WriteAllText("hello.zs", "fun hello(name: String): String { return name; }
+let x = 1;
+");
+
 let parser = Parser(Tokenizer.Tokenize(TextStream(File.ReadAllText("hello.zs"))));
 let statements = Grammar.Parse(parser).Statements;
+print(statements.Count);
 ```
+
+```output
+2
+```
+
+Nothing ran: the two statements are only read, as AST.
 
 A frontend of another syntax installs parsers of its own, or brings its own parser: what
 it gives the rest of the toolchain is HIR, however it read it.
