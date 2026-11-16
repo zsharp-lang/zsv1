@@ -5,6 +5,16 @@ operations, which code that works with COs calls in turn: a call, a member, a ca
 lowering. They are grouped in REIs, sets of replaceable entrypoints, each reached from Z#
 through `core:compiler`. These are the ones a CO most often meets.
 
+## Who asked the number
+
+When the code of [compiler objects](compiler-objects.md) asked for `doubled`, nothing
+called `NumberObject.Member` directly. Loading the member's code called `cg.Member(number,
+"doubled")`, an operation of CG, and CG's installed dispatcher asked the number's
+`ICTGetMember`. Running the result called `ir.CompileExpression`, an operation of IR,
+whose dispatcher asked its `ICompileIRExpression`. Every capability is answered for an
+operation like that, and code that works with COs, as a meta-compiler's or a loader's,
+calls the operations, never the capabilities.
+
 ## CG: code generation
 
 `cg` is what code does with objects:
