@@ -1,6 +1,7 @@
 # The toolchain's REIs
 
-Every REI the toolchain has, with what it asks. Each is reached from Z# through
+Writing a dispatcher starts with knowing which operation to replace. This page lists every
+REI the toolchain has, with what each of its entrypoints asks, as a map to come back to. Each is reached from Z# through
 `core:compiler`, and its delegates' types through the `core:zsharp/...` library of its
 layer.
 

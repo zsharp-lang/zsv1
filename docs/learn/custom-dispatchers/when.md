@@ -15,7 +15,9 @@ the objects what they do, so a new kind of object takes part with no dispatcher 
 
 A dispatcher is for behavior that belongs to no single object:
 
-- **A relation between objects that neither knows.** A trait is implemented for a type
+- **A relation between objects that neither knows.** Text going where a number is
+  expected, in [how REIs work](reis.md#a-dispatcher-of-your-own), is about `String` and
+  `Int32` together, and neither is yours. A trait is implemented for a type
   apart from both, so neither the value's CO nor the trait's can say the value goes to
   the trait. A dispatcher that looks the implementation up can, which is what
   `std:traits/static` does.

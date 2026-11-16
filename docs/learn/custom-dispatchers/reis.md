@@ -22,11 +22,68 @@ A default entrypoint does nothing useful: it gives an *unsupported* error, a kin
 that says the operation isn't handled, as opposed to one that says it was tried and
 failed. That difference is how dispatchers compose.
 
-## A dispatcher
+## A dispatcher of your own
 
-A dispatcher replaces an entrypoint, and keeps what it replaced to delegate to. This is
-`std:traits/static`, which makes a value go where a trait its type implements is
-expected:
+Say a script reads numbers as text, and you want text to go wherever a number is expected,
+parsed. Neither `String` nor `Int32` is yours to change, and the rule is about the two of
+them together, so no CO can carry it. A dispatcher can: it replaces `cg.ImplicitCast`,
+keeps what it replaced, and handles only what that couldn't:
+
+```zs
+import { print } from "std:io";
+import { CompilerObject } from "pkg:zsharp/mir";
+import { Error, IResult } from "pkg:zsharp/core";
+import { Argument, ImplicitCast } from "core:zsharp/mir/cg";
+import { Type as HIRType } from "pkg:zsharp/hir";
+import { cg, ts, hirLoader } from "core:compiler";
+import { Int32, String } from "core:runtime";
+
+module Parsing {
+    let previous: ImplicitCast = null;
+
+    fun implicitCast(object: CompilerObject, type: CompilerObject): IResult[CompilerObject, Error] {
+        let result = previous(object, type);
+        if (result.IsOk) return result;
+
+        let text = hirLoader.LoadType(String as HIRType).Unwrap();
+        let number = hirLoader.LoadType(Int32 as HIRType).Unwrap();
+        if (ts.IsAssignableTo(type, number)) {
+            if (ts.IsAssignableTo(text, ts.TypeOf(object).Unwrap())) {
+                return cg.Call(cg.Member(number, "Parse").Unwrap(), [Argument(object)]);
+            }
+        }
+        return result;
+    }
+
+    fun install() {
+        previous = cg.ImplicitCast;
+        cg.ImplicitCast = implicitCast;
+    }
+}
+
+Parsing.install();
+
+let count: Int32 = "41";
+print(count + 1);
+```
+
+```output
+42
+```
+
+- `install` keeps the entrypoint that was there, `cg.ImplicitCast`, and sets its own.
+  From then on, every implicit conversion, anywhere, goes through `implicitCast`.
+- `implicitCast` asks what it replaced first. Only if that couldn't convert, and the
+  conversion is of a string to an `Int32`, does it give a call of `Int32.Parse` instead.
+- `let count: Int32 = "41";` converts its value implicitly, so the string is parsed.
+
+The functions are in a module because what is installed is a delegate, which a module's
+function converts to.
+
+## A dispatcher of the standard library
+
+`std:traits/static` is a dispatcher of the same shape, which makes a value go where a
+trait its type implements is expected:
 
 ```zs fragment
 import { CompilerObject } from "pkg:zsharp/mir";
