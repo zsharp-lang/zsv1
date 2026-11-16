@@ -36,7 +36,9 @@ compiles reaches it there, and `core:compiler` is how Z# reaches it: its members
 around. There is no scoping: a compilation never needs a different setup, because a
 library is compiled when it is installed (not our responsibility) and only loaded on
 import. A library can export compile-time utilities, which can be imported and used at
-compile time.
+compile time. Forking the rest of the toolchain, as only the AST compiler forks today,
+would change this: [forking the toolchain](../../learn/advanced/build-scripts/toolchain-fork.md)
+says what is shared, and `TASKS.md` has it as an open question.
 
 That the compiler is reached as one, and not passed to what uses it, is a known form to
 remove: a CO's operations don't take the compiler, and the standard library's Z# code

@@ -7,7 +7,7 @@ branch and is not used here.
 
 It is split into pages, read in this order:
 
-- [Principles and implementation](principles.md)
+- [Principles and implementation](../principles.md#the-record)
 - [The three cores](cores.md)
 - [Layering](layering.md)
 - [REI: Replacable Entrypoints Interface](rei.md)

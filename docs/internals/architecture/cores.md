@@ -7,7 +7,7 @@ crossed only by external transformers.
 |------|----------------------------|------------------------------|
 | HIR  | Represents structure       | `Definition`, `Instance`, `Type` |
 | MIR  | Interactions between objects | `CompilerObject` (CO)      |
-| LIR  | Compiling down to a target | Undecided                    |
+| LIR  | Compiling down to a target | `Module`, `Function`, `Global`, `Structure`, `Code` |
 
 HIR and LIR are purely structural: nothing in them does anything other than
 change itself. Only MIR has behaviour. That rules out laziness too: a node never
@@ -94,7 +94,7 @@ use them too. They live in `CommonZ`, and no core depends on them.
 
 ### LIR
 
-To be designed. Settled so far:
+Settled so far:
 
 - It keeps the idea of `ZSharp.IR` but is general and relatively low-level,
   without the .NET shape (single base classes, for example).
@@ -158,8 +158,9 @@ To be designed. Settled so far:
   types, with placeholder markers on type definitions, may be added later as an
   extension. Every use outside a generic definition would have concrete
   arguments, so any target could compile it by substitution.
-- MIR -> LIR takes an optional target, so a CO can report an error when the
-  target has the wrong shape.
+- MIR -> LIR takes the target being lowered for, and its entrypoints return a result, so
+  a CO that finds a structure it can't lower, for that target or any, gives an error.
+  What a CO doesn't catch, the platform does.
 - A CO returns whatever it wants from lowering, and nothing is enforced about
   which LIR entity it returns. Custom COs fully control how custom HIR nodes
   lower.

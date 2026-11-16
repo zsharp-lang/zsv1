@@ -468,8 +468,14 @@ Internals (principles, the bootstrap, and `docs/internals/architecture/`).
   languages, the transformations and which are the core's, LIR dialects and pure
   capabilities, what a CO may rely on, opt-in everywhere, and preservability as a concept.
   The capability rules moved there from `frontend.md`.
-- [ ] The rest of the architecture record, gone through against the layering, as each
-  part is rewritten in Z#.
+- [~] The rest of the architecture record, gone through against the layering. Fixed so
+  far: one Principles page (`docs/internals/principles.md`, with the record's principles
+  under "The record"), LIR's concepts in `cores.md` no longer "Undecided", a CO's errors
+  through the LIR REIs' results rather than an optional target, and `composition.md`'s
+  "no scoping" pointing at forking. The pages of single parts (`clr.md`, `definitions.md`,
+  `documents.md`, `code.md`, `extensions.md`, `imports.md`, `projects.md`, `cecil.md`,
+  `toolchain.md`, `decisions.md`) are still to be gone through, as each part is rewritten
+  in Z#.
 - [ ] **Learn reads as a guide.** Each page builds on the ones before it and presents the
   problem before the solution, where the use case isn't plain. Feedback of 2026-11-16 up to
   code generation is applied; the pages after it get the same pass.
