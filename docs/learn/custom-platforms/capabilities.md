@@ -1,7 +1,7 @@
 # Capabilities
 
-A class lowers to core LIR as a record of fields with a table of functions, which any
-platform can run. But a platform with objects and virtual calls of its own, as .NET, can
+A class is meant to lower to core LIR as a record of fields with a table of functions,
+which any platform can run. But a platform with objects and virtual calls of its own, as .NET, can
 do better: realize the class as one of its classes. For that, the class's CO has to know
 the platform can, without knowing which platform it is.
 
