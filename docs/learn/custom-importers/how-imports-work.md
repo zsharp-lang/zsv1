@@ -9,33 +9,38 @@ importable as an assembly.
 An importer is a frontend: it takes a source and gives HIR. This page goes through what an
 import is, so the pages after it can say where an importer plugs in.
 
-## An import is a call
+## Following one import
+
+Take the first line of almost every script:
 
 ```zs fragment
-import { a, b as c } from source;
+import { print } from "std:io";
 ```
 
-is a call of the function the syntax `import` stands for, with the source as its first
-argument:
+1. **It is a call.** An import is a call of the function the syntax `import` stands for,
+   with the source as its argument: here, `import("std:io")`. `import` is an overloaded
+   function of the language, so what a source can be is whatever an overload takes;
+   `core:zsharp`'s `import(String)` takes a string.
+2. **The string is routed by its prefix.** `import(String)` gives the string to
+   `core:zsharp`'s `importers`, which looks at what comes before its first `:`, here
+   `std`, and gives the rest, `io`, to what is registered for it: the standard library.
+3. **The importer gives HIR.** The standard library gives the node of its `io` library, a
+   module.
+4. **The names are its members.** `print` is the member `print` of what the call gave.
 
-```zs fragment
-import(source)
-```
+Every import goes through the same steps, and each step is a place to plug in:
 
-and the import's own arguments after it: `import(x, y: z) { a } from source` calls
-`import(source, x, y: z)`. What the call gives is an HIR instance, and the names in braces
-are its members: `a` is the member `a` of what the call gave.
-
-`import` is an overloaded function of the language, so what a source can be is whatever
-an overload takes. `core:zsharp`'s `import(String)` is the first: a string is routed to an
-importer by its prefix, and a source with no prefix is a file. [Custom source
-importers](source.md) add overloads, and [import parameters](parameters.md) are an
-overload's own parameters.
+| Step | Plug in with |
+|---|---|
+| What a source can be | another overload of `import`: [custom source importers](source.md) |
+| What an import's own arguments are, as `import(x) { a } from source` calling `import(source, x)` | the overload's parameters: [import parameters](parameters.md) |
+| What a prefix means | `importers.Register`: [custom prefix importers](prefix.md) |
+| What a file of an extension means | `files.Register`: [custom file suffix importers](file-suffix.md) |
+| What is imported is described as | [nodes of your own](nodes-and-loaders.md) |
 
 ## Strings: prefixes and files
 
-`import(String)` gives the string to `core:zsharp`'s `importers`, which routes it by
-what comes before its first `:`:
+The prefixes there are, and who registers them:
 
 | Prefix | Importer | Registered by |
 |---|---|---|
@@ -46,9 +51,6 @@ what comes before its first `:`:
 
 A file is imported by what is registered for its extension: `.zs` is a document, and
 `.dll` a .NET assembly. A path is relative to the document that imports it.
-
-[Custom prefix importers](prefix.md) add a prefix, and [custom file suffix
-importers](file-suffix.md) an extension.
 
 ## When an import runs
 
