@@ -10,6 +10,10 @@ This page goes through what the CLI sets up, in the order it does.
 
 ## The compiler
 
+First the core: what [custom semantics](../custom-semantics/hir-to-lir.md) and [custom
+dispatchers](../custom-dispatchers/reis.md) plug into.
+
+
 - **The loaders.** The HIR loader and the code loader are the mapped ones, which choose
   by a node's type what is registered for it. The code loaders of `HIR.Code` are
   registered, and the IL loader installs what loads the CLR's nodes.
@@ -24,11 +28,19 @@ This page goes through what the CLI sets up, in the order it does.
 
 ## Running code
 
+Then a platform, as [custom platforms](../custom-platforms/overview.md) describes, for
+the code a script runs.
+
+
 The platform is the runtime. HIR that runs as it is compiled, as a document's statement or
 `ct`'s code, is lowered for the runtime and run in the process: the runner's statements
 are compiled with `ir` for the runtime, and the runtime executes the LIR.
 
 ## Libraries
+
+Then what [`core:`](../advanced/core-namespace.md) and the other prefixes give, which
+[custom importers](../custom-importers/how-imports-work.md) extend.
+
 
 - **`std:`** has `std:io`, which is C#, and falls back to the standard library's folder,
   `std` above where the `zs` command is: a library there is its build, `std/name/build/name.dll`, or
@@ -40,6 +52,10 @@ are compiled with `ir` for the runtime, and the runtime executes the LIR.
   falls back to the package manager once `std:packages` installs it.
 
 ## The language
+
+Then the frontend, as [custom syntax and definitions](../custom-syntax/syntax.md)
+describes.
+
 
 The Z# frontend: the binder of names, the language, with the operators of the CLR's
 types and of the libraries as functions of their syntax, and `core:zsharp`'s

@@ -10,6 +10,63 @@ LIR for it; something then makes that LIR run, or writes it somewhere. That some
 platform, and Z# asks nothing of it but that it read LIR. So a platform is a library like
 any other, and a build chooses which one to lower for.
 
+## The smallest platform
+
+A platform can be as small as a class that reads what it is given. This one only lists
+the functions and globals of the LIR modules it is given, which is enough to lower a
+module for it:
+
+```zs
+import { print } from "std:io";
+import { Module } from "std:modules";
+import { lower } from "std:modules/compiler";
+import { Module as LIRModule } from "pkg:zsharp/lir";
+import { Int32 } from "core:runtime";
+
+// A platform that only lists what it is given.
+def Listing {
+    new() { }
+
+    fun add(unit: LIRModule) {
+        let index = 0;
+        while (index < unit.Functions.Count) {
+            let function = unit.Functions[index];
+            print("function " + function.Name + ", taking " + function.Signature.Parameters.Count);
+            index = index + 1;
+        }
+        print("globals: " + unit.Globals.Count);
+    }
+}
+
+let tools = module Tools {
+    let version = 1;
+
+    fun twice(value: Int32): Int32 { return value * 2; }
+
+    fun add(a: Int32, b: Int32): Int32 { return a + b; }
+} as Module;
+
+let target = Listing();
+target.add(lower(tools, target));
+```
+
+```output
+function twice, taking 1
+function add, taking 2
+globals: 1
+```
+
+`lower(tools, target)` lowered the module for `Listing`: each definition of the module was
+asked for its LIR, given the target, and what came back is an LIR module, with a function
+for each function and a global for `version`. Nothing in the compiler knows `Listing`.
+Lowering never asked what it is; a CO that wanted more of it, as a class wanting objects
+and methods, would have asked it for a [capability](capabilities.md). A Z# class, which needs
+`Polymorphism`, can't be lowered for `Listing` yet: lowering a class to core LIR alone is
+planned, not written.
+
+A real platform does the same, and then something with each function: runs it, or writes
+it.
+
 ## What a platform does
 
 A platform is given LIR modules, and realizes them:

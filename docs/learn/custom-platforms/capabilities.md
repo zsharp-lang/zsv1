@@ -38,8 +38,9 @@ if (target is let polymorphism: Polymorphism) {
 
 A capability doesn't make LIR. It marks the LIR the CO built with what the platform needs
 to realize it richly, so the CO still builds the definition, and a platform without the
-capability still gets correct LIR. A target without `Polymorphism` gets the class as a
-record, with a table of its functions and `CallIndirect`.
+capability can still be given correct LIR. For a target without `Polymorphism`, a class is
+meant to be a record, with a table of its functions and `CallIndirect`; that lowering
+isn't written yet, so a Z# class needs the capability today.
 
 ## Giving a platform a capability
 
