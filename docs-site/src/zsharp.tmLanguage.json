@@ -1,0 +1,37 @@
+{
+	"name": "zs",
+	"displayName": "Z#",
+	"scopeName": "source.zsharp",
+	"aliases": ["zsharp"],
+	"fileTypes": ["zs"],
+	"patterns": [
+		{ "name": "comment.line.double-slash.zsharp", "match": "//.*$" },
+		{
+			"name": "string.quoted.double.zsharp",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [{ "name": "constant.character.escape.zsharp", "match": "\\\\." }]
+		},
+		{ "name": "entity.name.function.decorator.zsharp", "match": "@[A-Za-z_]\\w*" },
+		{
+			"match": "\\b(fun|def|module|new)\\s+([A-Za-z_]\\w*)",
+			"captures": {
+				"1": { "name": "keyword.declaration.zsharp" },
+				"2": { "name": "entity.name.function.zsharp" }
+			}
+		},
+		{
+			"name": "keyword.control.zsharp",
+			"match": "\\b(if|else|while|for|break|continue|return|case|when|in)\\b"
+		},
+		{
+			"name": "keyword.other.zsharp",
+			"match": "\\b(as|def|from|fun|get|import|is|let|module|new|of|or|set|var)\\b"
+		},
+		{ "name": "constant.language.zsharp", "match": "\\b(true|false|null|this)\\b" },
+		{ "name": "entity.name.type.zsharp", "match": "\\b[A-Z]\\w*" },
+		{ "name": "constant.numeric.float.zsharp", "match": "\\b\\d+\\.\\d+\\b" },
+		{ "name": "constant.numeric.integer.zsharp", "match": "\\b\\d+\\b" },
+		{ "name": "keyword.operator.zsharp", "match": "==|!=|<=|>=|\\*\\*|[-+*/=<>&|]" }
+	]
+}

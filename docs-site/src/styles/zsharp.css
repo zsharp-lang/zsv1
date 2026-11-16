@@ -1,0 +1,61 @@
+/* Z#'s colors on Starlight: a violet accent, and a slightly wider page for code. */
+
+:root {
+	--sl-content-width: 50rem;
+	--sl-font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--sl-font-mono: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
+}
+
+:root,
+::backdrop {
+	--sl-color-accent-low: #26164f;
+	--sl-color-accent: #7c5cff;
+	--sl-color-accent-high: #d9d0ff;
+}
+
+:root[data-theme='light'],
+[data-theme='light'] ::backdrop {
+	--sl-color-accent-low: #e5deff;
+	--sl-color-accent: #5b3ee0;
+	--sl-color-accent-high: #2a1873;
+}
+
+/* The home page's features: a grid of cards. */
+.zs-features {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+	gap: 1rem;
+	margin-top: 1.5rem;
+}
+
+.zs-features > div {
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.75rem;
+	padding: 1.25rem 1.25rem 0.5rem;
+	background: var(--sl-color-black);
+	margin: 0;
+}
+
+.zs-features > div:hover {
+	border-color: var(--sl-color-accent);
+}
+
+.zs-features h3 {
+	margin: 0 0 0.5rem;
+	font-size: var(--sl-text-lg);
+	color: var(--sl-color-white);
+}
+
+.zs-features p {
+	margin: 0 0 0.75rem;
+	color: var(--sl-color-gray-2);
+}
+
+/* The home page's title, in the accent, larger. */
+.hero h1 {
+	background: linear-gradient(120deg, var(--sl-color-accent-high), var(--sl-color-accent));
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	font-size: clamp(3rem, 10vw, 5.5rem);
+}

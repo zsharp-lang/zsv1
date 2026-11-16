@@ -1,6 +1,6 @@
 # Tasks
 
-What is to be added, in the order it is being done. `design/` records what is decided;
+What is to be added, in the order it is being done. `docs/internals/architecture/` records what is decided;
 this records what is left. Each item says what it is, and an item that waits on a
 decision says which.
 
@@ -163,7 +163,7 @@ them to its own types when it lowers them, so the runtime is one platform among 
   times: an import's source evaluated once despite three names used four ways (the
   `Import` case); `LoadModule` called 11 times without the `Module` fix and exactly once
   with it, for two imports sharing one source. Bootstrap completes. Folded into
-  `design/imports.md`, `design/code.md` and `design/definitions.md`.
+  `docs/internals/architecture/imports.md`, `docs/internals/architecture/code.md` and `docs/internals/architecture/definitions.md`.
 - [ ] Named constructors on generic CLR classes.
 - [ ] `import * as X` and `@importer` (need design).
 - [ ] Function values: partial application, Bound/Invocation.
@@ -185,8 +185,8 @@ them to its own types when it lowers them, so the runtime is one platform among 
   bodies with, puts each lowered statement in its function's table; the Cecil platform
   writes sequence points, source checksums and named locals into an embedded portable PDB.
   A stack trace through a Cecil-built assembly shows the `.zs` file and line. Statements
-  only, for now. Folded into `design/definitions.md` (**Source mapping**) and
-  `design/cecil.md`.
+  only, for now. Folded into `docs/internals/architecture/definitions.md` (**Source mapping**) and
+  `docs/internals/architecture/cecil.md`.
   - [ ] A definition's location: an encoded annotation of the definition, a single
     location, set by the code that builds it. A language server's go-to-definition wants
     it; a PDB has nowhere for it.
@@ -288,7 +288,7 @@ code, source mapping is its own task.
       an imported function is still a constant when a body is written, so the split
       didn't change it; a function of the module itself is the same. `reflect(decodeString)`
       does build, but calling it from the assembly fails with "A function handle is not
-      mapped": the Cecil platform doesn't map `reflect` (design/imports.md: an assembly
+      mapped": the Cecil platform doesn't map `reflect` (docs/internals/architecture/imports.md: an assembly
       "calls `DescribeType` of the loader that runs it"). Until then `pkg:fastlsp` and
       `pkg:zsharp/lsp` compile from source, with a start-up of about 2.4 seconds. Commit
       nothing built.
@@ -329,7 +329,7 @@ Language:
   and more: they get a trailing `_`, which fastlsp strips on the wire. And `module` as a
   variable name gives "Expected token 'Semicolon' but got '.'" with no hint that it is a
   keyword.
-- [ ] **`and`, `not`, `for` and `try`** (already in `docs/language/not-yet.md`). Nested `if`s
+- [ ] **`and`, `not`, `for` and `try`** (already in `docs/learn/basics/not-yet.md`). Nested `if`s
   stand in for `and`; and, since Z# can't catch an exception, a parse error would end the
   server: `Recovery` is C#, for that reason alone.
 - [ ] **Ambiguous overloads that C# resolves.** `text.Split("\n")` and `char == char` give
@@ -365,8 +365,8 @@ Toolchain:
   fails with "A value only the running process has, a Function, can't be written in an
   assembly", and building code that generates calls to a library, as `pkg:fastlsp`'s
   `build`, can't be built. Checked: **this is not a Cecil bug.** A live value can't be
-  written, as `design/cecil.md` says, and the cast gives the node as a known value of the
-  process (`FunctionObject.Cast`), which `design/imports.md` lists as not yet ("a
+  written, as `docs/internals/architecture/cecil.md` says, and the cast gives the node as a known value of the
+  process (`FunctionObject.Cast`), which `docs/internals/architecture/imports.md` lists as not yet ("a
   description of a Z# definition in code a platform writes"). It needs a by-id reference
   for a node that carries a `ReflectionId`, lowered as a call that gives the node, in the
   language and not in a platform.
@@ -414,10 +414,23 @@ Toolchain:
   isn't known to it.
 - [ ] **Start-up** of a server is about 5 seconds (see above).
 
+### Forking
+
+- [ ] **Only the AST compiler forks.** `compiler.Fork()` copies its three endpoints and
+  shares its `Contexts`; everything else is one per toolchain: the language's operator
+  table (`Language.Functions`, which `@operator` definitions add to for all later code),
+  the mapped AST compiler's maps (registering reaches every fork, earlier ones included),
+  `metaTypes`, the compiler's REIs and loaders (`ZSharp.Compiler.Current`), the importers
+  and `core:`. So an extension installed while one module compiles is installed for all
+  that follows, and a build can't compile part of its code with other operators,
+  meta-types or dispatchers. `docs/internals/architecture/composition.md` says no scoping is needed,
+  which forking the rest of the toolchain would change. Written up in
+  `docs/learn/advanced/build-scripts/toolchain-fork.md`.
+
 ## Rewriting Z# in Z#
 
 The language's own C# is to be rewritten in Z#, which is the goal of the redesign (see
-`design/principles.md`). It is not tidied in C# first: it is gone through when it is
+`docs/internals/architecture/principles.md`). It is not tidied in C# first: it is gone through when it is
 rewritten.
 
 - [ ] **Audit every part for layering and coupling, one by one, as each is rewritten.**
@@ -433,6 +446,63 @@ rewritten.
   - A special case where a general mechanism would do, and an identity that holds only
     by reference (the loader's `Class(type)` makes a type object each time it is asked).
   - What a part knows that its dependency graph doesn't say.
+- [ ] **The build-time halves of `std:` aren't standard libraries.** `std:oop/compiler`,
+  `std:functions/compiler` and `std:modules/compiler` hold COs and meta-compilers, what a
+  build uses, not what a running program does. They belong with the Z# packages (`pkg:`).
+  The docs list them as they are today, with a note (`reference/packages/zsharp.md`);
+  moving them is a seed transition, and the docs follow.
+
+## Documentation
+
+The docs are being rewritten on a Starlight site (`docs-site`), in a new structure: Learn
+(getting started, basics, advanced, then custom syntax, importers, semantics, dispatchers
+and platforms, and the CLI as what combines them), Reference (standard libraries and
+packages, the core languages, the Z# language as a specification, the runtime) and
+Internals (principles, the bootstrap, and `docs/internals/architecture/`).
+
+- [x] The Starlight site, the new structure, and the existing pages moved into it.
+- [x] Every page marked "To be written".
+- [x] The existing pages, rewritten for where they are now, and each standard library a
+  page of its own.
+- [x] The layering stated, in `docs/internals/architecture/layering.md`: the layers as
+  languages, the transformations and which are the core's, LIR dialects and pure
+  capabilities, what a CO may rely on, opt-in everywhere, and preservability as a concept.
+  The capability rules moved there from `frontend.md`.
+- [~] The rest of the architecture record, gone through against the layering. Fixed:
+  one Principles page (`docs/internals/principles.md`, with the record's under "The
+  record"); `cores.md`'s LIR concepts and a CO's errors through the LIR REIs' results;
+  `composition.md`'s "no scoping" pointing at forking; `clr.md`'s live values as the
+  platform catching them; `definitions.md`'s claim that building code needs nothing live,
+  which isn't true yet for code that builds code; `toolchain.md`'s layout with `docs/`
+  holding the design and `docs-site/`; `projects.md` saying the project compiler is to
+  move to `pkg:`. The single-part pages were checked by searching for what the layering
+  changes (live values, platforms, closed LIR, scoping, stale paths), not read line by
+  line; that reading is left for when each part is rewritten in Z#.
+- [x] **Deferred decisions recorded** in `docs/internals/architecture/decisions.md`'s open
+  questions (2026-11-16): building code meant for another platform and the live values it
+  holds; forking the rest of the toolchain; `this` implicit or explicit; the standard
+  types in everyday code; where the build-time libraries live.
+- [ ] **Learn reads as a guide.** Each page builds on the ones before it and presents the
+  problem before the solution, where the use case isn't plain. Feedback of 2026-11-16 up to
+  code generation is applied; the pages after it get the same pass.
+- Future fixes from that feedback, which need code or decisions first:
+  - [ ] Installation: a guide, once the installer is what it is to be.
+  - [ ] The standard types as built-in names: the prelude imports them, and the docs use
+    them, not .NET's (`Int32`, `String`), which the prelude page then explains.
+  - [ ] **Integrate the standard types properly**, which the item above needs first. `I8`
+    to `U64`, `F16` to `F64` and `Bool` exist, but literals are .NET's (`42` is an
+    `Int32`), nothing converts implicitly (`let x: I32 = 5;` and `twice(5)` for an `I32`
+    parameter both fail), comparisons give .NET's `Boolean` and a condition takes only
+    that, and there is no standard `String`, character, array, collection or function
+    type. So every use is a cast, `5 as I32`, and back for .NET's calls.
+  - [ ] `Void`, a standard type, and a function that returns nothing inferring it.
+  - [ ] Whether a method's `this` is implicit or explicit by default; Classes says what is
+    decided.
+  - [ ] Generics as standard, not .NET's.
+  - [ ] A function type of Z#'s own: a function as a value is a .NET delegate today, so
+    Functions as values speaks of delegates.
+  - [ ] The project compiler as a package, `pkg:`, not `std:project` (with the other
+    build-time libraries).
 
 ## Done
 

@@ -1,18 +1,23 @@
 # The Z# documentation site
 
-Serves the documentation in `../docs` as a website, with MkDocs and the Material theme.
-The pages stay as they are: the navigation, the theme and how code blocks render are
-this project's, in `mkdocs.yml`, `hooks.py` and a Pygments lexer for Z#.
+Serves the documentation in `../docs` as a website, with Astro and Starlight. The pages
+stay as they are, since the toolchain's tests run their samples. `scripts/sync.mjs`
+copies them into `src/content/docs`, with each page's title from its first heading, its
+code blocks as the site shows them and its links to the site's pages. Every page is in
+`../docs`, so the documentation can be read without the site. The navigation and the
+theme are in `astro.config.mjs`. Z# is highlighted by
+`src/zsharp.tmLanguage.json`.
 
 From this folder:
 
 ```text
-uv run mkdocs serve -a 0.0.0.0:8000     serves it, reloading as pages change
-uv run mkdocs build                     writes it into site/
+npm install       once, and when package.json changes
+npm run dev       serves it, reloading as the site changes; npm run sync copies pages again
+npm run build     writes it into dist/
 ```
 
-`0.0.0.0` serves it on every interface, so another device on the network reaches it at
-this machine's address, as `http://10.0.0.50:8000`. On Windows, the firewall may ask
-whether Python can accept connections the first time.
+`npm run dev` serves it on every interface, so another device on the network reaches it
+at this machine's address, as `http://10.0.0.50:4321`.
 
-A page added to `../docs` goes in `nav` in `mkdocs.yml`, to be in the navigation.
+A page added to `../docs` goes in the `sidebar` in `astro.config.mjs`, to be in the
+navigation.

@@ -1,0 +1,129 @@
+# Principles
+
+These are the ideas Z# is built on. The record of each decision, and why it was made, is
+the toolchain's design document, [the architecture](architecture/index.md).
+
+## Layers that never mix
+
+Z# is a chain of layers, HIR, MIR and LIR at its core, with a frontend's before them and
+a platform's after them. A layer never refers to another: only a transformation goes
+between two, and it only translates. Z# itself defines only the transformations between
+its core languages, so a frontend, a platform, or a new kind of definition is an
+extension, which the core doesn't know about. [Layering](architecture/layering.md)
+records the rules each part keeps.
+
+## A language whose definitions are its own
+
+Most languages fix their kinds of definitions: a class, a function and a module are what
+the compiler knows. In Z#, a kind of definition is defined in Z#, by a library. `def`
+means a Z# class because `std:oop` says so, `fun` a Z# function because `std:functions`
+does, and `module` a module because `std:modules` does. A library can define a new kind
+the same way, and a definition can say which kind it is: `def Shape of Interface`.
+
+What a kind of definition is, its **meta-type**, says how its definitions are compiled
+and what they mean. So a class isn't a thing the compiler has: it is what `std:oop`
+compiles `def` to, in Z#.
+
+## Almost everything in Z#
+
+The toolchain, in C#, is kept to what Z# can't do itself yet: the parser, the compiler's
+core, and the platforms that turn its output into running code. Everything else, the
+standard definitions, the project compiler, the package manager and the Cecil platform
+included, is written in Z#. The goal is that almost everything is, and then nothing more
+is C#.
+
+So a new runtime for Z# needs only a handful of libraries of its own: the standard
+definitions' structures, which are its own kind of class, and what is the platform's.
+The rest, written in Z#, comes with it.
+
+## General mechanisms, not special cases
+
+A feature is a mechanism anything can use, not a rule about one case. Overloads are how
+any definitions of one name are reached together, so functions and methods share them.
+A method bound to an object is any callee with its first argument fixed. A binder that
+replaces another binds again what the other bound, for any library that is replaced.
+
+## Define what is allowed
+
+A meta-type handles what it cares about and defines nothing else. What nothing defines
+fails on its own, wherever it is used, so there is no check that forbids it. A parameter
+in code means what its function defines it as while the function's code is lowered, so
+code that uses a parameter its function doesn't have fails because nothing gives it a
+meaning, not because something looked for it.
+
+## Structure is just structure
+
+A definition's HIR is its structure: what it is, with nothing it does. A structure can be
+one the definition would reject, and that isn't wrong until the definition is used:
+until its node is loaded to what the compiler works with, which is when its loader
+checks it. A meta-compiler builds what is written, a decorator transforms what was built,
+and the loader says whether it is valid.
+
+## Opt-in
+
+What a definition, a library or a platform has, it has because it says so. A target
+lowers a class only if it has the capability of polymorphism. A library carries what
+reflection reads only if it was built to. An import installs only what the library it
+imports declares.
+
+## The record
+
+The principles as the [architecture](architecture/index.md) records them, with what the
+implementation is.
+
+### In short
+
+- Nothing intrinsic.
+- Z# can extend Z#.
+- Interpreted language that uses reflection to compile code.
+- As few assumptions as possible.
+- As few special cases as possible. Everything flows through general mechanisms.
+- HIR is pure structure. All type checking and validation happens in MIR.
+- Every component knows only what it truly needs.
+- Almost everything is written in Z#. Once that is complete, C# isn't touched again.
+
+A *concept* is an empty C# interface unless stated otherwise.
+
+### Levels of abstraction
+
+**Never mix levels of abstraction.** An operation that crosses levels, as M2L does, only
+*translates* from one to the other; it doesn't mix them.
+
+- **HIR and LIR are structure,** so they refer only to themselves: HIR to HIR, LIR to LIR.
+  A node represents only the properties and relationships of its own level. A function's
+  captures are a function-level detail, so if HIR represents them, the function's node
+  does, never the local it captures. How a variable is stored is no HIR concern at all.
+- **MIR is interactions.** A CO may hold objects of other layers, as long as its
+  interactions don't depend on them.
+- **A loader realizes a concept as a CO**: a set of capabilities that implement a set of
+  interactions. It works at the level of the node it loads. Dealing with a lower level's
+  details mixes implementation into the semantics, as a code loader that chooses a cell
+  for a variable would; dealing with a higher level's ties that level to this one.
+- **Storage is an implementation detail,** the platform's, decided where MIR is lowered.
+  A variable could store its value on a piece of paper read and written through a scanner
+  and a printer, and nothing above the platform would know.
+- **The one exception:** an object proven to exist only in a specific context may carry
+  that context. It's allowed, not encouraged, and rare in HIR, which works with slots; it
+  is easier to find in LIR.
+
+### Implementation
+
+C# is the implementation language. The CLR is the default target: Emit is used
+and the CLR acts as the interpreter runtime. It goes through the same code
+paths as any other target would.
+
+### Language independence
+
+Nothing from HIR onwards relies on the Z# language. HIR is not bound to Z#
+source: custom importers, themselves written in Z#, can import from any language
+and even from binaries, and produce HIR.
+
+The Z# language frontend is simply the one the CLI uses. It happens to have an
+import system that allows this, which is why import sources are expressions. So
+the contract between a source and everything after it is HIR alone, and any
+frontend or importer is a peer of the Z# one.
+
+`HIR.Code` isn't language-neutral: it is oriented to Z#. Each frontend brings its own
+HIR libraries. A C frontend would add HIR for structs, functions and typedefs, Python
+its own kinds of statements, object model and import system, and CSS its own HIR. That
+is why Z# can speak directly with any language, as long as there is an importer for it.
