@@ -387,4 +387,9 @@ Construction code itself only builds HIR — an import compiles to an `Import` n
 a call it runs — so it can be compiled to a binary, as for precompiled libraries.
 Encoding a value needs only the mapper's rules,
 not the compiler. Exposed objects are the exception, but they are runtime nodes that
-only exist in the process that made them, and nothing precompiled contains them.
+only exist in the process that made them, and nothing precompiled contains them. That holds
+for a definition's own construction code, but not yet for code that builds code and is
+itself written to an assembly: a cast definition in a function's body reifies some values
+as exposed objects (the `Infer` of a `let` with no type, the group of definitions an
+operator stands for, a definition cast to its node), which only the runtime realizes.
+[Decisions](decisions.md) has it as an open question.

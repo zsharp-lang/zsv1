@@ -50,8 +50,9 @@ runtime what its handles mean:
   lower lowers for a target that is a `ClrPlatform`.
 - `Reflected` describes reflection's objects as these handles, each entity once.
 - Live values stay the running process's: a document's frame is a constant of the
-  runtime. A platform that writes an assembly can't map one, and has no need to reject
-  it: nothing defines it.
+  runtime. A platform that writes an assembly can't map one: the Cecil platform fails on
+  one, which is the platform catching LIR of the runtime's own, as
+  [layering](layering.md) records.
 
 ### IL loader
 

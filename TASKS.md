@@ -468,14 +468,20 @@ Internals (principles, the bootstrap, and `docs/internals/architecture/`).
   languages, the transformations and which are the core's, LIR dialects and pure
   capabilities, what a CO may rely on, opt-in everywhere, and preservability as a concept.
   The capability rules moved there from `frontend.md`.
-- [~] The rest of the architecture record, gone through against the layering. Fixed so
-  far: one Principles page (`docs/internals/principles.md`, with the record's principles
-  under "The record"), LIR's concepts in `cores.md` no longer "Undecided", a CO's errors
-  through the LIR REIs' results rather than an optional target, and `composition.md`'s
-  "no scoping" pointing at forking. The pages of single parts (`clr.md`, `definitions.md`,
-  `documents.md`, `code.md`, `extensions.md`, `imports.md`, `projects.md`, `cecil.md`,
-  `toolchain.md`, `decisions.md`) are still to be gone through, as each part is rewritten
-  in Z#.
+- [~] The rest of the architecture record, gone through against the layering. Fixed:
+  one Principles page (`docs/internals/principles.md`, with the record's under "The
+  record"); `cores.md`'s LIR concepts and a CO's errors through the LIR REIs' results;
+  `composition.md`'s "no scoping" pointing at forking; `clr.md`'s live values as the
+  platform catching them; `definitions.md`'s claim that building code needs nothing live,
+  which isn't true yet for code that builds code; `toolchain.md`'s layout with `docs/`
+  holding the design and `docs-site/`; `projects.md` saying the project compiler is to
+  move to `pkg:`. The single-part pages were checked by searching for what the layering
+  changes (live values, platforms, closed LIR, scoping, stale paths), not read line by
+  line; that reading is left for when each part is rewritten in Z#.
+- [x] **Deferred decisions recorded** in `docs/internals/architecture/decisions.md`'s open
+  questions (2026-11-16): building code meant for another platform and the live values it
+  holds; forking the rest of the toolchain; `this` implicit or explicit; the standard
+  types in everyday code; where the build-time libraries live.
 - [ ] **Learn reads as a guide.** Each page builds on the ones before it and presents the
   problem before the solution, where the use case isn't plain. Feedback of 2026-11-16 up to
   code generation is applied; the pages after it get the same pass.

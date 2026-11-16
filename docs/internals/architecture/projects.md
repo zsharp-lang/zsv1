@@ -45,6 +45,9 @@ when it is imported. `std:framework` is one.
 
 ## Projects
 
+The project compiler is `std:project` today, though it is a build-time tool: it is to move
+to `pkg:`, with the other build-time libraries, as [decisions](decisions.md) records.
+
 `std:project` is a minimal project compiler, written in Z#, to bootstrap the real one.
 
 - **Discovery.** `discover(directory)` gives a `Project`, which holds its root

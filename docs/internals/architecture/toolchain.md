@@ -91,8 +91,8 @@ program. It runs the bootstrap first, so the seed is what the sources build.
 - **What it has.** The toolchain, published self-contained in `bin`; the standard
   library's sources and builds, its seed; the toolchain's packages, with the versions of
   packages they import, found in NuGet's packages where the release is built; the
-  bootstrap, so an install builds itself again from its sources; the design, the
-  documentation and the examples; and the installer. A file at its root,
+  bootstrap, so an install builds itself again from its sources; the documentation, which
+  has the design in it, and the examples; and the installer. A file at its root,
   `.zsharp-toolchain`, says it is a toolchain. `zs` finds the standard library above its
   own folder, so nothing in it names where it is installed.
 - **The installer** is Z#, `install.zs`, which the release's own `zs` runs, through
@@ -134,10 +134,12 @@ src/
   CLI/       The command line, which runs a script with the toolchain
 tests/
 std/         The standard library: its sources, and its builds, the seed
-packages/    The toolchain's packages: the Cecil platform and the package manager
+packages/    The toolchain's packages: the Cecil platform, the package manager, and the LSP's
 bootstrap.zs Builds std and the packages from their sources
 release.zs   Builds a release; install.zs, with install.cmd and install.sh, installs one
-docs/        The documentation, every sample of which tests/ZSharp.Tests.Docs runs with zs
+docs/        The documentation, the design record under docs/internals/architecture, every
+             sample of which tests/ZSharp.Tests.Docs runs with zs
+docs-site/   The documentation as a website, with Starlight, which reads docs/ as it is
 ```
 
 Each project is designed and built separately. Only the CLI combines them.

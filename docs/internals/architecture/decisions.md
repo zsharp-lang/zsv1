@@ -47,6 +47,36 @@
   for it. `std:oop` types such a global by an interface instead. A global could be
   declared before its type is complete, as a class's structure is.
 
+- **Building code meant for another platform, and the values it holds.** Code that builds
+  code, as a cast definition in a function's body, reifies some values as exposed objects
+  of the process that runs it: the `Infer` of a `let` with no type, the group of
+  definitions an operator stands for (`!=` in a loop), and a definition cast to its node
+  (`decodeString as Instance`). Lowered, each is a constant only the runtime realizes, so
+  the building code can't be written to an assembly, as `pkg:fastlsp`'s generator can't.
+  Settled so far: HIR may refer to any HIR node; MIR may use live values; it is the LIR
+  that decides what a platform can take, and a constant of a live object is the runtime's
+  alone. Open: how such a value reaches the code a platform writes. The candidates
+  discussed were rejected or retracted: CLR names (couples to the CLR), building the node
+  again (a different reference), reflection ids (platform-specific, which is why they are
+  annotations), and import nodes (retracted in part). Encoding a value has to give
+  standalone code, or code that is temporary and loaded into the runtime alone. This needs
+  the whole chain described rigorously before it is designed.
+- **Forking the rest of the toolchain.** Only the AST compiler forks: the operators,
+  the meta-types, the mapped handlers, the REIs, the loaders, the importers and `core:`
+  are one per toolchain, so what one compilation installs, everything after it has.
+  [Composition](composition.md) says no scoping is needed; forking the rest would change
+  that. What a toolchain fork forks, and what it shares, is undecided.
+- **Whether a method's `this` is implicit or explicit by default.** Today a method names
+  its object only when its first parameter is `this`.
+- **The standard types in everyday code.** `I8` to `U64`, `F16` to `F64` and `Bool` exist,
+  but literals are .NET's, nothing converts implicitly, comparisons and conditions are
+  .NET's `Boolean`, and there is no standard `String`, collection or function type. Also
+  `Void`, for a function that returns nothing, and generics of Z#'s own. `TASKS.md` lists
+  the work.
+- **Where the build-time libraries live.** `std:project` and the `/compiler` halves of
+  `std:oop`, `std:functions` and `std:modules` are build-time tools under `std:`; they are
+  to move to `pkg:`, which is a seed transition.
+
 ## Decided in the review of 2026-11-12
 
 Decided in the review of the reimplementation, for the language features to come.
