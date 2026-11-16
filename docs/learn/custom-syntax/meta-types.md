@@ -12,6 +12,34 @@ definition of a meta-type, and the meta-type is the type of the node that descri
 built into the compiler. Each is defined by a library, and a library of yours can define
 another the same way.
 
+## Which meta-type a definition is of
+
+You have already chosen a meta-type: `def Shape of Interface` defined an interface, not a
+class, with the same `def`. A keyword has a default meta-type, which a library makes it:
+importing `std:oop` makes `def` a Z# class, and `std:functions` makes `fun` a Z#
+function. `of` says which meta-type a definition is of instead:
+
+```zs
+import { print } from "std:io";
+import { Class } from "std:oop";
+import { Class as DotNet_Class } from "pkg:clr/hir";
+
+let zsharp = def Point { } as Class;
+let clr = def Counter of DotNet_Class { } as DotNet_Class;
+print(zsharp.Name + " is a Z# class");
+print(clr.Name + " is a CLR class");
+```
+
+```output
+Point is a Z# class
+Counter is a CLR class
+```
+
+`Point` is `def`'s default, a Z# class. `Counter` is a CLR class, the CLR's own meta-type
+from `pkg:clr/hir`: the same syntax, built by another meta-compiler into another node,
+with another meaning. `of` is decided as the definition is compiled, so it names a
+meta-type the code around the definition already has.
+
 ## What a meta-type gives
 
 A meta-type is four parts, each of which a later page or guide goes through:
@@ -49,33 +77,6 @@ def Function of Node : Instance, Definition, NamedDefinition, Annotated, Overloa
 A library keeps its nodes in a library of their own, as `std:functions`, apart from what
 compiles them, as `std:functions/compiler`. So a program that only reads the structure, as
 one that reflects does, loads the nodes and not the compiler.
-
-## Which meta-type a definition is of
-
-A keyword has a default meta-type, which a library makes it: importing `std:oop` makes
-`def` a Z# class, and `std:functions` makes `fun` a Z# function. `of` says which
-meta-type a definition is of instead:
-
-```zs
-import { print } from "std:io";
-import { Class } from "std:oop";
-import { Class as DotNet_Class } from "pkg:clr/hir";
-
-let zsharp = def Point { } as Class;
-let clr = def Counter of DotNet_Class { } as DotNet_Class;
-print(zsharp.Name + " is a Z# class");
-print(clr.Name + " is a CLR class");
-```
-
-```output
-Point is a Z# class
-Counter is a CLR class
-```
-
-`Point` is `def`'s default, a Z# class. `Counter` is a CLR class, the CLR's own meta-type
-from `pkg:clr/hir`: the same syntax, built by another meta-compiler into another node,
-with another meaning. `of` is decided as the definition is compiled, so it names a
-meta-type the code around the definition already has.
 
 ## Meta-types and reflection
 

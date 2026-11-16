@@ -10,10 +10,16 @@ This page's samples are from `std:functions`, whose sources ship in every instal
 
 ## Writing one
 
-A meta-compiler is given the AST of what is written, and gives code that builds the
-node: how to make it, and what fills it once every definition around it exists, so
-definitions can refer to each other. `@metaType(Function)` says it is the meta-compiler
-of `Function`'s definitions:
+Definitions refer to each other: a class's method gives the class, two functions call
+each other, a field's type is a class defined further down. So a node can't be built all
+at once, in the order the definitions are written: when one is filled in, the others it
+names have to exist already.
+
+That is why a meta-compiler gives two things, not one. Given the AST of what was written,
+it gives code that **makes** the node, which only needs the definition itself, and code
+that **fills** it, which runs once every definition around it has been made. Here is
+`std:functions`' meta-compiler; `@metaType(Function)` says it is the meta-compiler of
+`Function`'s definitions:
 
 ```zs fragment
 @metaType(Function)
@@ -34,9 +40,10 @@ fun compileFunction(compiler: ASTCompiler, definition: DefinitionSyntax, self: L
 }
 ```
 
-The filler builds the rest of the node with `core:zsharp`'s `bodies`: its parameters, its
-type, and its code, which the language compiles in a scope where the parameters' names
-mean the parameters.
+`Bodies.Construct(Function as Instance, ...)` is the code that makes the node: a
+`Function` of the name written. `filler.fill` is the code that fills it, with
+`core:zsharp`'s `bodies`: its parameters, its type, and its code, which the language
+compiles in a scope where the parameters' names mean the parameters.
 
 ## The loader and the CO
 

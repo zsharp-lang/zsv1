@@ -11,9 +11,33 @@ to everything after the frontend, only the HIR it gives counts.
 This part of the guide is about that frontend: the syntax it reads and the definitions it
 builds.
 
-## The parser
+## Following one statement
 
-The parser is a Pratt parser with contexts. Its parts are in the language's packages:
+Take a statement you've written many times:
+
+```zs fragment
+let total = price + tax;
+```
+
+**The parser reads it.** The text becomes tokens, and the parser reads them by what it
+has installed for where it is. Here it is in a document, whose statements it reads by
+their first keyword: `let` starts a `let`. The `let`'s value is an expression, which the
+parser reads by what starts it, a name, `price`, and then by what continues it, `+`, an
+infix operator with its precedence. What it gives is AST: a `let` of `total`, whose value
+is `price + tax`.
+
+**The AST compiler compiles it.** The AST compiler is given the `let`, and builds HIR of
+it. What a `let` becomes depends on where it is: in a document it is a local of the
+document, in a module a global, in a class a field. The AST compiler doesn't decide that
+itself: whatever is compiling the code around it does, as [forking the
+toolchain](../advanced/build-scripts/toolchain-fork.md) explains. `price + tax` becomes a
+call of the functions `+` stands for, with the HIR of each name as its arguments.
+
+From there on, only that HIR counts: nothing after the frontend knows there was a `let`.
+
+## The parser's parts
+
+The parser and its syntax are in the language's packages:
 
 | Package | What it has |
 |---|---|
@@ -22,13 +46,13 @@ The parser is a Pratt parser with contexts. Its parts are in the language's pack
 | `pkg:zsharp/lang/syntax` | `Grammar`, Z#'s own syntax, which installs itself in a parser |
 | `pkg:zsharp/lang/ast` | The AST's nodes |
 
-Syntax is installed as parsers of its parts:
+Syntax is installed as the parsers of its parts, as the statement above showed:
 
-- an **expression** is parsed by what starts it, a *nud*, as a literal, a name, `def` or
-  `fun`, and by what continues it, an infix operator with its precedence;
-- a **statement** of a context is parsed by its keyword, as `let`, `import` or `while`
-  are, and a context, as a module's body, a function's or a loop's, has its own;
-- what no parser of a context takes is the context's default, as an expression
+- an **expression** is parsed by what starts it, as a literal, a name, `def` or `fun`, and
+  by what continues it, as an infix operator with its precedence;
+- a **statement** is parsed by its keyword, as `let`, `import` or `while`, and each
+  context, as a module's body, a function's or a loop's, has its own keywords;
+- what no keyword of a context takes is the context's default, as an expression
   statement is a document's.
 
 Code that reads Z# sources of its own parses them with a parser that has `Grammar`
@@ -45,13 +69,13 @@ let parser = Parser(Tokenizer.Tokenize(TextStream(File.ReadAllText("hello.zs")))
 let statements = Grammar.Parse(parser).Statements;
 ```
 
-A frontend of another syntax installs its own parsers in a parser, or brings a parser of
-its own: what it gives the rest of the toolchain is HIR, however it read it.
+A frontend of another syntax installs parsers of its own, or brings its own parser: what
+it gives the rest of the toolchain is HIR, however it read it.
 
-## The AST compiler
+## The AST compiler's endpoints
 
-`core:zsharp`'s `compiler` is the AST compiler the running document is compiled with. It
-has three endpoints, one for each kind of AST node:
+`core:zsharp`'s `compiler` is the AST compiler the running code is compiled with. It has
+three endpoints, one for each kind of AST node:
 
 | Endpoint | Compiles | To |
 |---|---|---|
@@ -59,15 +83,11 @@ has three endpoints, one for each kind of AST node:
 | `Statement` | a statement | HIR code, a statement |
 | `Definition` | a definition | a `CompiledDefinition`: the code that builds its node, and the node's meta-type |
 
-Each endpoint is given the compiler it runs in, which compiles anything inside the node,
-and an endpoint can be replaced. An extension that compiles a node of its own handles
-that node and gives anything else to the endpoint it replaced.
-
-`Fork()` gives a compiler with the same endpoints, whose endpoints can change without
-changing the one it was forked from. That is how a definition compiles its contents its
-own way: a class's body compiles a `let` as a field, a function's as a local, by forking
-the compiler for the body and replacing what compiles a `let` in the fork. Nothing
-outside the body sees the change.
+Each endpoint is given the compiler it runs in, which compiles whatever is inside the
+node, and each can be replaced. An extension that compiles a node of its own handles that
+node, and gives anything else to the endpoint it replaced. A fork of the compiler,
+`Fork()`, has the same endpoints, and changing them changes only the fork: that is how
+each kind of body compiles a `let` its own way.
 
 ## Syntax a document defines
 
