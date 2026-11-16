@@ -8,9 +8,10 @@ it can look at what is built, change it, or run while it is.
 
 ## Decorators
 
-A decorator is any function, written before what it decorates with `@`. It is given
-the definition's node as it is built, and gives the node that is defined: the same one,
-changed, or another.
+You have already used a few decorators: `@static` and `@class` on a class's members, and
+`@operator` on a function. There is nothing special about them. A decorator is any
+function, written with `@` above what it decorates. It is given the definition's node as
+it is built, and gives the node that is defined: the same one, changed, or another.
 
 ```zs
 import { print } from "std:io";
@@ -35,8 +36,8 @@ calling
 3
 ```
 
-`@static` and `@class` are decorators of this kind: `std:oop`'s functions that mark a
-member's node. Decorators apply nearest first, and one that is called with arguments, as
+`@static` and `@class` work the same way: they are `std:oop`'s functions, which mark a
+member's node. Several decorators apply nearest first, and one written with arguments, as
 `@operator(Operator.Index)`, is a call that gives the decorator.
 
 ## Running code as it is compiled
@@ -68,5 +69,7 @@ running work
 2
 ```
 
-`ct(code)` runs code given as HIR, and gives its value, and `load(definition)` gives a
-definition's runtime object: what a library that builds definitions from code uses.
+`ct(code)` runs code given as HIR, and gives its value, as [code
+generation](code-generation/declarative.md#using-what-was-built) uses it, and
+`load(definition)` loads a definition and gives its runtime object, as a class's type
+object.

@@ -8,16 +8,16 @@ arguments it was given. Those are live objects of the toolchain that runs the co
 So what `core:` holds depends on the toolchain running: a script run by the `zs` command
 and a project's module file run by the project compiler see different libraries under it.
 
-## What it is for
+## Reaching the toolchain
 
-The compiler, the platform a script runs on, the language's parser: these are live
-objects of the process that runs, not definitions a library could carry. `core:` is how
-Z# code gets at them. A library that needs one imports it from `core:`, and works with
-whatever toolchain gives it.
+You have already used `core:` a few times: `core:runtime` for .NET's types,
+`core:zsharp`'s `arguments` for what a script is given, and `core:project` in a module
+file. Each is something only the running toolchain has. A library that needs one imports
+it from `core:`, and works with whatever toolchain gives it.
 
-It is also how the pipeline is extended. The parts of the compiler under `core:` are its
-extension points: registering a meta-type, a loader, an importer or a dispatcher is done
-through what `core:` gives, from Z#.
+That also makes `core:` how the pipeline is extended. The compiler's parts are under it,
+so registering a meta-type, a loader, an importer or a dispatcher is done through what
+`core:` gives, from Z#.
 
 ## Who puts what there
 
@@ -40,7 +40,7 @@ A library of yours can add to it the same way, for what the code it runs needs f
 Import from `core:` what only the running toolchain can give, and from `std:` and `pkg:`
 everything else. Code that imports from `core:` runs only where a toolchain gives what it
 imports: a module file that uses `core:project` runs under the project compiler, and a
-build script that uses `core:compiler` runs where there is a compiler, which is under
-`zs`.
+build script that uses `core:compiler` runs where there is a compiler, which is under the
+`zs` command.
 
 The [reference](../../reference/core/index.md) lists what each library of `core:` has.
